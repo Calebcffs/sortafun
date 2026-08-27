@@ -19,28 +19,50 @@
     bottom: 6px;
     font-size: 13px;
     color: #444;
+    transition: opacity .25s ease;
   }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter pipe &nbsp;&middot;&nbsp; or just click a box</div>
+<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter pipe &nbsp;&middot;&nbsp; click a box &nbsp;&middot;&nbsp; run right for the gallery</div>
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
+const hintEl = document.getElementById("hint");
 
 const PIPES = [
-  { label: "crossword game",   url: "crossword.html" },
-  { label: "puzzle of the day", url: "puzzle.html" },
-  { label: "driving game",      url: "driving.html" },
-  { label: "typing game",       url: "typing.html" },
-  { label: "forum",             url: "forum.html" },
-  { label: "leaderboards",      url: "leaderboards.html" },
+  { label: "crossword game",    url: "crossword.html" },
+  { label: "puzzle of the day",  url: "puzzle.html" },
+  { label: "driving game",       url: "driving.html" },
+  { label: "typing game",        url: "typing.html" },
+  { label: "forum",              url: "forum.html" },
+  { label: "leaderboards",       url: "leaderboards.html" },
 ];
+
+// gallery photos live in art/ (1200x846 each). caption text is deliberately
+// illegible — squiggles on a little plaque.
+const ART = [
+  { src: "art/1.jpg" },
+  { src: "art/2.jpg" },
+  { src: "art/3.jpg" },
+  { src: "art/4.jpg" },
+];
+ART.forEach((a) => { a.img = new Image(); a.img.src = a.src; });
+const ART_RATIO = 1200 / 846;
 
 let W = 0, H = 0;
 let groundY = 0;
+let wallTop = 80;
 let pipeLayout = [];
+let frames = [];
+let WORLD_W = 0;
+let menuMidX = 0, galleryMidX = 0;
+
+let camX = 0;
+let previewT = 0;      // 0 = preview tucked below the floor, 1 = fully up
+let activeArt = null;  // frame the guy is currently standing under
+let shownArt = null;   // last art shown, kept while the panel slides away
 
 const GRAV = 0.6;
 const JUMP = 12;
@@ -73,18 +95,22 @@ function jump() {
   }
 }
 
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
   groundY = Math.min(H - 90, H * 0.62 + 60);
+  wallTop = 80;
 
+  // --- menu boxes, laid out across the first screenful ---
   const boxTop = 90;
   const boxH = 90;
   const gap = 24;
   const totalGap = gap * (PIPES.length + 1);
   const boxW = Math.min(180, (W - totalGap) / PIPES.length);
   const usedW = boxW * PIPES.length + gap * (PIPES.length - 1);
-  let startX = (W - usedW) / 2;
+  const startX = (W - usedW) / 2;
 
   pipeLayout = PIPES.map((p, i) => {
     const boxX = startX + i * (boxW + gap);
@@ -98,6 +124,24 @@ function resize() {
       cx,
     };
   });
+  menuMidX = W / 2;
+
+  // --- gallery, off to the right ---
+  const frameH = Math.min((groundY - wallTop) * 0.60, W * 0.27);
+  const frameW = frameH * ART_RATIO;
+  const galleryX0 = W + 250;
+  const frameGap = frameW + Math.max(70, W * 0.10);
+
+  frames = ART.map((a, i) => {
+    const cx = galleryX0 + frameW / 2 + i * frameGap;
+    return { art: a, cx, w: frameW, h: frameH };
+  });
+
+  const lastRight = frames[frames.length - 1].cx + frameW / 2;
+  WORLD_W = lastRight + 190;
+  galleryMidX = (galleryX0 + lastRight) / 2;
+
+  guy.x = clamp(guy.x, 20, WORLD_W - 20);
 }
 window.addEventListener("resize", resize);
 resize();
@@ -114,13 +158,15 @@ function hitBox(mx, my) {
 
 canvas.addEventListener("mousemove", (e) => {
   const r = canvas.getBoundingClientRect();
-  canvas.style.cursor = hitBox(e.clientX - r.left, e.clientY - r.top) ? "pointer" : "default";
+  const mx = e.clientX - r.left + camX;
+  const my = e.clientY - r.top;
+  canvas.style.cursor = hitBox(mx, my) ? "pointer" : "default";
 });
 
 canvas.addEventListener("click", (e) => {
   if (guy.entering) return;
   const r = canvas.getBoundingClientRect();
-  const p = hitBox(e.clientX - r.left, e.clientY - r.top);
+  const p = hitBox(e.clientX - r.left + camX, e.clientY - r.top);
   if (p) {
     guy.entering = true;
     guy.enterT = 0;
@@ -165,7 +211,7 @@ function update() {
   if (keys["ArrowRight"] || keys["d"] || keys["D"]) dir += 1;
   guy.vx = dir * guy.speed;
   guy.x += guy.vx;
-  guy.x = Math.max(20, Math.min(W - 20, guy.x));
+  guy.x = clamp(guy.x, 20, WORLD_W - 20);
 
   guy.vy += GRAV;
   guy.yOff += guy.vy;
@@ -174,23 +220,58 @@ function update() {
     guy.vy = 0;
     guy.onGround = true;
   }
+
+  // which picture are we standing under?
+  activeArt = null;
+  if (guy.onGround) {
+    let bd = 1e9;
+    for (const f of frames) {
+      const d = Math.abs(guy.x - f.cx);
+      if (d < f.w * 0.58 && d < bd) { bd = d; activeArt = f; }
+    }
+  }
+  if (activeArt) shownArt = activeArt;
+  previewT += ((activeArt ? 1 : 0) - previewT) * 0.14;
+  hintEl.style.opacity = previewT > 0.05 ? "0" : "0.9";
 }
 
 let t = 0;
 function draw() {
   t += 1;
+
+  const targetCam = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
+  camX += (targetCam - camX) * 0.16;
+  if (Math.abs(targetCam - camX) < 0.4) camX = targetCam;
+
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, W, H);
 
+  // ---------- world space ----------
+  ctx.save();
+  ctx.translate(-camX, 0);
+
   ctx.strokeStyle = "#000";
   ctx.fillStyle = "#000";
   ctx.lineWidth = 2;
+  ctx.textAlign = "center";
 
   ctx.font = "38px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.textAlign = "center";
-  ctx.fillText("SORTAFUN.ORG", W / 2, 56);
+  ctx.fillText("SORTAFUN.ORG", menuMidX, 56);
 
+  ctx.font = "30px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillText("art gallery", galleryMidX, 52);
+
+  // signposts in the gap between the two rooms
+  ctx.font = "15px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillStyle = "#999";
+  ctx.textAlign = "left";
+  ctx.fillText("the art gallery, this way  →", W + 40, groundY - 42);
+  ctx.fillText("←  back to the lobby", W + 40, groundY - 16);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#000";
+
+  // menu boxes
   ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
   for (const p of pipeLayout) {
     roundRect(p.boxX, p.boxTop, p.boxW, p.boxH, 12);
@@ -207,12 +288,15 @@ function draw() {
     lines.forEach((ln, i) => ctx.fillText(ln, p.cx, ly + i * 22));
   }
 
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY);
-  ctx.lineTo(W, groundY);
-  ctx.stroke();
+  // gallery frames on the wall
+  for (const f of frames) {
+    drawFrame(f);
+  }
 
+  // a little potted plant by the gallery door, for coziness
+  drawPlant(frames[0].cx - frames[0].w / 2 - 34, groundY);
+
+  // pipes poking out of the floor
   const { p: near, d: nearD } = nearestPipe();
   for (const p of pipeLayout) {
     ctx.fillStyle = "#1faf3a";
@@ -229,7 +313,151 @@ function draw() {
   }
 
   drawGuy();
+
+  ctx.restore();
+  // ---------- /world space ----------
+
+  // floor line — continuous everywhere, so it stays in screen space
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(W, groundY);
+  ctx.stroke();
+
+  drawPreview();
+
   requestAnimationFrame(loop);
+}
+
+// cover-fit an image into a rect, cropping the overflow
+function drawImageCover(img, x, y, w, h) {
+  if (!img.complete || !img.naturalWidth) {
+    ctx.fillStyle = "#eee";
+    ctx.fillRect(x, y, w, h);
+    return;
+  }
+  const ir = img.naturalWidth / img.naturalHeight;
+  const rr = w / h;
+  let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+  if (ir > rr) { sw = sh * rr; sx = (img.naturalWidth - sw) / 2; }
+  else { sh = sw / rr; sy = (img.naturalHeight - sh) / 2; }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+function drawFrame(f) {
+  const x = f.cx - f.w / 2;
+  const y = wallTop + 6;
+
+  // hanging wire
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(f.cx - f.w * 0.28, y);
+  ctx.lineTo(f.cx, y - 16);
+  ctx.lineTo(f.cx + f.w * 0.28, y);
+  ctx.stroke();
+
+  // frame + mat + photo
+  ctx.fillStyle = "#000";
+  ctx.fillRect(x - 6, y - 6, f.w + 12, f.h + 12);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(x - 3, y - 3, f.w + 6, f.h + 6);
+  drawImageCover(f.art.img, x, y, f.w, f.h);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, f.w, f.h);
+
+  // illegible plaque under the frame
+  const pw = 96, ph = 26;
+  const py = y + f.h + 12;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(f.cx - pw / 2, py, pw, ph);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(f.cx - pw / 2, py, pw, ph);
+  squiggle(f.cx - pw / 2 + 8, py + 9, pw - 16, 1.4, 3);
+  squiggle(f.cx - pw / 2 + 8, py + 17, pw - 22, 1.4, 3);
+}
+
+// a wobbly horizontal scribble standing in for text
+function squiggle(x, y, w, amp, waves) {
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  const steps = Math.max(12, Math.floor(w / 4));
+  for (let i = 0; i <= steps; i++) {
+    const px = x + (w * i) / steps;
+    const py = y + Math.sin((i / steps) * Math.PI * 2 * waves) * amp;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+
+function drawPlant(x, baseY) {
+  ctx.strokeStyle = "#000";
+  ctx.fillStyle = "#fff";
+  ctx.lineWidth = 2;
+  // pot
+  ctx.beginPath();
+  ctx.moveTo(x - 12, baseY - 20);
+  ctx.lineTo(x + 12, baseY - 20);
+  ctx.lineTo(x + 8, baseY);
+  ctx.lineTo(x - 8, baseY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // leaves
+  ctx.beginPath();
+  ctx.moveTo(x, baseY - 20);
+  ctx.quadraticCurveTo(x - 16, baseY - 34, x - 6, baseY - 48);
+  ctx.moveTo(x, baseY - 20);
+  ctx.quadraticCurveTo(x + 16, baseY - 34, x + 6, baseY - 48);
+  ctx.moveTo(x, baseY - 20);
+  ctx.lineTo(x, baseY - 44);
+  ctx.stroke();
+}
+
+function drawPreview() {
+  if (previewT < 0.02 || !shownArt) return;
+
+  const bandH = H - groundY;
+  const ease = 1 - Math.pow(1 - previewT, 2);
+  const slide = (1 - ease) * bandH;
+  const alpha = clamp(previewT * 1.4, 0, 1);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  const pad = 14;
+  const photoH = Math.min(bandH - pad * 2, 240);
+  const photoW = photoH * ART_RATIO;
+  const capW = Math.min(W * 0.32, 300);
+  const total = photoW + 26 + capW;
+  const x0 = (W - total) / 2;
+  const y0 = groundY + pad + slide;
+
+  // photo, contained, framed
+  ctx.fillStyle = "#000";
+  ctx.fillRect(x0 - 4, y0 - 4, photoW + 8, photoH + 8);
+  const img = shownArt.art.img;
+  if (img.complete && img.naturalWidth) {
+    ctx.drawImage(img, x0, y0, photoW, photoH);
+  } else {
+    ctx.fillStyle = "#eee";
+    ctx.fillRect(x0, y0, photoW, photoH);
+  }
+
+  // illegible caption block
+  const cx = x0 + photoW + 26;
+  const lines = 4;
+  for (let i = 0; i < lines; i++) {
+    const ly = y0 + 14 + (photoH - 24) * (i / (lines - 1));
+    squiggle(cx, ly, capW * (i === lines - 1 ? 0.55 : 0.92), 2, 4 + i);
+  }
+
+  ctx.restore();
 }
 
 function drawGuy() {
