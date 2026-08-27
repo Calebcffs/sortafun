@@ -15,6 +15,8 @@
   <div class="status" id="status">press any arrow key to start</div>
   <div><button id="restart">restart</button></div>
 
+  <div id="lb"></div>
+
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
@@ -41,6 +43,7 @@ function reset() {
   over = false;
   running = false;
   status.textContent = "press any arrow key to start";
+  document.getElementById("lb").innerHTML = "";
 }
 reset();
 
@@ -102,10 +105,15 @@ function update() {
 }
 
 function endGame(msg) {
+  if (over) return;
   over = true;
   running = false;
-  best = Math.max(best, Math.floor(score));
-  status.textContent = msg + "  score " + Math.floor(score) + " · best " + best + "  (press R)";
+  const final = Math.floor(score);
+  best = Math.max(best, final);
+  status.textContent = msg + "  score " + final + " · best " + best + "  (press R)";
+  const lb = document.getElementById("lb");
+  lb.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lb, "driving", { score: final });
 }
 
 function car(x, y, w, h, color) {
@@ -156,5 +164,7 @@ function draw() {
 
 update();
 </script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
 </body>
 </html>

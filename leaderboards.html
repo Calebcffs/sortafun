@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>leaderboards &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .boards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .board-col { flex: 0 1 360px; }
+  .board-col h2 {
+    font-size: 18px;
+    margin: 16px 0 0;
+  }
+  .note {
+    font-size: 13px;
+    color: #666;
+    max-width: 420px;
+    margin: 18px auto 0;
+    border-top: 2px dashed #000;
+    padding-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>leaderboards</h1>
+  <p class="sub">top scores. today and all time. play a game, submit, come back and gloat.</p>
+
+  <div class="boards">
+    <div class="board-col">
+      <h2>typing game &mdash; most wpm</h2>
+      <div id="lb-typing"></div>
+    </div>
+    <div class="board-col">
+      <h2>driving game &mdash; highest score</h2>
+      <div id="lb-driving"></div>
+    </div>
+    <div class="board-col">
+      <h2>puzzle of the day &mdash; fewest moves</h2>
+      <div id="lb-puzzle"></div>
+    </div>
+  </div>
+
+  <p class="note">
+    crossword has no score to rank, so it's not here. scores are submitted from
+    your browser, so treat the numbers with a pinch of salt.
+  </p>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+  ["typing", "driving", "puzzle"].forEach(function (game) {
+    var el = document.getElementById("lb-" + game);
+    if (window.SortafunLB) SortafunLB.mountPanel(el, game, {});
+    else el.textContent = "leaderboard offline";
+  });
+</script>
+</body>
+</html>

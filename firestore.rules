@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// sortafun leaderboards — anyone can read scores, anyone can add one score at a
+// time (if it passes the shape checks below), nobody can edit or delete.
+//
+// Note: scores are submitted straight from the player's browser, so a determined
+// person can still forge a number. These rules stop junk data and drive-by
+// vandalism, not cheating. That's a deliberate trade for "no server".
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /scores/{id} {
+      allow read: if true;
+      allow update, delete: if false;
+      allow create: if isValidScore(request.resource.data);
+    }
+
+    function isValidScore(d) {
+      return d.keys().hasOnly(['game', 'name', 'score', 'rankValue', 'day', 'ts'])
+        && d.game in ['typing', 'driving', 'puzzle']
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
+        && d.score is int && d.score >= 0 && d.score <= 1000000
+        && d.rankValue is int
+        && (
+             (d.game == 'puzzle' && d.rankValue == 0 - d.score) ||
+             (d.game != 'puzzle' && d.rankValue == d.score)
+           )
+        && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.ts == request.time;
+    }
+  }
+}

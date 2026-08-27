@@ -49,6 +49,8 @@
   </div>
   <div class="status" id="status"></div>
 
+  <div id="lb"></div>
+
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
@@ -64,6 +66,7 @@ let moves = 0;
 let startTime = null;
 let timer = null;
 let solved = false;
+let isDaily = false; // true only when the current scramble came from today's seed
 
 function mulberry32(a) {
   return function () {
@@ -76,7 +79,9 @@ function mulberry32(a) {
 
 function dateSeed() {
   const d = new Date();
-  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  // UTC so everyone worldwide gets the same puzzle for the same "day",
+  // and the day matches the leaderboard's UTC day bucket.
+  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
 }
 
 function neighbors(blank) {
@@ -89,7 +94,8 @@ function neighbors(blank) {
   return out;
 }
 
-function scramble(seed) {
+function scramble(seed, daily) {
+  isDaily = !!daily;
   state = [1, 2, 3, 4, 5, 6, 7, 8, 0];
   const rnd = mulberry32(seed);
   let blank = 8;
@@ -108,6 +114,7 @@ function scramble(seed) {
   timeEl.textContent = "0:00";
   movesEl.textContent = "0";
   status.textContent = "";
+  document.getElementById("lb").innerHTML = "";
   render();
 }
 
@@ -139,7 +146,13 @@ function tryMove(idx) {
   if (isSolved()) {
     solved = true;
     stopTimer();
-    status.textContent = "solved in " + moves + " moves 🟩";
+    status.textContent = "solved in " + moves + " moves 🟩" +
+      (isDaily ? "" : " (not today's puzzle — no leaderboard)");
+    const lb = document.getElementById("lb");
+    lb.innerHTML = "";
+    if (window.SortafunLB) {
+      SortafunLB.mountPanel(lb, "puzzle", isDaily ? { score: moves } : {});
+    }
   }
   render();
 }
@@ -170,10 +183,12 @@ window.addEventListener("keydown", (e) => {
   if (target !== null) { e.preventDefault(); tryMove(target); }
 });
 
-document.getElementById("again").addEventListener("click", () => scramble((Math.random() * 1e9) | 0));
-document.getElementById("today").addEventListener("click", () => scramble(dateSeed()));
+document.getElementById("again").addEventListener("click", () => scramble((Math.random() * 1e9) | 0, false));
+document.getElementById("today").addEventListener("click", () => scramble(dateSeed(), true));
 
-scramble(dateSeed());
+scramble(dateSeed(), true);
 </script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
 </body>
 </html>

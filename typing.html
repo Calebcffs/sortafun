@@ -55,6 +55,8 @@
   <div class="status" id="status"></div>
   <div><button id="restart">restart</button></div>
 
+  <div id="lb"></div>
+
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
@@ -92,6 +94,7 @@ function reset() {
   field.value = "";
   field.classList.remove("bad");
   field.disabled = false;
+  document.getElementById("lb").innerHTML = "";
   render();
   field.focus();
 }
@@ -123,6 +126,13 @@ function finish() {
   const wpm = Math.round((correctChars / 5) / 0.5);
   status.textContent = "time! " + count + " words · " + wpm + " wpm 🟩";
   wpmEl.textContent = wpm;
+  showBoard(wpm);
+}
+
+function showBoard(score) {
+  const lb = document.getElementById("lb");
+  lb.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lb, "typing", { score });
 }
 
 field.addEventListener("input", () => {
@@ -164,5 +174,7 @@ field.addEventListener("keydown", (e) => {
 document.getElementById("restart").addEventListener("click", reset);
 reset();
 </script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
 </body>
 </html>
