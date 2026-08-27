@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzle of the day &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #board {
+    width: 306px;
+    height: 306px;
+    margin: 8px auto 0;
+    border: 2px solid #000;
+    position: relative;
+    background: #fff;
+  }
+  .tile {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border: 2px solid #000;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    background: #fff;
+    cursor: pointer;
+    transition: left .12s ease, top .12s ease;
+    user-select: none;
+  }
+  .tile:hover { background: #eaffea; }
+  .tile.done { background: #d6f5d6; }
+  .meta { margin-top: 12px; font-size: 15px; color: #333; }
+  .controls { margin-top: 14px; display: flex; gap: 10px; justify-content: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>puzzle of the day</h1>
+  <p class="sub">slide the tiles into order. same scramble for everyone today. arrow keys or click.</p>
+
+  <div id="board"></div>
+
+  <div class="meta">moves: <span id="moves">0</span> &nbsp;&middot;&nbsp; time: <span id="time">0:00</span></div>
+  <div class="controls">
+    <button id="again">shuffle again</button>
+    <button id="today">today's puzzle</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script>
+const SIZE = 3;
+const board = document.getElementById("board");
+const movesEl = document.getElementById("moves");
+const timeEl = document.getElementById("time");
+const status = document.getElementById("status");
+
+let state = [];      // array of 9, 0 = blank
+let moves = 0;
+let startTime = null;
+let timer = null;
+let solved = false;
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let tt = Math.imul(a ^ a >>> 15, 1 | a);
+    tt = tt + Math.imul(tt ^ tt >>> 7, 61 | tt) ^ tt;
+    return ((tt ^ tt >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function dateSeed() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+function neighbors(blank) {
+  const r = Math.floor(blank / SIZE), c = blank % SIZE;
+  const out = [];
+  if (r > 0) out.push(blank - SIZE);
+  if (r < SIZE - 1) out.push(blank + SIZE);
+  if (c > 0) out.push(blank - 1);
+  if (c < SIZE - 1) out.push(blank + 1);
+  return out;
+}
+
+function scramble(seed) {
+  state = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+  const rnd = mulberry32(seed);
+  let blank = 8;
+  let last = -1;
+  for (let i = 0; i < 200; i++) {
+    const opts = neighbors(blank).filter((x) => x !== last);
+    const pick = opts[Math.floor(rnd() * opts.length)];
+    [state[blank], state[pick]] = [state[pick], state[blank]];
+    last = blank;
+    blank = pick;
+  }
+  moves = 0;
+  solved = false;
+  startTime = null;
+  stopTimer();
+  timeEl.textContent = "0:00";
+  movesEl.textContent = "0";
+  status.textContent = "";
+  render();
+}
+
+function stopTimer() {
+  if (timer) { clearInterval(timer); timer = null; }
+}
+function tickTimer() {
+  if (!startTime) return;
+  const s = Math.floor((Date.now() - startTime) / 1000);
+  timeEl.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+
+function isSolved() {
+  for (let i = 0; i < 8; i++) if (state[i] !== i + 1) return false;
+  return true;
+}
+
+function tryMove(idx) {
+  if (solved) return;
+  const blank = state.indexOf(0);
+  if (!neighbors(blank).includes(idx)) return;
+  [state[blank], state[idx]] = [state[idx], state[blank]];
+  moves++;
+  movesEl.textContent = moves;
+  if (!startTime) {
+    startTime = Date.now();
+    timer = setInterval(tickTimer, 250);
+  }
+  if (isSolved()) {
+    solved = true;
+    stopTimer();
+    status.textContent = "solved in " + moves + " moves 🟩";
+  }
+  render();
+}
+
+function render() {
+  board.innerHTML = "";
+  state.forEach((val, idx) => {
+    if (val === 0) return;
+    const r = Math.floor(idx / SIZE), c = idx % SIZE;
+    const t = document.createElement("div");
+    t.className = "tile" + (solved ? " done" : "");
+    t.textContent = val;
+    t.style.left = c * 102 + "px";
+    t.style.top = r * 102 + "px";
+    t.addEventListener("click", () => tryMove(idx));
+    board.appendChild(t);
+  });
+}
+
+window.addEventListener("keydown", (e) => {
+  const blank = state.indexOf(0);
+  const r = Math.floor(blank / SIZE), c = blank % SIZE;
+  let target = null;
+  if (e.key === "ArrowUp" && r < SIZE - 1) target = blank + SIZE;
+  if (e.key === "ArrowDown" && r > 0) target = blank - SIZE;
+  if (e.key === "ArrowLeft" && c < SIZE - 1) target = blank + 1;
+  if (e.key === "ArrowRight" && c > 0) target = blank - 1;
+  if (target !== null) { e.preventDefault(); tryMove(target); }
+});
+
+document.getElementById("again").addEventListener("click", () => scramble((Math.random() * 1e9) | 0));
+document.getElementById("today").addEventListener("click", () => scramble(dateSeed()));
+
+scramble(dateSeed());
+</script>
+</body>
+</html>

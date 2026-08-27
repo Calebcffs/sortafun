@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>typing game &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #stream {
+    font-size: 24px;
+    line-height: 1.8;
+    min-height: 76px;
+    margin: 10px auto 4px;
+    max-width: 520px;
+    word-spacing: 6px;
+  }
+  .w { padding: 2px 4px; border-radius: 5px; }
+  .w.cur { background: #ffe9a8; }
+  .w.done { color: #1faf3a; }
+  .w.wrong { color: #d64545; text-decoration: line-through; }
+  #field {
+    font-size: 22px;
+    padding: 8px 12px;
+    border: 2px solid #000;
+    border-radius: 8px;
+    width: 260px;
+    text-align: center;
+    outline: none;
+  }
+  #field.bad { background: #f7d6d6; }
+  .hud {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    font-size: 16px;
+    margin: 10px 0 4px;
+  }
+  .big { font-size: 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>typing game</h1>
+  <p class="sub">type each word, hit space. 30 seconds. how fast are you?</p>
+
+  <div class="hud">
+    <span>time <b id="time" class="big">30</b></span>
+    <span>words <b id="count" class="big">0</b></span>
+    <span>wpm <b id="wpm" class="big">0</b></span>
+  </div>
+
+  <div id="stream"></div>
+  <input id="field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type here">
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">restart</button></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script>
+const BANK = ("the quick brown fox jumps over a lazy dog while nine wizards pack my box with " +
+  "liquor jugs and every clever cat naps under warm summer light near the old river bend " +
+  "green pipe stick figure jump slide dodge type fast slow word count speed keys focus " +
+  "coffee bright morning window paper pencil bottle purple orange silver garden ladder " +
+  "tiny giant ocean forest mountain candle pocket wander simple honest gentle sudden").split(/\s+/);
+
+const streamEl = document.getElementById("stream");
+const field = document.getElementById("field");
+const timeEl = document.getElementById("time");
+const countEl = document.getElementById("count");
+const wpmEl = document.getElementById("wpm");
+const status = document.getElementById("status");
+
+let words, idx, correctChars, count, startTime, timer, running, ended;
+
+function rndWord() { return BANK[(Math.random() * BANK.length) | 0]; }
+
+function reset() {
+  words = Array.from({ length: 9 }, rndWord);
+  idx = 0;
+  correctChars = 0;
+  count = 0;
+  startTime = null;
+  running = false;
+  ended = false;
+  clearInterval(timer);
+  timeEl.textContent = "30";
+  countEl.textContent = "0";
+  wpmEl.textContent = "0";
+  status.textContent = "";
+  field.value = "";
+  field.classList.remove("bad");
+  field.disabled = false;
+  render();
+  field.focus();
+}
+
+function render() {
+  streamEl.innerHTML = "";
+  words.forEach((w, i) => {
+    const span = document.createElement("span");
+    span.className = "w" + (i === idx ? " cur" : "");
+    span.textContent = w;
+    streamEl.appendChild(span);
+    streamEl.appendChild(document.createTextNode(" "));
+  });
+}
+
+function tick() {
+  const left = 30 - (Date.now() - startTime) / 1000;
+  if (left <= 0) { timeEl.textContent = "0"; finish(); return; }
+  timeEl.textContent = left.toFixed(1);
+  const mins = (Date.now() - startTime) / 60000;
+  wpmEl.textContent = mins > 0 ? Math.round((correctChars / 5) / mins) : 0;
+}
+
+function finish() {
+  ended = true;
+  running = false;
+  clearInterval(timer);
+  field.disabled = true;
+  const wpm = Math.round((correctChars / 5) / 0.5);
+  status.textContent = "time! " + count + " words · " + wpm + " wpm 🟩";
+  wpmEl.textContent = wpm;
+}
+
+field.addEventListener("input", () => {
+  if (ended) return;
+  if (!running) {
+    running = true;
+    startTime = Date.now();
+    timer = setInterval(tick, 100);
+  }
+  const target = words[idx];
+  field.classList.toggle("bad", !target.startsWith(field.value.trimStart()));
+});
+
+field.addEventListener("keydown", (e) => {
+  if (e.key === " " || e.key === "Enter") {
+    e.preventDefault();
+    if (ended) return;
+    const target = words[idx];
+    const typed = field.value.trim();
+    if (typed.length === 0) return;
+    const spanList = streamEl.querySelectorAll(".w");
+    if (typed === target) {
+      correctChars += target.length + 1;
+      count++;
+      countEl.textContent = count;
+      spanList[idx].className = "w done";
+    } else {
+      spanList[idx].className = "w wrong";
+    }
+    idx++;
+    words.push(rndWord());
+    if (idx > 4) { words.shift(); idx--; }
+    field.value = "";
+    field.classList.remove("bad");
+    render();
+  }
+});
+
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

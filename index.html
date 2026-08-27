@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SORTAFUN.ORG</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    overflow: hidden;
+    font-family: "Comic Sans MS", "Segoe Print", cursive;
+  }
+  canvas { display: block; }
+  #hint {
+    position: fixed;
+    left: 8px;
+    bottom: 6px;
+    font-size: 13px;
+    color: #444;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter pipe &nbsp;&middot;&nbsp; or just click a box</div>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+const PIPES = [
+  { label: "crossword game",   url: "crossword.html" },
+  { label: "puzzle of the day", url: "puzzle.html" },
+  { label: "driving game",      url: "driving.html" },
+  { label: "typing game",       url: "typing.html" },
+  { label: "forum",             url: "forum.html" },
+];
+
+let W = 0, H = 0;
+let groundY = 0;
+let pipeLayout = [];
+
+const GRAV = 0.6;
+const JUMP = 12;
+
+const guy = {
+  x: 60,
+  vx: 0,
+  speed: 3.2,
+  yOff: 0,      // 0 = on ground, negative = airborne
+  vy: 0,
+  onGround: true,
+  entering: false,
+  enterT: 0,
+  targetUrl: null,
+};
+
+const keys = {};
+window.addEventListener("keydown", (e) => {
+  keys[e.key] = true;
+  if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", " "].includes(e.key)) e.preventDefault();
+  if ((e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") && !guy.entering) jump();
+  if ((e.key === "ArrowDown" || e.key === "Enter") && !guy.entering) tryEnter();
+});
+window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+
+function jump() {
+  if (guy.onGround) {
+    guy.vy = -JUMP;
+    guy.onGround = false;
+  }
+}
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  groundY = Math.min(H - 90, H * 0.62 + 60);
+
+  const boxTop = 90;
+  const boxH = 90;
+  const gap = 24;
+  const totalGap = gap * (PIPES.length + 1);
+  const boxW = Math.min(180, (W - totalGap) / PIPES.length);
+  const usedW = boxW * PIPES.length + gap * (PIPES.length - 1);
+  let startX = (W - usedW) / 2;
+
+  pipeLayout = PIPES.map((p, i) => {
+    const boxX = startX + i * (boxW + gap);
+    const cx = boxX + boxW / 2;
+    return {
+      ...p,
+      boxX, boxTop, boxW, boxH,
+      pipeW: 52,
+      pipeH: 34,
+      pipeX: cx - 26,
+      cx,
+    };
+  });
+}
+window.addEventListener("resize", resize);
+resize();
+
+function hitBox(mx, my) {
+  for (const p of pipeLayout) {
+    if (mx >= p.boxX && mx <= p.boxX + p.boxW && my >= p.boxTop && my <= p.boxTop + p.boxH)
+      return p;
+    if (mx >= p.pipeX && mx <= p.pipeX + p.pipeW && my >= groundY - p.pipeH && my <= groundY)
+      return p;
+  }
+  return null;
+}
+
+canvas.addEventListener("mousemove", (e) => {
+  const r = canvas.getBoundingClientRect();
+  canvas.style.cursor = hitBox(e.clientX - r.left, e.clientY - r.top) ? "pointer" : "default";
+});
+
+canvas.addEventListener("click", (e) => {
+  if (guy.entering) return;
+  const r = canvas.getBoundingClientRect();
+  const p = hitBox(e.clientX - r.left, e.clientY - r.top);
+  if (p) {
+    guy.entering = true;
+    guy.enterT = 0;
+    guy.targetUrl = p.url;
+    guy.x = p.cx;
+    guy.vx = 0;
+    guy.yOff = 0;
+    guy.vy = 0;
+    guy.onGround = true;
+  }
+});
+
+function nearestPipe() {
+  let best = null, bd = 1e9;
+  for (const p of pipeLayout) {
+    const d = Math.abs(guy.x - p.cx);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return { p: best, d: bd };
+}
+
+function tryEnter() {
+  if (!guy.onGround) return;
+  const { p, d } = nearestPipe();
+  if (p && d < 34) {
+    guy.entering = true;
+    guy.enterT = 0;
+    guy.targetUrl = p.url;
+    guy.x = p.cx;
+    guy.vx = 0;
+  }
+}
+
+function update() {
+  if (guy.entering) {
+    guy.enterT += 0.02;
+    if (guy.enterT >= 1) window.location.href = guy.targetUrl;
+    return;
+  }
+  let dir = 0;
+  if (keys["ArrowLeft"] || keys["a"] || keys["A"]) dir -= 1;
+  if (keys["ArrowRight"] || keys["d"] || keys["D"]) dir += 1;
+  guy.vx = dir * guy.speed;
+  guy.x += guy.vx;
+  guy.x = Math.max(20, Math.min(W - 20, guy.x));
+
+  guy.vy += GRAV;
+  guy.yOff += guy.vy;
+  if (guy.yOff >= 0) {
+    guy.yOff = 0;
+    guy.vy = 0;
+    guy.onGround = true;
+  }
+}
+
+let t = 0;
+function draw() {
+  t += 1;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = "#000";
+  ctx.fillStyle = "#000";
+  ctx.lineWidth = 2;
+
+  ctx.font = "38px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.textAlign = "center";
+  ctx.fillText("SORTAFUN.ORG", W / 2, 56);
+
+  ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
+  for (const p of pipeLayout) {
+    roundRect(p.boxX, p.boxTop, p.boxW, p.boxH, 12);
+    ctx.stroke();
+    const words = p.label.split(" ");
+    const lines = [];
+    let cur = "";
+    for (const w of words) {
+      if ((cur + " " + w).trim().length > 12) { lines.push(cur.trim()); cur = w; }
+      else cur += " " + w;
+    }
+    if (cur.trim()) lines.push(cur.trim());
+    const ly = p.boxTop + p.boxH / 2 - (lines.length - 1) * 11 + 5;
+    lines.forEach((ln, i) => ctx.fillText(ln, p.cx, ly + i * 22));
+  }
+
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(W, groundY);
+  ctx.stroke();
+
+  const { p: near, d: nearD } = nearestPipe();
+  for (const p of pipeLayout) {
+    ctx.fillStyle = "#1faf3a";
+    ctx.fillRect(p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
+    if (p === near && nearD < 34 && guy.onGround && !guy.entering) {
+      ctx.fillStyle = "#000";
+      ctx.font = "20px 'Comic Sans MS', cursive";
+      ctx.fillText("↓", p.cx, groundY - p.pipeH - 10);
+      ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
+    }
+  }
+
+  drawGuy();
+  requestAnimationFrame(loop);
+}
+
+function drawGuy() {
+  ctx.save();
+  ctx.strokeStyle = "#000";
+  ctx.fillStyle = "#fff";
+  ctx.lineWidth = 2;
+
+  let feetY = groundY + guy.yOff;
+  let bob = 0;
+  if (!guy.entering && guy.vx !== 0 && guy.onGround) bob = Math.sin(t * 0.3) * 2;
+  const airborne = !guy.onGround && !guy.entering;
+
+  if (guy.entering) {
+    const { p } = nearestPipe();
+    feetY = groundY + guy.enterT * 60;
+    ctx.beginPath();
+    ctx.rect(p.pipeX - 1, groundY - p.pipeH, p.pipeW + 2, p.pipeH + 62);
+    ctx.clip();
+  }
+
+  const x = guy.x;
+  const headR = 9;
+  const headCY = feetY - 46 + bob;
+  const hipY = feetY - 20 + bob;
+
+  ctx.beginPath();
+  ctx.arc(x, headCY, headR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x, headCY + headR);
+  ctx.lineTo(x, hipY);
+  ctx.stroke();
+
+  const swing = airborne ? -8 : (guy.vx !== 0 ? Math.sin(t * 0.3) * 6 : 3);
+  ctx.beginPath();
+  ctx.moveTo(x, hipY - 14);
+  ctx.lineTo(x - 9, hipY - 6 + swing);
+  ctx.moveTo(x, hipY - 14);
+  ctx.lineTo(x + 9, hipY - 6 - swing);
+  ctx.stroke();
+
+  let legSwing;
+  if (airborne) legSwing = guy.vy < 0 ? 3 : 9;
+  else legSwing = guy.vx !== 0 ? Math.sin(t * 0.3) * 7 : 5;
+  ctx.beginPath();
+  ctx.moveTo(x, hipY);
+  ctx.lineTo(x - legSwing, feetY + bob);
+  ctx.moveTo(x, hipY);
+  ctx.lineTo(x + legSwing, feetY + bob);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function loop() {
+  update();
+  draw();
+}
+loop();
+</script>
+</body>
+</html>

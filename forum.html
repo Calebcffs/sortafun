@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>forum &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .tape {
+    background: repeating-linear-gradient(45deg, #f5c518 0 18px, #000 18px 36px);
+    height: 18px;
+    margin: 6px 0 18px;
+    border: 2px solid #000;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>forum</h1>
+  <div class="tape"></div>
+  <p class="sub">under construction. the guy is doing his best.</p>
+
+  <canvas id="site" width="420" height="300"></canvas>
+
+  <p class="status">check back later. he needs a break.</p>
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script>
+const cv = document.getElementById("site");
+const g = cv.getContext("2d");
+const W = cv.width, H = cv.height;
+const groundY = H - 40;
+
+let t = 0;
+const dust = [];
+
+function spawnDust() {
+  dust.push({
+    x: W / 2 + 34 + (Math.random() * 10 - 5),
+    y: groundY - 2,
+    vx: 0.4 + Math.random() * 1.6,
+    vy: -(0.5 + Math.random() * 1.8),
+    r: 2 + Math.random() * 4,
+    life: 1,
+  });
+}
+
+function line(x1, y1, x2, y2) {
+  g.beginPath();
+  g.moveTo(x1, y1);
+  g.lineTo(x2, y2);
+  g.stroke();
+}
+
+function draw() {
+  t++;
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, W, H);
+
+  // hammering cycle: pound roughly 6x/sec
+  const phase = (t % 12) / 12;              // 0..1
+  const pound = phase < 0.35 ? 1 : 0;       // hitting the ground
+  const shake = pound ? (Math.random() * 3 - 1.5) : 0;
+
+  g.save();
+  g.translate(shake, pound ? Math.random() * 1.5 : 0);
+
+  g.strokeStyle = "#000";
+  g.fillStyle = "#000";
+  g.lineWidth = 3;
+
+  // ground
+  line(0, groundY, W, groundY);
+
+  // little rubble pile where he's digging
+  g.beginPath();
+  g.moveTo(W / 2 + 20, groundY);
+  g.lineTo(W / 2 + 34, groundY - 10 - (pound ? 2 : 0));
+  g.lineTo(W / 2 + 50, groundY);
+  g.stroke();
+
+  // --- stick guy (vibrating) ---
+  const jitter = () => Math.random() * 2 - 1;
+  const bx = W / 2 - 30 + jitter() * (pound ? 2 : 0.6);
+  const by = groundY + jitter() * (pound ? 1.5 : 0.4);
+
+  const hipY = by - 34;
+  const shoulderY = by - 58;
+  const headCY = by - 70;
+
+  g.lineWidth = 3;
+  // head
+  g.beginPath();
+  g.arc(bx, headCY, 9, 0, Math.PI * 2);
+  g.stroke();
+  // hard hat
+  g.beginPath();
+  g.arc(bx, headCY - 1, 10, Math.PI, 0);
+  g.stroke();
+  line(bx - 12, headCY - 1, bx + 12, headCY - 1);
+  // spine
+  line(bx, headCY + 9, bx, hipY);
+  // legs braced
+  line(bx, hipY, bx - 14, by);
+  line(bx, hipY, bx + 12, by);
+  // feet
+  line(bx - 14, by, bx - 20, by);
+  line(bx + 12, by, bx + 18, by);
+
+  // arms reaching forward-down to the jackhammer handle
+  const handX = bx + 30, handY = shoulderY + 14 + (pound ? 3 : 0);
+  line(bx, shoulderY + 4, handX, handY);
+  line(bx, shoulderY + 8, handX, handY + 6);
+
+  // --- jackhammer ---
+  const jTopY = handY - 8;
+  const jBotY = groundY - (pound ? 0 : 8);
+  g.lineWidth = 4;
+  line(handX + 4, jTopY, handX + 4, jBotY);      // shaft
+  g.lineWidth = 3;
+  // motor box
+  g.strokeRect(handX - 6, jTopY - 14, 22, 18);
+  // chisel foot
+  g.beginPath();
+  g.moveTo(handX - 2, jBotY);
+  g.lineTo(handX + 10, jBotY);
+  g.lineTo(handX + 4, jBotY + 8);
+  g.closePath();
+  g.stroke();
+
+  // impact stars
+  if (pound) {
+    g.lineWidth = 2;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI - Math.PI / 2 + Math.random() * 0.3;
+      const r1 = 4, r2 = 10 + Math.random() * 6;
+      line(handX + 4 + Math.cos(a) * r1, jBotY + 4 + Math.sin(a) * r1,
+           handX + 4 + Math.cos(a) * r2, jBotY + 4 + Math.sin(a) * r2);
+    }
+    if (t % 2 === 0) { spawnDust(); spawnDust(); }
+  }
+
+  // dust
+  for (const d of dust) {
+    d.x += d.vx;
+    d.y += d.vy;
+    d.vy += 0.05;
+    d.life -= 0.02;
+  }
+  for (let i = dust.length - 1; i >= 0; i--) if (dust[i].life <= 0) dust.splice(i, 1);
+  g.fillStyle = "rgba(80,80,80,0.5)";
+  for (const d of dust) {
+    g.globalAlpha = Math.max(0, d.life);
+    g.beginPath();
+    g.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.globalAlpha = 1;
+
+  g.restore();
+
+  // sign (doesn't shake)
+  g.fillStyle = "#000";
+  g.font = "bold 18px 'Comic Sans MS', cursive";
+  g.textAlign = "center";
+  g.fillText("UNDER CONSTRUCTION", W / 2, 34);
+  g.font = "12px 'Comic Sans MS', cursive";
+  g.fillText("(forum coming eventually)", W / 2, 52);
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

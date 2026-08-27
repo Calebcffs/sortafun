@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>driving game &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>driving game</h1>
+  <p class="sub">stay on the road, dodge the other cars. &larr; &rarr; to steer, &uarr; &darr; for gas / brake.</p>
+
+  <canvas id="game" width="400" height="520"></canvas>
+  <div class="status" id="status">press any arrow key to start</div>
+  <div><button id="restart">restart</button></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script>
+const cv = document.getElementById("game");
+const g = cv.getContext("2d");
+const W = cv.width, H = cv.height;
+const status = document.getElementById("status");
+
+const ROAD_L = 60, ROAD_R = W - 60, ROAD_W = ROAD_R - ROAD_L;
+const LANES = 3;
+
+let keys = {};
+let state, running, over, dashOffset, spawnTimer, score, best = 0;
+let player, enemies, speed;
+
+function reset() {
+  player = { x: W / 2 - 15, y: H - 90, w: 30, h: 52 };
+  enemies = [];
+  speed = 4;
+  score = 0;
+  dashOffset = 0;
+  spawnTimer = 0;
+  over = false;
+  running = false;
+  status.textContent = "press any arrow key to start";
+}
+reset();
+
+function laneX(i) {
+  const laneW = ROAD_W / LANES;
+  return ROAD_L + laneW * i + laneW / 2 - 15;
+}
+
+function spawn() {
+  const lane = Math.floor(Math.random() * LANES);
+  const x = laneX(lane) + (Math.random() * 16 - 8);
+  enemies.push({ x, y: -70, w: 30, h: 52, slow: 0.25 + Math.random() * 0.4 });
+}
+
+window.addEventListener("keydown", (e) => {
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+    e.preventDefault();
+    if (!running && !over) { running = true; status.textContent = ""; }
+  }
+  keys[e.key] = true;
+  if ((e.key === "r" || e.key === "R") && over) reset();
+});
+window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+document.getElementById("restart").addEventListener("click", reset);
+
+function hit(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function update() {
+  if (running && !over) {
+    if (keys["ArrowLeft"]) player.x -= 5;
+    if (keys["ArrowRight"]) player.x += 5;
+    if (keys["ArrowUp"]) speed = Math.min(11, speed + 0.05);
+    if (keys["ArrowDown"]) speed = Math.max(3, speed - 0.12);
+
+    // off-road crash
+    if (player.x < ROAD_L - 6 || player.x + player.w > ROAD_R + 6) endGame("you drove into the ditch");
+    player.x = Math.max(ROAD_L - 30, Math.min(ROAD_R, player.x));
+
+    dashOffset = (dashOffset + speed) % 40;
+    score += speed * 0.1;
+    speed += 0.0025;
+
+    spawnTimer -= 1;
+    if (spawnTimer <= 0) {
+      spawn();
+      spawnTimer = Math.max(28, 70 - speed * 3);
+    }
+
+    for (const en of enemies) {
+      en.y += speed * (0.55 + en.slow);
+      if (hit(player, en)) endGame("crash! 💥");
+    }
+    enemies = enemies.filter((e) => e.y < H + 80);
+  }
+  draw();
+  requestAnimationFrame(update);
+}
+
+function endGame(msg) {
+  over = true;
+  running = false;
+  best = Math.max(best, Math.floor(score));
+  status.textContent = msg + "  score " + Math.floor(score) + " · best " + best + "  (press R)";
+}
+
+function car(x, y, w, h, color) {
+  g.fillStyle = color;
+  g.strokeStyle = "#000";
+  g.lineWidth = 2;
+  g.fillRect(x, y, w, h);
+  g.strokeRect(x, y, w, h);
+  g.fillStyle = "#000";
+  g.fillRect(x + 3, y + 8, w - 6, 10);          // windshield
+  g.fillRect(x + 3, y + h - 18, w - 6, 10);      // rear window
+}
+
+function draw() {
+  // grass
+  g.fillStyle = "#cdeccd";
+  g.fillRect(0, 0, W, H);
+  // road
+  g.fillStyle = "#e8e8e8";
+  g.fillRect(ROAD_L, 0, ROAD_W, H);
+  g.strokeStyle = "#000";
+  g.lineWidth = 3;
+  g.beginPath(); g.moveTo(ROAD_L, 0); g.lineTo(ROAD_L, H);
+  g.moveTo(ROAD_R, 0); g.lineTo(ROAD_R, H); g.stroke();
+
+  // lane dashes
+  g.strokeStyle = "#999";
+  g.lineWidth = 4;
+  g.setLineDash([20, 20]);
+  for (let i = 1; i < LANES; i++) {
+    const x = ROAD_L + (ROAD_W / LANES) * i;
+    g.beginPath();
+    g.lineDashOffset = -dashOffset;
+    g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+  }
+  g.setLineDash([]);
+
+  for (const en of enemies) car(en.x, en.y, en.w, en.h, "#d64545");
+  car(player.x, player.y, player.w, player.h, "#3a7fd6");
+
+  g.fillStyle = "#000";
+  g.font = "16px 'Comic Sans MS', cursive";
+  g.textAlign = "left";
+  g.fillText("score " + Math.floor(score), 8, 22);
+  g.textAlign = "right";
+  g.fillText("mph " + Math.round(speed * 12), W - 8, 22);
+}
+
+update();
+</script>
+</body>
+</html>
