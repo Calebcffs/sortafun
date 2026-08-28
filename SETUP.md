@@ -36,21 +36,31 @@ Firebase **free (Spark) plan**. No server, no credit card, no build step.
 2. Replace everything with the contents of `firestore.rules`.
 3. **Publish**.
 
-### 5. Create the two indexes
-The daily and all-time queries each need a composite index.
+This is a manual step every time `firestore.rules` in this repo changes — the
+Firebase console doesn't read the file from GitHub, so pushing a rules change
+here does nothing on its own. If scores stop saving after an update, this is
+the first thing to check.
+
+### 5. Create the three indexes
+The daily query, the all-time query, and the tile slider archive calendar
+each need a composite index.
 
 **Easy way:** deploy, open `leaderboards.html`, open the browser console. The
 page fires all three "today" queries on load — Firestore prints an error with a
 direct link. Click it → **Create index** → wait ~1 minute. Then click an
-"all time" tab to get the console link for the second index.
+"all time" tab to get the console link for the second index. Then open
+`puzzle-archive.html` with the console open for the third (the archive
+calendar's range query) — it fails silently in the UI (blank calendar, no
+highlighted days) until that index exists, so check the console there even if
+nothing looks visibly broken.
 
 **Or** paste `firestore.indexes.json` if you use the Firebase CLI
 (`firebase deploy --only firestore:indexes`).
 
 ### 6. Deploy the site
 Commit and push as usual — GitHub Pages serves `sortafun.org`. The leaderboard
-panels appear on the typing, driving, and puzzle end screens, and all three are
-collected on `leaderboards.html`.
+panels appear on the typing, circuit race, and tile slider end screens, and
+all three are collected on `leaderboards.html`.
 
 ## Data model
 
@@ -58,15 +68,21 @@ Collection `scores`, one document per submitted score:
 
 | field       | type   | notes                                        |
 |-------------|--------|----------------------------------------------|
-| `game`      | string | `typing` \| `driving` \| `puzzle`            |
+| `game`      | string | `typing` \| `driving` \| `puzzle` \| `circuit` |
 | `name`      | string | 1–20 chars, player-entered                   |
-| `score`     | int    | the value shown to players                   |
-| `rankValue` | int    | higher = better always; `puzzle` stores `-score` |
-| `day`       | string | `YYYY-MM-DD`, UTC                             |
+| `score`     | int    | the value shown to players (circuit: lap time in ms) |
+| `rankValue` | int    | higher = better always; `puzzle`/`circuit` store `-score` |
+| `day`       | string | `YYYY-MM-DD`, Singapore time (UTC+8, no DST)  |
 | `ts`        | timestamp | server time                               |
 
-"Today" = `where day == <UTC today>`. All-time = no day filter. Both sort by
-`rankValue` descending.
+`driving` is the old top-down dodge game's key, retired when it was replaced
+by the circuit race — its historical scores are just inert now, nothing reads
+or writes them any more.
+
+"Today" = `where day == <today in Singapore time>`. All-time = no day filter.
+Both sort by `rankValue` descending. The tile slider's daily puzzle is seeded
+from this same day string, so its scramble and its leaderboard always roll
+over together, at midnight Singapore time.
 
 ## Free tier headroom
 

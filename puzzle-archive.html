@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tile slider archive &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .cal-head button {
+    padding: 4px 12px;
+  }
+  .cal-head button:disabled { opacity: .3; cursor: default; }
+  .cal-title { font-size: 17px; min-width: 150px; }
+  .cal {
+    max-width: 380px;
+    margin: 12px auto 0;
+    border-collapse: collapse;
+  }
+  .cal th {
+    font-size: 11px;
+    color: #888;
+    font-weight: normal;
+    padding-bottom: 4px;
+  }
+  .cal td {
+    width: 14.28%;
+    height: 44px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 2px;
+  }
+  .day {
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    margin: 0 auto;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .day.has {
+    border: 2px solid #1faf3a;
+    background: #d6f5d6;
+    cursor: pointer;
+  }
+  .day.has:hover { background: #b7ecb7; }
+  .day.empty { color: #ccc; }
+  .day.today { border: 2px dashed #999; color: #666; }
+  .legend {
+    font-size: 12px;
+    color: #666;
+    margin-top: 10px;
+  }
+  .legend .day { display: inline-block; width: 14px; height: 14px; line-height: 14px; border-radius: 4px; vertical-align: middle; margin: 0 4px 0 12px; }
+  .legend .day:first-child { margin-left: 0; }
+
+  .modal-back {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 10;
+  }
+  .modal-back.open { display: flex; }
+  .modal {
+    background: #fff;
+    border: 2px solid #000;
+    border-radius: 10px;
+    max-width: 360px;
+    width: 100%;
+    padding: 16px;
+    text-align: left;
+    position: relative;
+  }
+  .modal h2 { margin: 0 0 6px; font-size: 19px; text-align: center; }
+  .modal .disclaimer {
+    font-size: 13px;
+    color: #444;
+    border: 2px dashed #000;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin: 10px 0;
+  }
+  .modal .play {
+    display: block;
+    text-align: center;
+    margin: 10px 0;
+  }
+  .modal ol.mini-lb { list-style: decimal inside; margin: 8px 0 0; padding: 0; font-size: 14px; }
+  .modal ol.mini-lb li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  .modal .mini-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal .mini-score { flex: none; color: #1faf3a; }
+  .modal .close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: none;
+    background: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+  .modal .lb-status { font-size: 13px; color: #666; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>tile slider archive</h1>
+  <p class="sub">click a highlighted day to replay that puzzle and see its leaderboard. covers the past year.</p>
+
+  <div class="cal-head">
+    <button id="prev">&larr;</button>
+    <span class="cal-title" id="calTitle"></span>
+    <button id="next">&rarr;</button>
+  </div>
+  <table class="cal">
+    <thead><tr><th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th></tr></thead>
+    <tbody id="calBody"></tbody>
+  </table>
+  <p class="legend"><span class="day has"></span>played that day<span class="day empty" style="border:2px solid #eee;">&nbsp;</span>no puzzle recorded</p>
+  <p class="legend" id="loadStatus">loading past scores&hellip;</p>
+
+  <a class="back" href="puzzle.html">&larr; back to today's puzzle</a>
+</div>
+
+<div class="modal-back" id="modalBack">
+  <div class="modal" id="modal">
+    <button class="close" id="modalClose" aria-label="close">&times;</button>
+    <h2 id="modalDate"></h2>
+    <div class="disclaimer">you can try and beat this day's top score, but it won't be saved to the leaderboard.</div>
+    <a class="btn play" id="modalPlay" href="#">play this day's puzzle</a>
+    <div id="modalLb"></div>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+const SG_OFFSET_MS = 8 * 3600 * 1000;
+const ARCHIVE_YEAR_DAYS = 365; // keep in sync with puzzle.html's ARCHIVE_DAYS
+
+function pad(n) { return String(n).padStart(2, "0"); }
+function ymdStr(y, m, d) { return y + "-" + pad(m) + "-" + pad(d); } // m is 1-12
+
+function sgParts(offsetMs) {
+  const d = new Date(Date.now() + SG_OFFSET_MS + (offsetMs || 0));
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() };
+}
+
+const todayParts = sgParts(0);
+const todayStr = ymdStr(todayParts.y, todayParts.m, todayParts.d);
+const floorParts = sgParts(-ARCHIVE_YEAR_DAYS * 86400000);
+const floorStr = ymdStr(floorParts.y, floorParts.m, floorParts.d);
+
+let viewYear = todayParts.y;
+let viewMonth = todayParts.m; // 1-12
+const monthKey = (y, m) => y * 12 + m;
+const todayMonthKey = monthKey(todayParts.y, todayParts.m);
+// how far back "prev" can go — starts locked (no data yet), widens to the
+// earliest month that actually has a recorded puzzle once data loads, so
+// the calendar grows day by day instead of opening on a year of blanks
+let earliestMonthKey = todayMonthKey;
+
+const bestMap = {}; // "YYYY-MM-DD" -> { name, score }
+let dataReady = false;
+
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function renderCalendar() {
+  document.getElementById("calTitle").textContent = MONTH_NAMES[viewMonth - 1] + " " + viewYear;
+  document.getElementById("prev").disabled = monthKey(viewYear, viewMonth) <= earliestMonthKey;
+  document.getElementById("next").disabled = monthKey(viewYear, viewMonth) >= todayMonthKey;
+
+  const body = document.getElementById("calBody");
+  body.innerHTML = "";
+
+  const firstWeekday = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay(); // 0=Sun
+  const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
+
+  let row = document.createElement("tr");
+  for (let i = 0; i < firstWeekday; i++) row.appendChild(document.createElement("td"));
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    if ((firstWeekday + day - 1) % 7 === 0 && day !== 1) {
+      body.appendChild(row);
+      row = document.createElement("tr");
+    }
+    const ds = ymdStr(viewYear, viewMonth, day);
+    const td = document.createElement("td");
+    const cell = document.createElement("div");
+    cell.textContent = day;
+
+    if (ds === todayStr) {
+      cell.className = "day today";
+      cell.title = "today's puzzle isn't in the archive yet";
+    } else if (ds > todayStr || ds < floorStr) {
+      cell.className = "day empty";
+    } else if (dataReady && bestMap[ds]) {
+      cell.className = "day has";
+      cell.addEventListener("click", () => openModal(ds));
+    } else {
+      cell.className = "day empty";
+      if (dataReady) cell.title = "no scores recorded that day";
+    }
+
+    td.appendChild(cell);
+    row.appendChild(td);
+  }
+  body.appendChild(row);
+}
+
+document.getElementById("prev").addEventListener("click", () => {
+  viewMonth--;
+  if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+  renderCalendar();
+});
+document.getElementById("next").addEventListener("click", () => {
+  viewMonth++;
+  if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+  renderCalendar();
+});
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function openModal(day) {
+  document.getElementById("modalDate").textContent = day;
+  document.getElementById("modalPlay").href = "puzzle.html?date=" + day;
+  const lbEl = document.getElementById("modalLb");
+  lbEl.innerHTML = '<div class="lb-status">loading leaderboard&hellip;</div>';
+  document.getElementById("modalBack").classList.add("open");
+
+  if (!window.SortafunLB) {
+    lbEl.innerHTML = '<div class="lb-status">leaderboard offline</div>';
+    return;
+  }
+  SortafunLB.topDay("puzzle", day, 5).then((rows) => {
+    if (!rows.length) {
+      lbEl.innerHTML = '<div class="lb-status">no scores for this day</div>';
+      return;
+    }
+    lbEl.innerHTML = '<ol class="mini-lb">' + rows.map((r) =>
+      '<li><span class="mini-name">' + escapeHtml(r.name) + '</span>' +
+      '<span class="mini-score">' + r.score + ' moves</span></li>'
+    ).join("") + '</ol>';
+  }).catch((e) => {
+    console.warn("[puzzle-archive] topDay failed", e);
+    lbEl.innerHTML = '<div class="lb-status">leaderboard offline</div>';
+  });
+}
+
+function closeModal() {
+  document.getElementById("modalBack").classList.remove("open");
+}
+document.getElementById("modalClose").addEventListener("click", closeModal);
+document.getElementById("modalBack").addEventListener("click", (e) => {
+  if (e.target.id === "modalBack") closeModal();
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.getElementById("modalBack").classList.contains("open")) closeModal();
+});
+
+renderCalendar();
+
+const loadStatus = document.getElementById("loadStatus");
+
+if (window.SortafunLB) {
+  SortafunLB.bestByDay("puzzle", floorStr, todayStr).then((rows) => {
+    rows.forEach((r) => { bestMap[r.day] = { name: r.name, score: r.score }; });
+    if (rows.length) {
+      // rows are day-desc, so the last one is the earliest day with data
+      const earliest = rows[rows.length - 1].day.split("-");
+      earliestMonthKey = monthKey(Number(earliest[0]), Number(earliest[1]));
+    } else {
+      earliestMonthKey = todayMonthKey; // nothing recorded yet — nowhere to browse back to
+    }
+    dataReady = true;
+    loadStatus.style.display = "none";
+    renderCalendar();
+  }).catch((e) => {
+    console.warn("[puzzle-archive] bestByDay failed", e);
+    dataReady = true; // leave everything unhighlighted rather than spin forever
+    loadStatus.textContent = "couldn't load past scores (leaderboard offline)";
+    renderCalendar();
+  });
+} else {
+  dataReady = true;
+  loadStatus.textContent = "leaderboard offline";
+}
+</script>
+</body>
+</html>

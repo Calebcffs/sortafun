@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>puzzle of the day &middot; SORTAFUN.ORG</title>
+<title>tile slider &middot; SORTAFUN.ORG</title>
 <link rel="stylesheet" href="game.css">
 <style>
   #board {
@@ -37,8 +37,9 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>puzzle of the day</h1>
+  <h1>tile slider</h1>
   <p class="sub">slide the tiles into order. same scramble for everyone today. arrow keys or click.</p>
+  <p class="sub" id="dateBanner" style="display:none"></p>
 
   <div id="board"></div>
 
@@ -46,6 +47,7 @@
   <div class="controls">
     <button id="again">shuffle again</button>
     <button id="today">today's puzzle</button>
+    <a class="btn" href="puzzle-archive.html">archive</a>
   </div>
   <div class="status" id="status"></div>
 
@@ -77,11 +79,41 @@ function mulberry32(a) {
   };
 }
 
-function dateSeed() {
-  const d = new Date();
-  // UTC so everyone worldwide gets the same puzzle for the same "day",
-  // and the day matches the leaderboard's UTC day bucket.
-  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+const SG_OFFSET_MS = 8 * 3600 * 1000; // Singapore is fixed UTC+8, no DST
+const ARCHIVE_DAYS = 365; // how far back the archive calendar goes — keep in sync with puzzle-archive.html
+
+// "YYYY-MM-DD" in Singapore time — this is also the leaderboard's day
+// bucket (leaderboard.js dayStr()), so today's puzzle and today's
+// leaderboard always agree on what day it is.
+function sgToday() {
+  const d = new Date(Date.now() + SG_OFFSET_MS);
+  return d.getUTCFullYear() + "-" +
+    String(d.getUTCMonth() + 1).padStart(2, "0") + "-" +
+    String(d.getUTCDate()).padStart(2, "0");
+}
+
+function daysAgo(n) {
+  const d = new Date(Date.now() + SG_OFFSET_MS - n * 86400000);
+  return d.getUTCFullYear() + "-" +
+    String(d.getUTCMonth() + 1).padStart(2, "0") + "-" +
+    String(d.getUTCDate()).padStart(2, "0");
+}
+
+// One seed path for both today's puzzle and any archived date, so they
+// can never drift apart: same "YYYY-MM-DD" always scrambles the same way.
+function seedFromDay(dayStr) {
+  return Number(dayStr.replace(/-/g, ""));
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Which day are we viewing? Defaults to today; a valid, in-range ?date=
+// query param picks an archived day instead (see puzzle-archive.html).
+function resolveViewDay() {
+  const today = sgToday();
+  const q = new URLSearchParams(location.search).get("date");
+  if (q && DATE_RE.test(q) && q <= today && q >= daysAgo(ARCHIVE_DAYS)) return q;
+  return today;
 }
 
 function neighbors(blank) {
@@ -184,9 +216,21 @@ window.addEventListener("keydown", (e) => {
 });
 
 document.getElementById("again").addEventListener("click", () => scramble((Math.random() * 1e9) | 0, false));
-document.getElementById("today").addEventListener("click", () => scramble(dateSeed(), true));
+document.getElementById("today").addEventListener("click", () => {
+  // drop the ?date= param rather than just re-scrambling, so the URL
+  // stops claiming to be an archive day
+  if (location.search) location.href = "puzzle.html";
+  else scramble(seedFromDay(sgToday()), true);
+});
 
-scramble(dateSeed(), true);
+const viewDay = resolveViewDay();
+const today = sgToday();
+const dateBanner = document.getElementById("dateBanner");
+if (viewDay !== today) {
+  dateBanner.style.display = "";
+  dateBanner.textContent = "archive puzzle from " + viewDay + " — try and beat that day's top score, but it won't be saved to the leaderboard.";
+}
+scramble(seedFromDay(viewDay), viewDay === today);
 </script>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>

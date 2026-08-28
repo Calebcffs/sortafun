@@ -39,11 +39,11 @@
       <div id="lb-typing"></div>
     </div>
     <div class="board-col">
-      <h2>driving game &mdash; highest score</h2>
-      <div id="lb-driving"></div>
+      <h2>circuit race &mdash; best lap</h2>
+      <div id="lb-circuit"></div>
     </div>
     <div class="board-col">
-      <h2>puzzle of the day &mdash; fewest moves</h2>
+      <h2>tile slider &mdash; fewest moves</h2>
       <div id="lb-puzzle"></div>
     </div>
   </div>
@@ -59,7 +59,7 @@
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
-  ["typing", "driving", "puzzle"].forEach(function (game) {
+  ["typing", "circuit", "puzzle"].forEach(function (game) {
     var el = document.getElementById("lb-" + game);
     if (window.SortafunLB) SortafunLB.mountPanel(el, game, {});
     else el.textContent = "leaderboard offline";

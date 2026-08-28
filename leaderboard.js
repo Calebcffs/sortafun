@@ -5,28 +5,40 @@
  * everything degrades to "leaderboard offline" and the games keep working.
  *
  * Data model: collection "scores", one doc per submitted score:
- *   game      "typing" | "driving" | "puzzle"
+ *   game      "typing" | "driving" (retired) | "puzzle" | "circuit"
  *   name      string, 1..20 chars
  *   score     number  — the value shown to players
- *   rankValue number  — higher is always better (puzzle stores -score)
- *   day       "YYYY-MM-DD" in UTC
+ *   rankValue number  — higher is always better (puzzle/circuit store -score)
+ *   day       "YYYY-MM-DD" in Singapore time (UTC+8, no DST)
  *   ts        server timestamp
  */
 (function () {
   "use strict";
 
+  function fmtLapTime(ms) {
+    var cs = Math.floor(ms / 10) % 100;
+    var totalSec = Math.floor(ms / 1000);
+    var sec = totalSec % 60;
+    var min = Math.floor(totalSec / 60);
+    return min + ":" + String(sec).padStart(2, "0") + "." + String(cs).padStart(2, "0");
+  }
+
   var GAMES = {
-    typing:  { label: "typing game",      unit: "wpm",   better: "high" },
-    driving: { label: "driving game",     unit: "score", better: "high" },
-    puzzle:  { label: "puzzle of the day", unit: "moves", better: "low"  },
+    typing:  { label: "typing game",  unit: "wpm",   better: "high" },
+    driving: { label: "driving game", unit: "score", better: "high" }, // retired arcade dodger — kept so old scores keep meaning, no page submits to it any more
+    puzzle:  { label: "tile slider",  unit: "moves", better: "low"  },
+    circuit: { label: "circuit race", unit: "ms",    better: "low", format: fmtLapTime },
   };
 
   var SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+  var SG_OFFSET_MS = 8 * 3600 * 1000; // Singapore is fixed UTC+8, no DST
 
   var state = { ready: null, db: null, offline: false };
 
-  function utcDay(d) {
-    d = d || new Date();
+  // "day" bucket for the whole site, in Singapore time — Firestore day
+  // strings, so it doubles as the puzzle's daily seed input (puzzle.html).
+  function dayStr(d) {
+    d = d || new Date(Date.now() + SG_OFFSET_MS);
     return d.getUTCFullYear() + "-" +
       String(d.getUTCMonth() + 1).padStart(2, "0") + "-" +
       String(d.getUTCDate()).padStart(2, "0");
@@ -85,26 +97,76 @@
         name: name,
         score: score,
         rankValue: rankValueFor(game, score),
-        day: utcDay(),
+        day: dayStr(),
         ts: fs.serverTimestamp(),
       });
     });
   }
 
-  // period: "day" | "all". Returns [{ name, score }], best first, max 10.
-  function top(game, period) {
+  // Shared query runner. day: a "YYYY-MM-DD" string to filter to, or null/
+  // undefined for no day filter (all-time). Same index either way — day is
+  // just an extra equality filter ahead of the rankValue sort.
+  function runScoreQuery(game, day, n) {
     return init().then(function () {
       var fs = state.fs;
       var parts = [fs.collection(state.db, "scores"), fs.where("game", "==", game)];
-      if (period === "day") parts.push(fs.where("day", "==", utcDay()));
+      if (day) parts.push(fs.where("day", "==", day));
       parts.push(fs.orderBy("rankValue", "desc"));
-      parts.push(fs.limit(10));
+      parts.push(fs.limit(n));
       var q = fs.query.apply(null, parts);
       return fs.getDocs(q).then(function (snap) {
         var out = [];
         snap.forEach(function (doc) {
           var d = doc.data();
           out.push({ name: d.name, score: d.score });
+        });
+        return out;
+      });
+    });
+  }
+
+  // period: "day" | "all". Returns [{ name, score }], best first, max 10.
+  function top(game, period) {
+    return runScoreQuery(game, period === "day" ? dayStr() : null, 10);
+  }
+
+  // Top n scores for one specific day (any past day, not just today) — used
+  // by the tile slider archive page. Returns [{ name, score }], best first.
+  function topDay(game, day, n) {
+    return runScoreQuery(game, day, n || 10);
+  }
+
+  // Which days in [fromDay, toDay) actually have a score, and that day's
+  // best — one query for a whole range, instead of one query per day.
+  // Returns [{ day, name, score }], best-first within each day, so the
+  // first row seen per day is that day's best. Sorted day DESC (not asc):
+  // this isn't capped per-day, so if a year's worth of scores ever exceeds
+  // `limit` docs, truncation drops the *oldest* days, not the newest —
+  // recent months (the ones people actually browse to) stay intact.
+  // Needs a (game ASC, day DESC, rankValue DESC) composite index — see
+  // firestore.indexes.json. If Firestore hasn't been given that index yet,
+  // this query fails and the calendar just shows no highlighted days; open
+  // the browser console for the direct "create index" link.
+  function bestByDay(game, fromDay, toDay, limit) {
+    return init().then(function () {
+      var fs = state.fs;
+      var q = fs.query(
+        fs.collection(state.db, "scores"),
+        fs.where("game", "==", game),
+        fs.where("day", ">=", fromDay),
+        fs.where("day", "<", toDay),
+        fs.orderBy("day", "desc"),
+        fs.orderBy("rankValue", "desc"),
+        fs.limit(limit || 5000)
+      );
+      return fs.getDocs(q).then(function (snap) {
+        var seen = {};
+        var out = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          if (seen[d.day]) return;
+          seen[d.day] = true;
+          out.push({ day: d.day, name: d.name, score: d.score });
         });
         return out;
       });
@@ -118,6 +180,10 @@
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
+  }
+
+  function fmtScore(g, score) {
+    return g.format ? g.format(score) : score + " " + g.unit;
   }
 
   // opts: { score?: number, onSubmitted?: fn }  — pass score to show the submit row
@@ -153,7 +219,7 @@
       rows.forEach(function (r) {
         var li = el("li");
         li.appendChild(el("span", "lb-name", r.name));
-        li.appendChild(el("span", "lb-score", r.score + " " + g.unit));
+        li.appendChild(el("span", "lb-score", fmtScore(g, r.score)));
         listEl.appendChild(li);
       });
     }
@@ -183,7 +249,7 @@
       var form = el("div", "lb-submit");
       form.innerHTML =
         '<input class="lb-input" maxlength="20" placeholder="your name" autocomplete="off" spellcheck="false">' +
-        '<button class="lb-go">submit ' + opts.score + " " + g.unit + "</button>";
+        '<button class="lb-go">submit ' + fmtScore(g, opts.score) + "</button>";
       root.insertBefore(form, root.querySelector(".lb-list"));
       var input = form.querySelector(".lb-input");
       var go = form.querySelector(".lb-go");
@@ -196,7 +262,7 @@
         go.textContent = "sending...";
         try { localStorage.setItem("sortafun-name", name); } catch (e) {}
         submit(game, name, opts.score).then(function () {
-          form.innerHTML = '<span class="lb-ok">saved! ' + name + " · " + opts.score + " " + g.unit + "</span>";
+          form.innerHTML = '<span class="lb-ok">saved! ' + name + " · " + fmtScore(g, opts.score) + "</span>";
           if (opts.onSubmitted) opts.onSubmitted();
           load();
         }).catch(function (e) {
@@ -242,9 +308,11 @@
 
   window.SortafunLB = {
     GAMES: GAMES,
-    utcDay: utcDay,
+    dayStr: dayStr,
     submit: submit,
     top: top,
+    topDay: topDay,
+    bestByDay: bestByDay,
     mountPanel: mountPanel,
   };
 })();
