@@ -8,7 +8,7 @@
   html, body {
     margin: 0;
     padding: 0;
-    background: #fff;
+    background: #05060f;
     overflow: hidden;
     font-family: "Comic Sans MS", "Segoe Print", cursive;
   }
@@ -18,27 +18,39 @@
     left: 8px;
     bottom: 6px;
     font-size: 13px;
-    color: #444;
+    color: #9fb4ff;
+    text-shadow: 0 0 6px #1b2b8a;
     transition: opacity .25s ease;
   }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter pipe &nbsp;&middot;&nbsp; click a box &nbsp;&middot;&nbsp; run right for the gallery</div>
+<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter pipe &nbsp;&middot;&nbsp; click a sign &nbsp;&middot;&nbsp; run right for the gallery</div>
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const hintEl = document.getElementById("hint");
 
+// --- palette: white paper world repainted for deep space ---
+const INK = "#eafcff";     // light line art (was #000)
+const PAPER = "#0a0c1a";   // dark fills (was #fff)
+const GLOW = "#39ff14";    // radioactive early-web green
+
 const PIPES = [
-  { label: "crossword game",    url: "crossword.html" },
-  { label: "tile slider",        url: "puzzle.html" },
-  { label: "circuit race",       url: "driving.html" },
-  { label: "typing game",        url: "typing.html" },
-  { label: "forum",              url: "forum.html" },
-  { label: "leaderboards",       url: "leaderboards.html" },
+  { label: "crossword game", url: "crossword.html",    btn: "assets/btn-crossword.png",    ar: 152 / 63 },
+  { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72 },
+  { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69 },
+  { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65 },
+  { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58 },
+  { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64 },
 ];
+PIPES.forEach((p) => { p.img = new Image(); p.img.src = p.btn; });
+
+const pipeImg = new Image(); pipeImg.src = "assets/pipe.png";
+const PIPE_AR = 44 / 31;
+const signImg = new Image(); signImg.src = "assets/art-gallery-sign.png";
+const SIGN_AR = 252 / 124;
 
 // gallery photos live in art/ (1200x846 each). caption text is deliberately
 // illegible — squiggles on a little plaque.
@@ -58,6 +70,8 @@ let pipeLayout = [];
 let frames = [];
 let WORLD_W = 0;
 let menuMidX = 0, galleryMidX = 0;
+let signRect = null;
+let stars = [];
 
 let camX = 0;
 let previewT = 0;      // 0 = preview tucked below the floor, 1 = fully up
@@ -97,34 +111,65 @@ function jump() {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
+function seedStars() {
+  stars = [];
+  let seed = 0x9e3779b9;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const n = Math.round((W * H) / 4200);
+  for (let i = 0; i < n; i++) {
+    stars.push({
+      x: rnd() * W,
+      y: rnd() * H,
+      r: rnd() * 1.7 + 0.4,
+      tw: rnd() * Math.PI * 2,
+      layer: rnd() < 0.55 ? 0.25 : 0.6,   // parallax factor
+      warm: rnd() < 0.3,
+    });
+  }
+}
+
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
   groundY = Math.min(H - 90, H * 0.62 + 60);
   wallTop = 80;
 
-  // --- menu boxes, laid out across the first screenful ---
-  const boxTop = 90;
-  const boxH = 90;
-  const gap = 24;
-  const totalGap = gap * (PIPES.length + 1);
-  const boxW = Math.min(180, (W - totalGap) / PIPES.length);
-  const usedW = boxW * PIPES.length + gap * (PIPES.length - 1);
-  const startX = (W - usedW) / 2;
+  // --- menu signs, hand-drawn, laid out across the first screenful ---
+  const boxTop = 104;
+  const n = PIPES.length;
+  const gapK = 0.26;                       // gap as a fraction of sign height
+  const arSum = PIPES.reduce((a, p) => a + p.ar, 0);
+  const spanK = arSum + gapK * (n - 1);    // total row width = boxH * spanK
+  let boxH = Math.min(84, H * 0.13);
+  const maxW = W - 36;
+  if (boxH * spanK > maxW) boxH = maxW / spanK;
+  const gap = boxH * gapK;
+  const widths = PIPES.map((p) => boxH * p.ar);
+  const total = boxH * spanK;
+  let x = (W - total) / 2;
+
+  const pipeW = Math.min(56, boxH * 0.7);
+  const pipeH = pipeW / PIPE_AR;
 
   pipeLayout = PIPES.map((p, i) => {
-    const boxX = startX + i * (boxW + gap);
+    const boxX = x;
+    const boxW = widths[i];
     const cx = boxX + boxW / 2;
+    x += boxW + gap;
     return {
       ...p,
       boxX, boxTop, boxW, boxH,
-      pipeW: 52,
-      pipeH: 34,
-      pipeX: cx - 26,
+      pipeW, pipeH,
+      pipeX: cx - pipeW / 2,
       cx,
     };
   });
   menuMidX = W / 2;
+
+  // --- art gallery sign, pinned to the top-right corner ---
+  const signW = Math.min(158, W * 0.20);
+  const signH = signW / SIGN_AR;
+  signRect = { x: W - signW - 14, y: 8, w: signW, h: signH };
 
   // --- gallery, off to the right ---
   const frameH = Math.min((groundY - wallTop) * 0.60, W * 0.27);
@@ -142,6 +187,7 @@ function resize() {
   galleryMidX = (galleryX0 + lastRight) / 2;
 
   guy.x = clamp(guy.x, 20, WORLD_W - 20);
+  seedStars();
 }
 window.addEventListener("resize", resize);
 resize();
@@ -236,56 +282,149 @@ function update() {
 }
 
 let t = 0;
+
+function drawStars() {
+  for (const s of stars) {
+    let sx = ((s.x - camX * s.layer) % W + W) % W;
+    const tw = 0.45 + 0.55 * Math.sin(t * 0.05 + s.tw);
+    ctx.globalAlpha = 0.25 + tw * 0.75;
+    ctx.fillStyle = s.warm ? "#ffd9a8" : (s.layer < 0.4 ? "#9fb4ff" : "#ffffff");
+    ctx.fillRect(sx, s.y, s.r, s.r);
+    if (s.r > 1.5) {
+      ctx.globalAlpha *= 0.5;
+      ctx.fillRect(sx - s.r, s.y + s.r * 0.5, s.r * 3, 0.7);
+      ctx.fillRect(sx + s.r * 0.5, s.y - s.r, 0.7, s.r * 3);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawSpaceBg() {
+  ctx.fillStyle = "#05060f";
+  ctx.fillRect(0, 0, W, H);
+  // a couple of cheap nebula blooms, gently drifting with the camera
+  const blobs = [
+    { x: W * 0.20 - camX * 0.15, y: H * 0.30, r: W * 0.45, c: "rgba(90,30,160,0.30)" },
+    { x: W * 0.85 - camX * 0.10, y: H * 0.65, r: W * 0.40, c: "rgba(15,120,170,0.25)" },
+    { x: W * 0.55 - camX * 0.20, y: H * 0.15, r: W * 0.35, c: "rgba(200,40,120,0.18)" },
+  ];
+  for (const b of blobs) {
+    const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+    g.addColorStop(0, b.c);
+    g.addColorStop(1, "rgba(5,6,15,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  drawStars();
+}
+
+function drawSpinTitle(cx, cy) {
+  const text = "SORTAFUN.ORG";
+  const sx = Math.cos(t * 0.03);            // horizontal squash → WordArt spin
+  const spin = Math.abs(sx) < 0.02 ? (sx < 0 ? -0.02 : 0.02) : sx;
+
+  const fs = Math.min(40, Math.round(W / 20));
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `bold ${fs}px 'Comic Sans MS', 'Arial Black', Impact, sans-serif`;
+
+  const depth = 9;
+  for (let i = depth; i >= 1; i--) {
+    const k = i / depth;                    // 1 = far back, near 0 = front
+    ctx.save();
+    ctx.transform(spin, 0, 0, 1, 3 * i, 2.4 * i);
+    ctx.fillStyle = `rgb(${Math.round(30 + 40 * (1 - k))}, ${Math.round(6 + 18 * (1 - k))}, ${Math.round(70 + 60 * (1 - k))})`;
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+
+  // shiny front face
+  ctx.save();
+  ctx.transform(spin, 0, 0, 1, 0, 0);
+  const grad = ctx.createLinearGradient(0, -22, 0, 22);
+  grad.addColorStop(0, "#fff6b0");
+  grad.addColorStop(0.45, "#ffd23f");
+  grad.addColorStop(0.55, "#ff9de2");
+  grad.addColorStop(1, "#7ce7ff");
+  ctx.fillStyle = grad;
+  ctx.fillText(text, 0, 0);
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "#2a0b4e";
+  ctx.strokeText(text, 0, 0);
+  // hot glint
+  ctx.restore();
+
+  ctx.restore();
+}
+
 function draw() {
   t += 1;
+
+  // start every frame from a known-clean context state
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+
+  const pulse = 0.5 + 0.5 * Math.sin(t * 0.06);   // shared glow throb
 
   const targetCam = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
   camX += (targetCam - camX) * 0.16;
   if (Math.abs(targetCam - camX) < 0.4) camX = targetCam;
 
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, H);
+  drawSpaceBg();
 
   // ---------- world space ----------
   ctx.save();
   ctx.translate(-camX, 0);
 
-  ctx.strokeStyle = "#000";
-  ctx.fillStyle = "#000";
+  ctx.strokeStyle = INK;
+  ctx.fillStyle = INK;
   ctx.lineWidth = 2;
   ctx.textAlign = "center";
 
-  ctx.font = "38px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillText("SORTAFUN.ORG", menuMidX, 56);
+  drawSpinTitle(menuMidX, 52);
+
+  // art gallery sign, pinned by the title
+  if (signRect && signImg.complete && signImg.naturalWidth) {
+    ctx.save();
+    ctx.shadowColor = "#7ce7ff";
+    ctx.shadowBlur = 12 + pulse * 8;
+    ctx.drawImage(signImg, signRect.x, signRect.y, signRect.w, signRect.h);
+    ctx.restore();
+  }
 
   ctx.font = "30px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillStyle = INK;
   ctx.fillText("art gallery", galleryMidX, 52);
 
   // signposts in the gap between the two rooms
   ctx.font = "15px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillStyle = "#999";
+  ctx.fillStyle = "#7f8bd6";
   ctx.textAlign = "left";
   ctx.fillText("the art gallery, this way  →", W + 40, groundY - 42);
   ctx.fillText("←  back to the lobby", W + 40, groundY - 16);
   ctx.textAlign = "center";
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = INK;
 
-  // menu boxes
-  ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
-  for (const p of pipeLayout) {
-    roundRect(p.boxX, p.boxTop, p.boxW, p.boxH, 12);
-    ctx.stroke();
-    const words = p.label.split(" ");
-    const lines = [];
-    let cur = "";
-    for (const w of words) {
-      if ((cur + " " + w).trim().length > 12) { lines.push(cur.trim()); cur = w; }
-      else cur += " " + w;
+  // menu signs — hand-drawn buttons, cut to their wonky outline and glowing
+  for (let i = 0; i < pipeLayout.length; i++) {
+    const p = pipeLayout[i];
+    if (p.img.complete && p.img.naturalWidth) {
+      const hue = (i / pipeLayout.length) * 300 + t * 0.6;
+      ctx.save();
+      // two passes of glow so it reads against the stars
+      ctx.shadowColor = `hsl(${hue}, 100%, 65%)`;
+      ctx.shadowBlur = 14 + pulse * 12;
+      ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
+      ctx.shadowBlur = 6 + pulse * 6;
+      ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
+      ctx.restore();
+    } else {
+      ctx.strokeStyle = INK;
+      ctx.strokeRect(p.boxX, p.boxTop, p.boxW, p.boxH);
     }
-    if (cur.trim()) lines.push(cur.trim());
-    const ly = p.boxTop + p.boxH / 2 - (lines.length - 1) * 11 + 5;
-    lines.forEach((ln, i) => ctx.fillText(ln, p.cx, ly + i * 22));
   }
 
   // gallery frames on the wall
@@ -296,16 +435,17 @@ function draw() {
   // a little potted plant by the gallery door, for coziness
   drawPlant(frames[0].cx - frames[0].w / 2 - 34, groundY);
 
-  // pipes poking out of the floor
+  // Mario pipes poking out of the floor
   const { p: near, d: nearD } = nearestPipe();
   for (const p of pipeLayout) {
-    ctx.fillStyle = "#1faf3a";
-    ctx.fillRect(p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
+    if (pipeImg.complete && pipeImg.naturalWidth) {
+      ctx.drawImage(pipeImg, p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
+    } else {
+      ctx.fillStyle = "#1faf3a";
+      ctx.fillRect(p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
+    }
     if (p === near && nearD < 34 && guy.onGround && !guy.entering) {
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = GLOW;
       ctx.font = "20px 'Comic Sans MS', cursive";
       ctx.fillText("↓", p.cx, groundY - p.pipeH - 10);
       ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
@@ -318,22 +458,23 @@ function draw() {
   // ---------- /world space ----------
 
   // floor line — continuous everywhere, so it stays in screen space
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = GLOW;
   ctx.lineWidth = 2;
+  ctx.shadowColor = GLOW;
+  ctx.shadowBlur = 12;
   ctx.beginPath();
   ctx.moveTo(0, groundY);
   ctx.lineTo(W, groundY);
   ctx.stroke();
+  ctx.shadowBlur = 0;
 
   drawPreview();
-
-  requestAnimationFrame(loop);
 }
 
 // cover-fit an image into a rect, cropping the overflow
 function drawImageCover(img, x, y, w, h) {
   if (!img.complete || !img.naturalWidth) {
-    ctx.fillStyle = "#eee";
+    ctx.fillStyle = "#1a1d33";
     ctx.fillRect(x, y, w, h);
     return;
   }
@@ -350,7 +491,7 @@ function drawFrame(f) {
   const y = wallTop + 6;
 
   // hanging wire
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = INK;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(f.cx - f.w * 0.28, y);
@@ -359,30 +500,30 @@ function drawFrame(f) {
   ctx.stroke();
 
   // frame + mat + photo
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#1a1208";
   ctx.fillRect(x - 6, y - 6, f.w + 12, f.h + 12);
   ctx.fillStyle = "#fff";
   ctx.fillRect(x - 3, y - 3, f.w + 6, f.h + 6);
   drawImageCover(f.art.img, x, y, f.w, f.h);
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, f.w, f.h);
 
   // illegible plaque under the frame
   const pw = 96, ph = 26;
   const py = y + f.h + 12;
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = "#e9e4d0";
   ctx.fillRect(f.cx - pw / 2, py, pw, ph);
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = INK;
   ctx.lineWidth = 1.5;
   ctx.strokeRect(f.cx - pw / 2, py, pw, ph);
-  squiggle(f.cx - pw / 2 + 8, py + 9, pw - 16, 1.4, 3);
-  squiggle(f.cx - pw / 2 + 8, py + 17, pw - 22, 1.4, 3);
+  squiggle(f.cx - pw / 2 + 8, py + 9, pw - 16, 1.4, 3, "#555");
+  squiggle(f.cx - pw / 2 + 8, py + 17, pw - 22, 1.4, 3, "#555");
 }
 
 // a wobbly horizontal scribble standing in for text
-function squiggle(x, y, w, amp, waves) {
-  ctx.strokeStyle = "#333";
+function squiggle(x, y, w, amp, waves, color) {
+  ctx.strokeStyle = color || INK;
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   const steps = Math.max(12, Math.floor(w / 4));
@@ -396,8 +537,8 @@ function squiggle(x, y, w, amp, waves) {
 }
 
 function drawPlant(x, baseY) {
-  ctx.strokeStyle = "#000";
-  ctx.fillStyle = "#fff";
+  ctx.strokeStyle = INK;
+  ctx.fillStyle = PAPER;
   ctx.lineWidth = 2;
   // pot
   ctx.beginPath();
@@ -438,14 +579,18 @@ function drawPreview() {
   const x0 = (W - total) / 2;
   const y0 = groundY + pad + slide;
 
+  // backing panel so the photo reads against the stars
+  ctx.fillStyle = "rgba(8,10,26,0.92)";
+  ctx.fillRect(0, groundY + 1, W, bandH);
+
   // photo, contained, framed
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#1a1208";
   ctx.fillRect(x0 - 4, y0 - 4, photoW + 8, photoH + 8);
   const img = shownArt.art.img;
   if (img.complete && img.naturalWidth) {
     ctx.drawImage(img, x0, y0, photoW, photoH);
   } else {
-    ctx.fillStyle = "#eee";
+    ctx.fillStyle = "#1a1d33";
     ctx.fillRect(x0, y0, photoW, photoH);
   }
 
@@ -454,7 +599,7 @@ function drawPreview() {
   const lines = 4;
   for (let i = 0; i < lines; i++) {
     const ly = y0 + 14 + (photoH - 24) * (i / (lines - 1));
-    squiggle(cx, ly, capW * (i === lines - 1 ? 0.55 : 0.92), 2, 4 + i);
+    squiggle(cx, ly, capW * (i === lines - 1 ? 0.55 : 0.92), 2, 4 + i, INK);
   }
 
   ctx.restore();
@@ -462,8 +607,8 @@ function drawPreview() {
 
 function drawGuy() {
   ctx.save();
-  ctx.strokeStyle = "#000";
-  ctx.fillStyle = "#fff";
+  ctx.strokeStyle = INK;
+  ctx.fillStyle = PAPER;
   ctx.lineWidth = 2;
 
   let feetY = groundY + guy.yOff;
@@ -525,8 +670,13 @@ function roundRect(x, y, w, h, r) {
 }
 
 function loop() {
-  update();
-  draw();
+  try {
+    update();
+    draw();
+  } catch (err) {
+    console.error(err);   // never let one bad frame freeze input
+  }
+  requestAnimationFrame(loop);
 }
 loop();
 </script>
