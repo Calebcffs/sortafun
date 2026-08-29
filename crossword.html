@@ -6,62 +6,119 @@
 <title>crossword game &middot; SORTAFUN.ORG</title>
 <link rel="stylesheet" href="game.css">
 <style>
-  table { border-collapse: collapse; margin: 0 auto; }
-  td { padding: 0; position: relative; }
-  td.blank { background: #000; }
-  td input {
-    width: 46px; height: 46px;
-    border: 2px solid #000;
-    text-align: center;
-    font-size: 22px;
-    text-transform: uppercase;
-    background: #fff;
-    outline: none;
+  :root { --cs: 34px; }
+  .board {
+    display: flex;
+    gap: 22px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-top: 8px;
   }
-  td input.good { background: #d6f5d6; }
-  td input.bad  { background: #f7d6d6; }
-  td .num {
-    position: absolute;
-    top: 1px; left: 3px;
-    font-size: 10px;
-    color: #333;
+  .gridwrap { flex: 0 0 auto; }
+
+  .cluebar {
+    max-width: calc(var(--cs) * 15 + 4px);
+    margin: 0 auto 8px;
+    min-height: 40px;
+    border: 2px solid #000;
+    background: #ffe9a8;
+    padding: 6px 10px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  .cluebar b { flex: none; }
+
+  table.xw { border-collapse: collapse; margin: 0 auto; table-layout: fixed; border: 3px solid #000; }
+  table.xw td {
+    width: var(--cs); height: var(--cs);
+    padding: 0; position: relative;
+    border: 1px solid #000;
+    background: #fff;
+  }
+  table.xw td.block { background: #000; }
+  table.xw td .num {
+    position: absolute; top: 0; left: 1px;
+    font-size: 9px; line-height: 1;
+    color: #333; pointer-events: none; z-index: 2;
+  }
+  table.xw td input {
+    width: 100%; height: 100%;
+    border: 0; margin: 0; padding: 0;
+    text-align: center;
+    font-family: inherit;
+    font-size: calc(var(--cs) * 0.56);
+    text-transform: uppercase;
+    background: transparent;
+    color: #000;
+    outline: none;
+    caret-color: transparent;
+  }
+  table.xw td.word input { background: #d7ecff; }
+  table.xw td.cursor input { background: #ffd23f; }
+  table.xw td.good input { color: #1a7f1a; }
+  table.xw td.bad  input { color: #c02020; }
+  table.xw td.bad::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(to top left, transparent 45%, #c02020 45%, #c02020 55%, transparent 55%);
     pointer-events: none;
   }
-  .clues {
-    display: flex;
-    gap: 24px;
-    justify-content: center;
-    margin-top: 20px;
+
+  .controls { margin-top: 14px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .controls button { font-size: 14px; padding: 6px 12px; }
+
+  .cluecols {
+    display: flex; gap: 22px;
     text-align: left;
-    flex-wrap: wrap;
+    max-width: 620px;
   }
-  .clues h3 { margin: 0 0 6px; font-size: 15px; }
-  .clues ol { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.7; }
-  .controls { margin-top: 16px; display: flex; gap: 10px; justify-content: center; }
+  .cluecols .col { flex: 1 1 0; min-width: 0; }
+  .cluecols h3 { margin: 0 0 6px; font-size: 15px; border-bottom: 2px solid #000; }
+  .cluelist { list-style: none; margin: 0; padding: 0; font-size: 13px; line-height: 1.5; max-height: 340px; overflow-y: auto; }
+  .cluelist li { display: flex; gap: 6px; padding: 2px 4px; cursor: pointer; }
+  .cluelist li .n { flex: none; font-weight: bold; min-width: 22px; text-align: right; }
+  .cluelist li:hover { background: #f0f0f0; }
+  .cluelist li.on { background: #ffe9a8; }
+
+  @media (max-width: 760px) {
+    .board { gap: 12px; }
+    .cluecols { gap: 12px; }
+    .cluelist { font-size: 12px; max-height: none; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" style="max-width:760px;">
   <h1>crossword game</h1>
-  <p class="sub">a 5&times;5 word square. every row and column is a word.</p>
+  <p class="sub" id="sub">loading&hellip;</p>
 
-  <table id="grid"></table>
+  <div class="cluebar" id="cluebar" title="tap to switch across / down">&nbsp;</div>
 
-  <div class="controls">
-    <button id="check">check</button>
-    <button id="reveal">reveal</button>
-    <button id="clearBtn">clear</button>
-  </div>
-  <div class="status" id="status"></div>
-
-  <div class="clues">
-    <div>
-      <h3>across</h3>
-      <ol id="across"></ol>
+  <div class="board">
+    <div class="gridwrap">
+      <table class="xw" id="grid"></table>
+      <div class="controls">
+        <button id="check">check</button>
+        <button id="revealSq">reveal square</button>
+        <button id="revealAll">reveal grid</button>
+        <button id="clearBtn">clear</button>
+      </div>
+      <div class="status" id="status"></div>
     </div>
-    <div>
-      <h3>down</h3>
-      <ol id="down"></ol>
+
+    <div class="cluecols">
+      <div class="col">
+        <h3>across</h3>
+        <ul class="cluelist" id="across"></ul>
+      </div>
+      <div class="col">
+        <h3>down</h3>
+        <ul class="cluelist" id="down"></ul>
+      </div>
     </div>
   </div>
 
@@ -69,129 +126,476 @@
 </div>
 
 <script>
-const SOL = [
-  "HEART",
-  "EMBER",
-  "ABUSE",
-  "RESIN",
-  "TREND",
-];
-const N = 5;
+/* SNACKY BUT THEMELESS — 15x15, from Crosswords/20260701 SNACKY BUT THEMELESS v4.ipuz */
+const PUZZLE = {
+  title: "SNACKY BUT THEMELESS",
+  author: "Caleb Clayton",
+  notes: "First puzzle, good luck",
+  id: "snacky-themeless-20260701",
+  rows: [
+    "##BAILS#MRT#ASK",
+    "##ANNIE#UAE#MOI",
+    "##STANS#SEENFIT",
+    "OAS#LEACH#TERRE",
+    "AHA#LAMA#THREES",
+    "TOMS#RENEE#VEE#",
+    "HYPED#STACHE###",
+    "###ROTE#SHAG###",
+    "###REHEAT#MANTA",
+    "#PEA#IDLED#SEAL",
+    "WASTES#ORES#MIA",
+    "ONSEN#STENO#ELS",
+    "READSTO#GASPS##",
+    "KEY#UHS#GLARE##",
+    "SRS#ECO#SIDES##",
+  ],
+  across: [
+    [1, "Suddenly cancels plans, or gets out of jail"],
+    [6, "Singapore's rail network acronym"],
+    [9, "“__ and you shall receive”"],
+    [12, "Smooth criminal victim"],
+    [13, "Country with the world's tallest skyscraper and deepest manmade pool"],
+    [14, "Excusez-__"],
+    [15, "Superfans, informally"],
+    [16, "Deemed passable"],
+    [18, "Vowels not found in 'equip'"],
+    [20, "Wash out by a solvent, animal homophone"],
+    [22, "Earth in French,"],
+    [23, "Eureka sound"],
+    [24, "Leader in Tibetan Buddhism, animal homophone"],
+    [25, "Points scored from a distance in basketball"],
+    [26, "Parts of a drumkit"],
+    [28, "Actor ___ Zellweger"],
+    [30, "Between U and W"],
+    [31, "Super excited"],
+    [33, "Short for something hairy on the upper lip"],
+    [35, "Through mechanical repetition, ___ learning"],
+    [37, "Super tired, in Singapore slang"],
+    [38, "Make warm again"],
+    [40, "Type of ray"],
+    [44, "Butterfly ___ Rice is blue"],
+    [46, "Kept the car running"],
+    [48, "Aquatic mammal and Rock singer"],
+    [49, "Consumes carelessly"],
+    [51, "Mineral deposits"],
+    [53, "Female name or unaccounted for in battle"],
+    [54, "Spa or egg"],
+    [55, "Shortform for court typist"],
+    [56, "Before ems"],
+    [57, "A parent who wants their kids to hear bedtime stories _____ __ them"],
+    [59, "Intakes breath sharply"],
+    [61, "Skeleton ___"],
+    [62, "Filler words"],
+    [63, "Fierce look"],
+    [64, "R U ___?!"],
+    [65, "Environmentally conscious"],
+    [66, "A mobius strip has just one"],
+  ],
+  down: [
+    [1, "Major source of concert vibration"],
+    [2, "Small insect with 2 stomachs"],
+    [3, "All __ ___ (Meaning at the end of the day)"],
+    [4, "Straight not curvy"],
+    [5, "One of many on a bagel"],
+    [6, "Porridgey paste"],
+    [7, "Call Me Maybe singer Carly __ Jepsen"],
+    [8, "Features of gears"],
+    [9, "“I'll check my calendar to see if I __ ____”"],
+    [10, "Evening gathering or party, from French"],
+    [11, "Picnic toys or birds of prey"],
+    [17, "Type of chemical weapon"],
+    [18, "Promise"],
+    [19, "“Chips ___!”"],
+    [21, "“You ___ say that!”"],
+    [25, "The practical application of science, in short"],
+    [27, "Toothed and sharp edge"],
+    [29, "Small well hidden clues or features"],
+    [32, "__, a deer"],
+    [34, "Amateur radio or with green eggs"],
+    [36, "Meta clue?"],
+    [39, "Much of"],
+    [41, "Greatest enemies"],
+    [42, "Follow a suspect"],
+    [43, "Exclamation of grief"],
+    [44, "Indian cheese"],
+    [45, "Writings, from the French for attempt"],
+    [47, "Highest peak in the US"],
+    [49, "Collection of creative pieces, like Shakespeare's"],
+    [50, "Chaos could ____ (follow)"],
+    [52, "“Too bad, ____!”"],
+    [55, "Mid"],
+    [58, "Main psychoactive compound in cannibis"],
+    [60, "Word before fix or historic"],
+  ],
+};
 
-const ACROSS = [
-  [1, "Ticker in your chest"],
-  [6, "Glowing scrap in a dying fire"],
-  [7, "Mistreat badly"],
-  [8, "Sticky sap from pine trees"],
-  [9, "The direction things are moving"],
-];
-const DOWN = [
-  [1, "It can skip a beat"],
-  [2, "Campfire leftover (yes, again)"],
-  [3, "Wrongly use"],
-  [4, "What a violinist rubs on the bow"],
-  [5, "'#___ing' on social media"],
-];
+const N = 15;
+const sub = document.getElementById("sub");
+sub.textContent = "“" + PUZZLE.title + "” · by " + PUZZLE.author + " · " + PUZZLE.notes;
 
-// numbers: row starts get 1,6,7,8,9 ; col starts get 1,2,3,4,5
-const NUMS = {};
-NUMS["0,0"] = 1;
-NUMS["0,1"] = 2; NUMS["0,2"] = 3; NUMS["0,3"] = 4; NUMS["0,4"] = 5;
-NUMS["1,0"] = 6; NUMS["2,0"] = 7; NUMS["3,0"] = 8; NUMS["4,0"] = 9;
+const isWhite = (r, c) => r >= 0 && c >= 0 && r < N && c < N && PUZZLE.rows[r][c] !== "#";
 
+// numbering + entries, derived from grid geometry
+const cellNum = {};
+let counter = 0;
+for (let r = 0; r < N; r++) {
+  for (let c = 0; c < N; c++) {
+    if (!isWhite(r, c)) continue;
+    const aStart = !isWhite(r, c - 1) && isWhite(r, c + 1);
+    const dStart = !isWhite(r - 1, c) && isWhite(r + 1, c);
+    if (aStart || dStart) cellNum[r + "," + c] = ++counter;
+  }
+}
+
+function buildEntries(dir) {
+  const list = [];
+  const clueMap = new Map((dir === "across" ? PUZZLE.across : PUZZLE.down));
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (!isWhite(r, c)) continue;
+      const isStart = dir === "across"
+        ? (!isWhite(r, c - 1) && isWhite(r, c + 1))
+        : (!isWhite(r - 1, c) && isWhite(r + 1, c));
+      if (!isStart) continue;
+      const num = cellNum[r + "," + c];
+      const cells = [];
+      let rr = r, cc = c;
+      while (isWhite(rr, cc)) {
+        cells.push([rr, cc]);
+        if (dir === "across") cc++; else rr++;
+      }
+      list.push({ dir, num, r, c, cells, clue: clueMap.get(num) || "(missing clue)" });
+    }
+  }
+  return list;
+}
+const entries = { across: buildEntries("across"), down: buildEntries("down") };
+
+// per-cell lookup of which entry it belongs to, in each direction
+const cellEntry = {}; // "r,c" -> {across: entry|null, down: entry|null}
+for (const dir of ["across", "down"]) {
+  for (const e of entries[dir]) {
+    for (const [r, c] of e.cells) {
+      const k = r + "," + c;
+      (cellEntry[k] || (cellEntry[k] = { across: null, down: null }))[dir] = e;
+    }
+  }
+}
+
+// ---- build the grid DOM ----
 const grid = document.getElementById("grid");
-const inputs = [];
-
+const inputAt = {}; // "r,c" -> <input>
+const tdAt = {};
 for (let r = 0; r < N; r++) {
   const tr = document.createElement("tr");
-  inputs[r] = [];
   for (let c = 0; c < N; c++) {
     const td = document.createElement("td");
-    const key = r + "," + c;
-    if (NUMS[key]) {
-      const num = document.createElement("span");
-      num.className = "num";
-      num.textContent = NUMS[key];
-      td.appendChild(num);
-    }
-    const inp = document.createElement("input");
-    inp.maxLength = 1;
-    inp.dataset.r = r;
-    inp.dataset.c = c;
-    inp.addEventListener("input", () => {
-      inp.value = inp.value.replace(/[^a-zA-Z]/g, "").toUpperCase();
-      inp.classList.remove("good", "bad");
-      if (inp.value && c < N - 1) inputs[r][c + 1].focus();
-    });
-    inp.addEventListener("keydown", (e) => {
-      const rr = +inp.dataset.r, cc = +inp.dataset.c;
-      if (e.key === "ArrowRight" && cc < N - 1) inputs[rr][cc + 1].focus();
-      if (e.key === "ArrowLeft" && cc > 0) inputs[rr][cc - 1].focus();
-      if (e.key === "ArrowDown" && rr < N - 1) inputs[rr + 1][cc].focus();
-      if (e.key === "ArrowUp" && rr > 0) inputs[rr - 1][cc].focus();
-      if (e.key === "Backspace" && !inp.value && cc > 0) {
-        inputs[rr][cc - 1].focus();
-        e.preventDefault();
+    if (!isWhite(r, c)) {
+      td.className = "block";
+    } else {
+      const k = r + "," + c;
+      if (cellNum[k]) {
+        const s = document.createElement("span");
+        s.className = "num";
+        s.textContent = cellNum[k];
+        td.appendChild(s);
       }
-    });
-    td.appendChild(inp);
+      const inp = document.createElement("input");
+      inp.maxLength = 1;
+      inp.autocapitalize = "characters";
+      inp.setAttribute("autocomplete", "off");
+      inp.setAttribute("aria-label", "row " + (r + 1) + " column " + (c + 1));
+      inp.dataset.r = r;
+      inp.dataset.c = c;
+      td.appendChild(inp);
+      inputAt[k] = inp;
+      tdAt[k] = td;
+    }
     tr.appendChild(td);
-    inputs[r][c] = inp;
   }
   grid.appendChild(tr);
 }
 
-function fillClues(el, arr) {
-  arr.forEach(([n, clue]) => {
-    const li = document.createElement("li");
-    li.value = n;
-    li.textContent = clue;
-    el.appendChild(li);
+// ---- state ----
+let cur = firstCell();
+let dir = "across";
+
+function firstCell() {
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (isWhite(r, c)) return [r, c];
+  return [0, 0];
+}
+
+function activeEntry() {
+  const k = cur[0] + "," + cur[1];
+  const ce = cellEntry[k];
+  if (!ce) return null;
+  return ce[dir] || ce[dir === "across" ? "down" : "across"];
+}
+
+// ---- rendering ----
+const cluebar = document.getElementById("cluebar");
+
+function paint() {
+  const e = activeEntry();
+  const wordSet = new Set(e ? e.cells.map(([r, c]) => r + "," + c) : []);
+  for (const k in tdAt) {
+    const td = tdAt[k];
+    td.classList.toggle("word", wordSet.has(k) && k !== cur[0] + "," + cur[1]);
+    td.classList.toggle("cursor", k === cur[0] + "," + cur[1]);
+  }
+  if (e) {
+    cluebar.innerHTML = "";
+    const b = document.createElement("b");
+    b.textContent = e.num + (e.dir === "across" ? "A" : "D");
+    cluebar.appendChild(b);
+    cluebar.appendChild(document.createTextNode(e.clue));
+  }
+  for (const dd of ["across", "down"]) {
+    const ul = document.getElementById(dd);
+    for (const li of ul.children) {
+      const on = e && e.dir === dd && +li.dataset.num === e.num;
+      li.classList.toggle("on", !!on);
+      if (on) li.scrollIntoView({ block: "nearest" });
+    }
+  }
+}
+
+function focusCell(r, c, opts) {
+  if (!isWhite(r, c)) return;
+  cur = [r, c];
+  const inp = inputAt[r + "," + c];
+  inp.focus({ preventScroll: true });
+  // put caret at end so typing overwrites cleanly
+  const v = inp.value; inp.value = ""; inp.value = v;
+  paint();
+}
+
+// ---- interaction ----
+for (const k in inputAt) {
+  const inp = inputAt[k];
+  const r = +inp.dataset.r, c = +inp.dataset.c;
+
+  inp.addEventListener("mousedown", () => {
+    if (cur[0] === r && cur[1] === c) {
+      // second click on the same cell → flip direction if possible
+      const ce = cellEntry[k];
+      if (ce.across && ce.down) dir = dir === "across" ? "down" : "across";
+    } else {
+      const ce = cellEntry[k];
+      if (!ce[dir] && ce[dir === "across" ? "down" : "across"]) {
+        dir = dir === "across" ? "down" : "across";
+      }
+    }
+    setTimeout(() => focusCell(r, c), 0);
+  });
+
+  inp.addEventListener("input", () => {
+    const raw = inp.value.replace(/[^a-zA-Z]/g, "").toUpperCase();
+    inp.value = raw.slice(-1);
+    tdAt[k].classList.remove("good", "bad");
+    save();
+    if (inp.value) advance(1);
+    checkSolved();
+  });
+
+  inp.addEventListener("keydown", (e) => {
+    const key = e.key;
+    if (key === "ArrowRight") { e.preventDefault(); dir = "across"; step(0, 1); }
+    else if (key === "ArrowLeft") { e.preventDefault(); dir = "across"; step(0, -1); }
+    else if (key === "ArrowDown") { e.preventDefault(); dir = "down"; step(1, 0); }
+    else if (key === "ArrowUp") { e.preventDefault(); dir = "down"; step(-1, 0); }
+    else if (key === " ") {
+      e.preventDefault();
+      const ce = cellEntry[k];
+      if (ce.across && ce.down) { dir = dir === "across" ? "down" : "across"; paint(); }
+    }
+    else if (key === "Tab") {
+      e.preventDefault();
+      gotoEntry(e.shiftKey ? -1 : 1);
+    }
+    else if (key === "Backspace") {
+      e.preventDefault();
+      if (inp.value) {
+        inp.value = "";
+        tdAt[k].classList.remove("good", "bad");
+      } else {
+        advance(-1);
+        const nk = cur[0] + "," + cur[1];
+        if (inputAt[nk]) { inputAt[nk].value = ""; tdAt[nk].classList.remove("good", "bad"); }
+      }
+      save();
+    }
+    else if (key === "Delete") {
+      e.preventDefault();
+      inp.value = "";
+      tdAt[k].classList.remove("good", "bad");
+      save();
+    }
   });
 }
-fillClues(document.getElementById("across"), ACROSS);
-fillClues(document.getElementById("down"), DOWN);
 
+function step(dr, dc) {
+  let [r, c] = cur;
+  do { r += dr; c += dc; } while (r >= 0 && c >= 0 && r < N && c < N && !isWhite(r, c));
+  if (isWhite(r, c)) focusCell(r, c);
+  else paint();
+}
+
+function advance(delta) {
+  const e = activeEntry();
+  if (!e) return;
+  const idx = e.cells.findIndex(([r, c]) => r === cur[0] && c === cur[1]);
+  const next = e.cells[idx + delta];
+  if (next) focusCell(next[0], next[1]);
+  else paint();
+}
+
+function gotoEntry(delta) {
+  const e = activeEntry();
+  const all = entries.across.concat(entries.down);
+  let i = all.findIndex((x) => e && x.dir === e.dir && x.num === e.num);
+  if (i < 0) i = 0;
+  const nx = all[(i + delta + all.length) % all.length];
+  dir = nx.dir;
+  focusCell(nx.r, nx.c);
+}
+
+// ---- clue lists ----
+function fillClues(id, arr) {
+  const ul = document.getElementById(id);
+  for (const e of arr) {
+    const li = document.createElement("li");
+    li.dataset.num = e.num;
+    li.dataset.dir = e.dir;
+    const n = document.createElement("span");
+    n.className = "n";
+    n.textContent = e.num;
+    const tx = document.createElement("span");
+    tx.textContent = e.clue;
+    li.appendChild(n); li.appendChild(tx);
+    li.addEventListener("click", () => {
+      dir = e.dir;
+      focusCell(e.r, e.c);
+    });
+    ul.appendChild(li);
+  }
+}
+fillClues("across", entries.across);
+fillClues("down", entries.down);
+
+cluebar.addEventListener("click", () => {
+  const ce = cellEntry[cur[0] + "," + cur[1]];
+  if (ce && ce.across && ce.down) { dir = dir === "across" ? "down" : "across"; paint(); }
+});
+
+// ---- buttons ----
 const status = document.getElementById("status");
 
 document.getElementById("check").addEventListener("click", () => {
-  let filled = 0, correct = 0;
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      const inp = inputs[r][c];
-      inp.classList.remove("good", "bad");
-      if (!inp.value) continue;
-      filled++;
-      if (inp.value === SOL[r][c]) { inp.classList.add("good"); correct++; }
-      else inp.classList.add("bad");
-    }
+  let filled = 0, wrong = 0, total = 0;
+  for (const k in inputAt) {
+    total++;
+    const [r, c] = k.split(",").map(Number);
+    const inp = inputAt[k], td = tdAt[k];
+    td.classList.remove("good", "bad");
+    if (!inp.value) continue;
+    filled++;
+    if (inp.value === PUZZLE.rows[r][c]) td.classList.add("good");
+    else { td.classList.add("bad"); wrong++; }
   }
-  if (correct === 25) status.textContent = "solved it. nice. 🟩";
-  else if (filled === 0) status.textContent = "type some letters first";
-  else status.textContent = correct + " / 25 letters right";
+  if (!filled) status.textContent = "type some letters first";
+  else if (!wrong && filled === total) status.textContent = "🟩 all correct — solved it!";
+  else if (!wrong) status.textContent = "no mistakes so far — " + filled + "/" + total + " filled";
+  else status.textContent = wrong + (wrong === 1 ? " letter is" : " letters are") + " wrong";
 });
 
-document.getElementById("reveal").addEventListener("click", () => {
-  for (let r = 0; r < N; r++)
-    for (let c = 0; c < N; c++) {
-      inputs[r][c].value = SOL[r][c];
-      inputs[r][c].classList.remove("bad");
-      inputs[r][c].classList.add("good");
-    }
+document.getElementById("revealSq").addEventListener("click", () => {
+  const k = cur[0] + "," + cur[1];
+  const [r, c] = cur;
+  inputAt[k].value = PUZZLE.rows[r][c];
+  tdAt[k].classList.remove("bad");
+  tdAt[k].classList.add("good");
+  save();
+  checkSolved();
+});
+
+document.getElementById("revealAll").addEventListener("click", () => {
+  if (!confirm("Reveal the whole grid?")) return;
+  for (const k in inputAt) {
+    const [r, c] = k.split(",").map(Number);
+    inputAt[k].value = PUZZLE.rows[r][c];
+    tdAt[k].classList.remove("bad");
+  }
+  save();
   status.textContent = "there you go. cheater.";
 });
 
 document.getElementById("clearBtn").addEventListener("click", () => {
-  for (let r = 0; r < N; r++)
-    for (let c = 0; c < N; c++) {
-      inputs[r][c].value = "";
-      inputs[r][c].classList.remove("good", "bad");
-    }
+  if (!confirm("Clear all your answers?")) return;
+  for (const k in inputAt) {
+    inputAt[k].value = "";
+    tdAt[k].classList.remove("good", "bad");
+  }
   status.textContent = "";
-  inputs[0][0].focus();
+  save();
+  focusCell(cur[0], cur[1]);
 });
 
-inputs[0][0].focus();
+function checkSolved() {
+  for (const k in inputAt) {
+    const [r, c] = k.split(",").map(Number);
+    if (inputAt[k].value !== PUZZLE.rows[r][c]) return;
+  }
+  status.textContent = "🟩 solved it. nice one.";
+  for (const k in tdAt) { tdAt[k].classList.remove("bad"); tdAt[k].classList.add("good"); }
+}
+
+// ---- persistence ----
+const SKEY = "sortafun-xw-" + PUZZLE.id;
+function save() {
+  try {
+    let s = "";
+    for (let r = 0; r < N; r++)
+      for (let c = 0; c < N; c++)
+        s += isWhite(r, c) ? (inputAt[r + "," + c].value || ".") : "#";
+    localStorage.setItem(SKEY, s);
+  } catch (e) {}
+}
+function load() {
+  try {
+    const s = localStorage.getItem(SKEY);
+    if (!s || s.length !== N * N) return;
+    for (let r = 0; r < N; r++)
+      for (let c = 0; c < N; c++) {
+        const ch = s[r * N + c];
+        if (isWhite(r, c) && ch !== ".") inputAt[r + "," + c].value = ch;
+      }
+  } catch (e) {}
+}
+load();
+
+// ---- sizing: fit 15 cells to the viewport ----
+function fitGrid() {
+  const avail = Math.min(document.querySelector(".wrap").clientWidth, window.innerWidth - 16);
+  const cs = Math.max(18, Math.min(34, Math.floor((avail - 6) / N)));
+  document.documentElement.style.setProperty("--cs", cs + "px");
+}
+window.addEventListener("resize", fitGrid);
+fitGrid();
+
+focusCell(cur[0], cur[1]);
+paint();
+
+// sanity: every clue number is a real entry start (logs, doesn't block play)
+(function selfCheck() {
+  const seen = new Set(entries.across.map((e) => "A" + e.num).concat(entries.down.map((e) => "D" + e.num)));
+  for (const [n] of PUZZLE.across) if (!seen.has("A" + n)) console.warn("across clue", n, "has no entry");
+  for (const [n] of PUZZLE.down) if (!seen.has("D" + n)) console.warn("down clue", n, "has no entry");
+  for (const e of entries.across.concat(entries.down))
+    if (e.clue === "(missing clue)") console.warn("entry", e.num, e.dir, "has no clue");
+})();
 </script>
 </body>
 </html>

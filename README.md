@@ -2,11 +2,11 @@
 
 A crusty little homepage that's also a game. Walk the stick guy to a pipe (or click a box) and drop into a minigame.
 
-- crossword - 5x5 word square
+- crossword - a 15x15 themeless ("SNACKY BUT THEMELESS", from `Crosswords/*.ipuz`); across/down nav, click-a-clue, check/reveal, progress saved per browser
 - tile slider - sliding 8-puzzle, seeded by the Singapore-time date, with an archive of past days
 - circuit race - 3d, slowroads.io-ish: a fixed closed-loop circuit, hit every checkpoint in order and cross the line for a lap time (three.js, no build step — loaded from a CDN)
 - typing game - 30-second WPM sprint
-- forum - under construction (the guy is trying)
+- forum - a threaded 2003-vintage bulletin board, pre-seeded with ~a month of a small nerdy community. Register a username + password and post — accounts and new posts live in `localStorage` (this browser only; there's no server behind it). No password reset by design.
 - leaderboards - top daily + all-time scores for typing, circuit, puzzle
 
 Static HTML/CSS/JS, no build step. Open `index.html`.

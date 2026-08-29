@@ -3,175 +3,1025 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>forum &middot; SORTAFUN.ORG</title>
-<link rel="stylesheet" href="game.css">
+<title>SORTAFUN Community Board</title>
 <style>
-  .tape {
-    background: repeating-linear-gradient(45deg, #f5c518 0 18px, #000 18px 36px);
-    height: 18px;
-    margin: 6px 0 18px;
-    border: 2px solid #000;
+  /* deliberately an older, crustier artifact than the rest of the site.
+     no comic sans in here. this is a 2003 bulletin board. */
+  body {
+    margin: 0;
+    background: #c9d2dc;
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-size: 15px;
+    color: #101010;
+  }
+  a { color: #0000cc; }
+  a:visited { color: #551a8b; }
+  a:hover { color: #cc0000; }
+
+  #page {
+    max-width: 760px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-left: 2px solid #55606c;
+    border-right: 2px solid #55606c;
+    min-height: 100vh;
+  }
+
+  .titlebar {
+    background: #1c3f66;
+    color: #fff;
+    padding: 6px 10px;
+    border-bottom: 3px solid #7fa8d0;
+  }
+  .titlebar .big { font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+  .titlebar .sub { font-size: 12px; color: #b9d2ec; font-style: italic; }
+
+  .navrow {
+    background: #dfe6ee;
+    border-bottom: 1px solid #90a0b0;
+    padding: 4px 8px;
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 4px;
+    align-items: center;
+  }
+  .navrow button, .navrow select {
+    font-family: inherit;
+    font-size: 12px;
+    background: #eef2f6;
+    border: 2px outset #b7c2cd;
+    padding: 1px 8px;
+    cursor: pointer;
+    color: #102040;
+  }
+  .navrow button:active { border-style: inset; }
+  .navrow .spacer { flex: 1; }
+  .navrow .who { font-size: 12px; color: #333; }
+
+  #searchbox { font-family: inherit; font-size: 12px; border: 1px solid #7a8b9c; padding: 1px 4px; width: 130px; }
+
+  #board { padding: 8px 10px 40px; }
+
+  .section { margin: 0 0 14px; }
+  .section > h2 {
+    font-size: 14px;
+    margin: 0;
+    background: #b7c9dd;
+    border: 1px solid #6f8296;
+    padding: 3px 7px;
+    color: #14243a;
+  }
+  .section > h2 .meta { font-weight: normal; font-style: italic; color: #3d5064; font-size: 12px; }
+  .section .startlink { font-size: 12px; padding: 3px 7px; background: #eef2f6; border: 1px solid #6f8296; border-top: 0; }
+
+  ul.tree, ul.tree ul { list-style: none; margin: 0; padding: 0; }
+  ul.tree ul { margin-left: 15px; border-left: 1px dotted #9aa7b4; padding-left: 6px; }
+  .node { padding: 1px 0; }
+  .node .row { font-size: 13.5px; cursor: pointer; }
+  .node .row .tw { color: #7a5; font-family: monospace; font-size: 12px; }
+  .node .row .ttl { color: #0000cc; }
+  .node .row .ttl.head { font-weight: bold; }
+  .node.open .row .ttl { color: #cc0000; }
+  .node .row .by { color: #444; font-size: 12px; }
+  .node .row .dt { color: #666; font-size: 12px; }
+  .node .row .unread { color: #c00; font-weight: bold; }
+
+  .post {
+    margin: 3px 0 6px;
+    border: 1px solid #8894a0;
+    background: #f4f6f8;
+    font-size: 14px;
+  }
+  .post .phead {
+    background: #e2e8ee;
+    border-bottom: 1px solid #9aa7b4;
+    padding: 2px 6px;
+    font-size: 12px;
+    color: #2a3a4a;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .post .phead b { color: #14243a; }
+  .post .pbody { padding: 6px 8px; white-space: pre-wrap; line-height: 1.4; }
+  .post .pfoot { padding: 2px 8px 5px; font-size: 12px; }
+
+  .replyform, .threadform, #authpanel .box {
+    border: 2px solid #6f8296;
+    background: #eef3f8;
+    padding: 8px;
+    margin: 6px 0;
+    font-size: 13px;
+  }
+  .replyform textarea, .threadform textarea, #authpanel textarea,
+  .replyform input, .threadform input, #authpanel input, .threadform select {
+    font-family: inherit;
+    font-size: 13px;
+    border: 1px solid #7a8b9c;
+    padding: 3px 4px;
+    box-sizing: border-box;
+  }
+  .replyform textarea, .threadform textarea { width: 100%; min-height: 70px; }
+  .replyform input[type=text], .threadform input[type=text], #authpanel input { width: 100%; margin: 2px 0 6px; }
+  .btn {
+    font-family: inherit; font-size: 13px;
+    background: #dbe6f2; border: 2px outset #a9bccf;
+    padding: 2px 12px; cursor: pointer; color: #102040;
+  }
+  .btn:active { border-style: inset; }
+
+  .warnbox {
+    border: 2px solid #a12; background: #ffecec;
+    padding: 6px 8px; margin: 6px 0; font-size: 12.5px; color: #611;
+  }
+  .msg { font-size: 12.5px; color: #611; min-height: 16px; }
+  .ok { color: #161; }
+
+  #authpanel { padding: 8px 10px; border-bottom: 1px solid #90a0b0; background: #f3f6f9; font-size: 13px; display: none; }
+  #authpanel.show { display: block; }
+  #authpanel h3 { margin: 0 0 4px; font-size: 14px; }
+  .authtabs { margin-bottom: 6px; }
+  .authtabs button { font-family: inherit; font-size: 12px; border: 1px solid #6f8296; background: #dde5ee; padding: 2px 10px; cursor: pointer; }
+  .authtabs button.on { background: #fff; font-weight: bold; }
+
+  .statline { font-size: 12px; color: #445; padding: 4px 10px; background: #eef2f6; border-top: 1px solid #b7c2cd; }
+
+  .footlinks { text-align: center; font-size: 12px; color: #556; padding: 8px; }
+  .footlinks a { margin: 0 6px; }
+  .backhome { display: block; text-align: center; padding: 10px; font-size: 13px; }
+
+  @media (max-width: 620px) {
+    body { font-size: 14px; }
+    .navrow { font-size: 12px; }
+    ul.tree ul { margin-left: 9px; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>forum</h1>
-  <div class="tape"></div>
-  <p class="sub">under construction. the guy is doing his best.</p>
+<div id="page">
+  <div class="titlebar">
+    <div class="big">SORTAFUN&middot;ORG COMMUNITY BOARD</div>
+    <div class="sub">&ldquo;the guy finally finished the deck&rdquo; &mdash; est. 2026, held together with tape</div>
+  </div>
 
-  <canvas id="site" width="420" height="300"></canvas>
+  <div class="navrow">
+    <button data-nav="home">HOME</button>
+    <button data-nav="post">POST</button>
+    <button data-nav="expand">EXPAND ALL</button>
+    <button data-nav="collapse">COLLAPSE</button>
+    <span style="font-size:12px;">Show since:</span>
+    <select id="sincesel">
+      <option value="0">All Msgs</option>
+      <option value="1">1 day</option>
+      <option value="7">7 days</option>
+      <option value="30">30 days</option>
+    </select>
+    <input id="searchbox" type="text" placeholder="search&hellip;" autocomplete="off">
+    <span class="spacer"></span>
+    <span class="who" id="whoami">not logged in</span>
+    <button id="authbtn">log in / register</button>
+    <button id="logoutbtn" style="display:none;">log out</button>
+  </div>
 
-  <p class="status">check back later. he needs a break.</p>
-  <a class="back" href="index.html">&larr; back up the pipe</a>
+  <div id="authpanel">
+    <div class="authtabs">
+      <button data-tab="login" class="on">Log in</button>
+      <button data-tab="register">Register</button>
+    </div>
+
+    <div id="tab-login">
+      <h3>Log in</h3>
+      <input id="li-user" type="text" placeholder="username" autocomplete="off" spellcheck="false">
+      <input id="li-pass" type="password" placeholder="password" autocomplete="off">
+      <button class="btn" id="li-go">Log in</button>
+      <div class="msg" id="li-msg"></div>
+    </div>
+
+    <div id="tab-register" style="display:none;">
+      <h3>Register</h3>
+      <div class="warnbox">
+        <b>Read this.</b> There is no password reset and no email on file.
+        If you forget your password you will have to contact an admin
+        (<a href="index.html">the guy</a>), explain yourself, and hope.
+        <b>Do not use a password you use anywhere else.</b>
+      </div>
+      <input id="rg-user" type="text" placeholder="username (3&ndash;20, letters/numbers/_/-)" autocomplete="off" spellcheck="false">
+      <input id="rg-pass" type="password" placeholder="password (min 4)" autocomplete="off">
+      <input id="rg-pass2" type="password" placeholder="password again" autocomplete="off">
+      <button class="btn" id="rg-go">Create account</button>
+      <div class="msg" id="rg-msg"></div>
+      <div style="font-size:11.5px;color:#556;margin-top:4px;">
+        Your account and any posts you make are stored in <i>this browser only</i> &mdash;
+        the board can&rsquo;t reach a server, so nobody else will see them. Same deal as a
+        1999 guestbook. Usernames already in use (including the regulars) are blocked.
+      </div>
+    </div>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="statline" id="statline"></div>
+  <div class="footlinks">
+    <a href="#" onclick="return false;">Fully Threaded</a> |
+    <a href="#" onclick="return false;"><b>Tree View</b></a> |
+    <a href="#" onclick="return false;">Hierarchical View</a><br>
+    <span style="font-size:11px;">this forum is best viewed in Netscape Navigator 4.7 at 800&times;600</span>
+  </div>
+  <a class="backhome" href="index.html">&larr; back up the pipe</a>
 </div>
 
 <script>
-const cv = document.getElementById("site");
-const g = cv.getContext("2d");
-const W = cv.width, H = cv.height;
-const groundY = H - 40;
+"use strict";
 
-let t = 0;
-const dust = [];
+/* ------------------------------------------------------------------ *
+ *  SECTIONS
+ * ------------------------------------------------------------------ */
+const SECTIONS = [
+  { id: "general", name: "General Chatter" },
+  { id: "games",   name: "Games & Scores" },
+  { id: "offtopic", name: "Off Topic" },
+];
 
-function spawnDust() {
-  dust.push({
-    x: W / 2 + 34 + (Math.random() * 10 - 5),
-    y: groundY - 2,
-    vx: 0.4 + Math.random() * 1.6,
-    vy: -(0.5 + Math.random() * 1.8),
-    r: 2 + Math.random() * 4,
-    life: 1,
+/* ------------------------------------------------------------------ *
+ *  SEED CONTENT  — a month or so of a small, nerdy, well-used board.
+ *  Dates are "YYYY-MM-DD HH:MM". Replies nest via `re`.
+ * ------------------------------------------------------------------ */
+const SEED = [
+
+/* ===== GENERAL ===== */
+{
+  id: "t-welcome", section: "general",
+  title: "READ FIRST — how this place works",
+  author: "webmaster", date: "2026-07-27 08:02",
+  body:
+`welcome. this board runs on tape and goodwill.
+
+the rules, such as they are:
+ - be decent to each other
+ - keep keyboard talk in the keyboard thread or the typing thread, not everywhere
+ - don't repost the same thread into three sections, i will merge them and sigh
+
+accounts: pick a username, pick a password. THERE IS NO PASSWORD RESET. there is
+no "forgot password" link because there is no email and there is barely a server.
+if you lose your password you email the admin (me), explain yourself, i ignore it
+for about a week, then i probably help.
+
+do not reuse a real password here. i mean it.
+
+the stick guy built the deck. i just swept up.`,
+  re: [
+    { author: "quietkeys", date: "2026-07-27 12:20", body: "thanks for setting this up. it's nice to have somewhere." },
+    { author: "pixel_merchant", date: "2026-07-27 19:41",
+      body: "the fact that it's visibly held together with tape is the entire appeal. please do not fix it, sand it, or add a react frontend.",
+      re: [ { author: "webmaster", date: "2026-07-28 07:55", body: "not planning to. i don't know what react is and it's staying that way." } ] },
+    { author: "HAMSTERWHEEL", date: "2026-07-28 21:10", body: "HELLO EVERYONE I AM HERE" },
+  ],
+},
+
+{
+  id: "t-stickguy", section: "general",
+  title: "what is the deal with the stick guy (lore thread)",
+  author: "pixel_merchant", date: "2026-08-09 15:33",
+  body:
+`is there canon here. why is he running. why does a crusty homepage have a
+side-scrolling art gallery attached to it. i have questions and the readme
+does not answer them.`,
+  re: [
+    { author: "Vera_Nihil", date: "2026-08-09 23:58",
+      body: "he runs because we're watching. close the tab and he stops. he doesn't get to rest, he just stops existing. think about that one for a while.",
+      re: [ { author: "BrightSodium", date: "2026-08-10 08:14", body: "ok that was genuinely upsetting first thing in the morning, thank you" } ] },
+    { author: "pixel_merchant", date: "2026-08-10 11:02",
+      body: "unrelated discovery: if you jump into the floor just to the right of the third pipe at the top of your arc, you clip through and fall into nothing. held down-right and fell for a full minute before i alt-tabbed. 10/10.",
+      re: [ { author: "webmaster", date: "2026-08-10 13:20", body: "that's not a feature. i'm also not fixing it. call it the basement." } ] },
+    { author: "fenwick_tree", date: "2026-08-11 09:47",
+      body: "the gallery photos are all Vietnam, for what it's worth. Ha Long Bay, a boat on a river, a park with a pagoda, a sunset near a port.",
+      re: [
+        { author: "pixel_merchant", date: "2026-08-11 10:05", body: "how could you possibly know that" },
+        { author: "fenwick_tree", date: "2026-08-11 10:31", body: "the pagoda in the third frame is the one in Tao Dan park in Saigon. i've stood in front of it. the light's the same." },
+      ] },
+    { author: "gastropoda", date: "2026-08-12 20:19", body: "i like the little potted plant by the gallery door. it's a nice touch. somebody thought about that." },
+  ],
+},
+
+{
+  id: "t-keyboards", section: "general",
+  title: "KEYBOARD THREAD (containment) — all switch/layout talk goes here",
+  author: "webmaster", date: "2026-07-30 09:15",
+  body: "you know why this exists. go.",
+  re: [
+    { author: "qwerty_maxx", date: "2026-07-30 10:40", body: "linears for typing, tactiles for everything else, and anyone who games on browns is lying to themselves about what they want. i'll take the heat." },
+    { author: "fenwick_tree", date: "2026-07-31 22:03",
+      body: "switched to Colemak-DH over the summer. three weeks of feeling like my hands belonged to someone else, then it clicked. wpm is back to where it was and my fingers move about half as far.",
+      re: [ { author: "quietkeys", date: "2026-08-01 07:12", body: "i keep meaning to and keep chickening out because of the relearning dip. did you cold-turkey or gradual?" },
+             { author: "fenwick_tree", date: "2026-08-01 09:30", body: "cold turkey, over a weekend, with a printed layout taped to the monitor. gradual just means suffering for longer." } ] },
+    { author: "not_a_robot_beep", date: "2026-08-02 14:22", body: "you could say the switch really... clicked for you (linears notwithstanding)" },
+    { author: "blancmange_77", date: "2026-08-15 11:40", body: "I have used the same beige Model M since 1994. It has outlived two marriages and a dog. I see no reason to change now. — B." },
+  ],
+},
+
+/* ===== GAMES & SCORES ===== */
+{
+  id: "t-typing", section: "games",
+  title: "typing leaderboard — is qwerty_maxx running a script??",
+  author: "BrightSodium", date: "2026-08-03 21:14",
+  body:
+`ok so i've been grinding the 30-second typing sprint and i cannot get past
+about 118 wpm and there is someone sitting at 154 at the top of the all-time
+board. 154!! for a full 30 seconds!!
+
+i'm not accusing anyone. i'm just saying it's suspicious and i want it looked into.`,
+  re: [
+    { author: "qwerty_maxx", date: "2026-08-03 22:40",
+      body:
+`it's me and it's not a script.
+
+154 sustained for 30s is fast but it is extremely not superhuman. the typeracer
+top 100 is all above 150. i'm on a cheap 40-key ortho with linears and i type
+Colemak. the layout alone is worth maybe 8-10 wpm for me because my fingers
+aren't hurdling all over the board.
+
+not trying to be a jerk. the honest answer is practice + a layout that suits you.`,
+      re: [
+        { author: "fenwick_tree", date: "2026-08-04 09:02", body: "seconding this. the actual typing world record is north of 300 wpm (Barbara Blackburn, Dvorak). 154 for half a minute is a good club-level number, not a red flag." },
+        { author: "BrightSodium", date: "2026-08-04 10:15", body: "ok. fair. i retract the accusation. how long did it take you to get there" },
+        { author: "qwerty_maxx", date: "2026-08-04 10:51", body: "couple years of just... typing a lot. i didn't drill. i just never handwrite anything." },
+      ] },
+    { author: "HAMSTERWHEEL", date: "2026-08-05 18:30", body: "I GOT 91 TODAY. NEW PERSONAL BEST. I AM INCLUDING THIS INFORMATION FOR THE HISTORICAL RECORD" },
+    { author: "HollowMoon88", date: "2026-08-06 13:44",
+      body:
+`separate gripe: the leaderboard "today" resets on Singapore time, so my
+morning runs are on yesterday's board by the time i check at night. took me
+a week to work out why my scores kept "vanishing".`,
+      re: [
+        { author: "webmaster", date: "2026-08-06 15:09", body: "the whole site's day flips at UTC+8 midnight. that's also the tile slider's daily seed. it's one clock for everything and i'm not adding a second one." },
+        { author: "quietkeys", date: "2026-08-06 19:22", body: "thanks, that was quietly bothering me too" },
+      ] },
+    { author: "qwerty_maxx", date: "2026-08-26 01:12", body: "necro-ing my own thread: hit 161 tonight. also my right pinky has started making a noise. i regret nothing but i am noting it." },
+  ],
+},
+
+{
+  id: "t-slider", section: "games",
+  title: "tile slider daily — rolling discussion thread",
+  author: "HollowMoon88", date: "2026-07-29 23:05",
+  body:
+`let's keep the daily tile-slider chat in one place instead of a new thread
+every 24 hours.
+
+29th: solved in 74 moves. felt slow. i think optimal was in the high 60s.`,
+  re: [
+    { author: "fenwick_tree", date: "2026-07-30 00:40",
+      body: "ran an IDA* solver on the 29th's seed out of curiosity — God's number for that scramble is 66. 74 is a genuinely tight human solve, don't beat yourself up.",
+      re: [
+        { author: "HollowMoon88", date: "2026-07-30 08:11", body: "does checking optimal after the fact \"count\" or is that cheating. i only ever look once i've already finished." },
+        { author: "fenwick_tree", date: "2026-07-30 09:26", body: "looking after you've solved it is just curiosity, that's fine. feeding the solver's move list back into the puzzle is the cheating. the line's pretty clear." },
+        { author: "BrightSodium", date: "2026-07-30 12:03", body: "what's IDA*" },
+        { author: "fenwick_tree", date: "2026-07-30 12:40", body: "iterative-deepening A*. you do depth-limited searches with an admissible heuristic (here: sum of manhattan distances) and keep raising the limit until a solution pops out. low memory, which matters because the 15-puzzle state space is huge." },
+      ] },
+    { author: "mantis_dad", date: "2026-08-14 21:30", body: "long-time lurker. solved the 14th in 51 and i am fully aware i will never do that again. i have taken a screenshot. it is now my desktop." },
+    { author: "HollowMoon88", date: "2026-08-15 09:18", body: "the 14th was a friendly scramble, a lot of tiles started close to home. the 22nd on the other hand was actively hostile." },
+    { author: "gastropoda", date: "2026-08-22 17:52", body: "i got 203 on the 22nd :) took me three cups of tea but i finished it and that's what matters" },
+    { author: "m00nrunner", date: "2026-08-24 03:14", body: "there's something to the 3am daily. the board's empty, nobody's submitted yet, it's just you and fifteen tiles and the hum of the fridge. best time to play anything honestly." },
+  ],
+},
+
+{
+  id: "t-flicker", section: "games",
+  title: "weird flicker on the circuit race in firefox? (just me?)",
+  author: "greg_from_QLD", date: "2026-08-19 20:40",
+  body: "the 3D circuit race strobes for me on firefox — like the whole track flashes black every few seconds. chrome's fine. anyone else, or is my machine cooked?",
+  re: [
+    { author: "pixel_merchant", date: "2026-08-19 22:15",
+      body: "not just you. it's a depth-buffer thing with the CDN build of three.js the page pulls in — older revision, known issue on some Intel drivers under firefox. forcing WebGL to the discrete GPU in about:config (webgl.force-enabled etc) fixed it for me.",
+      re: [ { author: "greg_from_QLD", date: "2026-08-20 06:30", body: "that did it. cheers. still flickers for about a second on load then settles." },
+             { author: "pixel_merchant", date: "2026-08-20 09:05", body: "yeah that first second is it compiling shaders. nothing to be done about that without a loading screen and the guy is not going to build a loading screen." } ] },
+    { author: "webmaster", date: "2026-08-20 10:11", body: "noted. i'll bump the three.js version next time i'm in there, which could be any decade now." },
+  ],
+},
+
+/* ===== OFF TOPIC ===== */
+{
+  id: "t-mantis", section: "offtopic",
+  title: "Mantideering: a field report (long, sorry)",
+  author: "mantis_dad", date: "2026-07-31 22:48",
+  body:
+`Colony update for anyone who cares about invertebrates on a games forum.
+
+The Sphodromantis ootheca I've been babysitting since May finally went off —
+roughly 40 nymphs over about six hours, which is a lot of tiny arms waving at
+you at once. Lost maybe six in the first two instars, which is normal; the rest
+are motoring through L3 now.
+
+The fruit fly culture crashed at the worst possible moment (my fault, see
+below), so there was a frantic 48 hours of me chopping up mealworms too big for
+L2 mouths. Everyone made it.
+
+One L4 had a bad molt — got stuck coming out of the old cuticle and lost most
+of a raptorial leg doing it. She's eating fine one-handed and if she's young
+enough she'll get some of it back over the next couple of molts. Adults don't;
+what they molt in with is what they keep.
+
+Humidity's been the whole game. Too dry and they can't shed, too wet and you
+grow mould and the flightless flies drown in their own culture. Aiming for a
+gentle gradient and a lot of cross-ventilation.`,
+  re: [
+    { author: "Onset_Rime", date: "2026-08-01 01:30",
+      body: "the molt-failure detail is grim but this is a genuinely lovely writeup. do they clock you as an individual, or are you just Large Warm Shape That Sometimes Brings Flies?",
+      re: [ { author: "mantis_dad", date: "2026-08-01 08:40", body: "the big pre-adult female tracks my hand across the enclosure and has stopped striking at it, which she absolutely did when she was younger. i'm not going to claim that's \"recognition\" in any deep sense but it's *something*." } ] },
+    { author: "BrightSodium", date: "2026-08-01 12:11",
+      body: "hang on they can lose an entire LEG and just be fine about it??",
+      re: [ { author: "mantis_dad", date: "2026-08-01 12:55", body: "invertebrates are built different. autotomy — dropping a limb to escape — is a feature, not a bug, for a lot of them. she'll be a bit lopsided catching prey for a while and then she'll adapt." } ] },
+    { author: "saltmarsh", date: "2026-08-02 09:20", body: "came to this forum for the birds, staying for this. the ambush-predator posture is so convergent with herons it's uncanny — same stillness, same explosive final movement, completely different branch of the tree of life." },
+    { author: "mantis_dad", date: "2026-08-03 19:05", body: "double-posting to add the bit I forgot: the culture crash was because I let the medium get waterlogged. re-cultured on plain potato flake and it's been rock solid for two weeks. lesson learned, again, for the third time." },
+    { author: "Dr_Bunsen", date: "2026-08-04 07:50", body: "potato flake medium is criminally underrated. if you get any mould creeping back, a pinch of propionic acid or even just a sliver of paper towel with a drop of vinegar in the tub keeps it down without bothering the flies." },
+  ],
+},
+
+{
+  id: "t-font", section: "offtopic",
+  title: "ISO: a font I saw on a cereal box around 2003",
+  author: "BrightSodium", date: "2026-08-06 16:20",
+  body:
+`this is going to be hard to describe. rounded, friendly, a bit chunky. the
+lowercase 'a' had a little tail/spur at the bottom right. the box used it in
+all caps but i've definitely seen it lowercase elsewhere. it feels 80s even
+though this was an early-2000s box.
+
+it's not Cooper Black and it's not Comic Sans. help.`,
+  re: [
+    { author: "spandrelle", date: "2026-08-06 18:02",
+      body:
+`"little tail on the a" plus "chunky and rounded" is doing a lot of work here.
+That's usually a single-storey a with a spur. Two strong candidates:
+
+  - VAG Rounded (the old Volkswagen typeface) — cleaner, more corporate
+  - Frankfurter (Alan Meeks, Letraset, 1970) — fatter, friendlier, that spur
+
+If it felt 80s it's almost certainly Frankfurter. That face was on *everything*
+between about 1978 and 1998. Cereal, fun runs, leisure centres, ice cream vans.`,
+      re: [
+        { author: "BrightSodium", date: "2026-08-06 18:40", body: "just image-searched VAG Rounded — warmer than that, and rounder. googling Frankfurter now" },
+        { author: "BrightSodium", date: "2026-08-06 18:52", body: "THAT'S IT. that is the exact font. i can hear the cereal advert. thank you." },
+      ] },
+    { author: "Onset_Rime", date: "2026-08-07 10:15", body: "the Letraset dry-transfer catalogues from that era are a whole rabbit hole if you ever want to lose an afternoon." },
+    { author: "spandrelle", date: "2026-08-07 11:30",
+      body:
+`I still have three of them in a drawer. The smell of the backing sheets is
+1987 in a single breath.
+
+You'd position the sheet, burnish each letter down with a lolly stick or the
+end of a biro, and if you sneezed halfway through a headline you started again.
+Kerning was done by eye and by prayer. I don't miss the labour but I miss the
+feel of it.`,
+      re: [ { author: "not_a_robot_beep", date: "2026-08-07 13:44", body: "sounds like the industry really left its... mark on you" } ] },
+    { author: "blancmange_77", date: "2026-08-10 09:25", body: "Our parish newsletter was 100% Letraset until roughly 1996, when Father Dennis acquired a Performa and a copy of Publisher and things went badly downhill for a year or two. — B." },
+  ],
+},
+
+{
+  id: "t-mile", section: "offtopic",
+  title: "Palindromic mile markers & odometer sightings — MASTER LIST",
+  author: "odometer_owl", date: "2026-07-28 07:41",
+  body:
+`Rules of the list, since we get new people:
+
+ 1. Photo or it didn't happen. A written claim is a nice story, not an entry.
+ 2. Mile markers, road distance signs, odometers and trip meters all count.
+ 3. Repdigits (11111, 88888) go in their own category — they're palindromes
+    but they're a different kind of catch and it's not fair to the 12321s.
+ 4. Leading zeros are a philosophical matter we have agreed to stop arguing about.
+
+Current verified list stands at 214 entries. A few personal favourites below.`,
+  re: [
+    { author: "saltmarsh", date: "2026-07-30 17:22", body: "12321 on the distance-to-town sign past the reservoir on the B-road, last Tuesday. photo attached (imagine it). the 3 was a bit rusted but legible." },
+    { author: "odometer_owl", date: "2026-07-30 18:03", body: "logged and verified. clean symmetrical marker on an unhurried road, that's a good one." },
+    { author: "terrapin_stn", date: "2026-08-01 14:10",
+      body: "does an elevator floor counter count. i have a specific one in mind and a specific reason for asking.",
+      re: [ { author: "odometer_owl", date: "2026-08-01 15:40", body: "...I will allow it as an EXHIBITION entry. It does not go on the main list. The main list is roads. We are not opening the door to lift counters, kitchen scales and bus stop numbers." } ] },
+    { author: "HAMSTERWHEEL", date: "2026-08-05 19:12", body: "MY CAR TICKED OVER TO 123321 AND I MISSED THE ACTUAL MOMENT BY ABOUT FOUR MILES BECAUSE I WAS DRIVING THE CAR. I AM DEVASTATED." },
+    { author: "odometer_owl", date: "2026-08-05 20:00", body: "This is the central tragedy of the discipline. You cannot safely photograph the sublime while operating the vehicle that produces it." },
+    { author: "Onset_Rime", date: "2026-08-08 22:41",
+      body: "genuine question, not trying to be difficult: is 100001 a palindrome, or does the structural asymmetry (a hundred-thousand vs a one) disqualify it in spirit?",
+      re: [ { author: "odometer_owl", date: "2026-08-09 07:15", body: "It reads identically forwards and backwards, so formally: yes. Whether it's *interesting* is a separate question and the answer to that one is \"barely\"." } ] },
+    { author: "m00nrunner", date: "2026-08-24 02:50", body: "88888 tonight, on the ring road, coming home. no photo, phone was dead, and there was nobody in the car to witness it. i'm telling you anyway. it felt like being briefly acknowledged by something large." },
+  ],
+},
+
+{
+  id: "t-radio", section: "offtopic",
+  title: "worked Svalbard last night from a wire in a tree, still buzzing",
+  author: "greg_from_QLD", date: "2026-08-12 21:33",
+  body:
+`JW-land. On 20m. 0340Z, 59 both ways, whole thing lasted about ninety seconds
+and then he was gone into the pileup.
+
+From a suburban block in QLD, 100 watts, into a bit of wire slung over a
+gum tree at maybe 8 metres. I have been chasing that entity for three years.
+Grid PG06 if anyone's keeping score.`,
+  re: [
+    { author: "VE3_Pinetree", date: "2026-08-12 22:50",
+      body: "Congratulations, that's a proper one. Svalbard into VK on 20m isn't a gimme even in a good season. DXpedition or a resident op?",
+      re: [ { author: "greg_from_QLD", date: "2026-08-13 06:10", body: "resident, i think. he was completely relaxed about it, working split like it was a wednesday. no drama, just efficient." } ] },
+    { author: "BrightSodium", date: "2026-08-13 09:44",
+      body: "i understood maybe one word in five of that and i want to say congratulations anyway",
+      re: [
+        { author: "VE3_Pinetree", date: "2026-08-13 10:20",
+          body:
+`Happy to translate:
+ - "worked" = made a two-way contact with
+ - "20m" = the 20-metre band, ~14 MHz, the workhorse band for long distance
+ - "59 both ways" = we each gave the other a perfect signal report
+ - "Z" = UTC, so we don't have to do timezone maths on the air
+ - "grid PG06" = Maidenhead grid square, a short way to say roughly where you are
+ - "split" = he transmits on one frequency, listens on another, so the pileup
+   doesn't sit on top of him`},
+        { author: "BrightSodium", date: "2026-08-13 11:05", body: "ok that's actually a really clean little system. how does a person even start with this" },
+        { author: "VE3_Pinetree", date: "2026-08-13 12:15",
+          body:
+`Cheapest path: study for the entry-level licence (Foundation where Greg is,
+Technician in the US), it's a weekend of reading. Then a cheap handheld or a
+second-hand HF rig, and — this is the important part — join a club. They will
+have an antenna working bee, someone will lend you gear, and you'll learn more
+in one Saturday than in a month of forum posts.
+
+Do NOT buy the expensive radio first. Everyone does. Don't.`},
+      ] },
+    { author: "greg_from_QLD", date: "2026-08-13 18:02", body: "what he said. also — Sporadic-E season is ramping up down here, keep half an ear on 10m in the afternoons, it goes long with no warning and it's the most fun you can have with a wire." },
+    { author: "quietkeys", date: "2026-08-14 08:30", body: "bookmarking this whole thread. thank you both." },
+    { author: "gastropoda", date: "2026-08-15 21:10", body: "my grandfather had a shack in the spare room. green glowing dials, a smell of hot dust, a big black key he wouldn't let me touch. he died before i thought to ask him a single question about any of it. anyway. nice thread." },
+    { author: "VE3_Pinetree", date: "2026-08-16 09:05", body: "For what it's worth: a lot of people come into this hobby in their 40s and 50s carrying exactly that regret, and the way they deal with it is to learn the thing the person never got to teach them. It's not too late to meet him halfway." },
+  ],
+},
+
+{
+  id: "t-elevator", section: "offtopic",
+  title: "Elevator inspection certificates you have known and loved",
+  author: "terrapin_stn", date: "2026-08-17 13:12",
+  body:
+`The inspection certificate in the lift at my dentist's expired in 2019 and, as
+far as I can tell, nobody has ever noticed. It is behind slightly fogged
+plastic. I look at it during every cleaning and think about the chain of small
+omissions that leads to a thing like that.
+
+Post your best expired certs. Bonus points for sun damage.`,
+  re: [
+    { author: "pixel_merchant", date: "2026-08-17 15:40", body: "multi-storey car park stairwell near me, laminated cert from 2011, sun has bleached it to a uniform salmon pink. you can just make out a signature." },
+    { author: "terrapin_stn", date: "2026-08-17 16:02", body: "pink is the mark of a true veteran. that certificate has seen things." },
+    { author: "Dr_Bunsen", date: "2026-08-18 08:30",
+      body:
+`The genuinely elegant part of a traction elevator is the counterweight. It's
+set to the car's own weight plus about 40-45% of rated capacity, so the motor
+is only ever fighting the *imbalance*, not lifting the whole car from scratch.
+An empty car going up and a full car going down are both nearly free rides.`,
+      re: [ { author: "terrapin_stn", date: "2026-08-18 09:15", body: "this is precisely the register I was hoping this thread would find." } ] },
+    { author: "odometer_owl", date: "2026-08-19 12:44", body: "cross-referencing from the mile-marker thread: the floor counter in that same dentist's building read 3-2-1 while I was waiting last month and I have the photo. Exhibition category, per the ruling." },
+    { author: "terrapin_stn", date: "2026-08-19 13:20", body: "the hobbies are converging and I find that I am a little frightened." },
+    { author: "blancmange_77", date: "2026-08-21 10:05", body: "My late wife did lift maintenance for the city council for twenty-two years. She could name the manufacturer from the sound the doors made closing — Otis, Schindler, Kone, the lot. I never learned how she did it and now I can't ask. She would have enjoyed this thread enormously. — B." },
+    { author: "terrapin_stn", date: "2026-08-21 14:30", body: "That's a remarkable skill and a real loss. Thank you for posting it here." },
+  ],
+},
+
+];
+
+/* ------------------------------------------------------------------ *
+ *  FLATTEN SEED -> posts[]  (id, threadId, parentId, section, title,
+ *  author, body, ts, seed)
+ * ------------------------------------------------------------------ */
+function parseDate(s) { return new Date(s.replace(" ", "T") + ":00").getTime(); }
+
+const posts = [];
+const seedAuthors = new Set();
+
+(function flatten() {
+  SEED.forEach((thread) => {
+    const rootId = thread.id;
+    posts.push({
+      id: rootId, threadId: rootId, parentId: null,
+      section: thread.section, title: thread.title,
+      author: thread.author, body: thread.body, ts: parseDate(thread.date), seed: true,
+    });
+    seedAuthors.add(thread.author.toLowerCase());
+    let n = 0;
+    (function walk(list, parentId) {
+      (list || []).forEach((r) => {
+        const id = rootId + "." + (++n);
+        posts.push({
+          id: id, threadId: rootId, parentId: parentId,
+          section: thread.section, title: "Re: " + thread.title,
+          author: r.author, body: r.body, ts: parseDate(r.date), seed: true,
+        });
+        seedAuthors.add(r.author.toLowerCase());
+        walk(r.re, id);
+      });
+    })(thread.re, rootId);
+  });
+})();
+
+/* ------------------------------------------------------------------ *
+ *  STORAGE  — accounts + posts + session, this browser only.
+ *  Kept in these five functions so a real backend can slot in later.
+ * ------------------------------------------------------------------ */
+const LS_ACC = "sortafun-forum-accounts";
+const LS_POSTS = "sortafun-forum-posts";
+const LS_SESSION = "sortafun-forum-session";
+
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch (e) { return fallback; }
+}
+function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+}
+
+function getAccounts() { return lsGet(LS_ACC, {}); }               // { lcname: {username, pwHash, joined} }
+function getLocalPosts() { return lsGet(LS_POSTS, []); }
+function getSession() { try { return localStorage.getItem(LS_SESSION) || null; } catch (e) { return null; } }
+function setSession(name) { try { localStorage.setItem(LS_SESSION, name); } catch (e) {} }
+function clearSession() { try { localStorage.removeItem(LS_SESSION); } catch (e) {} }
+
+async function hashPw(username, pw) {
+  const data = new TextEncoder().encode(username.toLowerCase() + " " + pw);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function nameTaken(name) {
+  const lc = name.toLowerCase();
+  return seedAuthors.has(lc) || Object.prototype.hasOwnProperty.call(getAccounts(), lc);
+}
+
+async function createAccount(username, pw) {
+  const lc = username.toLowerCase();
+  if (nameTaken(username)) throw new Error("that username is taken");
+  const accs = getAccounts();
+  accs[lc] = { username: username, pwHash: await hashPw(username, pw), joined: Date.now() };
+  lsSet(LS_ACC, accs);
+}
+
+async function checkLogin(username, pw) {
+  const acc = getAccounts()[username.toLowerCase()];
+  if (!acc) throw new Error("no account with that name in this browser");
+  if (acc.pwHash !== await hashPw(acc.username, pw)) throw new Error("wrong password");
+  return acc.username;
+}
+
+function addLocalPost(p) {
+  const all = getLocalPosts();
+  all.push(p);
+  lsSet(LS_POSTS, all);
+}
+
+/* ------------------------------------------------------------------ *
+ *  MERGE seed + local into one post list
+ * ------------------------------------------------------------------ */
+function allPosts() {
+  const local = getLocalPosts().map((p) => Object.assign({}, p, { seed: false }));
+  return posts.concat(local);
+}
+
+/* ------------------------------------------------------------------ *
+ *  RENDER
+ * ------------------------------------------------------------------ */
+const boardEl = document.getElementById("board");
+const statEl = document.getElementById("statline");
+const whoEl = document.getElementById("whoami");
+
+let expandAll = false;
+let openNodes = {};       // id -> true
+let sinceDays = 0;
+let searchTerm = "";
+let session = getSession();
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function mmddyy(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, "0");
+  return p(d.getMonth() + 1) + "-" + p(d.getDate()) + "-" + String(d.getFullYear()).slice(2);
+}
+
+function buildTree(list) {
+  const byId = {};
+  list.forEach((p) => (byId[p.id] = Object.assign({}, p, { kids: [] })));
+  const roots = [];
+  list.forEach((p) => {
+    const node = byId[p.id];
+    if (p.parentId && byId[p.parentId]) byId[p.parentId].kids.push(node);
+    else roots.push(node);
+  });
+  const sortRec = (n) => { n.kids.sort((a, b) => a.ts - b.ts); n.kids.forEach(sortRec); };
+  roots.sort((a, b) => a.ts - b.ts);
+  roots.forEach(sortRec);
+  return { roots, byId };
+}
+
+function newestTs(node) {
+  let m = node.ts;
+  node.kids.forEach((k) => { m = Math.max(m, newestTs(k)); });
+  return m;
+}
+function countMsgs(node) {
+  let c = 1;
+  node.kids.forEach((k) => { c += countMsgs(k); });
+  return c;
+}
+function matchesSearch(node) {
+  if (!searchTerm) return true;
+  const t = searchTerm.toLowerCase();
+  if ((node.title + " " + node.author + " " + node.body).toLowerCase().indexOf(t) !== -1) return true;
+  return node.kids.some(matchesSearch);
+}
+
+function render() {
+  const tree = buildTree(allPosts());
+  const cutoff = sinceDays ? Date.now() - sinceDays * 86400000 : 0;
+  boardEl.innerHTML = "";
+
+  let shownThreads = 0;
+
+  SECTIONS.forEach((sec) => {
+    const secRoots = tree.roots.filter((r) => r.section === sec.id);
+    const visible = secRoots.filter((r) => newestTs(r) >= cutoff && matchesSearch(r));
+
+    const secDiv = document.createElement("div");
+    secDiv.className = "section";
+
+    const totalMsgs = secRoots.reduce((s, r) => s + countMsgs(r), 0);
+    const last = secRoots.reduce((m, r) => Math.max(m, newestTs(r)), 0);
+    const h = document.createElement("h2");
+    h.innerHTML = esc(sec.name) + ' <span class="meta">(' + totalMsgs + " msgs" +
+      (last ? " &middot; LastMsg:" + mmddyy(last) : "") + ")</span>";
+    secDiv.appendChild(h);
+
+    if (session) {
+      const start = document.createElement("div");
+      start.className = "startlink";
+      start.innerHTML = '<a href="#" data-start="' + sec.id + '">&#9998; start a new thread in ' + esc(sec.name) + "</a>";
+      secDiv.appendChild(start);
+    }
+
+    const ul = document.createElement("ul");
+    ul.className = "tree";
+    if (!visible.length) {
+      const li = document.createElement("li");
+      li.style.cssText = "font-size:12px;color:#667;padding:3px 2px;";
+      li.textContent = secRoots.length ? "(nothing matches the current filter)" : "(no threads yet — be the first)";
+      ul.appendChild(li);
+    } else {
+      visible.forEach((r) => ul.appendChild(renderNode(r)));
+      shownThreads += visible.length;
+    }
+    secDiv.appendChild(ul);
+    boardEl.appendChild(secDiv);
+  });
+
+  // stats
+  const acc = getAccounts();
+  const members = new Set([...seedAuthors]);
+  Object.values(acc).forEach((a) => members.add(a.username.toLowerCase()));
+  const localCount = getLocalPosts().length;
+  statEl.innerHTML =
+    (posts.length + localCount) + " messages &middot; " + members.size + " members &middot; " +
+    SEED.length + " seeded threads" +
+    (localCount ? " &middot; " + localCount + " of your posts (this browser)" : "") +
+    (Object.keys(acc).length ? " &middot; newest member: " + esc(Object.values(acc).slice(-1)[0].username) : "");
+
+  bindBoard();
+}
+
+function renderNode(node) {
+  const li = document.createElement("li");
+  const isOpen = expandAll || openNodes[node.id];
+  li.className = "node" + (isOpen ? " open" : "");
+
+  const row = document.createElement("div");
+  row.className = "row";
+  row.dataset.id = node.id;
+  const isThreadHead = node.parentId === null;
+  const twist = node.kids.length ? (isOpen ? "▾ " : "▸ ") : "· ";
+  row.innerHTML =
+    '<span class="tw">' + twist + "</span>" +
+    '<span class="ttl' + (isThreadHead ? " head" : "") + '">' + esc(node.title) + "</span> " +
+    '<span class="by">— ' + esc(node.author) + "</span> " +
+    '<span class="dt">' + mmddyy(node.ts) + "</span>" +
+    (node.seed ? "" : ' <span class="unread">NEW</span>');
+  li.appendChild(row);
+
+  if (isOpen) {
+    const post = document.createElement("div");
+    post.className = "post";
+    post.innerHTML =
+      '<div class="phead"><span><b>' + esc(node.author) + "</b> wrote:</span><span>" +
+      new Date(node.ts).toLocaleString() + "</span></div>" +
+      '<div class="pbody">' + esc(node.body) + "</div>" +
+      '<div class="pfoot">' +
+        (session
+          ? '<a href="#" data-reply="' + node.id + '">post a reply</a>'
+          : '<span style="color:#667;">log in to reply</span>') +
+      "</div>";
+    li.appendChild(post);
+  }
+
+  if (node.kids.length) {
+    const ul = document.createElement("ul");
+    node.kids.forEach((k) => ul.appendChild(renderNode(k)));
+    li.appendChild(ul);
+  }
+  return li;
+}
+
+/* ------------------------------------------------------------------ *
+ *  EVENT WIRING
+ * ------------------------------------------------------------------ */
+function bindBoard() {
+  boardEl.querySelectorAll(".row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const id = row.dataset.id;
+      openNodes[id] = !openNodes[id];
+      render();
+    });
+  });
+  boardEl.querySelectorAll("[data-reply]").forEach((a) => {
+    a.addEventListener("click", (e) => { e.preventDefault(); openReplyForm(a.dataset.reply); });
+  });
+  boardEl.querySelectorAll("[data-start]").forEach((a) => {
+    a.addEventListener("click", (e) => { e.preventDefault(); openThreadForm(a.dataset.start); });
   });
 }
 
-function line(x1, y1, x2, y2) {
-  g.beginPath();
-  g.moveTo(x1, y1);
-  g.lineTo(x2, y2);
-  g.stroke();
+function openReplyForm(parentId) {
+  const parent = allPosts().find((p) => p.id === parentId);
+  if (!parent) return;
+  document.querySelectorAll(".replyform,.threadform").forEach((f) => f.remove());
+  // find the <li> for this node and drop the form after its .post
+  const row = boardEl.querySelector('.row[data-id="' + CSS.escape(parentId) + '"]');
+  const li = row.closest("li.node");
+  const form = document.createElement("div");
+  form.className = "replyform";
+  form.innerHTML =
+    "<b>Reply to " + esc(parent.author) + "</b> &mdash; posting as <b>" + esc(session) + "</b>" +
+    "<textarea id=\"rf-body\" placeholder=\"be decent\"></textarea>" +
+    '<button class="btn" id="rf-go">Post reply</button> ' +
+    '<button class="btn" id="rf-cancel">cancel</button>' +
+    '<div class="msg" id="rf-msg"></div>';
+  li.insertBefore(form, li.querySelector("ul") || null);
+  const body = form.querySelector("#rf-body");
+  body.focus();
+  form.querySelector("#rf-cancel").addEventListener("click", () => form.remove());
+  form.querySelector("#rf-go").addEventListener("click", () => {
+    const text = body.value.trim();
+    if (text.length < 2) { form.querySelector("#rf-msg").textContent = "say something first"; return; }
+    const p = {
+      id: "local-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+      threadId: parent.threadId, parentId: parent.id, section: parent.section,
+      title: parent.title.indexOf("Re: ") === 0 ? parent.title : "Re: " + parent.title,
+      author: session, body: text, ts: Date.now(), seed: false,
+    };
+    addLocalPost(p);
+    openNodes[parent.id] = true;
+    openNodes[p.id] = true;
+    render();
+  });
 }
 
-function draw() {
-  t++;
-  g.clearRect(0, 0, W, H);
-  g.fillStyle = "#fff";
-  g.fillRect(0, 0, W, H);
+function openThreadForm(sectionId) {
+  const sec = SECTIONS.find((s) => s.id === sectionId);
+  document.querySelectorAll(".replyform,.threadform").forEach((f) => f.remove());
+  const secDiv = [...boardEl.querySelectorAll(".section")].find((d) =>
+    d.querySelector("[data-start]") && d.querySelector("[data-start]").dataset.start === sectionId);
+  const form = document.createElement("div");
+  form.className = "threadform";
+  form.innerHTML =
+    "<b>New thread in " + sec.name + "</b> &mdash; posting as <b>" + esc(session) + "</b>" +
+    '<input type="text" id="tf-title" placeholder="thread title" maxlength="120">' +
+    '<textarea id="tf-body" placeholder="first post"></textarea>' +
+    '<button class="btn" id="tf-go">Post thread</button> ' +
+    '<button class="btn" id="tf-cancel">cancel</button>' +
+    '<div class="msg" id="tf-msg"></div>';
+  secDiv.insertBefore(form, secDiv.querySelector("ul.tree"));
+  form.querySelector("#tf-title").focus();
+  form.querySelector("#tf-cancel").addEventListener("click", () => form.remove());
+  form.querySelector("#tf-go").addEventListener("click", () => {
+    const title = form.querySelector("#tf-title").value.trim();
+    const bodyv = form.querySelector("#tf-body").value.trim();
+    const msg = form.querySelector("#tf-msg");
+    if (title.length < 3) { msg.textContent = "give it a title"; return; }
+    if (bodyv.length < 2) { msg.textContent = "write a first post"; return; }
+    const id = "local-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+    addLocalPost({
+      id: id, threadId: id, parentId: null, section: sectionId,
+      title: title, author: session, body: bodyv, ts: Date.now(), seed: false,
+    });
+    openNodes[id] = true;
+    render();
+  });
+}
 
-  // hammering cycle: pound roughly 6x/sec
-  const phase = (t % 12) / 12;              // 0..1
-  const pound = phase < 0.35 ? 1 : 0;       // hitting the ground
-  const shake = pound ? (Math.random() * 3 - 1.5) : 0;
-
-  g.save();
-  g.translate(shake, pound ? Math.random() * 1.5 : 0);
-
-  g.strokeStyle = "#000";
-  g.fillStyle = "#000";
-  g.lineWidth = 3;
-
-  // ground
-  line(0, groundY, W, groundY);
-
-  // little rubble pile where he's digging
-  g.beginPath();
-  g.moveTo(W / 2 + 20, groundY);
-  g.lineTo(W / 2 + 34, groundY - 10 - (pound ? 2 : 0));
-  g.lineTo(W / 2 + 50, groundY);
-  g.stroke();
-
-  // --- stick guy (vibrating) ---
-  const jitter = () => Math.random() * 2 - 1;
-  const bx = W / 2 - 30 + jitter() * (pound ? 2 : 0.6);
-  const by = groundY + jitter() * (pound ? 1.5 : 0.4);
-
-  const hipY = by - 34;
-  const shoulderY = by - 58;
-  const headCY = by - 70;
-
-  g.lineWidth = 3;
-  // head
-  g.beginPath();
-  g.arc(bx, headCY, 9, 0, Math.PI * 2);
-  g.stroke();
-  // hard hat
-  g.beginPath();
-  g.arc(bx, headCY - 1, 10, Math.PI, 0);
-  g.stroke();
-  line(bx - 12, headCY - 1, bx + 12, headCY - 1);
-  // spine
-  line(bx, headCY + 9, bx, hipY);
-  // legs braced
-  line(bx, hipY, bx - 14, by);
-  line(bx, hipY, bx + 12, by);
-  // feet
-  line(bx - 14, by, bx - 20, by);
-  line(bx + 12, by, bx + 18, by);
-
-  // arms reaching forward-down to the jackhammer handle
-  const handX = bx + 30, handY = shoulderY + 14 + (pound ? 3 : 0);
-  line(bx, shoulderY + 4, handX, handY);
-  line(bx, shoulderY + 8, handX, handY + 6);
-
-  // --- jackhammer ---
-  const jTopY = handY - 8;
-  const jBotY = groundY - (pound ? 0 : 8);
-  g.lineWidth = 4;
-  line(handX + 4, jTopY, handX + 4, jBotY);      // shaft
-  g.lineWidth = 3;
-  // motor box
-  g.strokeRect(handX - 6, jTopY - 14, 22, 18);
-  // chisel foot
-  g.beginPath();
-  g.moveTo(handX - 2, jBotY);
-  g.lineTo(handX + 10, jBotY);
-  g.lineTo(handX + 4, jBotY + 8);
-  g.closePath();
-  g.stroke();
-
-  // impact stars
-  if (pound) {
-    g.lineWidth = 2;
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI - Math.PI / 2 + Math.random() * 0.3;
-      const r1 = 4, r2 = 10 + Math.random() * 6;
-      line(handX + 4 + Math.cos(a) * r1, jBotY + 4 + Math.sin(a) * r1,
-           handX + 4 + Math.cos(a) * r2, jBotY + 4 + Math.sin(a) * r2);
+/* ---- nav row ---- */
+document.querySelectorAll("[data-nav]").forEach((b) => {
+  b.addEventListener("click", () => {
+    const n = b.dataset.nav;
+    if (n === "home") { openNodes = {}; expandAll = false; searchTerm = ""; document.getElementById("searchbox").value = ""; window.scrollTo(0, 0); }
+    if (n === "post") {
+      if (!session) { openAuth("register"); return; }
+      openThreadForm(SECTIONS[0].id);
+      return;
     }
-    if (t % 2 === 0) { spawnDust(); spawnDust(); }
-  }
+    if (n === "expand") expandAll = true;
+    if (n === "collapse") { expandAll = false; openNodes = {}; }
+    render();
+  });
+});
+document.getElementById("sincesel").addEventListener("change", (e) => { sinceDays = +e.target.value; render(); });
+let searchT;
+document.getElementById("searchbox").addEventListener("input", (e) => {
+  clearTimeout(searchT);
+  searchT = setTimeout(() => { searchTerm = e.target.value.trim(); render(); }, 200);
+});
 
-  // dust
-  for (const d of dust) {
-    d.x += d.vx;
-    d.y += d.vy;
-    d.vy += 0.05;
-    d.life -= 0.02;
-  }
-  for (let i = dust.length - 1; i >= 0; i--) if (dust[i].life <= 0) dust.splice(i, 1);
-  g.fillStyle = "rgba(80,80,80,0.5)";
-  for (const d of dust) {
-    g.globalAlpha = Math.max(0, d.life);
-    g.beginPath();
-    g.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-    g.fill();
-  }
-  g.globalAlpha = 1;
-
-  g.restore();
-
-  // sign (doesn't shake)
-  g.fillStyle = "#000";
-  g.font = "bold 18px 'Comic Sans MS', cursive";
-  g.textAlign = "center";
-  g.fillText("UNDER CONSTRUCTION", W / 2, 34);
-  g.font = "12px 'Comic Sans MS', cursive";
-  g.fillText("(forum coming eventually)", W / 2, 52);
-
-  requestAnimationFrame(draw);
+/* ---- auth panel ---- */
+const authPanel = document.getElementById("authpanel");
+function openAuth(tab) {
+  authPanel.classList.add("show");
+  switchTab(tab || "login");
+  authPanel.scrollIntoView({ block: "nearest" });
 }
-draw();
+function switchTab(tab) {
+  document.querySelectorAll(".authtabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  document.getElementById("tab-login").style.display = tab === "login" ? "" : "none";
+  document.getElementById("tab-register").style.display = tab === "register" ? "" : "none";
+}
+document.querySelectorAll(".authtabs button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+document.getElementById("authbtn").addEventListener("click", () => {
+  authPanel.classList.toggle("show");
+});
+document.getElementById("logoutbtn").addEventListener("click", () => {
+  clearSession(); session = null; refreshWho(); render();
+});
+
+document.getElementById("li-go").addEventListener("click", async () => {
+  const u = document.getElementById("li-user").value.trim();
+  const p = document.getElementById("li-pass").value;
+  const msg = document.getElementById("li-msg");
+  msg.className = "msg"; msg.textContent = "checking…";
+  try {
+    const name = await checkLogin(u, p);
+    setSession(name); session = name;
+    msg.className = "msg ok"; msg.textContent = "logged in as " + name;
+    document.getElementById("li-pass").value = "";
+    authPanel.classList.remove("show");
+    refreshWho(); render();
+  } catch (e) {
+    msg.className = "msg"; msg.textContent = e.message;
+  }
+});
+
+document.getElementById("rg-go").addEventListener("click", async () => {
+  const u = document.getElementById("rg-user").value.trim();
+  const p = document.getElementById("rg-pass").value;
+  const p2 = document.getElementById("rg-pass2").value;
+  const msg = document.getElementById("rg-msg");
+  msg.className = "msg";
+  if (!/^[A-Za-z0-9_-]{3,20}$/.test(u)) { msg.textContent = "username: 3–20 chars, letters/numbers/_/- only"; return; }
+  if (nameTaken(u)) { msg.textContent = "“" + u + "” is already taken — pick another"; return; }
+  if (p.length < 4) { msg.textContent = "password needs at least 4 characters"; return; }
+  if (p !== p2) { msg.textContent = "the two passwords don't match"; return; }
+  if (!window.confirm("Last warning: there is NO password reset. If you forget “" + p + "” you are locked out and will have to beg an admin.\n\nCreate the account?")) return;
+  try {
+    await createAccount(u, p);
+    setSession(u); session = u;
+    msg.className = "msg ok"; msg.textContent = "welcome, " + u + ". you're logged in.";
+    document.getElementById("rg-pass").value = document.getElementById("rg-pass2").value = "";
+    authPanel.classList.remove("show");
+    refreshWho(); render();
+  } catch (e) {
+    msg.textContent = e.message;
+  }
+});
+
+function refreshWho() {
+  if (session) {
+    whoEl.innerHTML = "logged in as <b>" + esc(session) + "</b>";
+    document.getElementById("authbtn").style.display = "none";
+    document.getElementById("logoutbtn").style.display = "";
+  } else {
+    whoEl.textContent = "not logged in";
+    document.getElementById("authbtn").style.display = "";
+    document.getElementById("logoutbtn").style.display = "none";
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  GO
+ * ------------------------------------------------------------------ */
+if (!(window.crypto && crypto.subtle)) {
+  // file:// on some setups has no subtle crypto — accounts just won't work
+  document.getElementById("rg-go").disabled = true;
+}
+refreshWho();
+render();
 </script>
 </body>
 </html>
