@@ -162,7 +162,7 @@
 <div id="page">
   <div class="titlebar">
     <div class="big">SORTAFUN&middot;ORG COMMUNITY BOARD</div>
-    <div class="sub">&ldquo;the guy finally finished the deck&rdquo; &mdash; est. 2026, held together with tape</div>
+    <div class="sub">"the guy finally finished the deck" est. 2026, held together with tape</div>
   </div>
 
   <div class="navrow">
@@ -177,7 +177,7 @@
       <option value="7">7 days</option>
       <option value="30">30 days</option>
     </select>
-    <input id="searchbox" type="text" placeholder="search&hellip;" autocomplete="off">
+    <input id="searchbox" type="text" placeholder="search..." autocomplete="off">
     <span class="spacer"></span>
     <span class="who" id="whoami">not logged in</span>
     <button id="authbtn">log in / register</button>
@@ -206,14 +206,14 @@
         (<a href="index.html">the guy</a>), explain yourself, and hope.
         <b>Do not use a password you use anywhere else.</b>
       </div>
-      <input id="rg-user" type="text" placeholder="username (3&ndash;20, letters/numbers/_/-)" autocomplete="off" spellcheck="false">
+      <input id="rg-user" type="text" placeholder="username (3-20, letters/numbers/_/-)" autocomplete="off" spellcheck="false">
       <input id="rg-pass" type="password" placeholder="password (min 4)" autocomplete="off">
       <input id="rg-pass2" type="password" placeholder="password again" autocomplete="off">
       <button class="btn" id="rg-go">Create account</button>
       <div class="msg" id="rg-msg"></div>
       <div style="font-size:11.5px;color:#556;margin-top:4px;">
-        Your account and any posts you make are stored in <i>this browser only</i> &mdash;
-        the board can&rsquo;t reach a server, so nobody else will see them. Same deal as a
+        Your account and any posts you make are stored in <i>this browser only</i>.
+        The board can't reach a server, so nobody else will see them. Same deal as a
         1999 guestbook. Usernames already in use (including the regulars) are blocked.
       </div>
     </div>
@@ -244,7 +244,7 @@ const SECTIONS = [
 ];
 
 /* ------------------------------------------------------------------ *
- *  SEED CONTENT  — a month or so of a small, nerdy, well-used board.
+ *  SEED CONTENT  - a month or so of a small, nerdy, well-used board.
  *  Dates are "YYYY-MM-DD HH:MM". Replies nest via `re`.
  * ------------------------------------------------------------------ */
 const SEED = [
@@ -252,30 +252,38 @@ const SEED = [
 /* ===== GENERAL ===== */
 {
   id: "t-welcome", section: "general",
-  title: "READ FIRST — how this place works",
+  title: "READ FIRST, how this place works",
   author: "webmaster", date: "2026-07-27 08:02",
   body:
 `welcome. this board runs on tape and goodwill.
 
-the rules, such as they are:
- - be decent to each other
- - keep keyboard talk in the keyboard thread or the typing thread, not everywhere
- - don't repost the same thread into three sections, i will merge them and sigh
+rules, what there is of them:
+- be decent. or at least be funny about not being decent
+- keyboard talk goes in the keyboard thread. i mean it
+- dont post the same thread in three sections, i will merge them and be annoyed
 
-accounts: pick a username, pick a password. THERE IS NO PASSWORD RESET. there is
-no "forgot password" link because there is no email and there is barely a server.
-if you lose your password you email the admin (me), explain yourself, i ignore it
-for about a week, then i probably help.
+accounts: pick a username, pick a password. THERE IS NO PASSWORD RESET. no forgot
+password link, no email, barely a server. if you lose it you email me, explain
+yourself, i ignore it for a week, then i probably help.
 
-do not reuse a real password here. i mean it.
+do not reuse a real password here. seriously.
 
-the stick guy built the deck. i just swept up.`,
+the stick guy built the deck. i just sweep up.`,
   re: [
-    { author: "quietkeys", date: "2026-07-27 12:20", body: "thanks for setting this up. it's nice to have somewhere." },
+    { author: "quietkeys", date: "2026-07-27 12:20", body: "thanks for putting this together. nice to have somewhere that isnt a discord." },
     { author: "pixel_merchant", date: "2026-07-27 19:41",
-      body: "the fact that it's visibly held together with tape is the entire appeal. please do not fix it, sand it, or add a react frontend.",
-      re: [ { author: "webmaster", date: "2026-07-28 07:55", body: "not planning to. i don't know what react is and it's staying that way." } ] },
-    { author: "HAMSTERWHEEL", date: "2026-07-28 21:10", body: "HELLO EVERYONE I AM HERE" },
+      body: "the fact that it's held together with tape is the whole point. do not fix it, do not add react, do not add a 'login with google' button.",
+      re: [ { author: "webmaster", date: "2026-07-28 07:55", body: "wasnt going to. i dont know what react is and im keeping it that way." } ] },
+    { author: "HAMSTERWHEEL", date: "2026-07-28 21:10",
+      body: "HELLO. I AM NEW. WHERE DO I POST",
+      re: [
+        { author: "normie_steve", date: "2026-07-28 21:44", body: "you just did it" },
+        { author: "HAMSTERWHEEL", date: "2026-07-28 21:52", body: "OK GREAT" },
+      ] },
+    { author: "BONELESS_PIZZA", date: "2026-07-29 02:11",
+      body: "who is this for",
+      re: [ { author: "webmaster", date: "2026-07-29 07:30", body: "not you apparently" } ] },
+    { author: "kevin_r", date: "2026-08-04 19:20", body: "is this the crossword help line. i'm stuck on 9 down" },
   ],
 },
 
@@ -284,105 +292,276 @@ the stick guy built the deck. i just swept up.`,
   title: "what is the deal with the stick guy (lore thread)",
   author: "pixel_merchant", date: "2026-08-09 15:33",
   body:
-`is there canon here. why is he running. why does a crusty homepage have a
-side-scrolling art gallery attached to it. i have questions and the readme
-does not answer them.`,
+`is there lore here. why is the guy running. why is there a side scrolling art
+gallery bolted onto a crossword site. the readme explains none of this.`,
   re: [
     { author: "Vera_Nihil", date: "2026-08-09 23:58",
-      body: "he runs because we're watching. close the tab and he stops. he doesn't get to rest, he just stops existing. think about that one for a while.",
-      re: [ { author: "BrightSodium", date: "2026-08-10 08:14", body: "ok that was genuinely upsetting first thing in the morning, thank you" } ] },
+      body: "he runs because youre watching. close the tab and he stops. he doesnt rest, he just stops. anyway.",
+      re: [ { author: "BrightSodium", date: "2026-08-10 08:14", body: "why would you say that. i have to close this tab eventually" } ] },
     { author: "pixel_merchant", date: "2026-08-10 11:02",
-      body: "unrelated discovery: if you jump into the floor just to the right of the third pipe at the top of your arc, you clip through and fall into nothing. held down-right and fell for a full minute before i alt-tabbed. 10/10.",
-      re: [ { author: "webmaster", date: "2026-08-10 13:20", body: "that's not a feature. i'm also not fixing it. call it the basement." } ] },
-    { author: "fenwick_tree", date: "2026-08-11 09:47",
-      body: "the gallery photos are all Vietnam, for what it's worth. Ha Long Bay, a boat on a river, a park with a pagoda, a sunset near a port.",
+      body: "separate discovery: jump into the floor just right of the third pipe at the top of your jump and you clip through and fall forever. held down-right and fell for like a minute before i alt tabbed.",
       re: [
-        { author: "pixel_merchant", date: "2026-08-11 10:05", body: "how could you possibly know that" },
-        { author: "fenwick_tree", date: "2026-08-11 10:31", body: "the pagoda in the third frame is the one in Tao Dan park in Saigon. i've stood in front of it. the light's the same." },
+        { author: "webmaster", date: "2026-08-10 13:20", body: "thats not a feature. im also not fixing it. its the basement now." },
+        { author: "trucknutz", date: "2026-08-10 14:02", body: "the basement. leave it in forever. best feature on the site" },
+        { author: "HAMSTERWHEEL", date: "2026-08-10 15:30", body: "I FOUND THE BASEMENT. IM IN THE BASEMENT. HOW DO I GET OUT" },
+        { author: "webmaster", date: "2026-08-10 15:44", body: "refresh the page hamster" },
+        { author: "HAMSTERWHEEL", date: "2026-08-10 15:51", body: "OK. I MISS THE BASEMENT ALREADY" },
       ] },
-    { author: "gastropoda", date: "2026-08-12 20:19", body: "i like the little potted plant by the gallery door. it's a nice touch. somebody thought about that." },
+    { author: "fenwick_tree", date: "2026-08-11 09:47",
+      body: "the gallery photos are all vietnam btw. ha long bay, a river boat, a park with a pagoda, a sunset near a port.",
+      re: [
+        { author: "pixel_merchant", date: "2026-08-11 10:05", body: "how do you know that" },
+        { author: "fenwick_tree", date: "2026-08-11 10:31", body: "the pagoda is the one in tao dan park in saigon. ive stood in front of it." },
+        { author: "cc2_truther", date: "2026-08-11 12:10", body: "so caleb has been to vietnam. noted. adding it to the file." },
+        { author: "fenwick_tree", date: "2026-08-11 12:22", body: "or he searched 'nice photos'. please dont put me in the file." },
+      ] },
+    { author: "gastropoda", date: "2026-08-12 20:19",
+      body: "i like the little plant next to the gallery door",
+      re: [ { author: "quietkeys", date: "2026-08-13 07:40", body: "yeah its a nice touch" } ] },
+    { author: "BONELESS_PIZZA", date: "2026-08-14 01:15",
+      body: "the guy should be able to die. add fall damage. add a health bar. make the running MEAN something",
+      re: [ { author: "Vera_Nihil", date: "2026-08-14 09:02", body: "no" } ] },
   ],
 },
 
 {
   id: "t-keyboards", section: "general",
-  title: "KEYBOARD THREAD (containment) — all switch/layout talk goes here",
+  title: "KEYBOARD THREAD (containment). all switch/layout talk goes here",
   author: "webmaster", date: "2026-07-30 09:15",
-  body: "you know why this exists. go.",
+  body: "you know why this exists. keyboard talk goes here or it gets deleted. go nuts.",
   re: [
-    { author: "qwerty_maxx", date: "2026-07-30 10:40", body: "linears for typing, tactiles for everything else, and anyone who games on browns is lying to themselves about what they want. i'll take the heat." },
+    { author: "qwerty_maxx", date: "2026-07-30 10:40",
+      body: "linears for typing, tactiles for coding, and if you game on browns you are lying to yourself about what you actually want.",
+      re: [
+        { author: "realpolitik99", date: "2026-07-30 11:15", body: "this is so confidently wrong. tactiles are better for typing, full stop. the bump gives you a reset point every keystroke. linears are a gaming meme." },
+        { author: "qwerty_maxx", date: "2026-07-30 11:40", body: "objectively better. ok. link the study." },
+        { author: "realpolitik99", date: "2026-07-30 12:02", body: "i dont need a study, i can feel it" },
+        { author: "qwerty_maxx", date: "2026-07-30 12:19", body: "so not objectively then" },
+        { author: "BONELESS_PIZZA", date: "2026-07-30 13:30", body: "two grown men arguing about whether their toys click or thock. incredible. keep going." },
+      ] },
     { author: "fenwick_tree", date: "2026-07-31 22:03",
-      body: "switched to Colemak-DH over the summer. three weeks of feeling like my hands belonged to someone else, then it clicked. wpm is back to where it was and my fingers move about half as far.",
-      re: [ { author: "quietkeys", date: "2026-08-01 07:12", body: "i keep meaning to and keep chickening out because of the relearning dip. did you cold-turkey or gradual?" },
-             { author: "fenwick_tree", date: "2026-08-01 09:30", body: "cold turkey, over a weekend, with a printed layout taped to the monitor. gradual just means suffering for longer." } ] },
-    { author: "not_a_robot_beep", date: "2026-08-02 14:22", body: "you could say the switch really... clicked for you (linears notwithstanding)" },
-    { author: "blancmange_77", date: "2026-08-15 11:40", body: "I have used the same beige Model M since 1994. It has outlived two marriages and a dog. I see no reason to change now. — B." },
+      body: "switched to colemak-DH this summer. three weeks of my hands feeling like rentals, then it clicked. same wpm, half the finger travel. no regrets.",
+      re: [
+        { author: "quietkeys", date: "2026-08-01 07:12", body: "i keep meaning to and chickening out because of the dip. cold turkey or gradual?" },
+        { author: "fenwick_tree", date: "2026-08-01 09:30", body: "cold turkey over a weekend with the layout taped to my monitor. gradual just stretches the pain out." },
+        { author: "kevin_r", date: "2026-08-01 12:44", body: "whats colemak, is it a brand" },
+        { author: "fenwick_tree", date: "2026-08-01 13:10", body: "its a keyboard layout. the letters sit in different places than qwerty. supposedly more efficient." },
+        { author: "kevin_r", date: "2026-08-01 13:22", body: "why would you do that to yourself" },
+        { author: "fenwick_tree", date: "2026-08-01 13:41", body: "some mornings i ask myself the same thing" },
+      ] },
+    { author: "not_a_robot_beep", date: "2026-08-02 14:22",
+      body: "you could say the new layout really... clicked for him. (he uses linears so it didnt, but you could say it)",
+      re: [ { author: "Vera_Nihil", date: "2026-08-02 15:00", body: "every thread. every single thread." } ] },
+    { author: "blancmange_77", date: "2026-08-15 11:40",
+      body: "I have used the same beige IBM Model M since 1994. It still works. Everything else in this thread sounds like a scam. B.",
+      re: [ { author: "trucknutz", date: "2026-08-15 12:30", body: "based grandpa" } ] },
+  ],
+},
+
+{
+  id: "t-caleb", section: "general",
+  title: "caleb's face got leaked from a puzzle LMAO",
+  author: "BONELESS_PIZZA", date: "2026-08-20 00:41",
+  body:
+`ok so the little clue pictures on caleb's puzzles. one of them is a chrome ufo
+thing. somebody zoomed way in on the reflection and you can see the guy who
+makes these. face, room, everything. hoodie, bad ceiling light, a mug.
+
+posting this because its funny not because i care. he looks like he manages a
+phone shop.`,
+  re: [
+    { author: "fenwick_tree", date: "2026-08-20 08:15",
+      body: "which puzzle. i want to see the reflection myself before we all decide this is real.",
+      re: [
+        { author: "BONELESS_PIZZA", date: "2026-08-20 08:40", body: "the one with the ufo. a down clue i think. do your own homework." },
+        { author: "fenwick_tree", date: "2026-08-20 09:31", body: "found it. yeah thats a face. cant make out much, the highlight blows out most of it. brown hair, glasses maybe. could be literally anyone." },
+        { author: "normie_steve", date: "2026-08-20 10:02", body: "so we zoomed in on a jpeg and found a blurry man. huge day for the internet." },
+      ] },
+    { author: "xX_griefer_Xx", date: "2026-08-20 11:20", body: "he looks EXACTLY how i pictured. sorry caleb" },
+    { author: "damp_lettuce", date: "2026-08-20 12:05",
+      body: "imagine having this much free time. making free crosswords and a whole website. must be nice.",
+      re: [
+        { author: "trucknutz", date: "2026-08-20 12:40", body: "brother he built a whole site AND puzzles for free and youre mad about it. thats a W. touch grass." },
+        { author: "damp_lettuce", date: "2026-08-20 13:15", body: "im just saying" },
+      ] },
+    { author: "cc2_truther", date: "2026-08-20 14:50",
+      body:
+`ok nobody is connecting the dots so i will.
+
+caleb clayton. initials CC. there is a podcast called CC2. guy never shows his
+face, talks about sales and "acquiring" businesses. listen to the puzzle solve
+videos he posted last year and then listen to CC2. same cadence. same "uh"
+placement. i made a spreadsheet.
+
+the ufo reflection room matches the CC2 thumbnail. same lamp. i can post frames.`,
+      re: [
+        { author: "realpolitik99", date: "2026-08-20 15:30", body: "the CC2 guy claims he exited a company in 2021. no name, no press, no filing anyone has ever found. its vibes." },
+        { author: "normie_steve", date: "2026-08-20 15:55", body: "or theyre two different men with two Cs in their name, which is not a rare event" },
+        { author: "cc2_truther", date: "2026-08-20 16:11", body: "the LAMP normie. the SAME LAMP." },
+      ] },
+    { author: "BrightSodium", date: "2026-08-20 17:03",
+      body: "wait whats CC2",
+      re: [
+        { author: "realpolitik99", date: "2026-08-20 17:20", body: "business podcast. 'how i closed a 40k deal cold emailing', that kind of thing. some of its fine actually, the cold email episode had real templates." },
+        { author: "STOP_POSTING", date: "2026-08-20 17:45", body: "its guru garbage. 'buy my course' energy. the guy has never sold anything except the idea of selling. hes full of shit." },
+        { author: "trucknutz", date: "2026-08-20 18:10", body: "the sales stuff is legit tho. i used the follow up script from ep 12 and closed two clients this month. say what you want, the man eats." },
+        { author: "STOP_POSTING", date: "2026-08-20 18:22", body: "cool anecdote. n=1. still a fraud." },
+        { author: "BigDawgEnergy", date: "2026-08-20 18:50", body: "^ cope. dumbass take. some people just cant stand watching a guy win." },
+        { author: "STOP_POSTING", date: "2026-08-20 19:05", body: "hes not winning, he's making CROSSWORDS on a website with a STICK MAN. get a fucking grip, all of you" },
+      ] },
+    { author: "kevin_r", date: "2026-08-20 19:40",
+      body: "wait i thought the stick guy made the site. who is caleb",
+      re: [
+        { author: "quietkeys", date: "2026-08-20 20:02", body: "caleb makes the puzzles. the stick guy is a drawing. the webmaster is a third person, or maybe the same as caleb, nobody actually knows." },
+        { author: "kevin_r", date: "2026-08-20 20:15", body: "ok this is confusing. anyway the snacky crossword was really hard" },
+      ] },
+    { author: "gastropoda", date: "2026-08-21 07:30", body: "i dont really get the drama. i just think the puzzles are nice. 57 across made me laugh out loud." },
+    { author: "Vera_Nihil", date: "2026-08-21 13:12", body: "you found a man in a reflection and now you want his whole life. leave him alone. or dont. hes not real to you either way." },
+    { author: "webmaster", date: "2026-08-21 16:40",
+      body:
+`few things.
+
+1. the puzzles are free. the site is free. if you dont like the man, dont solve
+   the man.
+2. im not confirming or denying anything, partly because its none of your
+   business and partly because its funnier this way.
+3. cc2_truther if you post that spreadsheet im locking the thread.`,
+      re: [
+        { author: "cc2_truther", date: "2026-08-21 16:55", body: "posting the spreadsheet" },
+        { author: "webmaster", date: "2026-08-21 16:58", body: "locking the thread" },
+        { author: "BONELESS_PIZZA", date: "2026-08-21 17:20", body: "(it did not get locked)" },
+      ] },
+    { author: "xX_griefer_Xx", date: "2026-08-27 23:14",
+      body: "sorry to bump this. did the truther guy ever actually post the spreadsheet",
+      re: [
+        { author: "cc2_truther", date: "2026-08-27 23:40", body: "webmaster deleted it. ask him what hes hiding." },
+        { author: "webmaster", date: "2026-08-28 08:02", body: "i deleted it because it had your home address in cell B4, you absolute muppet" },
+      ] },
+  ],
+},
+
+{
+  id: "t-dead", section: "general",
+  title: "is this place dead",
+  author: "damp_lettuce", date: "2026-08-25 22:10",
+  body: "genuine question. like six people post here. is this dying or was it always like this",
+  re: [
+    { author: "normie_steve", date: "2026-08-25 22:40", body: "its six people who post a LOT. thats not dead, thats just small." },
+    { author: "BONELESS_PIZZA", date: "2026-08-25 23:15",
+      body: "its dead. skill issue on the webmaster. no notifications, no app, ugly as shit.",
+      re: [ { author: "webmaster", date: "2026-08-26 07:30", body: "correct on all counts. staying that way." } ] },
+    { author: "Vera_Nihil", date: "2026-08-26 01:44", body: "small and slow is the point. a dead forum is one where people stopped caring. people here care too much if anything." },
+    { author: "HAMSTERWHEEL", date: "2026-08-26 08:00",
+      body: "IM HERE EVERY DAY. IS THAT HELPING",
+      re: [ { author: "damp_lettuce", date: "2026-08-26 09:12", body: "unironically yes hamster" } ] },
+    { author: "trucknutz", date: "2026-08-26 12:30", body: "six real posters beats six thousand bots. this is the last good corner of the internet and you dumbasses are calling it dead. L take." },
+    { author: "gastropoda", date: "2026-08-26 19:50",
+      body: "i check it most mornings with my coffee. i dont always post. but i read all of them.",
+      re: [
+        { author: "quietkeys", date: "2026-08-26 20:15", body: "same actually" },
+        { author: "normie_steve", date: "2026-08-26 20:40", body: "yeah theres probably more of us lurking than posting. always is." },
+      ] },
   ],
 },
 
 /* ===== GAMES & SCORES ===== */
 {
   id: "t-typing", section: "games",
-  title: "typing leaderboard — is qwerty_maxx running a script??",
+  title: "typing leaderboard, is qwerty_maxx running a script??",
   author: "BrightSodium", date: "2026-08-03 21:14",
   body:
-`ok so i've been grinding the 30-second typing sprint and i cannot get past
-about 118 wpm and there is someone sitting at 154 at the top of the all-time
-board. 154!! for a full 30 seconds!!
+`been grinding the 30 second typing sprint and i cannot break 118. meanwhile
+theres someone at 154 sitting on top of the all time board. 154. for a full
+30 seconds.
 
-i'm not accusing anyone. i'm just saying it's suspicious and i want it looked into.`,
+not accusing anyone. just saying it looks fake and someone should check.`,
   re: [
     { author: "qwerty_maxx", date: "2026-08-03 22:40",
       body:
-`it's me and it's not a script.
+`its me and its not a script.
 
-154 sustained for 30s is fast but it is extremely not superhuman. the typeracer
-top 100 is all above 150. i'm on a cheap 40-key ortho with linears and i type
-Colemak. the layout alone is worth maybe 8-10 wpm for me because my fingers
-aren't hurdling all over the board.
+154 for 30s is fast but its not superhuman. the typeracer top 100 is all above
+150. im on a cheap 40 key board with linears and i type colemak. the layout
+alone is worth like 8-10 wpm for me.
 
-not trying to be a jerk. the honest answer is practice + a layout that suits you.`,
+the boring answer is i type all day every day and have for years.`,
       re: [
-        { author: "fenwick_tree", date: "2026-08-04 09:02", body: "seconding this. the actual typing world record is north of 300 wpm (Barbara Blackburn, Dvorak). 154 for half a minute is a good club-level number, not a red flag." },
-        { author: "BrightSodium", date: "2026-08-04 10:15", body: "ok. fair. i retract the accusation. how long did it take you to get there" },
-        { author: "qwerty_maxx", date: "2026-08-04 10:51", body: "couple years of just... typing a lot. i didn't drill. i just never handwrite anything." },
+        { author: "BrightSodium", date: "2026-08-04 09:10", body: "convenient that the only guy who can hit the number is the guy defending the number" },
+        { author: "qwerty_maxx", date: "2026-08-04 09:25", body: "what do you want me to do, film my hands" },
+        { author: "BrightSodium", date: "2026-08-04 09:33", body: "honestly yeah" },
+        { author: "qwerty_maxx", date: "2026-08-04 09:41", body: "not doing that" },
+        { author: "BONELESS_PIZZA", date: "2026-08-04 10:02", body: "he wont film his hands. thats a confession where im from" },
+        { author: "fenwick_tree", date: "2026-08-04 11:15", body: "the actual typing record is over 300 wpm (barbara blackburn, dvorak). 154 for half a minute is a good hobbyist number, not a red flag. everyone can calm down." },
+        { author: "BrightSodium", date: "2026-08-04 11:40", body: "im calm. im just also right." },
       ] },
-    { author: "HAMSTERWHEEL", date: "2026-08-05 18:30", body: "I GOT 91 TODAY. NEW PERSONAL BEST. I AM INCLUDING THIS INFORMATION FOR THE HISTORICAL RECORD" },
+    { author: "STOP_POSTING", date: "2026-08-04 14:20",
+      body: "or the leaderboard has no anti cheat because its a free website made by one guy and you can probably just edit the number in the console. who cares.",
+      re: [
+        { author: "fenwick_tree", date: "2026-08-04 14:55", body: "you can, actually. the rules only block garbage data, not a determined liar. its in the setup doc." },
+        { author: "BrightSodium", date: "2026-08-04 15:10", body: "SO THE SCORES ARE FAKE" },
+        { author: "fenwick_tree", date: "2026-08-04 15:22", body: "no. i said they CAN be. yours arent because you cant break 118, no offense" },
+        { author: "BrightSodium", date: "2026-08-04 15:30", body: "some taken" },
+      ] },
+    { author: "HAMSTERWHEEL", date: "2026-08-05 18:30",
+      body: "I GOT 91 TODAY. PERSONAL BEST. PUTTING IT HERE FOR THE RECORD",
+      re: [ { author: "trucknutz", date: "2026-08-05 19:00", body: "W hamster. ignore the drama." } ] },
     { author: "HollowMoon88", date: "2026-08-06 13:44",
       body:
-`separate gripe: the leaderboard "today" resets on Singapore time, so my
-morning runs are on yesterday's board by the time i check at night. took me
-a week to work out why my scores kept "vanishing".`,
+`unrelated gripe: the daily leaderboard resets on singapore time, so my morning
+runs are on yesterdays board by the time i look at night. took me a week to
+figure out why my scores kept vanishing.`,
       re: [
-        { author: "webmaster", date: "2026-08-06 15:09", body: "the whole site's day flips at UTC+8 midnight. that's also the tile slider's daily seed. it's one clock for everything and i'm not adding a second one." },
-        { author: "quietkeys", date: "2026-08-06 19:22", body: "thanks, that was quietly bothering me too" },
+        { author: "webmaster", date: "2026-08-06 15:09", body: "the whole site flips at UTC+8 midnight. thats also the puzzle seed. one clock. not adding a second one." },
+        { author: "quietkeys", date: "2026-08-06 19:22", body: "thanks, that was quietly driving me insane" },
       ] },
-    { author: "qwerty_maxx", date: "2026-08-26 01:12", body: "necro-ing my own thread: hit 161 tonight. also my right pinky has started making a noise. i regret nothing but i am noting it." },
+    { author: "qwerty_maxx", date: "2026-08-26 01:12",
+      body: "coming back to say i hit 161 tonight. also my right pinky clicks now when i bend it. worth it. probably.",
+      re: [
+        { author: "BrightSodium", date: "2026-08-26 08:30", body: "still think its fake" },
+        { author: "qwerty_maxx", date: "2026-08-26 09:05", body: "i know you do" },
+      ] },
   ],
 },
 
 {
   id: "t-slider", section: "games",
-  title: "tile slider daily — rolling discussion thread",
+  title: "tile slider daily, rolling discussion thread",
   author: "HollowMoon88", date: "2026-07-29 23:05",
   body:
-`let's keep the daily tile-slider chat in one place instead of a new thread
-every 24 hours.
+`lets keep the daily tile slider talk in one thread instead of a new one every
+day.
 
-29th: solved in 74 moves. felt slow. i think optimal was in the high 60s.`,
+29th: 74 moves. felt slow. think optimal was high 60s.`,
   re: [
     { author: "fenwick_tree", date: "2026-07-30 00:40",
-      body: "ran an IDA* solver on the 29th's seed out of curiosity — God's number for that scramble is 66. 74 is a genuinely tight human solve, don't beat yourself up.",
+      body: "ran an IDA* solver on the 29th seed. optimal is 66. 74 is a tight human solve.",
       re: [
-        { author: "HollowMoon88", date: "2026-07-30 08:11", body: "does checking optimal after the fact \"count\" or is that cheating. i only ever look once i've already finished." },
-        { author: "fenwick_tree", date: "2026-07-30 09:26", body: "looking after you've solved it is just curiosity, that's fine. feeding the solver's move list back into the puzzle is the cheating. the line's pretty clear." },
-        { author: "BrightSodium", date: "2026-07-30 12:03", body: "what's IDA*" },
-        { author: "fenwick_tree", date: "2026-07-30 12:40", body: "iterative-deepening A*. you do depth-limited searches with an admissible heuristic (here: sum of manhattan distances) and keep raising the limit until a solution pops out. low memory, which matters because the 15-puzzle state space is huge." },
+        { author: "HollowMoon88", date: "2026-07-30 08:11", body: "does checking optimal after count as cheating. i only look once ive finished." },
+        { author: "fenwick_tree", date: "2026-07-30 09:26", body: "looking after is fine. feeding the solvers moves back into the puzzle is cheating. pretty clear line imo." },
+        { author: "realpolitik99", date: "2026-07-30 09:50", body: "hard disagree. if you looked it up at all you cant claim a clean solve. knowing the number changes how you play the next one. its all cheating past a point." },
+        { author: "fenwick_tree", date: "2026-07-30 10:05", body: "so reading a chess book is cheating at chess now" },
+        { author: "realpolitik99", date: "2026-07-30 10:18", body: "different thing and you know it" },
+        { author: "fenwick_tree", date: "2026-07-30 10:30", body: "i genuinely dont but ok" },
+        { author: "BrightSodium", date: "2026-07-30 12:03", body: "whats IDA*" },
+        { author: "fenwick_tree", date: "2026-07-30 12:40", body: "iterative deepening A star. you do depth limited searches with a heuristic (here, total manhattan distance of every tile from its home square) and keep raising the depth cap until a solve falls out. almost no memory, which matters because the 15 puzzle has a stupid number of states." },
+        { author: "kevin_r", date: "2026-07-30 13:15", body: "i just push the tiles until it looks right" },
+        { author: "fenwick_tree", date: "2026-07-30 13:30", body: "honestly thats most of us" },
       ] },
-    { author: "mantis_dad", date: "2026-08-14 21:30", body: "long-time lurker. solved the 14th in 51 and i am fully aware i will never do that again. i have taken a screenshot. it is now my desktop." },
-    { author: "HollowMoon88", date: "2026-08-15 09:18", body: "the 14th was a friendly scramble, a lot of tiles started close to home. the 22nd on the other hand was actively hostile." },
-    { author: "gastropoda", date: "2026-08-22 17:52", body: "i got 203 on the 22nd :) took me three cups of tea but i finished it and that's what matters" },
-    { author: "m00nrunner", date: "2026-08-24 03:14", body: "there's something to the 3am daily. the board's empty, nobody's submitted yet, it's just you and fifteen tiles and the hum of the fridge. best time to play anything honestly." },
+    { author: "STOP_POSTING", date: "2026-08-02 16:40",
+      body: "its a fifteen puzzle. from 1880. you people are writing search algorithms for a thing that comes free in a christmas cracker.",
+      re: [
+        { author: "HollowMoon88", date: "2026-08-02 17:02", body: "yes. thats the fun part." },
+        { author: "STOP_POSTING", date: "2026-08-02 17:20", body: "no it isnt" },
+        { author: "moth_lord", date: "2026-08-02 18:00", body: "let people enjoy things man" },
+      ] },
+    { author: "mantis_dad", date: "2026-08-14 21:30", body: "lurker, but i solved the 14th in 51 and im aware ill never do it again. its my desktop background now." },
+    { author: "HollowMoon88", date: "2026-08-15 09:18", body: "the 14th was a soft scramble, half the tiles started near home. the 22nd was actively hostile." },
+    { author: "gastropoda", date: "2026-08-22 17:52",
+      body: "got 203 on the 22nd :) three cups of tea but i finished",
+      re: [ { author: "kevin_r", date: "2026-08-22 19:10", body: "nice" } ] },
+    { author: "m00nrunner", date: "2026-08-24 03:14",
+      body: "the 3am daily hits different. empty leaderboard, nobody submitted yet, just you and the tiles and the fridge humming.",
+      re: [ { author: "BONELESS_PIZZA", date: "2026-08-24 03:40", body: "get help" } ] },
   ],
 },
 
@@ -390,13 +569,75 @@ every 24 hours.
   id: "t-flicker", section: "games",
   title: "weird flicker on the circuit race in firefox? (just me?)",
   author: "greg_from_QLD", date: "2026-08-19 20:40",
-  body: "the 3D circuit race strobes for me on firefox — like the whole track flashes black every few seconds. chrome's fine. anyone else, or is my machine cooked?",
+  body: "the 3d circuit race strobes for me on firefox, whole track flashes black every few seconds. chrome is fine. anyone else or is my pc cooked",
   re: [
     { author: "pixel_merchant", date: "2026-08-19 22:15",
-      body: "not just you. it's a depth-buffer thing with the CDN build of three.js the page pulls in — older revision, known issue on some Intel drivers under firefox. forcing WebGL to the discrete GPU in about:config (webgl.force-enabled etc) fixed it for me.",
-      re: [ { author: "greg_from_QLD", date: "2026-08-20 06:30", body: "that did it. cheers. still flickers for about a second on load then settles." },
-             { author: "pixel_merchant", date: "2026-08-20 09:05", body: "yeah that first second is it compiling shaders. nothing to be done about that without a loading screen and the guy is not going to build a loading screen." } ] },
-    { author: "webmaster", date: "2026-08-20 10:11", body: "noted. i'll bump the three.js version next time i'm in there, which could be any decade now." },
+      body: "not just you. its a depth buffer thing with the old three.js build the page loads from a CDN. known issue on some intel drivers under firefox. forcing webgl to the discrete gpu in about:config fixed it for me.",
+      re: [
+        { author: "greg_from_QLD", date: "2026-08-20 06:30", body: "that did it. still flickers for a second on load then settles." },
+        { author: "pixel_merchant", date: "2026-08-20 09:05", body: "thats it compiling shaders. cant fix that without a loading screen and the guy is not building a loading screen." },
+      ] },
+    { author: "kevin_r", date: "2026-08-20 09:40",
+      body: "mine doesnt flicker but the car wont turn left",
+      re: [
+        { author: "normie_steve", date: "2026-08-20 10:00", body: "thats the A and D keys kevin" },
+        { author: "kevin_r", date: "2026-08-20 10:12", body: "oh" },
+      ] },
+    { author: "STOP_POSTING", date: "2026-08-20 11:30",
+      body: "or use chrome like a normal person and stop posting driver logs on a crossword forum",
+      re: [
+        { author: "greg_from_QLD", date: "2026-08-20 12:00", body: "mate this is the games section. of the forum. attached to the games." },
+        { author: "STOP_POSTING", date: "2026-08-20 12:15", body: "still" },
+      ] },
+    { author: "webmaster", date: "2026-08-20 13:11", body: "ill bump the three.js version next time im in there. could be any decade." },
+  ],
+},
+
+{
+  id: "t-chore", section: "games",
+  title: "the tile slider is not a puzzle its a chore",
+  author: "BONELESS_PIZZA", date: "2026-08-18 13:20",
+  body:
+`hot take. the tile slider is not a puzzle. a puzzle has a trick, an aha, a
+moment. the slider is just moving tiles until theyre in order. its a chore with
+a timer. the crossword is a real puzzle. the slider is doing the dishes.`,
+  re: [
+    { author: "HollowMoon88", date: "2026-08-18 13:45",
+      body: "this is one of the worst fucking takes ive read here and thats a real bar",
+      re: [
+        { author: "BONELESS_PIZZA", date: "2026-08-18 13:52", body: "cant refute it though" },
+        { author: "HollowMoon88", date: "2026-08-18 14:10", body: "the aha is finding the move sequence that cycles three tiles without wrecking the rest of the board. does your dishwashing involve a search algorithm? no? then its not the same thing. you just arent good enough to see the trick." },
+        { author: "BONELESS_PIZZA", date: "2026-08-18 14:20", body: "or its busywork and youve gaslit yourself into calling it depth" },
+      ] },
+    { author: "realpolitik99", date: "2026-08-18 15:02",
+      body: "hes sort of right. the slider is a solved problem. every state is reachable and theres a known algorithm. no discovery, just execution.",
+      re: [
+        { author: "fenwick_tree", date: "2026-08-18 15:20", body: "by that logic chess is a chore, its finite. sudoku is a chore. every puzzle with rules is a chore." },
+        { author: "realpolitik99", date: "2026-08-18 15:33", body: "chess has a living opponent" },
+        { author: "fenwick_tree", date: "2026-08-18 15:41", body: "play the daily then. the scramble is the opponent." },
+        { author: "realpolitik99", date: "2026-08-18 15:50", body: "thats not what opponent means" },
+        { author: "fenwick_tree", date: "2026-08-18 16:02", body: "im aware. i was making a point. relax." },
+      ] },
+    { author: "trucknutz", date: "2026-08-18 17:10",
+      body: "who cares. both games are free. play the one you like and shut up.",
+      re: [ { author: "BONELESS_PIZZA", date: "2026-08-18 17:22", body: "no" } ] },
+    { author: "normie_steve", date: "2026-08-18 18:40", body: "ten replies deep arguing about whether sliding tiles is a Real Puzzle. we are not a serious people." },
+    { author: "kevin_r", date: "2026-08-19 09:15",
+      body: "i like the slider because you cant really lose. the crossword you can just be wrong forever.",
+      re: [ { author: "HollowMoon88", date: "2026-08-19 09:40", body: "kevin gets it and hes not even trying" } ] },
+    { author: "STOP_POSTING", date: "2026-08-19 12:00",
+      body: "finally a thread with a point. the slider IS filler. so is half this site.",
+      re: [
+        { author: "HollowMoon88", date: "2026-08-19 12:15", body: "you agree with BONELESS_PIZZA now. sit with that." },
+        { author: "STOP_POSTING", date: "2026-08-19 12:30", body: "..." },
+        { author: "BONELESS_PIZZA", date: "2026-08-19 12:45", body: "unlikely alliance" },
+      ] },
+    { author: "webmaster", date: "2026-08-19 16:20",
+      body: "the slider took me three days to get right and the archive calendar took longer. call it a chore again and ill scramble your account.",
+      re: [
+        { author: "BONELESS_PIZZA", date: "2026-08-19 16:35", body: "you cant do that" },
+        { author: "webmaster", date: "2026-08-19 16:50", body: "try me. i barely know how this thing works. deleting stuff is the one part i can do." },
+      ] },
   ],
 },
 
@@ -406,105 +647,139 @@ every 24 hours.
   title: "Mantideering: a field report (long, sorry)",
   author: "mantis_dad", date: "2026-07-31 22:48",
   body:
-`Colony update for anyone who cares about invertebrates on a games forum.
+`colony update for the two of you who care about bugs on a games forum.
 
-The Sphodromantis ootheca I've been babysitting since May finally went off —
-roughly 40 nymphs over about six hours, which is a lot of tiny arms waving at
-you at once. Lost maybe six in the first two instars, which is normal; the rest
-are motoring through L3 now.
+the sphodromantis ootheca ive been sitting on since may finally hatched. about
+40 nymphs over six hours, a lot of tiny arms at once. lost maybe six in the
+first two instars, which is normal. rest are powering through L3.
 
-The fruit fly culture crashed at the worst possible moment (my fault, see
-below), so there was a frantic 48 hours of me chopping up mealworms too big for
-L2 mouths. Everyone made it.
+the fruit fly culture crashed at the worst moment (my fault) so there was a
+frantic 48h of me chopping mealworms too big for L2 mouths. everyone made it.
 
-One L4 had a bad molt — got stuck coming out of the old cuticle and lost most
-of a raptorial leg doing it. She's eating fine one-handed and if she's young
-enough she'll get some of it back over the next couple of molts. Adults don't;
-what they molt in with is what they keep.
+one L4 had a bad molt, got stuck in the old cuticle and lost most of a
+raptorial leg pulling free. shes eating fine one handed. if shes young enough
+shell get some of it back over the next couple molts. adults dont, what they
+molt in with is what they keep.
 
-Humidity's been the whole game. Too dry and they can't shed, too wet and you
-grow mould and the flightless flies drown in their own culture. Aiming for a
-gentle gradient and a lot of cross-ventilation.`,
+humidity is the whole game. too dry they cant shed, too wet you get mould and
+the flightless flies drown in the culture. going for a gradient and a lot of
+airflow.`,
   re: [
     { author: "Onset_Rime", date: "2026-08-01 01:30",
-      body: "the molt-failure detail is grim but this is a genuinely lovely writeup. do they clock you as an individual, or are you just Large Warm Shape That Sometimes Brings Flies?",
-      re: [ { author: "mantis_dad", date: "2026-08-01 08:40", body: "the big pre-adult female tracks my hand across the enclosure and has stopped striking at it, which she absolutely did when she was younger. i'm not going to claim that's \"recognition\" in any deep sense but it's *something*." } ] },
+      body: "the molt failure bit is rough but this is a great writeup. do they recognise you or are you just the big shape that brings food",
+      re: [ { author: "mantis_dad", date: "2026-08-01 08:40", body: "the big female tracks my hand now and doesnt strike at it, which she absolutely did when she was smaller. not calling it recognition but its something." } ] },
     { author: "BrightSodium", date: "2026-08-01 12:11",
-      body: "hang on they can lose an entire LEG and just be fine about it??",
-      re: [ { author: "mantis_dad", date: "2026-08-01 12:55", body: "invertebrates are built different. autotomy — dropping a limb to escape — is a feature, not a bug, for a lot of them. she'll be a bit lopsided catching prey for a while and then she'll adapt." } ] },
-    { author: "saltmarsh", date: "2026-08-02 09:20", body: "came to this forum for the birds, staying for this. the ambush-predator posture is so convergent with herons it's uncanny — same stillness, same explosive final movement, completely different branch of the tree of life." },
-    { author: "mantis_dad", date: "2026-08-03 19:05", body: "double-posting to add the bit I forgot: the culture crash was because I let the medium get waterlogged. re-cultured on plain potato flake and it's been rock solid for two weeks. lesson learned, again, for the third time." },
-    { author: "Dr_Bunsen", date: "2026-08-04 07:50", body: "potato flake medium is criminally underrated. if you get any mould creeping back, a pinch of propionic acid or even just a sliver of paper towel with a drop of vinegar in the tub keeps it down without bothering the flies." },
+      body: "wait they can lose a whole LEG and just be ok??",
+      re: [ { author: "mantis_dad", date: "2026-08-01 12:55", body: "bugs are built different. dropping a limb to get away is a normal escape move for a lot of them. shell be a clumsy hunter for a bit then adapt." } ] },
+    { author: "STOP_POSTING", date: "2026-08-01 14:30",
+      body: "why is there a bug diary in the off topic section of a games website",
+      re: [
+        { author: "mantis_dad", date: "2026-08-01 15:00", body: "because its off topic. thats the section. its right there in the name." },
+        { author: "saltmarsh", date: "2026-08-01 15:22", body: "some of us like it. scroll past mate." },
+        { author: "STOP_POSTING", date: "2026-08-01 15:40", body: "40 replies about bug molting. this forum is cooked." },
+        { author: "moth_lord", date: "2026-08-01 16:10", body: "and yet here you are, reply 5" },
+      ] },
+    { author: "saltmarsh", date: "2026-08-02 09:20", body: "came here for the birds, staying for this. the ambush posture is so close to a heron its uncanny, totally different branch of the tree and the same freeze then explode." },
+    { author: "mantis_dad", date: "2026-08-03 19:05", body: "double posting to add what i forgot: the crash was because i let the medium get waterlogged. re-cultured on plain potato flake, solid for two weeks. learned this lesson before. twice actually." },
+    { author: "Dr_Bunsen", date: "2026-08-04 07:50", body: "potato flake is underrated. if mould comes back a pinch of propionic acid, or a scrap of paper towel with a drop of vinegar in the tub, keeps it down without bothering the flies." },
+    { author: "kevin_r", date: "2026-08-05 10:15",
+      body: "are these the ones that pray",
+      re: [
+        { author: "mantis_dad", date: "2026-08-05 10:40", body: "same family yeah" },
+        { author: "kevin_r", date: "2026-08-05 10:55", body: "cool. do they know theyre praying" },
+        { author: "mantis_dad", date: "2026-08-05 11:20", body: "no kevin" },
+      ] },
   ],
 },
 
 {
   id: "t-font", section: "offtopic",
-  title: "ISO: a font I saw on a cereal box around 2003",
+  title: "ISO: a font i saw on a cereal box around 2003",
   author: "BrightSodium", date: "2026-08-06 16:20",
   body:
 `this is going to be hard to describe. rounded, friendly, a bit chunky. the
-lowercase 'a' had a little tail/spur at the bottom right. the box used it in
-all caps but i've definitely seen it lowercase elsewhere. it feels 80s even
-though this was an early-2000s box.
+lowercase a had a little tail/spur bottom right. box used it in all caps but
+ive seen it lowercase somewhere. feels 80s even though the box was early 2000s.
 
-it's not Cooper Black and it's not Comic Sans. help.`,
+not cooper black, not comic sans. help.`,
   re: [
     { author: "spandrelle", date: "2026-08-06 18:02",
       body:
-`"little tail on the a" plus "chunky and rounded" is doing a lot of work here.
-That's usually a single-storey a with a spur. Two strong candidates:
+`"little tail on the a" plus "chunky and round" narrows it. thats a single
+storey a with a spur. two candidates:
 
-  - VAG Rounded (the old Volkswagen typeface) — cleaner, more corporate
-  - Frankfurter (Alan Meeks, Letraset, 1970) — fatter, friendlier, that spur
+VAG Rounded (the old volkswagen face). cleaner, corporate.
+Frankfurter (alan meeks, letraset, 1970). fatter, friendlier, has that spur.
 
-If it felt 80s it's almost certainly Frankfurter. That face was on *everything*
-between about 1978 and 1998. Cereal, fun runs, leisure centres, ice cream vans.`,
+if it feels 80s its almost certainly frankfurter. that face was on everything
+from about 1978 to 1998. cereal, fun runs, leisure centres, ice cream vans.`,
       re: [
-        { author: "BrightSodium", date: "2026-08-06 18:40", body: "just image-searched VAG Rounded — warmer than that, and rounder. googling Frankfurter now" },
-        { author: "BrightSodium", date: "2026-08-06 18:52", body: "THAT'S IT. that is the exact font. i can hear the cereal advert. thank you." },
+        { author: "BrightSodium", date: "2026-08-06 18:40", body: "just looked at VAG rounded, warmer and rounder than that. googling frankfurter" },
+        { author: "BrightSodium", date: "2026-08-06 18:52", body: "THATS IT. thats the exact font. i can hear the advert. thank you." },
       ] },
-    { author: "Onset_Rime", date: "2026-08-07 10:15", body: "the Letraset dry-transfer catalogues from that era are a whole rabbit hole if you ever want to lose an afternoon." },
+    { author: "STOP_POSTING", date: "2026-08-06 19:30",
+      body: "a grown adult spent a week trying to remember a cereal font",
+      re: [
+        { author: "spandrelle", date: "2026-08-06 19:50", body: "yes. and now he knows. what did you do this week." },
+        { author: "BONELESS_PIZZA", date: "2026-08-06 20:05", body: "ohhhh" },
+      ] },
+    { author: "Onset_Rime", date: "2026-08-07 10:15", body: "the letraset dry transfer catalogues are a whole rabbit hole if you want to lose an afternoon" },
     { author: "spandrelle", date: "2026-08-07 11:30",
       body:
-`I still have three of them in a drawer. The smell of the backing sheets is
-1987 in a single breath.
-
-You'd position the sheet, burnish each letter down with a lolly stick or the
-end of a biro, and if you sneezed halfway through a headline you started again.
-Kerning was done by eye and by prayer. I don't miss the labour but I miss the
-feel of it.`,
-      re: [ { author: "not_a_robot_beep", date: "2026-08-07 13:44", body: "sounds like the industry really left its... mark on you" } ] },
-    { author: "blancmange_77", date: "2026-08-10 09:25", body: "Our parish newsletter was 100% Letraset until roughly 1996, when Father Dennis acquired a Performa and a copy of Publisher and things went badly downhill for a year or two. — B." },
+`i still have three in a drawer. you positioned the sheet, rubbed each letter
+down with a lolly stick or a biro cap, and if you sneezed mid headline you
+started over. kerning was done by eye. dont miss the work, miss the feel.`,
+      re: [
+        { author: "not_a_robot_beep", date: "2026-08-07 13:44", body: "sounds like it really left its mark on you. (transfer lettering. mark. because you press it)" },
+        { author: "Vera_Nihil", date: "2026-08-07 14:02", body: "we get it" },
+      ] },
+    { author: "blancmange_77", date: "2026-08-10 09:25", body: "Our parish newsletter was 100% Letraset until about 1996, when Father Dennis got a Performa and it looked worse for two years. B." },
   ],
 },
 
 {
   id: "t-mile", section: "offtopic",
-  title: "Palindromic mile markers & odometer sightings — MASTER LIST",
+  title: "Palindromic mile markers & odometer sightings, MASTER LIST",
   author: "odometer_owl", date: "2026-07-28 07:41",
   body:
-`Rules of the list, since we get new people:
+`reposting the rules since we keep getting new people.
 
- 1. Photo or it didn't happen. A written claim is a nice story, not an entry.
- 2. Mile markers, road distance signs, odometers and trip meters all count.
- 3. Repdigits (11111, 88888) go in their own category — they're palindromes
-    but they're a different kind of catch and it's not fair to the 12321s.
- 4. Leading zeros are a philosophical matter we have agreed to stop arguing about.
+1. photo or it didnt happen. a written claim is a story, not an entry.
+2. mile markers, distance signs, odometers, trip meters all count.
+3. repdigits (11111, 88888) get their own category. theyre palindromes but its a
+   different catch and its not fair to the 12321s.
+4. leading zeros. we agreed to stop arguing about this. we are not restarting.
 
-Current verified list stands at 214 entries. A few personal favourites below.`,
+verified list is at 214. some favourites below.`,
   re: [
-    { author: "saltmarsh", date: "2026-07-30 17:22", body: "12321 on the distance-to-town sign past the reservoir on the B-road, last Tuesday. photo attached (imagine it). the 3 was a bit rusted but legible." },
-    { author: "odometer_owl", date: "2026-07-30 18:03", body: "logged and verified. clean symmetrical marker on an unhurried road, that's a good one." },
-    { author: "terrapin_stn", date: "2026-08-01 14:10",
-      body: "does an elevator floor counter count. i have a specific one in mind and a specific reason for asking.",
-      re: [ { author: "odometer_owl", date: "2026-08-01 15:40", body: "...I will allow it as an EXHIBITION entry. It does not go on the main list. The main list is roads. We are not opening the door to lift counters, kitchen scales and bus stop numbers." } ] },
-    { author: "HAMSTERWHEEL", date: "2026-08-05 19:12", body: "MY CAR TICKED OVER TO 123321 AND I MISSED THE ACTUAL MOMENT BY ABOUT FOUR MILES BECAUSE I WAS DRIVING THE CAR. I AM DEVASTATED." },
-    { author: "odometer_owl", date: "2026-08-05 20:00", body: "This is the central tragedy of the discipline. You cannot safely photograph the sublime while operating the vehicle that produces it." },
-    { author: "Onset_Rime", date: "2026-08-08 22:41",
-      body: "genuine question, not trying to be difficult: is 100001 a palindrome, or does the structural asymmetry (a hundred-thousand vs a one) disqualify it in spirit?",
-      re: [ { author: "odometer_owl", date: "2026-08-09 07:15", body: "It reads identically forwards and backwards, so formally: yes. Whether it's *interesting* is a separate question and the answer to that one is \"barely\"." } ] },
-    { author: "m00nrunner", date: "2026-08-24 02:50", body: "88888 tonight, on the ring road, coming home. no photo, phone was dead, and there was nobody in the car to witness it. i'm telling you anyway. it felt like being briefly acknowledged by something large." },
+    { author: "saltmarsh", date: "2026-07-30 17:22", body: "12321 on the distance sign past the reservoir on the B road last tuesday. photo attached. the 3 was rusty but readable." },
+    { author: "odometer_owl", date: "2026-07-30 18:03", body: "logged. clean symmetrical marker on a quiet road. good one." },
+    { author: "realpolitik99", date: "2026-07-31 09:15",
+      body: "point 4 is a cop out. 012210 is either a palindrome or it isnt. you cant just declare the hard question closed.",
+      re: [
+        { author: "odometer_owl", date: "2026-07-31 09:40", body: "we spent four months on it in 2025. the thread is in the archive. read it, then dont bring it up again." },
+        { author: "realpolitik99", date: "2026-07-31 10:02", body: "so thats a no then" },
+        { author: "odometer_owl", date: "2026-07-31 10:20", body: "its a 'we already did this'" },
+      ] },
+    { author: "kevin_r", date: "2026-08-01 11:10",
+      body: "wait are mile markers the little posts on the motorway. i thought those were random",
+      re: [
+        { author: "odometer_owl", date: "2026-08-01 11:30", body: "theyre sequential. they count up. thats sort of the entire basis of the hobby." },
+        { author: "kevin_r", date: "2026-08-01 11:45", body: "huh. ok ill start looking" },
+        { author: "odometer_owl", date: "2026-08-01 12:00", body: "welcome aboard i guess" },
+      ] },
+    { author: "terrapin_stn", date: "2026-08-02 14:10",
+      body: "does an elevator floor counter count. asking for a reason.",
+      re: [ { author: "odometer_owl", date: "2026-08-02 15:40", body: "exhibition category only. it does not go on the main list. the main list is roads. we are not opening this up to lift counters and kitchen scales." } ] },
+    { author: "HAMSTERWHEEL", date: "2026-08-05 19:12",
+      body: "MY CAR HIT 123321 AND I MISSED IT BY FOUR MILES BECAUSE I WAS DRIVING THE CAR",
+      re: [ { author: "odometer_owl", date: "2026-08-05 19:40", body: "this happens to everyone once. you learn to watch the last three digits on a long straight." } ] },
+    { author: "BONELESS_PIZZA", date: "2026-08-08 20:30",
+      body: "found the saddest fucking thread on the entire site. grown men photographing numbers",
+      re: [ { author: "saltmarsh", date: "2026-08-08 21:00", body: "and yet you opened it. and replied. and youll be back." } ] },
+    { author: "m00nrunner", date: "2026-08-24 02:50",
+      body: "88888 tonight on the ring road coming home. no photo, phone died. telling you anyway.",
+      re: [ { author: "odometer_owl", date: "2026-08-24 08:15", body: "no photo, no entry. you know the rule. nice one though." } ] },
   ],
 },
 
@@ -513,44 +788,51 @@ Current verified list stands at 214 entries. A few personal favourites below.`,
   title: "worked Svalbard last night from a wire in a tree, still buzzing",
   author: "greg_from_QLD", date: "2026-08-12 21:33",
   body:
-`JW-land. On 20m. 0340Z, 59 both ways, whole thing lasted about ninety seconds
-and then he was gone into the pileup.
+`JW land. on 20m. 0340Z, 59 both ways, whole thing lasted about 90 seconds then
+he was gone into the pileup.
 
-From a suburban block in QLD, 100 watts, into a bit of wire slung over a
-gum tree at maybe 8 metres. I have been chasing that entity for three years.
-Grid PG06 if anyone's keeping score.`,
+suburban block in QLD, 100 watts, wire over a gum tree at maybe 8m. been
+chasing svalbard for three years. grid PG06 if anyones counting.`,
   re: [
     { author: "VE3_Pinetree", date: "2026-08-12 22:50",
-      body: "Congratulations, that's a proper one. Svalbard into VK on 20m isn't a gimme even in a good season. DXpedition or a resident op?",
-      re: [ { author: "greg_from_QLD", date: "2026-08-13 06:10", body: "resident, i think. he was completely relaxed about it, working split like it was a wednesday. no drama, just efficient." } ] },
+      body: "congrats, thats a real one. svalbard into VK on 20m isnt a gimme even in a good season. dxpedition or a resident?",
+      re: [ { author: "greg_from_QLD", date: "2026-08-13 06:10", body: "resident i think. totally relaxed about it, working split like it was a tuesday." } ] },
+    { author: "xX_griefer_Xx", date: "2026-08-13 08:20",
+      body: "ham radio is boomer shit. walkie talkies for guys who think the grid is going down next tuesday",
+      re: [
+        { author: "greg_from_QLD", date: "2026-08-13 08:40", body: "im 34" },
+        { author: "VE3_Pinetree", date: "2026-08-13 09:00", body: "and the phone in your pocket has less range than my wire in a tree, so who is actually the caveman here" },
+        { author: "xX_griefer_Xx", date: "2026-08-13 09:15", body: "ok that was kind of a sick burn ngl" },
+      ] },
     { author: "BrightSodium", date: "2026-08-13 09:44",
-      body: "i understood maybe one word in five of that and i want to say congratulations anyway",
+      body: "i understood maybe one word in five and i want to say congrats anyway",
       re: [
         { author: "VE3_Pinetree", date: "2026-08-13 10:20",
           body:
-`Happy to translate:
- - "worked" = made a two-way contact with
- - "20m" = the 20-metre band, ~14 MHz, the workhorse band for long distance
- - "59 both ways" = we each gave the other a perfect signal report
- - "Z" = UTC, so we don't have to do timezone maths on the air
- - "grid PG06" = Maidenhead grid square, a short way to say roughly where you are
- - "split" = he transmits on one frequency, listens on another, so the pileup
-   doesn't sit on top of him`},
-        { author: "BrightSodium", date: "2026-08-13 11:05", body: "ok that's actually a really clean little system. how does a person even start with this" },
+`translation:
+worked = made a two way contact
+20m = the 20 metre band, ~14 MHz, good for long distance
+59 both ways = we each gave the other a perfect signal report
+Z = UTC, so nobody has to do timezone maths on air
+grid PG06 = maidenhead grid square, shorthand for roughly where you are
+split = he transmits on one freq, listens on another, so the pileup isnt
+sitting on top of him`},
+        { author: "BrightSodium", date: "2026-08-13 11:05", body: "ok thats a clean little system actually. how do you even start" },
         { author: "VE3_Pinetree", date: "2026-08-13 12:15",
           body:
-`Cheapest path: study for the entry-level licence (Foundation where Greg is,
-Technician in the US), it's a weekend of reading. Then a cheap handheld or a
-second-hand HF rig, and — this is the important part — join a club. They will
-have an antenna working bee, someone will lend you gear, and you'll learn more
-in one Saturday than in a month of forum posts.
-
-Do NOT buy the expensive radio first. Everyone does. Don't.`},
+`cheapest path: study for the entry level licence, its a weekend of reading.
+then a cheap handheld or a used HF rig, and join a club. they have antenna
+days, someone lends you gear, you learn more in one saturday than a month of
+forum posts. do not buy the expensive radio first. everyone does. dont.`},
+        { author: "trucknutz", date: "2026-08-13 13:00", body: "this is a sick hobby actually. contacting a random guy in the arctic with a wire in a tree. thats hacking the sky." },
       ] },
-    { author: "greg_from_QLD", date: "2026-08-13 18:02", body: "what he said. also — Sporadic-E season is ramping up down here, keep half an ear on 10m in the afternoons, it goes long with no warning and it's the most fun you can have with a wire." },
-    { author: "quietkeys", date: "2026-08-14 08:30", body: "bookmarking this whole thread. thank you both." },
-    { author: "gastropoda", date: "2026-08-15 21:10", body: "my grandfather had a shack in the spare room. green glowing dials, a smell of hot dust, a big black key he wouldn't let me touch. he died before i thought to ask him a single question about any of it. anyway. nice thread." },
-    { author: "VE3_Pinetree", date: "2026-08-16 09:05", body: "For what it's worth: a lot of people come into this hobby in their 40s and 50s carrying exactly that regret, and the way they deal with it is to learn the thing the person never got to teach them. It's not too late to meet him halfway." },
+    { author: "greg_from_QLD", date: "2026-08-13 18:02", body: "what he said. also sporadic-E season is ramping up down here, keep an ear on 10m in the afternoons, it goes long with no warning." },
+    { author: "gastropoda", date: "2026-08-15 21:10",
+      body: "my grandad had a shack in the spare room. green dials, smell of hot dust, a big black key he wouldnt let me touch. he died before i thought to ask him anything about it.",
+      re: [
+        { author: "VE3_Pinetree", date: "2026-08-16 09:05", body: "a lot of people get into this in their 40s carrying exactly that. the licence exam is still there whenever you want it." },
+        { author: "gastropoda", date: "2026-08-16 12:30", body: "yeah. maybe." },
+      ] },
   ],
 },
 
@@ -559,26 +841,36 @@ Do NOT buy the expensive radio first. Everyone does. Don't.`},
   title: "Elevator inspection certificates you have known and loved",
   author: "terrapin_stn", date: "2026-08-17 13:12",
   body:
-`The inspection certificate in the lift at my dentist's expired in 2019 and, as
-far as I can tell, nobody has ever noticed. It is behind slightly fogged
-plastic. I look at it during every cleaning and think about the chain of small
-omissions that leads to a thing like that.
+`the inspection certificate in my dentists lift expired in 2019 and as far as i
+can tell nobody has noticed. its behind fogged plastic. i look at it every
+cleaning.
 
-Post your best expired certs. Bonus points for sun damage.`,
+post your best expired certs. bonus points for sun damage.`,
   re: [
-    { author: "pixel_merchant", date: "2026-08-17 15:40", body: "multi-storey car park stairwell near me, laminated cert from 2011, sun has bleached it to a uniform salmon pink. you can just make out a signature." },
-    { author: "terrapin_stn", date: "2026-08-17 16:02", body: "pink is the mark of a true veteran. that certificate has seen things." },
+    { author: "pixel_merchant", date: "2026-08-17 15:40", body: "car park stairwell near me, laminated 2011 cert, sun has bleached it to solid pink. can just make out a signature." },
+    { author: "terrapin_stn", date: "2026-08-17 16:02", body: "pink is a good sign. that ones been through it." },
+    { author: "STOP_POSTING", date: "2026-08-17 18:20",
+      body: "this is the fourth niche collecting thread this month. mantis guy, mile marker guy, font guy, now lift certificates. what is wrong with everyone here.",
+      re: [
+        { author: "terrapin_stn", date: "2026-08-17 18:40", body: "we have hobbies. you have this." },
+        { author: "normie_steve", date: "2026-08-17 19:05", body: "he kind of has a point though. off topic is 90% one obsessive guy per topic." },
+        { author: "moth_lord", date: "2026-08-17 19:30", body: "yeah and its the best section. your point?" },
+      ] },
     { author: "Dr_Bunsen", date: "2026-08-18 08:30",
       body:
-`The genuinely elegant part of a traction elevator is the counterweight. It's
-set to the car's own weight plus about 40-45% of rated capacity, so the motor
-is only ever fighting the *imbalance*, not lifting the whole car from scratch.
-An empty car going up and a full car going down are both nearly free rides.`,
-      re: [ { author: "terrapin_stn", date: "2026-08-18 09:15", body: "this is precisely the register I was hoping this thread would find." } ] },
-    { author: "odometer_owl", date: "2026-08-19 12:44", body: "cross-referencing from the mile-marker thread: the floor counter in that same dentist's building read 3-2-1 while I was waiting last month and I have the photo. Exhibition category, per the ruling." },
-    { author: "terrapin_stn", date: "2026-08-19 13:20", body: "the hobbies are converging and I find that I am a little frightened." },
-    { author: "blancmange_77", date: "2026-08-21 10:05", body: "My late wife did lift maintenance for the city council for twenty-two years. She could name the manufacturer from the sound the doors made closing — Otis, Schindler, Kone, the lot. I never learned how she did it and now I can't ask. She would have enjoyed this thread enormously. — B." },
-    { author: "terrapin_stn", date: "2026-08-21 14:30", body: "That's a remarkable skill and a real loss. Thank you for posting it here." },
+`the good part of a traction lift is the counterweight. its set to the cars
+weight plus about 40-45% of capacity, so the motor only fights the imbalance,
+not the whole car. an empty car going up and a full car going down are nearly
+free rides.`,
+      re: [
+        { author: "terrapin_stn", date: "2026-08-18 09:15", body: "this is exactly the kind of post i wanted" },
+        { author: "kevin_r", date: "2026-08-18 10:00", body: "so the lift is basically a see saw" },
+        { author: "Dr_Bunsen", date: "2026-08-18 10:20", body: "thats.. actually not a bad way to put it" },
+      ] },
+    { author: "odometer_owl", date: "2026-08-19 12:44", body: "cross ref from the mile marker thread, the floor counter in that same dentists building read 3-2-1 last month and i have the photo. exhibition category." },
+    { author: "terrapin_stn", date: "2026-08-19 13:20", body: "the hobbies keep colliding. im not sure how i feel about it." },
+    { author: "blancmange_77", date: "2026-08-21 10:05", body: "My wife did lift maintenance for the council for 22 years. She could name the maker from the sound the doors made closing. Otis, Schindler, Kone. I never learned how and now I cant ask. B." },
+    { author: "terrapin_stn", date: "2026-08-21 14:30", body: "thats a hell of a skill. sorry." },
   ],
 },
 
@@ -619,7 +911,7 @@ const seedAuthors = new Set();
 })();
 
 /* ------------------------------------------------------------------ *
- *  STORAGE  — accounts + posts + session, this browser only.
+ *  STORAGE  - accounts + posts + session, this browser only.
  *  Kept in these five functions so a real backend can slot in later.
  * ------------------------------------------------------------------ */
 const LS_ACC = "sortafun-forum-accounts";
@@ -767,7 +1059,7 @@ function render() {
     if (!visible.length) {
       const li = document.createElement("li");
       li.style.cssText = "font-size:12px;color:#667;padding:3px 2px;";
-      li.textContent = secRoots.length ? "(nothing matches the current filter)" : "(no threads yet — be the first)";
+      li.textContent = secRoots.length ? "(nothing matches the current filter)" : "(no threads yet, be the first)";
       ul.appendChild(li);
     } else {
       visible.forEach((r) => ul.appendChild(renderNode(r)));
@@ -804,7 +1096,7 @@ function renderNode(node) {
   row.innerHTML =
     '<span class="tw">' + twist + "</span>" +
     '<span class="ttl' + (isThreadHead ? " head" : "") + '">' + esc(node.title) + "</span> " +
-    '<span class="by">— ' + esc(node.author) + "</span> " +
+    '<span class="by">(' + esc(node.author) + ")</span> " +
     '<span class="dt">' + mmddyy(node.ts) + "</span>" +
     (node.seed ? "" : ' <span class="unread">NEW</span>');
   li.appendChild(row);
@@ -861,7 +1153,7 @@ function openReplyForm(parentId) {
   const form = document.createElement("div");
   form.className = "replyform";
   form.innerHTML =
-    "<b>Reply to " + esc(parent.author) + "</b> &mdash; posting as <b>" + esc(session) + "</b>" +
+    "<b>Reply to " + esc(parent.author) + "</b> &middot; posting as <b>" + esc(session) + "</b>" +
     "<textarea id=\"rf-body\" placeholder=\"be decent\"></textarea>" +
     '<button class="btn" id="rf-go">Post reply</button> ' +
     '<button class="btn" id="rf-cancel">cancel</button>' +
@@ -894,7 +1186,7 @@ function openThreadForm(sectionId) {
   const form = document.createElement("div");
   form.className = "threadform";
   form.innerHTML =
-    "<b>New thread in " + sec.name + "</b> &mdash; posting as <b>" + esc(session) + "</b>" +
+    "<b>New thread in " + sec.name + "</b> &middot; posting as <b>" + esc(session) + "</b>" +
     '<input type="text" id="tf-title" placeholder="thread title" maxlength="120">' +
     '<textarea id="tf-body" placeholder="first post"></textarea>' +
     '<button class="btn" id="tf-go">Post thread</button> ' +
@@ -965,7 +1257,7 @@ document.getElementById("li-go").addEventListener("click", async () => {
   const u = document.getElementById("li-user").value.trim();
   const p = document.getElementById("li-pass").value;
   const msg = document.getElementById("li-msg");
-  msg.className = "msg"; msg.textContent = "checking…";
+  msg.className = "msg"; msg.textContent = "checking...";
   try {
     const name = await checkLogin(u, p);
     setSession(name); session = name;
@@ -984,11 +1276,11 @@ document.getElementById("rg-go").addEventListener("click", async () => {
   const p2 = document.getElementById("rg-pass2").value;
   const msg = document.getElementById("rg-msg");
   msg.className = "msg";
-  if (!/^[A-Za-z0-9_-]{3,20}$/.test(u)) { msg.textContent = "username: 3–20 chars, letters/numbers/_/- only"; return; }
-  if (nameTaken(u)) { msg.textContent = "“" + u + "” is already taken — pick another"; return; }
+  if (!/^[A-Za-z0-9_-]{3,20}$/.test(u)) { msg.textContent = "username: 3-20 chars, letters/numbers/_/- only"; return; }
+  if (nameTaken(u)) { msg.textContent = '"' + u + '" is already taken, pick another'; return; }
   if (p.length < 4) { msg.textContent = "password needs at least 4 characters"; return; }
   if (p !== p2) { msg.textContent = "the two passwords don't match"; return; }
-  if (!window.confirm("Last warning: there is NO password reset. If you forget “" + p + "” you are locked out and will have to beg an admin.\n\nCreate the account?")) return;
+  if (!window.confirm('Last warning: there is NO password reset. If you forget "' + p + '" you are locked out and will have to beg an admin.\n\nCreate the account?')) return;
   try {
     await createAccount(u, p);
     setSession(u); session = u;
@@ -1017,7 +1309,7 @@ function refreshWho() {
  *  GO
  * ------------------------------------------------------------------ */
 if (!(window.crypto && crypto.subtle)) {
-  // file:// on some setups has no subtle crypto — accounts just won't work
+  // file:// on some setups has no subtle crypto, accounts just won't work
   document.getElementById("rg-go").disabled = true;
 }
 refreshWho();
