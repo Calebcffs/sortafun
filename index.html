@@ -8,7 +8,7 @@
   html, body {
     margin: 0;
     padding: 0;
-    background: #05060f;
+    background: #fff;
     overflow: hidden;
     font-family: "Comic Sans MS", "Segoe Print", cursive;
   }
@@ -18,26 +18,25 @@
     left: 8px;
     bottom: 6px;
     font-size: 13px;
-    color: #9fb4ff;
-    text-shadow: 0 0 6px #1b2b8a;
+    color: #000;
     transition: opacity .25s ease;
   }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter pipe &nbsp;&middot;&nbsp; click a sign &nbsp;&middot;&nbsp; run right for the gallery</div>
+<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter a door &nbsp;&middot;&nbsp; click a sign &nbsp;&middot;&nbsp; run right for the gallery</div>
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const hintEl = document.getElementById("hint");
 
-// --- palette: white paper world repainted for deep space ---
-const INK = "#eafcff";     // light line art (was #000)
-const PAPER = "#0a0c1a";   // dark fills (was #fff)
-const GLOW = "#39ff14";    // radioactive early-web green
+// --- palette: plain white paper, black line art ---
+const INK = "#000";
+const PAPER = "#fff";
 
-const PIPES = [
+// each menu sign has a black door under it. walk up, press down, next page.
+const DOORS = [
   { label: "crossword game", url: "crossword.html",    btn: "assets/btn-crossword.png",    ar: 152 / 63 },
   { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72 },
   { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69 },
@@ -45,10 +44,8 @@ const PIPES = [
   { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58 },
   { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64 },
 ];
-PIPES.forEach((p) => { p.img = new Image(); p.img.src = p.btn; });
+DOORS.forEach((p) => { p.img = new Image(); p.img.src = p.btn; });
 
-const pipeImg = new Image(); pipeImg.src = "assets/pipe.png";
-const PIPE_AR = 44 / 31;
 const signImg = new Image(); signImg.src = "assets/art-gallery-sign.png";
 const SIGN_AR = 252 / 124;
 
@@ -66,12 +63,11 @@ const ART_RATIO = 1200 / 846;
 let W = 0, H = 0;
 let groundY = 0;
 let wallTop = 80;
-let pipeLayout = [];
+let doorLayout = [];
 let frames = [];
 let WORLD_W = 0;
 let menuMidX = 0, galleryMidX = 0;
 let signRect = null;
-let stars = [];
 
 let camX = 0;
 let previewT = 0;      // 0 = preview tucked below the floor, 1 = fully up
@@ -111,23 +107,6 @@ function jump() {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-function seedStars() {
-  stars = [];
-  let seed = 0x9e3779b9;
-  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  const n = Math.round((W * H) / 4200);
-  for (let i = 0; i < n; i++) {
-    stars.push({
-      x: rnd() * W,
-      y: rnd() * H,
-      r: rnd() * 1.7 + 0.4,
-      tw: rnd() * Math.PI * 2,
-      layer: rnd() < 0.55 ? 0.25 : 0.6,   // parallax factor
-      warm: rnd() < 0.3,
-    });
-  }
-}
-
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
@@ -136,22 +115,22 @@ function resize() {
 
   // --- menu signs, hand-drawn, laid out across the first screenful ---
   const boxTop = 104;
-  const n = PIPES.length;
+  const n = DOORS.length;
   const gapK = 0.26;                       // gap as a fraction of sign height
-  const arSum = PIPES.reduce((a, p) => a + p.ar, 0);
+  const arSum = DOORS.reduce((a, p) => a + p.ar, 0);
   const spanK = arSum + gapK * (n - 1);    // total row width = boxH * spanK
   let boxH = Math.min(84, H * 0.13);
   const maxW = W - 36;
   if (boxH * spanK > maxW) boxH = maxW / spanK;
   const gap = boxH * gapK;
-  const widths = PIPES.map((p) => boxH * p.ar);
+  const widths = DOORS.map((p) => boxH * p.ar);
   const total = boxH * spanK;
   let x = (W - total) / 2;
 
-  const pipeW = Math.min(56, boxH * 0.7);
-  const pipeH = pipeW / PIPE_AR;
+  const doorH = Math.min(80, boxH * 1.05);
+  const doorW = doorH * 0.46;
 
-  pipeLayout = PIPES.map((p, i) => {
+  doorLayout = DOORS.map((p, i) => {
     const boxX = x;
     const boxW = widths[i];
     const cx = boxX + boxW / 2;
@@ -159,8 +138,8 @@ function resize() {
     return {
       ...p,
       boxX, boxTop, boxW, boxH,
-      pipeW, pipeH,
-      pipeX: cx - pipeW / 2,
+      doorW, doorH,
+      doorX: cx - doorW / 2,
       cx,
     };
   });
@@ -187,16 +166,15 @@ function resize() {
   galleryMidX = (galleryX0 + lastRight) / 2;
 
   guy.x = clamp(guy.x, 20, WORLD_W - 20);
-  seedStars();
 }
 window.addEventListener("resize", resize);
 resize();
 
 function hitBox(mx, my) {
-  for (const p of pipeLayout) {
+  for (const p of doorLayout) {
     if (mx >= p.boxX && mx <= p.boxX + p.boxW && my >= p.boxTop && my <= p.boxTop + p.boxH)
       return p;
-    if (mx >= p.pipeX && mx <= p.pipeX + p.pipeW && my >= groundY - p.pipeH && my <= groundY)
+    if (mx >= p.doorX && mx <= p.doorX + p.doorW && my >= groundY - p.doorH && my <= groundY)
       return p;
   }
   return null;
@@ -225,9 +203,9 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-function nearestPipe() {
+function nearestDoor() {
   let best = null, bd = 1e9;
-  for (const p of pipeLayout) {
+  for (const p of doorLayout) {
     const d = Math.abs(guy.x - p.cx);
     if (d < bd) { bd = d; best = p; }
   }
@@ -236,8 +214,8 @@ function nearestPipe() {
 
 function tryEnter() {
   if (!guy.onGround) return;
-  const { p, d } = nearestPipe();
-  if (p && d < 34) {
+  const { p, d } = nearestDoor();
+  if (p && d < p.doorW * 0.9) {
     guy.entering = true;
     guy.enterT = 0;
     guy.targetUrl = p.url;
@@ -283,46 +261,15 @@ function update() {
 
 let t = 0;
 
-function drawStars() {
-  for (const s of stars) {
-    let sx = ((s.x - camX * s.layer) % W + W) % W;
-    const tw = 0.45 + 0.55 * Math.sin(t * 0.05 + s.tw);
-    ctx.globalAlpha = 0.25 + tw * 0.75;
-    ctx.fillStyle = s.warm ? "#ffd9a8" : (s.layer < 0.4 ? "#9fb4ff" : "#ffffff");
-    ctx.fillRect(sx, s.y, s.r, s.r);
-    if (s.r > 1.5) {
-      ctx.globalAlpha *= 0.5;
-      ctx.fillRect(sx - s.r, s.y + s.r * 0.5, s.r * 3, 0.7);
-      ctx.fillRect(sx + s.r * 0.5, s.y - s.r, 0.7, s.r * 3);
-    }
-  }
-  ctx.globalAlpha = 1;
-}
-
-function drawSpaceBg() {
-  ctx.fillStyle = "#05060f";
+function drawBg() {
+  // the white fill is also the per-frame canvas clear — keep it unconditional
+  ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, W, H);
-  // a couple of cheap nebula blooms, gently drifting with the camera
-  const blobs = [
-    { x: W * 0.20 - camX * 0.15, y: H * 0.30, r: W * 0.45, c: "rgba(90,30,160,0.30)" },
-    { x: W * 0.85 - camX * 0.10, y: H * 0.65, r: W * 0.40, c: "rgba(15,120,170,0.25)" },
-    { x: W * 0.55 - camX * 0.20, y: H * 0.15, r: W * 0.35, c: "rgba(200,40,120,0.18)" },
-  ];
-  for (const b of blobs) {
-    const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-    g.addColorStop(0, b.c);
-    g.addColorStop(1, "rgba(5,6,15,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-  }
-  drawStars();
 }
 
-function drawSpinTitle(cx, cy) {
+// static clipart WordArt — chunky letters with a flat grey extrusion, no motion
+function drawTitle(cx, cy) {
   const text = "SORTAFUN.ORG";
-  const sx = Math.cos(t * 0.03);            // horizontal squash → WordArt spin
-  const spin = Math.abs(sx) < 0.02 ? (sx < 0 ? -0.02 : 0.02) : sx;
-
   const fs = Math.min(40, Math.round(W / 20));
   ctx.save();
   ctx.translate(cx, cy);
@@ -330,31 +277,17 @@ function drawSpinTitle(cx, cy) {
   ctx.textBaseline = "middle";
   ctx.font = `bold ${fs}px 'Comic Sans MS', 'Arial Black', Impact, sans-serif`;
 
-  const depth = 9;
+  const depth = 7;
+  ctx.fillStyle = "#c9c9c9";
   for (let i = depth; i >= 1; i--) {
-    const k = i / depth;                    // 1 = far back, near 0 = front
-    ctx.save();
-    ctx.transform(spin, 0, 0, 1, 3 * i, 2.4 * i);
-    ctx.fillStyle = `rgb(${Math.round(30 + 40 * (1 - k))}, ${Math.round(6 + 18 * (1 - k))}, ${Math.round(70 + 60 * (1 - k))})`;
-    ctx.fillText(text, 0, 0);
-    ctx.restore();
+    ctx.fillText(text, i * 1.6, i * 1.3);
   }
 
-  // shiny front face
-  ctx.save();
-  ctx.transform(spin, 0, 0, 1, 0, 0);
-  const grad = ctx.createLinearGradient(0, -22, 0, 22);
-  grad.addColorStop(0, "#fff6b0");
-  grad.addColorStop(0.45, "#ffd23f");
-  grad.addColorStop(0.55, "#ff9de2");
-  grad.addColorStop(1, "#7ce7ff");
-  ctx.fillStyle = grad;
+  ctx.fillStyle = PAPER;
   ctx.fillText(text, 0, 0);
-  ctx.lineWidth = 1.4;
-  ctx.strokeStyle = "#2a0b4e";
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = INK;
   ctx.strokeText(text, 0, 0);
-  // hot glint
-  ctx.restore();
 
   ctx.restore();
 }
@@ -367,13 +300,11 @@ function draw() {
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
 
-  const pulse = 0.5 + 0.5 * Math.sin(t * 0.06);   // shared glow throb
-
   const targetCam = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
   camX += (targetCam - camX) * 0.16;
   if (Math.abs(targetCam - camX) < 0.4) camX = targetCam;
 
-  drawSpaceBg();
+  drawBg();
 
   // ---------- world space ----------
   ctx.save();
@@ -384,15 +315,11 @@ function draw() {
   ctx.lineWidth = 2;
   ctx.textAlign = "center";
 
-  drawSpinTitle(menuMidX, 52);
+  drawTitle(menuMidX, 52);
 
   // art gallery sign, pinned by the title
   if (signRect && signImg.complete && signImg.naturalWidth) {
-    ctx.save();
-    ctx.shadowColor = "#7ce7ff";
-    ctx.shadowBlur = 12 + pulse * 8;
     ctx.drawImage(signImg, signRect.x, signRect.y, signRect.w, signRect.h);
-    ctx.restore();
   }
 
   ctx.font = "30px 'Comic Sans MS', 'Segoe Print', cursive";
@@ -401,26 +328,18 @@ function draw() {
 
   // signposts in the gap between the two rooms
   ctx.font = "15px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillStyle = "#7f8bd6";
+  ctx.fillStyle = "#666";
   ctx.textAlign = "left";
   ctx.fillText("the art gallery, this way  →", W + 40, groundY - 42);
   ctx.fillText("←  back to the lobby", W + 40, groundY - 16);
   ctx.textAlign = "center";
   ctx.fillStyle = INK;
 
-  // menu signs — hand-drawn buttons, cut to their wonky outline and glowing
-  for (let i = 0; i < pipeLayout.length; i++) {
-    const p = pipeLayout[i];
+  // menu signs — hand-drawn buttons, cut to their wonky outline
+  for (let i = 0; i < doorLayout.length; i++) {
+    const p = doorLayout[i];
     if (p.img.complete && p.img.naturalWidth) {
-      const hue = (i / pipeLayout.length) * 300 + t * 0.6;
-      ctx.save();
-      // two passes of glow so it reads against the stars
-      ctx.shadowColor = `hsl(${hue}, 100%, 65%)`;
-      ctx.shadowBlur = 14 + pulse * 12;
       ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
-      ctx.shadowBlur = 6 + pulse * 6;
-      ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
-      ctx.restore();
     } else {
       ctx.strokeStyle = INK;
       ctx.strokeRect(p.boxX, p.boxTop, p.boxW, p.boxH);
@@ -435,21 +354,11 @@ function draw() {
   // a little potted plant by the gallery door, for coziness
   drawPlant(frames[0].cx - frames[0].w / 2 - 34, groundY);
 
-  // Mario pipes poking out of the floor
-  const { p: near, d: nearD } = nearestPipe();
-  for (const p of pipeLayout) {
-    if (pipeImg.complete && pipeImg.naturalWidth) {
-      ctx.drawImage(pipeImg, p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
-    } else {
-      ctx.fillStyle = "#1faf3a";
-      ctx.fillRect(p.pipeX, groundY - p.pipeH, p.pipeW, p.pipeH);
-    }
-    if (p === near && nearD < 34 && guy.onGround && !guy.entering) {
-      ctx.fillStyle = GLOW;
-      ctx.font = "20px 'Comic Sans MS', cursive";
-      ctx.fillText("↓", p.cx, groundY - p.pipeH - 10);
-      ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
-    }
+  // black doors standing on the floor under each sign
+  const { p: near, d: nearD } = nearestDoor();
+  for (const p of doorLayout) {
+    const lit = p === near && nearD < p.doorW * 0.9 && guy.onGround && !guy.entering;
+    drawDoor(p, lit);
   }
 
   drawGuy();
@@ -458,23 +367,57 @@ function draw() {
   // ---------- /world space ----------
 
   // floor line — continuous everywhere, so it stays in screen space
-  ctx.strokeStyle = GLOW;
+  ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
-  ctx.shadowColor = GLOW;
-  ctx.shadowBlur = 12;
   ctx.beginPath();
   ctx.moveTo(0, groundY);
   ctx.lineTo(W, groundY);
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   drawPreview();
+}
+
+function drawDoor(p, lit) {
+  const x = p.doorX, w = p.doorW, h = p.doorH;
+  const y = groundY - h;
+  const r = Math.min(10, w * 0.4);
+
+  // outer frame
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x - 4, y - 4, w + 8, h + 4);
+
+  // black slab with a rounded top
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.moveTo(x, groundY);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, groundY);
+  ctx.closePath();
+  ctx.fill();
+
+  // knob
+  ctx.fillStyle = PAPER;
+  ctx.beginPath();
+  ctx.arc(x + w - 7, y + h * 0.55, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (lit) {
+    ctx.fillStyle = INK;
+    ctx.font = "20px 'Comic Sans MS', cursive";
+    ctx.textAlign = "center";
+    ctx.fillText("↓", p.cx, y - 12);
+    ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
+  }
 }
 
 // cover-fit an image into a rect, cropping the overflow
 function drawImageCover(img, x, y, w, h) {
   if (!img.complete || !img.naturalWidth) {
-    ctx.fillStyle = "#1a1d33";
+    ctx.fillStyle = "#eee";
     ctx.fillRect(x, y, w, h);
     return;
   }
@@ -500,9 +443,9 @@ function drawFrame(f) {
   ctx.stroke();
 
   // frame + mat + photo
-  ctx.fillStyle = "#1a1208";
+  ctx.fillStyle = INK;
   ctx.fillRect(x - 6, y - 6, f.w + 12, f.h + 12);
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = PAPER;
   ctx.fillRect(x - 3, y - 3, f.w + 6, f.h + 6);
   drawImageCover(f.art.img, x, y, f.w, f.h);
   ctx.strokeStyle = INK;
@@ -512,13 +455,13 @@ function drawFrame(f) {
   // illegible plaque under the frame
   const pw = 96, ph = 26;
   const py = y + f.h + 12;
-  ctx.fillStyle = "#e9e4d0";
+  ctx.fillStyle = PAPER;
   ctx.fillRect(f.cx - pw / 2, py, pw, ph);
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1.5;
   ctx.strokeRect(f.cx - pw / 2, py, pw, ph);
-  squiggle(f.cx - pw / 2 + 8, py + 9, pw - 16, 1.4, 3, "#555");
-  squiggle(f.cx - pw / 2 + 8, py + 17, pw - 22, 1.4, 3, "#555");
+  squiggle(f.cx - pw / 2 + 8, py + 9, pw - 16, 1.4, 3, "#000");
+  squiggle(f.cx - pw / 2 + 8, py + 17, pw - 22, 1.4, 3, "#000");
 }
 
 // a wobbly horizontal scribble standing in for text
@@ -579,18 +522,24 @@ function drawPreview() {
   const x0 = (W - total) / 2;
   const y0 = groundY + pad + slide;
 
-  // backing panel so the photo reads against the stars
-  ctx.fillStyle = "rgba(8,10,26,0.92)";
+  // backing panel so the photo reads as its own strip
+  ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.fillRect(0, groundY + 1, W, bandH);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY + 1);
+  ctx.lineTo(W, groundY + 1);
+  ctx.stroke();
 
   // photo, contained, framed
-  ctx.fillStyle = "#1a1208";
+  ctx.fillStyle = INK;
   ctx.fillRect(x0 - 4, y0 - 4, photoW + 8, photoH + 8);
   const img = shownArt.art.img;
   if (img.complete && img.naturalWidth) {
     ctx.drawImage(img, x0, y0, photoW, photoH);
   } else {
-    ctx.fillStyle = "#1a1d33";
+    ctx.fillStyle = "#eee";
     ctx.fillRect(x0, y0, photoW, photoH);
   }
 
@@ -611,18 +560,13 @@ function drawGuy() {
   ctx.fillStyle = PAPER;
   ctx.lineWidth = 2;
 
+  // fade into the doorway on entry
+  if (guy.entering) ctx.globalAlpha = Math.max(0, 1 - guy.enterT * 1.15);
+
   let feetY = groundY + guy.yOff;
   let bob = 0;
   if (!guy.entering && guy.vx !== 0 && guy.onGround) bob = Math.sin(t * 0.3) * 2;
   const airborne = !guy.onGround && !guy.entering;
-
-  if (guy.entering) {
-    const { p } = nearestPipe();
-    feetY = groundY + guy.enterT * 60;
-    ctx.beginPath();
-    ctx.rect(p.pipeX - 1, groundY - p.pipeH, p.pipeW + 2, p.pipeH + 62);
-    ctx.clip();
-  }
 
   const x = guy.x;
   const headR = 9;

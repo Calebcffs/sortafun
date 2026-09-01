@@ -225,7 +225,7 @@ consistent. A thread with 4 to 10 posts and 3 to 6 distinct posters reads best.
 - The site's day flips at **UTC+8 (Singapore) midnight**. Same clock runs the
   tile-slider daily seed and the leaderboard reset. webmaster refuses to add a
   second clock.
-- **The basement**: you can clip through the floor just right of the third pipe
+- **The basement**: you can clip through the floor just right of the third door
   at the top of a jump and fall forever. Not a feature, not getting fixed.
 - The gallery photos are all Vietnam (Ha Long Bay, a river boat, a pagoda in Tao
   Dan park in Saigon, a sunset near a port).
