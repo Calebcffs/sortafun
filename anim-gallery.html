@@ -66,7 +66,7 @@
 <body>
 <div class="wrap gal">
   <h1>animation gallery</h1>
-  <p class="sub">flipbooks people made, playing at 12fps. vote and comment. <a href="flipbook.html">make your own</a>.</p>
+  <p class="sub">flipbooks people made, each looping at the speed it was drawn. vote and comment. <a href="flipbook.html">make your own</a>.</p>
 
   <div class="sortbar">
     <button data-sort="top" class="on">top</button>
@@ -93,8 +93,7 @@ var sortBtns = document.querySelectorAll(".sortbar button");
 var sort = "top";
 var cursor = null;
 var loading = false;
-var cards = [];        // { id, imgs:[Image], canvas, ctx }
-var gTick = 0;
+var cards = [];        // { id, imgs:[Image], canvas, ctx, fps, idx }
 
 var VOTES_KEY = "sortafun-anim-votes";
 function votedIds() {
@@ -112,19 +111,25 @@ function saveName(n) {
   try { localStorage.setItem("sortafun-name", n); } catch (e) {}
 }
 
-/* ---------- shared 12fps playback ---------- */
+/* ---------- shared playback — each card runs at its own fps ---------- */
 
-setInterval(function () {
-  gTick++;
-  for (var i = 0; i < cards.length; i++) paintCard(cards[i]);
-}, 1000 / 12);
+function tickAll(now) {
+  for (var i = 0; i < cards.length; i++) {
+    var c = cards[i];
+    if (!c.imgs.length) continue;
+    var idx = Math.floor(now / (1000 / c.fps)) % c.imgs.length;
+    if (idx !== c.idx) { c.idx = idx; paintCard(c); }
+  }
+  requestAnimationFrame(tickAll);
+}
+requestAnimationFrame(tickAll);
 
 function paintCard(c) {
   var g = c.ctx, cw = c.canvas.width, ch = c.canvas.height;
   g.fillStyle = "#fff";
   g.fillRect(0, 0, cw, ch);
   if (!c.imgs.length) return;
-  var im = c.imgs[gTick % c.imgs.length];
+  var im = c.imgs[Math.max(0, c.idx) % c.imgs.length];
   if (im && im.complete && im.naturalWidth) {
     g.drawImage(im, 0, 0, cw, ch);
   }
@@ -188,13 +193,14 @@ function makeCard(a) {
   card.appendChild(row);
   card.appendChild(box);
 
-  var ctx = canvas.getContext("2d");
-  var imgs = (a.frames || []).map(function (url) {
+  var rec = { id: a.id, imgs: [], canvas: canvas, ctx: canvas.getContext("2d"),
+              fps: a.fps || 12, idx: -1 };
+  rec.imgs = (a.frames || []).map(function (url) {
     var im = new Image();
+    im.onload = function () { if (rec.idx < 0) paintCard(rec); };
     im.src = url;
     return im;
   });
-  var rec = { id: a.id, imgs: imgs, canvas: canvas, ctx: ctx };
   cards.push(rec);
   paintCard(rec);
 

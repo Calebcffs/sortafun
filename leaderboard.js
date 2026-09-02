@@ -219,10 +219,11 @@
       if (!author) throw new Error("name required");
       if (!frames.length) throw new Error("nothing to post");
       if (frames.length > ANIM_MAX_FRAMES) throw new Error("too many frames (" + ANIM_MAX_FRAMES + " max)");
+      var fps = [8, 12, 16].indexOf(a.fps) !== -1 ? a.fps : 12;
       return fs.addDoc(fs.collection(state.db, "animations"), {
         title: title,
         author: author,
-        fps: 12,
+        fps: fps,
         w: Math.round(a.w) || 480,
         h: Math.round(a.h) || 360,
         frames: frames,

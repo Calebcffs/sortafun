@@ -98,7 +98,7 @@ Collection `animations`, one document per posted flipbook:
 |-------------|-----------|---------------------------------------------------|
 | `title`     | string    | 0–60 chars, optional                              |
 | `author`    | string    | 1–20 chars                                        |
-| `fps`       | int       | always 12 for now                                 |
+| `fps`       | int       | 8, 12 or 16 (the studio's fps selector)            |
 | `w`, `h`    | int       | frame pixel size (480 x 360)                      |
 | `frames`    | list      | PNG data URLs, 1–80 of them, one per frame        |
 | `votes`     | int       | starts 0, only ever `+1` per update (rules-checked) |
