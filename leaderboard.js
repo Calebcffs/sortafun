@@ -173,6 +173,29 @@
     });
   }
 
+  // The n most recently submitted scores across every game, newest first.
+  // Returns [{ name, game, score }]. Single-field orderBy(ts) needs no
+  // composite index. Docs whose serverTimestamp hasn't landed yet are
+  // briefly absent from the result — fine for a "latest" readout.
+  function recent(n) {
+    return init().then(function () {
+      var fs = state.fs;
+      var q = fs.query(
+        fs.collection(state.db, "scores"),
+        fs.orderBy("ts", "desc"),
+        fs.limit(n || 1)
+      );
+      return fs.getDocs(q).then(function (snap) {
+        var out = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          out.push({ name: d.name, game: d.game, score: d.score });
+        });
+        return out;
+      });
+    });
+  }
+
   /* ---------- UI panel ---------- */
 
   function el(tag, cls, text) {
@@ -313,6 +336,7 @@
     top: top,
     topDay: topDay,
     bestByDay: bestByDay,
+    recent: recent,
     mountPanel: mountPanel,
   };
 })();

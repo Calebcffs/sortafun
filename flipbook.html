@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>animation studio &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .studio { max-width: 560px; }
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin: 8px 0;
+  }
+  .bar button {
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 8px;
+  }
+  .tool.on { background: #ffe9a8; }
+  .seg { display: inline-flex; gap: 0; }
+  .seg button { border-radius: 0; margin: 0; border-right-width: 1px; }
+  .seg button:first-child { border-radius: 8px 0 0 8px; }
+  .seg button:last-child { border-radius: 0 8px 8px 0; border-right-width: 2px; }
+  #view {
+    width: 100%;
+    max-width: 480px;
+    height: auto;
+    display: block;
+    margin: 6px auto;
+    cursor: crosshair;
+    image-rendering: auto;
+  }
+  .onion-row {
+    font-size: 13px;
+    color: #666;
+    margin: 4px 0 2px;
+  }
+  .onion-row label { cursor: pointer; color: #000; }
+  .frameinfo { font-size: 15px; margin: 4px 0; }
+  .frameinfo b { font-size: 18px; }
+  #strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 4px;
+    margin: 6px 0;
+    border-top: 2px dashed #000;
+    border-bottom: 2px dashed #000;
+  }
+  .thumb {
+    flex: none;
+    padding: 3px 3px 1px;
+    background: #fff;
+    border: 2px solid #000;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  .thumb canvas { display: block; border: 1px solid #bbb; background: #fff; }
+  .thumb span { display: block; }
+  .thumb.on { border-color: #e5533d; background: #fff3f0; }
+  .hint { font-size: 12px; color: #888; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap studio">
+  <h1>animation studio</h1>
+  <p class="sub">draw a frame, add another, flip through them at 12 fps. faint red = the frame before.</p>
+
+  <div class="bar">
+    <button class="tool on" data-tool="pen">pen</button>
+    <button class="tool" data-tool="line">line</button>
+    <button class="tool" data-tool="rect">square</button>
+    <button class="tool" data-tool="circle">circle</button>
+    <button class="tool" data-tool="eraser">eraser</button>
+    <span class="seg" role="group" aria-label="brush size">
+      <button data-size="2">S</button>
+      <button data-size="4">M</button>
+      <button data-size="8">L</button>
+    </span>
+  </div>
+
+  <div class="onion-row">
+    <label><input type="checkbox" id="onion" checked> onion skin (show previous frames)</label>
+  </div>
+
+  <canvas id="view" width="480" height="360"></canvas>
+
+  <div class="frameinfo">frame <b id="fnum">1</b> / <b id="ftot">1</b></div>
+
+  <div class="bar">
+    <button id="prev">&larr; prev</button>
+    <button id="play">play &#9654;</button>
+    <button id="next">next &rarr;</button>
+  </div>
+  <div class="bar">
+    <button id="addBlank">+ blank frame</button>
+    <button id="addCopy">+ copy frame</button>
+    <button id="clearFrame">clear frame</button>
+    <button id="del">delete frame</button>
+  </div>
+
+  <div id="strip"></div>
+
+  <div class="bar">
+    <button id="wipe">start over</button>
+  </div>
+
+  <p class="hint">keys: space play/stop &middot; , . prev/next &middot; p l r c e tools &middot; o onion. saved in this browser.</p>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script>
+"use strict";
+
+var W = 480, H = 360, FPS = 12;
+var LS_KEY = "sortafun-flipbook-v1";
+
+var view = document.getElementById("view");
+var vctx = view.getContext("2d");
+var stripEl = document.getElementById("strip");
+var fnumEl = document.getElementById("fnum");
+var ftotEl = document.getElementById("ftot");
+var playBtn = document.getElementById("play");
+var onionBox = document.getElementById("onion");
+
+var frames = [];      // offscreen canvases, transparent, black ink
+var cur = 0;
+var onion = true;
+var tool = "pen";
+var size = 4;
+var playing = false;
+var playTimer = null;
+
+/* ---------- frame helpers ---------- */
+
+function makeFrame() {
+  var c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  return c;
+}
+function fctx() { return frames[cur].getContext("2d"); }
+
+var scratch = makeFrame();
+var sctx = scratch.getContext("2d");
+
+// draw src onto the view, recoloured to `color`, at `alpha`
+function drawTinted(src, color, alpha) {
+  sctx.globalCompositeOperation = "source-over";
+  sctx.clearRect(0, 0, W, H);
+  sctx.drawImage(src, 0, 0);
+  sctx.globalCompositeOperation = "source-in";
+  sctx.fillStyle = color;
+  sctx.fillRect(0, 0, W, H);
+  sctx.globalCompositeOperation = "source-over";
+  vctx.save();
+  vctx.globalAlpha = alpha;
+  vctx.drawImage(scratch, 0, 0);
+  vctx.restore();
+}
+
+function compose(preview) {
+  vctx.clearRect(0, 0, W, H);
+  vctx.fillStyle = "#fff";
+  vctx.fillRect(0, 0, W, H);
+  if (onion && !playing) {
+    if (frames[cur - 2]) drawTinted(frames[cur - 2], "#ff9e9e", 0.22);
+    if (frames[cur - 1]) drawTinted(frames[cur - 1], "#ef4d4d", 0.40);
+  }
+  vctx.drawImage(frames[cur], 0, 0);
+  if (preview) preview(vctx);
+}
+
+/* ---------- drawing ---------- */
+
+function pos(e) {
+  var r = view.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * (W / r.width),
+    y: (e.clientY - r.top) * (H / r.height),
+  };
+}
+
+function drawShape(g, kind, a, b, lw) {
+  g.save();
+  g.strokeStyle = "#000";
+  g.lineWidth = lw;
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  g.beginPath();
+  if (kind === "line") {
+    g.moveTo(a.x, a.y);
+    g.lineTo(b.x, b.y);
+  } else if (kind === "rect") {
+    g.rect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+  } else if (kind === "circle") {
+    g.ellipse((a.x + b.x) / 2, (a.y + b.y) / 2,
+      Math.abs(b.x - a.x) / 2, Math.abs(b.y - a.y) / 2, 0, 0, Math.PI * 2);
+  }
+  g.stroke();
+  g.restore();
+}
+
+var drawing = false, startPt = null, lastPt = null;
+
+view.addEventListener("pointerdown", function (e) {
+  if (playing) return;
+  e.preventDefault();
+  try { view.setPointerCapture(e.pointerId); } catch (err) {}
+  drawing = true;
+  startPt = lastPt = pos(e);
+  if (tool === "pen" || tool === "eraser") {
+    var c = fctx();
+    c.lineCap = "round";
+    c.lineJoin = "round";
+    c.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
+    c.strokeStyle = "#000";
+    c.lineWidth = tool === "eraser" ? size * 4 : size;
+    c.beginPath();
+    c.moveTo(startPt.x, startPt.y);
+    c.lineTo(startPt.x + 0.01, startPt.y + 0.01);
+    c.stroke();
+    compose();
+  }
+});
+
+view.addEventListener("pointermove", function (e) {
+  if (!drawing) return;
+  var pt = pos(e);
+  if (tool === "pen" || tool === "eraser") {
+    var c = fctx();
+    c.beginPath();
+    c.moveTo(lastPt.x, lastPt.y);
+    c.lineTo(pt.x, pt.y);
+    c.stroke();
+    lastPt = pt;
+    compose();
+  } else {
+    lastPt = pt;
+    compose(function (g) { drawShape(g, tool, startPt, pt, size); });
+  }
+});
+
+function endStroke() {
+  if (!drawing) return;
+  drawing = false;
+  if (tool !== "pen" && tool !== "eraser" && startPt && lastPt) {
+    var c = fctx();
+    c.globalCompositeOperation = "source-over";
+    drawShape(c, tool, startPt, lastPt, size);
+  }
+  fctx().globalCompositeOperation = "source-over";
+  compose();
+  updateThumb(cur);
+  saveSoon();
+}
+view.addEventListener("pointerup", endStroke);
+view.addEventListener("pointercancel", endStroke);
+view.addEventListener("pointerleave", function () { if (drawing) endStroke(); });
+
+/* ---------- frame ops ---------- */
+
+function go(i) {
+  cur = Math.max(0, Math.min(frames.length - 1, i));
+  compose();
+  refreshUI();
+}
+
+function addFrame(copy) {
+  var f = makeFrame();
+  if (copy) f.getContext("2d").drawImage(frames[cur], 0, 0);
+  frames.splice(cur + 1, 0, f);
+  cur++;
+  rebuildStrip();
+  compose();
+  refreshUI();
+  saveSoon();
+}
+
+function clearFrame() {
+  fctx().clearRect(0, 0, W, H);
+  compose();
+  updateThumb(cur);
+  saveSoon();
+}
+
+function delFrame() {
+  if (frames.length === 1) {
+    clearFrame();
+    return;
+  }
+  frames.splice(cur, 1);
+  if (cur >= frames.length) cur = frames.length - 1;
+  rebuildStrip();
+  compose();
+  refreshUI();
+  saveSoon();
+}
+
+/* ---------- playback ---------- */
+
+function play() {
+  if (frames.length < 2) return;
+  playing = true;
+  refreshUI();
+  var i = cur;
+  playTimer = setInterval(function () {
+    cur = i % frames.length;
+    compose();
+    fnumEl.textContent = cur + 1;
+    highlightStrip();
+    i++;
+  }, 1000 / FPS);
+}
+
+function stop() {
+  playing = false;
+  if (playTimer) clearInterval(playTimer);
+  playTimer = null;
+  compose();
+  refreshUI();
+}
+
+function togglePlay() { playing ? stop() : play(); }
+
+/* ---------- thumbnail strip ---------- */
+
+function drawThumb(canvas, frame) {
+  var g = canvas.getContext("2d");
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, canvas.width, canvas.height);
+  g.drawImage(frame, 0, 0, canvas.width, canvas.height);
+}
+
+function rebuildStrip() {
+  stripEl.innerHTML = "";
+  frames.forEach(function (f, i) {
+    var b = document.createElement("button");
+    b.className = "thumb" + (i === cur ? " on" : "");
+    b.type = "button";
+    var tc = document.createElement("canvas");
+    tc.width = 72;
+    tc.height = 54;
+    b.appendChild(tc);
+    var n = document.createElement("span");
+    n.textContent = String(i + 1);
+    b.appendChild(n);
+    b.addEventListener("click", function () {
+      if (playing) stop();
+      go(i);
+      b.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+    stripEl.appendChild(b);
+    drawThumb(tc, f);
+  });
+}
+
+function updateThumb(i) {
+  var b = stripEl.children[i];
+  if (b) drawThumb(b.querySelector("canvas"), frames[i]);
+}
+
+function highlightStrip() {
+  for (var i = 0; i < stripEl.children.length; i++) {
+    stripEl.children[i].classList.toggle("on", i === cur);
+  }
+}
+
+/* ---------- persistence ---------- */
+
+var saveT = null;
+function saveSoon() {
+  clearTimeout(saveT);
+  saveT = setTimeout(save, 500);
+}
+function save() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      v: 1, cur: cur,
+      frames: frames.map(function (f) { return f.toDataURL("image/png"); }),
+    }));
+  } catch (e) {}
+}
+
+function load(done) {
+  var data = null;
+  try { data = JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch (e) {}
+  if (!data || !Array.isArray(data.frames) || !data.frames.length) {
+    frames = [makeFrame()];
+    cur = 0;
+    done();
+    return;
+  }
+  frames = data.frames.map(makeFrame);
+  cur = Math.min(data.cur || 0, frames.length - 1);
+  var pending = data.frames.length;
+  data.frames.forEach(function (url, i) {
+    var img = new Image();
+    img.onload = img.onerror = function () {
+      if (img.width) frames[i].getContext("2d").drawImage(img, 0, 0);
+      if (--pending === 0) done();
+    };
+    img.src = url;
+  });
+}
+
+/* ---------- UI wiring ---------- */
+
+function refreshUI() {
+  fnumEl.textContent = cur + 1;
+  ftotEl.textContent = frames.length;
+  playBtn.innerHTML = playing ? "stop &#9632;" : "play &#9654;";
+  document.querySelectorAll(".tool").forEach(function (b) {
+    b.classList.toggle("on", b.dataset.tool === tool);
+  });
+  document.querySelectorAll("[data-size]").forEach(function (b) {
+    b.classList.toggle("on", Number(b.dataset.size) === size);
+  });
+  highlightStrip();
+}
+
+document.querySelectorAll(".tool").forEach(function (b) {
+  b.addEventListener("click", function () {
+    if (drawing) return;
+    tool = b.dataset.tool;
+    refreshUI();
+  });
+});
+document.querySelectorAll("[data-size]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    size = Number(b.dataset.size);
+    refreshUI();
+  });
+});
+
+onionBox.addEventListener("change", function () {
+  onion = onionBox.checked;
+  compose();
+});
+
+document.getElementById("prev").addEventListener("click", function () { if (playing) stop(); go(cur - 1); });
+document.getElementById("next").addEventListener("click", function () { if (playing) stop(); go(cur + 1); });
+document.getElementById("play").addEventListener("click", togglePlay);
+document.getElementById("addBlank").addEventListener("click", function () { if (playing) stop(); addFrame(false); });
+document.getElementById("addCopy").addEventListener("click", function () { if (playing) stop(); addFrame(true); });
+document.getElementById("clearFrame").addEventListener("click", function () { if (playing) stop(); clearFrame(); });
+document.getElementById("del").addEventListener("click", function () { if (playing) stop(); delFrame(); });
+document.getElementById("wipe").addEventListener("click", function () {
+  if (!confirm("Delete every frame and start over?")) return;
+  if (playing) stop();
+  frames = [makeFrame()];
+  cur = 0;
+  rebuildStrip();
+  compose();
+  refreshUI();
+  save();
+});
+
+document.addEventListener("keydown", function (e) {
+  var t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+  var k = e.key.toLowerCase();
+  if (e.key === " ") { e.preventDefault(); togglePlay(); return; }
+  if (playing && (k === "," || k === ".")) { stop(); }
+  if (k === ",") { go(cur - 1); }
+  else if (k === ".") { go(cur + 1); }
+  else if (k === "p") { tool = "pen"; refreshUI(); }
+  else if (k === "l") { tool = "line"; refreshUI(); }
+  else if (k === "r") { tool = "rect"; refreshUI(); }
+  else if (k === "c") { tool = "circle"; refreshUI(); }
+  else if (k === "e") { tool = "eraser"; refreshUI(); }
+  else if (k === "o") { onionBox.checked = !onionBox.checked; onion = onionBox.checked; compose(); }
+});
+
+/* ---------- boot ---------- */
+
+load(function () {
+  rebuildStrip();
+  compose();
+  refreshUI();
+});
+</script>
+</body>
+</html>

@@ -245,7 +245,12 @@ consistent. A thread with 4 to 10 posts and 3 to 6 distinct posters reads best.
 
 Plain static HTML, no framework, no build. `game.css` is shared styling for the
 game sub-pages; `forum.html` deliberately does NOT use it (it's a period piece
-with its own Times New Roman styling). Leaderboards use a client-only Firestore
+with its own Times New Roman styling). `flipbook.html` (the animation studio) is
+self-contained: each frame is an offscreen `<canvas>` of transparent black ink,
+onion skin recolours the previous frames red, and the whole flipbook autosaves to
+`localStorage` as an array of PNG data URLs (key `sortafun-flipbook-v1`). It does
+not touch Firestore. Its homepage sign has no hand-drawn button art, so
+`index.html` falls back to a plain lettered sign for it. Leaderboards use a client-only Firestore
 backend (`firebase-config.js`, `leaderboard.js`); `firestore.rules` must be
 pasted into the Firebase console by hand, see `SETUP.md`. The forum does not
 touch Firestore.

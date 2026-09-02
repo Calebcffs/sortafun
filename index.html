@@ -25,7 +25,9 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; &darr; enter a door &nbsp;&middot;&nbsp; click a sign &nbsp;&middot;&nbsp; run right for the gallery</div>
+<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; press &darr; to enter &nbsp;&middot;&nbsp; click a sign &nbsp;&middot;&nbsp; run right for the gallery</div>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -38,13 +40,40 @@ const PAPER = "#fff";
 // each menu sign has a black door under it. walk up, press down, next page.
 const DOORS = [
   { label: "crossword game", url: "crossword.html",    btn: "assets/btn-crossword.png",    ar: 152 / 63 },
-  { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72 },
-  { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69 },
-  { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65 },
+  { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72, game: "puzzle" },
+  { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69, game: "circuit" },
+  { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65, game: "typing" },
+  { label: "animation studio", url: "flipbook.html",                                       ar: 188 / 64 },
   { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58 },
-  { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64 },
+  { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64, recent: true },
 ];
-DOORS.forEach((p) => { p.img = new Image(); p.img.src = p.btn; });
+DOORS.forEach((p) => { if (p.btn) { p.img = new Image(); p.img.src = p.btn; } });
+
+// tiny leaderboard readouts under the signs — Firestore, best-effort.
+// LB[game] = today's top 3 [{name,score}]; LB.recent = newest score anywhere.
+const LB = { puzzle: null, circuit: null, typing: null, recent: null };
+function loadLB() {
+  if (!window.SortafunLB) return;
+  ["puzzle", "circuit", "typing"].forEach((g) => {
+    SortafunLB.top(g, "day")
+      .then((rows) => { LB[g] = rows.slice(0, 3); })
+      .catch(() => {});
+  });
+  SortafunLB.recent(1)
+    .then((rows) => { LB.recent = rows[0] || null; })
+    .catch(() => {});
+}
+loadLB();
+
+function lbTrunc(s, n) {
+  s = String(s);
+  return s.length > n ? s.slice(0, n) + ".." : s;
+}
+function lbFmt(game, score) {
+  const g = window.SortafunLB && SortafunLB.GAMES[game];
+  if (!g) return String(score);
+  return g.format ? g.format(score) : score + " " + g.unit;
+}
 
 const signImg = new Image(); signImg.src = "assets/art-gallery-sign.png";
 const SIGN_AR = 252 / 124;
@@ -87,6 +116,7 @@ const guy = {
   entering: false,
   enterT: 0,
   targetUrl: null,
+  enterDoor: null,
 };
 
 const keys = {};
@@ -195,6 +225,7 @@ canvas.addEventListener("click", (e) => {
     guy.entering = true;
     guy.enterT = 0;
     guy.targetUrl = p.url;
+    guy.enterDoor = p;
     guy.x = p.cx;
     guy.vx = 0;
     guy.yOff = 0;
@@ -219,6 +250,7 @@ function tryEnter() {
     guy.entering = true;
     guy.enterT = 0;
     guy.targetUrl = p.url;
+    guy.enterDoor = p;
     guy.x = p.cx;
     guy.vx = 0;
   }
@@ -338,11 +370,37 @@ function draw() {
   // menu signs — hand-drawn buttons, cut to their wonky outline
   for (let i = 0; i < doorLayout.length; i++) {
     const p = doorLayout[i];
-    if (p.img.complete && p.img.naturalWidth) {
+    if (p.img && p.img.complete && p.img.naturalWidth) {
       ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
     } else {
+      // no hand-drawn button art — draw a wonky labelled sign instead
+      ctx.save();
       ctx.strokeStyle = INK;
-      ctx.strokeRect(p.boxX, p.boxTop, p.boxW, p.boxH);
+      ctx.fillStyle = PAPER;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p.boxX + 3, p.boxTop + 1);
+      ctx.lineTo(p.boxX + p.boxW - 1, p.boxTop + 4);
+      ctx.lineTo(p.boxX + p.boxW - 3, p.boxTop + p.boxH - 1);
+      ctx.lineTo(p.boxX + 1, p.boxTop + p.boxH - 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const fs = Math.min(17, p.boxH * 0.26);
+      ctx.font = fs + "px 'Comic Sans MS', 'Segoe Print', cursive";
+      const words = p.label.split(" ");
+      const mid = p.boxTop + p.boxH / 2;
+      if (words.length > 1) {
+        ctx.fillText(words[0], p.cx, mid - fs * 0.6);
+        ctx.fillText(words.slice(1).join(" "), p.cx, mid + fs * 0.6);
+      } else {
+        ctx.fillText(p.label, p.cx, mid);
+      }
+      ctx.restore();
+      ctx.textBaseline = "alphabetic";
     }
   }
 
@@ -357,11 +415,15 @@ function draw() {
   // black doors standing on the floor under each sign
   const { p: near, d: nearD } = nearestDoor();
   for (const p of doorLayout) {
-    const lit = p === near && nearD < p.doorW * 0.9 && guy.onGround && !guy.entering;
-    drawDoor(p, lit);
+    const isEnterDoor = guy.entering && p === guy.enterDoor;
+    const open = isEnterDoor ? clamp(guy.enterT * 1.5, 0, 1) : 0;
+    const lit = !guy.entering && p === near && nearD < p.doorW * 0.9 && guy.onGround;
+    drawDoor(p, lit, open);
   }
 
   drawGuy();
+
+  drawSignboards();
 
   ctx.restore();
   // ---------- /world space ----------
@@ -377,41 +439,94 @@ function draw() {
   drawPreview();
 }
 
-function drawDoor(p, lit) {
+function drawDoor(p, lit, open) {
+  open = open || 0;
   const x = p.doorX, w = p.doorW, h = p.doorH;
   const y = groundY - h;
   const r = Math.min(10, w * 0.4);
+  const ease = 1 - Math.pow(1 - open, 3);
 
   // outer frame
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
   ctx.strokeRect(x - 4, y - 4, w + 8, h + 4);
 
-  // black slab with a rounded top
+  // lit doorway behind the panel, revealed as it swings (white = light beyond)
+  if (ease > 0.01) {
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  // the panel — hinged at the left edge, foreshortening to a thin strip
+  const pw = w * (1 - ease * 0.86);
+  const lift = ease * 3;
+  const rr = Math.min(r, pw) * (1 - ease);   // right corner squares off as it turns
   ctx.fillStyle = INK;
   ctx.beginPath();
   ctx.moveTo(x, groundY);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, groundY);
+  ctx.lineTo(x, y + Math.min(r, pw));
+  ctx.quadraticCurveTo(x, y, x + Math.min(r, pw), y);
+  ctx.lineTo(x + pw - rr, y - lift);
+  ctx.quadraticCurveTo(x + pw, y - lift, x + pw, y - lift + rr);
+  ctx.lineTo(x + pw, groundY);
   ctx.closePath();
   ctx.fill();
 
-  // knob
+  // lit outer edge of the swinging panel
+  if (ease > 0.02) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + pw, y - lift);
+    ctx.lineTo(x + pw, groundY);
+    ctx.stroke();
+  }
+
+  // knob near the free edge
   ctx.fillStyle = PAPER;
   ctx.beginPath();
-  ctx.arc(x + w - 7, y + h * 0.55, 2.6, 0, Math.PI * 2);
+  ctx.arc(x + pw - Math.min(7, pw * 0.3), y + h * 0.55, 2.6, 0, Math.PI * 2);
   ctx.fill();
 
   if (lit) {
     ctx.fillStyle = INK;
-    ctx.font = "20px 'Comic Sans MS', cursive";
     ctx.textAlign = "center";
-    ctx.fillText("↓", p.cx, y - 12);
+    ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
+    ctx.fillText("press ↓ to enter", p.cx, y - 10);
     ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
   }
+}
+
+// tiny leaderboard readouts pinned under each sign (world space)
+function drawSignboards() {
+  if (!window.SortafunLB) return;
+  ctx.save();
+  ctx.textAlign = "center";
+  for (const p of doorLayout) {
+    const lines = [];
+    if (p.game && LB[p.game] && LB[p.game].length) {
+      lines.push({ t: "today", head: true });
+      LB[p.game].forEach((r, i) => {
+        lines.push({ t: (i + 1) + ". " + lbTrunc(r.name, 8) + "  " + lbFmt(p.game, r.score) });
+      });
+    } else if (p.recent && LB.recent) {
+      const r = LB.recent;
+      const gl = (SortafunLB.GAMES[r.game] || {}).label || r.game;
+      lines.push({ t: "latest score", head: true });
+      lines.push({ t: lbTrunc(r.name, 14) });
+      lines.push({ t: gl + "  " + lbFmt(r.game, r.score) });
+    }
+    if (!lines.length) continue;
+
+    let ly = p.boxTop + p.boxH + 10;
+    for (const ln of lines) {
+      ctx.fillStyle = ln.head ? "#999" : "#555";
+      ctx.font = (ln.head ? "8px" : "9px") + " 'Comic Sans MS', 'Segoe Print', cursive";
+      ctx.fillText(ln.t, p.cx, ly);
+      ly += ln.head ? 9 : 11;
+    }
+  }
+  ctx.restore();
 }
 
 // cover-fit an image into a rect, cropping the overflow
