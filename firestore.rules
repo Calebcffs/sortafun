@@ -29,5 +29,52 @@ service cloud.firestore {
         && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
         && d.ts == request.time;
     }
+
+    // --- animation gallery (flipbook.html posts here, anim-gallery.html reads) ---
+    //
+    // Anyone reads. Anyone posts one animation that passes the shape check.
+    // The only allowed update is a vote: +1 to `votes`, nothing else touched.
+    // No edits, no deletes. Comments are append-only. Same "stops junk, not a
+    // determined forger" trade as the scores above.
+
+    match /animations/{id} {
+      allow read: if true;
+      allow delete: if false;
+      allow create: if isValidAnim(request.resource.data);
+      allow update: if isVoteOnly(resource.data, request.resource.data);
+    }
+
+    match /anim_comments/{id} {
+      allow read: if true;
+      allow update, delete: if false;
+      allow create: if isValidComment(request.resource.data);
+    }
+
+    function isValidAnim(d) {
+      return d.keys().hasOnly(['title', 'author', 'fps', 'w', 'h', 'frames', 'votes', 'createdAt', 'day'])
+        && d.title is string && d.title.size() <= 60
+        && d.author is string && d.author.size() >= 1 && d.author.size() <= 20
+        && d.fps is int && d.fps >= 1 && d.fps <= 24
+        && d.w is int && d.w > 0 && d.w <= 2000
+        && d.h is int && d.h > 0 && d.h <= 2000
+        && d.frames is list && d.frames.size() >= 1 && d.frames.size() <= 80
+        && d.votes == 0
+        && d.createdAt == request.time
+        && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+
+    function isVoteOnly(old, nw) {
+      return nw.diff(old).affectedKeys().hasOnly(['votes'])
+        && nw.votes is int
+        && nw.votes == old.votes + 1;
+    }
+
+    function isValidComment(d) {
+      return d.keys().hasOnly(['animId', 'author', 'body', 'createdAt'])
+        && d.animId is string && d.animId.size() >= 1 && d.animId.size() <= 40
+        && d.author is string && d.author.size() >= 1 && d.author.size() <= 20
+        && d.body is string && d.body.size() >= 1 && d.body.size() <= 600
+        && d.createdAt == request.time;
+    }
   }
 }

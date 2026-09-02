@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>animation gallery &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .gal { max-width: 620px; }
+  .sortbar { display: flex; gap: 0; justify-content: center; margin: 10px 0 14px; }
+  .sortbar button { border-radius: 0; }
+  .sortbar button:first-child { border-radius: 8px 0 0 8px; }
+  .sortbar button:last-child { border-radius: 0 8px 8px 0; border-left-width: 1px; }
+  .sortbar button.on { background: #ffe9a8; }
+
+  .card {
+    border: 2px solid #000;
+    border-radius: 10px;
+    margin: 12px 0;
+    padding: 10px;
+    text-align: left;
+    background: #fff;
+  }
+  .card.flash { animation: flash 1.4s ease; }
+  @keyframes flash { from { background: #fff3b0; } to { background: #fff; } }
+  .row { display: flex; gap: 12px; align-items: flex-start; }
+  .thumb {
+    flex: none;
+    width: 200px;
+    height: 150px;
+    border: 2px solid #000;
+    background: #fff;
+    border-radius: 4px;
+  }
+  .meta { flex: 1; min-width: 0; }
+  .ttl { font-size: 17px; word-break: break-word; }
+  .ttl.untitled { color: #999; }
+  .by { font-size: 13px; color: #666; margin: 2px 0 10px; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts button { font-size: 13px; padding: 5px 10px; }
+  .vote.voted { background: #eaffea; border-color: #1faf3a; cursor: default; }
+  .vcount { font-weight: bold; }
+
+  .comments { margin-top: 10px; border-top: 2px dashed #000; padding-top: 8px; }
+  .cmt { font-size: 14px; margin: 6px 0; }
+  .cmt b { color: #000; }
+  .cmt span { color: #333; word-break: break-word; }
+  .cmt-none { font-size: 13px; color: #999; }
+  .cmt-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .cmt-form input {
+    font-size: 14px; padding: 5px 7px; border: 2px solid #000; border-radius: 6px;
+    width: 130px; outline: none;
+  }
+  .cmt-form textarea {
+    font-family: inherit; font-size: 14px; padding: 5px 7px; border: 2px solid #000;
+    border-radius: 6px; flex: 1; min-width: 160px; resize: vertical; min-height: 36px; outline: none;
+  }
+  .cmt-form button { font-size: 13px; padding: 5px 10px; }
+
+  @media (max-width: 460px) {
+    .row { flex-direction: column; }
+    .thumb { width: 100%; height: auto; aspect-ratio: 4 / 3; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap gal">
+  <h1>animation gallery</h1>
+  <p class="sub">flipbooks people made, playing at 12fps. vote and comment. <a href="flipbook.html">make your own</a>.</p>
+
+  <div class="sortbar">
+    <button data-sort="top" class="on">top</button>
+    <button data-sort="new">newest</button>
+  </div>
+
+  <div id="list"></div>
+  <div class="status" id="empty"></div>
+  <div class="bar"><button id="more" hidden>load more</button></div>
+
+  <a class="back" href="flipbook.html">&larr; back to the studio</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var listEl = document.getElementById("list");
+var emptyEl = document.getElementById("empty");
+var moreBtn = document.getElementById("more");
+var sortBtns = document.querySelectorAll(".sortbar button");
+
+var sort = "top";
+var cursor = null;
+var loading = false;
+var cards = [];        // { id, imgs:[Image], canvas, ctx }
+var gTick = 0;
+
+var VOTES_KEY = "sortafun-anim-votes";
+function votedIds() {
+  try { return JSON.parse(localStorage.getItem(VOTES_KEY) || "[]"); } catch (e) { return []; }
+}
+function markVoted(id) {
+  var v = votedIds();
+  if (v.indexOf(id) === -1) { v.push(id); }
+  try { localStorage.setItem(VOTES_KEY, JSON.stringify(v)); } catch (e) {}
+}
+function myName() {
+  try { return localStorage.getItem("sortafun-name") || ""; } catch (e) { return ""; }
+}
+function saveName(n) {
+  try { localStorage.setItem("sortafun-name", n); } catch (e) {}
+}
+
+/* ---------- shared 12fps playback ---------- */
+
+setInterval(function () {
+  gTick++;
+  for (var i = 0; i < cards.length; i++) paintCard(cards[i]);
+}, 1000 / 12);
+
+function paintCard(c) {
+  var g = c.ctx, cw = c.canvas.width, ch = c.canvas.height;
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, cw, ch);
+  if (!c.imgs.length) return;
+  var im = c.imgs[gTick % c.imgs.length];
+  if (im && im.complete && im.naturalWidth) {
+    g.drawImage(im, 0, 0, cw, ch);
+  }
+}
+
+/* ---------- rendering ---------- */
+
+function el(tag, cls, text) {
+  var n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+function makeCard(a) {
+  var card = el("div", "card");
+  card.dataset.id = a.id;
+
+  var row = el("div", "row");
+  var canvas = el("canvas", "thumb");
+  canvas.width = 200;
+  canvas.height = 150;
+  row.appendChild(canvas);
+
+  var meta = el("div", "meta");
+  var ttl = el("div", "ttl" + (a.title ? "" : " untitled"), a.title || "untitled");
+  var by = el("div", "by", "by " + a.author);
+  var acts = el("div", "acts");
+
+  var already = votedIds().indexOf(a.id) !== -1;
+  var vote = el("button", "vote" + (already ? " voted" : ""));
+  vote.innerHTML = '&#9650; <span class="vcount">' + a.votes + "</span>";
+  var vcount = vote.querySelector(".vcount");
+  vote.addEventListener("click", function () {
+    if (vote.classList.contains("voted")) return;
+    vote.classList.add("voted");
+    vcount.textContent = Number(vcount.textContent) + 1;
+    markVoted(a.id);
+    SortafunLB.animVote(a.id).catch(function (e) {
+      vote.classList.remove("voted");
+      vcount.textContent = Number(vcount.textContent) - 1;
+      console.warn("[gallery] vote failed", e);
+    });
+  });
+
+  var cbtn = el("button", "cbtn", "comments");
+  var box = el("div", "comments");
+  box.hidden = true;
+  var loaded = false;
+  cbtn.addEventListener("click", function () {
+    box.hidden = !box.hidden;
+    if (!box.hidden && !loaded) { loaded = true; loadComments(a.id, box, cbtn); }
+  });
+
+  acts.appendChild(vote);
+  acts.appendChild(cbtn);
+  meta.appendChild(ttl);
+  meta.appendChild(by);
+  meta.appendChild(acts);
+  row.appendChild(meta);
+  card.appendChild(row);
+  card.appendChild(box);
+
+  var ctx = canvas.getContext("2d");
+  var imgs = (a.frames || []).map(function (url) {
+    var im = new Image();
+    im.src = url;
+    return im;
+  });
+  var rec = { id: a.id, imgs: imgs, canvas: canvas, ctx: ctx };
+  cards.push(rec);
+  paintCard(rec);
+
+  return card;
+}
+
+function loadComments(id, box, cbtn) {
+  box.innerHTML = "";
+  var status = el("div", "cmt-none", "loading...");
+  box.appendChild(status);
+
+  SortafunLB.animComments(id).then(function (rows) {
+    box.innerHTML = "";
+    cbtn.textContent = "hide comments (" + rows.length + ")";
+    if (!rows.length) {
+      box.appendChild(el("div", "cmt-none", "no comments yet."));
+    } else {
+      rows.forEach(function (r) {
+        var c = el("div", "cmt");
+        c.appendChild(el("b", null, r.author + ": "));
+        c.appendChild(el("span", null, r.body));
+        box.appendChild(c);
+      });
+    }
+    box.appendChild(commentForm(id, box, cbtn));
+  }).catch(function (e) {
+    box.innerHTML = "";
+    box.appendChild(el("div", "cmt-none", "couldn't load comments"));
+    console.warn("[gallery] comments failed", e);
+  });
+}
+
+function commentForm(id, box, cbtn) {
+  var form = el("div", "cmt-form");
+  var name = el("input");
+  name.maxLength = 20;
+  name.placeholder = "name";
+  name.value = myName();
+  var body = el("textarea");
+  body.maxLength = 600;
+  body.placeholder = "say something";
+  var send = el("button", null, "post");
+  form.appendChild(name);
+  form.appendChild(body);
+  form.appendChild(send);
+
+  send.addEventListener("click", function () {
+    var nm = name.value.trim(), bd = body.value.trim();
+    if (!nm || !bd) { (nm ? body : name).focus(); return; }
+    send.disabled = true;
+    send.textContent = "...";
+    saveName(nm);
+    SortafunLB.animComment(id, nm, bd).then(function () {
+      var c = el("div", "cmt");
+      c.appendChild(el("b", null, nm + ": "));
+      c.appendChild(el("span", null, bd));
+      box.insertBefore(c, form);
+      body.value = "";
+      send.disabled = false;
+      send.textContent = "post";
+      var m = /\((\d+)\)/.exec(cbtn.textContent);
+      cbtn.textContent = "hide comments (" + ((m ? +m[1] : 0) + 1) + ")";
+    }).catch(function (e) {
+      send.disabled = false;
+      send.textContent = "try again";
+      console.warn("[gallery] comment failed", e);
+    });
+  });
+  return form;
+}
+
+/* ---------- list loading ---------- */
+
+function resetList() {
+  listEl.innerHTML = "";
+  cards = [];
+  cursor = null;
+  emptyEl.textContent = "";
+  moreBtn.hidden = true;
+}
+
+function loadPage() {
+  if (loading || !window.SortafunLB) return;
+  loading = true;
+  moreBtn.textContent = "loading...";
+  var first = cursor === null;
+  if (first) emptyEl.textContent = "loading...";
+
+  SortafunLB.animList(sort, 24, cursor).then(function (rows) {
+    loading = false;
+    moreBtn.textContent = "load more";
+    if (first) emptyEl.textContent = "";
+    if (first && !rows.length) {
+      emptyEl.textContent = "nothing here yet. be the first to post one.";
+      return;
+    }
+    rows.forEach(function (a) { listEl.appendChild(makeCard(a)); });
+    cursor = rows.length ? rows[rows.length - 1]._cursor : cursor;
+    moreBtn.hidden = rows.length < 24;
+    if (first) jumpToHash();
+  }).catch(function (e) {
+    loading = false;
+    emptyEl.textContent = "gallery offline";
+    moreBtn.hidden = true;
+    console.warn("[gallery] list failed", e);
+  });
+}
+
+function jumpToHash() {
+  var id = location.hash.slice(1);
+  if (!id) return;
+  var card = listEl.querySelector('[data-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  if (card) {
+    card.scrollIntoView({ block: "center" });
+    card.classList.add("flash");
+  }
+}
+
+sortBtns.forEach(function (b) {
+  b.addEventListener("click", function () {
+    if (b.dataset.sort === sort) return;
+    sortBtns.forEach(function (x) { x.classList.remove("on"); });
+    b.classList.add("on");
+    sort = b.dataset.sort;
+    resetList();
+    loadPage();
+  });
+});
+moreBtn.addEventListener("click", loadPage);
+
+if (!window.SortafunLB) {
+  emptyEl.textContent = "gallery offline";
+} else {
+  loadPage();
+}
+</script>
+</body>
+</html>

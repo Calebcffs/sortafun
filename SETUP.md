@@ -41,9 +41,9 @@ Firebase console doesn't read the file from GitHub, so pushing a rules change
 here does nothing on its own. If scores stop saving after an update, this is
 the first thing to check.
 
-### 5. Create the three indexes
-The daily query, the all-time query, and the tile slider archive calendar
-each need a composite index.
+### 5. Create the indexes
+The daily query, the all-time query, the tile slider archive calendar, and the
+animation gallery's comment query each need a composite index.
 
 **Easy way:** deploy, open `leaderboards.html`, open the browser console. The
 page fires all three "today" queries on load — Firestore prints an error with a
@@ -52,7 +52,11 @@ direct link. Click it → **Create index** → wait ~1 minute. Then click an
 `puzzle-archive.html` with the console open for the third (the archive
 calendar's range query) — it fails silently in the UI (blank calendar, no
 highlighted days) until that index exists, so check the console there even if
-nothing looks visibly broken.
+nothing looks visibly broken. Finally open `anim-gallery.html`, post a test
+flipbook from `flipbook.html`, and open its comments — the fourth index
+(`anim_comments`: `animId` asc, `createdAt` asc) prints its link in the console
+if it's missing. The gallery's own list (sorted by votes, or by newest) uses
+single-field indexes Firestore builds automatically — no action needed.
 
 **Or** paste `firestore.indexes.json` if you use the Firebase CLI
 (`firebase deploy --only firestore:indexes`).
@@ -60,7 +64,9 @@ nothing looks visibly broken.
 ### 6. Deploy the site
 Commit and push as usual — GitHub Pages serves `sortafun.org`. The leaderboard
 panels appear on the typing, circuit race, and tile slider end screens, and
-all three are collected on `leaderboards.html`.
+all three are collected on `leaderboards.html`. The animation gallery
+(`anim-gallery.html`) reads and writes the `animations` and `anim_comments`
+collections; `flipbook.html` posts to them.
 
 ## Data model
 
@@ -84,7 +90,32 @@ Both sort by `rankValue` descending. The tile slider's daily puzzle is seeded
 from this same day string, so its scramble and its leaderboard always roll
 over together, at midnight Singapore time.
 
+### Animation gallery
+
+Collection `animations`, one document per posted flipbook:
+
+| field       | type      | notes                                             |
+|-------------|-----------|---------------------------------------------------|
+| `title`     | string    | 0–60 chars, optional                              |
+| `author`    | string    | 1–20 chars                                        |
+| `fps`       | int       | always 12 for now                                 |
+| `w`, `h`    | int       | frame pixel size (480 x 360)                      |
+| `frames`    | list      | PNG data URLs, 1–80 of them, one per frame        |
+| `votes`     | int       | starts 0, only ever `+1` per update (rules-checked) |
+| `createdAt` | timestamp | server time                                       |
+| `day`       | string    | `YYYY-MM-DD` Singapore time                       |
+
+Collection `anim_comments`, one document per comment: `animId` (string),
+`author` (1–20), `body` (1–600), `createdAt` (server ts).
+
+Votes are deduped per browser in `localStorage` (`sortafun-anim-votes`), same
+forgeable-but-fine trade as the scores. The gallery list is sorted by `votes`
+desc (default) or `createdAt` desc ("newest"). A single flipbook of 80 line-art
+frames is roughly 100–300 KB, well under the 1 MiB Firestore document limit; the
+80-frame cap is enforced in `firestore.rules` and in `flipbook.html`.
+
 ## Free tier headroom
 
 Spark plan gives 50k reads + 20k writes per day. Each leaderboard view is ~10
-reads. You'd need thousands of daily visitors to get close.
+reads. A gallery page load is ~24 reads plus comments on demand. You'd need
+thousands of daily visitors to get close.

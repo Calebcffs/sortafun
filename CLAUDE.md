@@ -245,15 +245,32 @@ consistent. A thread with 4 to 10 posts and 3 to 6 distinct posters reads best.
 
 Plain static HTML, no framework, no build. `game.css` is shared styling for the
 game sub-pages; `forum.html` deliberately does NOT use it (it's a period piece
-with its own Times New Roman styling). `flipbook.html` (the animation studio) is
-self-contained: each frame is an offscreen `<canvas>` of transparent black ink,
-onion skin recolours the previous frames red, and the whole flipbook autosaves to
-`localStorage` as an array of PNG data URLs (key `sortafun-flipbook-v1`). It does
-not touch Firestore. Its homepage sign has no hand-drawn button art, so
-`index.html` falls back to a plain lettered sign for it. Leaderboards use a client-only Firestore
-backend (`firebase-config.js`, `leaderboard.js`); `firestore.rules` must be
-pasted into the Firebase console by hand, see `SETUP.md`. The forum does not
-touch Firestore.
+with its own Times New Roman styling).
+
+`flipbook.html` (the animation studio): each frame is an offscreen `<canvas>` of
+transparent black ink, onion skin recolours the previous frames red, and the
+whole flipbook autosaves to `localStorage` as an array of PNG data URLs (key
+`sortafun-flipbook-v1`). "Post to gallery" writes it to Firestore.
+
+`anim-gallery.html`: the user gallery. Reads `animations` (sorted by `votes` or
+`createdAt`) and `anim_comments` from Firestore via `leaderboard.js` (the
+`SortafunLB.anim*` functions live there, not in a separate file). Votes are one
+per browser, deduped in `localStorage` (`sortafun-anim-votes`); the name field
+reuses the leaderboards' `sortafun-name` key.
+
+`gallery.html`: the art gallery, now an **easter egg**. It used to be a room to
+the right of the lobby in `index.html`; it's a standalone walk-around page, and
+the only way to it is clicking the potted plant in the lobby's right corner.
+Nothing on the homepage hints at it. The Vietnam photos and the "he runs
+because you're watching" line live here now.
+
+Leaderboards + the animation gallery use one client-only Firestore backend
+(`firebase-config.js`, `leaderboard.js`). `firestore.rules` and the indexes must
+be pasted into the Firebase console by hand whenever they change here, see
+`SETUP.md`. The forum does not touch Firestore.
+
+The `flipbook` / `animation gallery` homepage signs have no hand-drawn button
+art, so `index.html` falls back to a plain lettered sign for them.
 
 CNAME points the repo's GitHub Pages at **sortafun.org**, so a push to `main` is
 a deploy. Don't push unless asked.

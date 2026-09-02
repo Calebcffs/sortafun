@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>art gallery &middot; SORTAFUN.ORG</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    overflow: hidden;
+    font-family: "Comic Sans MS", "Segoe Print", cursive;
+  }
+  canvas { display: block; }
+  #hint {
+    position: fixed;
+    left: 8px;
+    bottom: 6px;
+    font-size: 13px;
+    color: #000;
+    transition: opacity .25s ease;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; stand under a picture &nbsp;&middot;&nbsp; press &darr; at the door to leave</div>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const hintEl = document.getElementById("hint");
+
+const INK = "#000";
+const PAPER = "#fff";
+
+// the photos. captions are deliberately illegible — squiggles on a plaque.
+const ART = [
+  { src: "art/1.jpg" },
+  { src: "art/2.jpg" },
+  { src: "art/3.jpg" },
+  { src: "art/4.jpg" },
+];
+ART.forEach((a) => { a.img = new Image(); a.img.src = a.src; });
+const ART_RATIO = 1200 / 846;
+
+let W = 0, H = 0, groundY = 0, wallTop = 80;
+let WORLD_W = 0;
+let frames = [];
+let exitDoor = null;
+let titleX = 0;
+
+let camX = 0;
+let previewT = 0;
+let activeArt = null;
+let shownArt = null;
+
+const GRAV = 0.6, JUMP = 12;
+
+const guy = {
+  x: 210, vx: 0, speed: 3.2,
+  yOff: 0, vy: 0, onGround: true,
+  entering: false, enterT: 0, targetUrl: null, leaving: false,
+};
+
+const keys = {};
+window.addEventListener("keydown", (e) => {
+  keys[e.key] = true;
+  if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", " "].includes(e.key)) e.preventDefault();
+  if ((e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") && !guy.entering) jump();
+  if ((e.key === "ArrowDown" || e.key === "Enter") && !guy.entering) tryLeave();
+});
+window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+
+function jump() {
+  if (guy.onGround) { guy.vy = -JUMP; guy.onGround = false; }
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  groundY = Math.min(H - 90, H * 0.62 + 60);
+  wallTop = 80;
+
+  const doorH = Math.min(84, groundY * 0.34);
+  const doorW = doorH * 0.46;
+  exitDoor = { cx: 96, w: doorW, h: doorH, x: 96 - doorW / 2 };
+
+  const frameH = Math.min((groundY - wallTop) * 0.60, W * 0.30, 260);
+  const frameW = frameH * ART_RATIO;
+  const x0 = 300;
+  const gap = frameW + Math.max(90, W * 0.11);
+
+  frames = ART.map((a, i) => ({
+    art: a, w: frameW, h: frameH,
+    cx: x0 + frameW / 2 + i * gap,
+  }));
+
+  const lastRight = frames[frames.length - 1].cx + frameW / 2;
+  WORLD_W = lastRight + 180;
+  titleX = (x0 + lastRight) / 2;
+
+  guy.x = clamp(guy.x, 20, WORLD_W - 20);
+}
+window.addEventListener("resize", resize);
+resize();
+
+function frameHit(mx, my) {
+  for (const f of frames) {
+    const x = f.cx - f.w / 2, y = wallTop + 6;
+    if (mx >= x && mx <= x + f.w && my >= y && my <= y + f.h) return f;
+  }
+  return null;
+}
+function doorHit(mx, my) {
+  return mx >= exitDoor.x - 4 && mx <= exitDoor.x + exitDoor.w + 4 &&
+         my >= groundY - exitDoor.h && my <= groundY;
+}
+
+canvas.addEventListener("mousemove", (e) => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left + camX, my = e.clientY - r.top;
+  canvas.style.cursor = (frameHit(mx, my) || doorHit(mx, my)) ? "pointer" : "default";
+});
+
+canvas.addEventListener("click", (e) => {
+  if (guy.entering) return;
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left + camX, my = e.clientY - r.top;
+  if (doorHit(mx, my)) { startLeave(); return; }
+  const f = frameHit(mx, my);
+  if (f) { guy.x = f.cx; shownArt = f; }
+});
+
+function startLeave() {
+  guy.entering = true;
+  guy.leaving = true;
+  guy.enterT = 0;
+  guy.targetUrl = "index.html";
+  guy.x = exitDoor.cx;
+  guy.vx = 0;
+  guy.yOff = 0;
+  guy.vy = 0;
+  guy.onGround = true;
+}
+function tryLeave() {
+  if (guy.onGround && Math.abs(guy.x - exitDoor.cx) < exitDoor.w * 1.1) startLeave();
+}
+
+function update() {
+  if (guy.entering) {
+    guy.enterT += 0.02;
+    if (guy.enterT >= 1) window.location.href = guy.targetUrl;
+    return;
+  }
+  let dir = 0;
+  if (keys["ArrowLeft"] || keys["a"] || keys["A"]) dir -= 1;
+  if (keys["ArrowRight"] || keys["d"] || keys["D"]) dir += 1;
+  guy.vx = dir * guy.speed;
+  guy.x = clamp(guy.x + guy.vx, 20, WORLD_W - 20);
+
+  guy.vy += GRAV;
+  guy.yOff += guy.vy;
+  if (guy.yOff >= 0) { guy.yOff = 0; guy.vy = 0; guy.onGround = true; }
+
+  activeArt = null;
+  if (guy.onGround) {
+    let bd = 1e9;
+    for (const f of frames) {
+      const d = Math.abs(guy.x - f.cx);
+      if (d < f.w * 0.58 && d < bd) { bd = d; activeArt = f; }
+    }
+  }
+  if (activeArt) shownArt = activeArt;
+  previewT += ((activeArt ? 1 : 0) - previewT) * 0.14;
+  hintEl.style.opacity = (previewT > 0.05 || guy.entering) ? "0" : "0.9";
+}
+
+let t = 0;
+
+function draw() {
+  t += 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+
+  const targetCam = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
+  camX += (targetCam - camX) * 0.16;
+  if (Math.abs(targetCam - camX) < 0.4) camX = targetCam;
+
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(-camX, 0);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = INK;
+  ctx.font = "30px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillText("art gallery", titleX, 52);
+
+  // one quiet line, near the entrance
+  ctx.font = "13px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillStyle = "#999";
+  ctx.textAlign = "left";
+  ctx.fillText("he runs because you're watching. close the tab and he stops.", 250, groundY - 40);
+  ctx.textAlign = "center";
+
+  for (const f of frames) drawFrame(f);
+
+  drawPlant(exitDoor.cx + 74, groundY);
+  drawExitDoor();
+  drawGuy();
+
+  ctx.restore();
+
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(W, groundY);
+  ctx.stroke();
+
+  drawPreview();
+}
+
+function drawExitDoor() {
+  const p = exitDoor;
+  const x = p.x, w = p.w, h = p.h, y = groundY - h;
+  const open = guy.leaving ? clamp(guy.enterT * 1.5, 0, 1) : 0;
+  const ease = 1 - Math.pow(1 - open, 3);
+  const r = Math.min(10, w * 0.4);
+
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x - 4, y - 4, w + 8, h + 4);
+
+  if (ease > 0.01) { ctx.fillStyle = PAPER; ctx.fillRect(x, y, w, h); }
+
+  const pw = w * (1 - ease * 0.86);
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.moveTo(x, groundY);
+  ctx.lineTo(x, y + Math.min(r, pw));
+  ctx.quadraticCurveTo(x, y, x + Math.min(r, pw), y);
+  ctx.lineTo(x + pw, y - ease * 3);
+  ctx.lineTo(x + pw, groundY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = PAPER;
+  ctx.beginPath();
+  ctx.arc(x + pw - Math.min(7, pw * 0.3), y + h * 0.55, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  const near = guy.onGround && !guy.entering && Math.abs(guy.x - p.cx) < w * 1.1;
+  ctx.fillStyle = INK;
+  ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillText(near ? "press ↓ to leave" : "to the lobby", p.cx, y - 10);
+}
+
+function drawImageCover(img, x, y, w, h) {
+  if (!img.complete || !img.naturalWidth) {
+    ctx.fillStyle = "#eee";
+    ctx.fillRect(x, y, w, h);
+    return;
+  }
+  const ir = img.naturalWidth / img.naturalHeight, rr = w / h;
+  let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+  if (ir > rr) { sw = sh * rr; sx = (img.naturalWidth - sw) / 2; }
+  else { sh = sw / rr; sy = (img.naturalHeight - sh) / 2; }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+function drawFrame(f) {
+  const x = f.cx - f.w / 2, y = wallTop + 6;
+
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(f.cx - f.w * 0.28, y);
+  ctx.lineTo(f.cx, y - 16);
+  ctx.lineTo(f.cx + f.w * 0.28, y);
+  ctx.stroke();
+
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 6, y - 6, f.w + 12, f.h + 12);
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(x - 3, y - 3, f.w + 6, f.h + 6);
+  drawImageCover(f.art.img, x, y, f.w, f.h);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, f.w, f.h);
+
+  const pw = 96, ph = 26, py = y + f.h + 12;
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(f.cx - pw / 2, py, pw, ph);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(f.cx - pw / 2, py, pw, ph);
+  squiggle(f.cx - pw / 2 + 8, py + 9, pw - 16, 1.4, 3);
+  squiggle(f.cx - pw / 2 + 8, py + 17, pw - 22, 1.4, 3);
+}
+
+function squiggle(x, y, w, amp, waves) {
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  const steps = Math.max(12, Math.floor(w / 4));
+  for (let i = 0; i <= steps; i++) {
+    const px = x + (w * i) / steps;
+    const py = y + Math.sin((i / steps) * Math.PI * 2 * waves) * amp;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+
+function drawPlant(x, baseY) {
+  ctx.strokeStyle = INK;
+  ctx.fillStyle = PAPER;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 12, baseY - 20);
+  ctx.lineTo(x + 12, baseY - 20);
+  ctx.lineTo(x + 8, baseY);
+  ctx.lineTo(x - 8, baseY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, baseY - 20);
+  ctx.quadraticCurveTo(x - 16, baseY - 34, x - 6, baseY - 48);
+  ctx.moveTo(x, baseY - 20);
+  ctx.quadraticCurveTo(x + 16, baseY - 34, x + 6, baseY - 48);
+  ctx.moveTo(x, baseY - 20);
+  ctx.lineTo(x, baseY - 44);
+  ctx.stroke();
+}
+
+function drawPreview() {
+  if (previewT < 0.02 || !shownArt) return;
+
+  const bandH = H - groundY;
+  const ease = 1 - Math.pow(1 - previewT, 2);
+  const slide = (1 - ease) * bandH;
+  ctx.save();
+  ctx.globalAlpha = clamp(previewT * 1.4, 0, 1);
+
+  const pad = 14;
+  const photoH = Math.min(bandH - pad * 2, 240);
+  const photoW = photoH * ART_RATIO;
+  const capW = Math.min(W * 0.32, 300);
+  const total = photoW + 26 + capW;
+  const x0 = (W - total) / 2;
+  const y0 = groundY + pad + slide;
+
+  ctx.fillStyle = "rgba(255,255,255,0.96)";
+  ctx.fillRect(0, groundY + 1, W, bandH);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY + 1);
+  ctx.lineTo(W, groundY + 1);
+  ctx.stroke();
+
+  ctx.fillStyle = INK;
+  ctx.fillRect(x0 - 4, y0 - 4, photoW + 8, photoH + 8);
+  const img = shownArt.art.img;
+  if (img.complete && img.naturalWidth) ctx.drawImage(img, x0, y0, photoW, photoH);
+  else { ctx.fillStyle = "#eee"; ctx.fillRect(x0, y0, photoW, photoH); }
+
+  const cx = x0 + photoW + 26, lines = 4;
+  for (let i = 0; i < lines; i++) {
+    const ly = y0 + 14 + (photoH - 24) * (i / (lines - 1));
+    squiggle(cx, ly, capW * (i === lines - 1 ? 0.55 : 0.92), 2, 4 + i);
+  }
+  ctx.restore();
+}
+
+function drawGuy() {
+  ctx.save();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  if (guy.entering) ctx.globalAlpha = Math.max(0, 1 - guy.enterT * 1.15);
+
+  const feetY = groundY + guy.yOff;
+  let bob = 0;
+  if (!guy.entering && guy.vx !== 0 && guy.onGround) bob = Math.sin(t * 0.3) * 2;
+  const airborne = !guy.onGround && !guy.entering;
+
+  const x = guy.x, headR = 9;
+  const headCY = feetY - 46 + bob, hipY = feetY - 20 + bob;
+
+  ctx.beginPath();
+  ctx.arc(x, headCY, headR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, headCY + headR);
+  ctx.lineTo(x, hipY);
+  ctx.stroke();
+
+  const swing = airborne ? -8 : (guy.vx !== 0 ? Math.sin(t * 0.3) * 6 : 3);
+  ctx.beginPath();
+  ctx.moveTo(x, hipY - 14);
+  ctx.lineTo(x - 9, hipY - 6 + swing);
+  ctx.moveTo(x, hipY - 14);
+  ctx.lineTo(x + 9, hipY - 6 - swing);
+  ctx.stroke();
+
+  let legSwing;
+  if (airborne) legSwing = guy.vy < 0 ? 3 : 9;
+  else legSwing = guy.vx !== 0 ? Math.sin(t * 0.3) * 7 : 5;
+  ctx.beginPath();
+  ctx.moveTo(x, hipY);
+  ctx.lineTo(x - legSwing, feetY + bob);
+  ctx.moveTo(x, hipY);
+  ctx.lineTo(x + legSwing, feetY + bob);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function loop() {
+  try { update(); draw(); }
+  catch (err) { console.error(err); }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

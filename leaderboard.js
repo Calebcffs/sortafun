@@ -196,6 +196,107 @@
     });
   }
 
+  /* ---------- animation gallery ----------
+   * Separate collections from the leaderboard, same client-only Firestore.
+   *   animations       one doc per posted flipbook:
+   *                      title, author, fps, w, h, frames (array of PNG data
+   *                      URLs), votes (int), createdAt (server ts), day
+   *   anim_comments    one doc per comment: animId, author, body, createdAt
+   * Votes are a bare counter bumped with increment(); firestore.rules only
+   * allows an update that adds exactly 1 to `votes` and touches nothing else.
+   * One-vote-per-browser is enforced client side (localStorage), same
+   * forgeable-but-fine trade as the scores.
+   */
+
+  var ANIM_MAX_FRAMES = 80;
+
+  function animPublish(a) {
+    return init().then(function () {
+      var fs = state.fs;
+      var title = String(a.title || "").trim().slice(0, 60);
+      var author = String(a.author || "").trim().slice(0, 20);
+      var frames = a.frames || [];
+      if (!author) throw new Error("name required");
+      if (!frames.length) throw new Error("nothing to post");
+      if (frames.length > ANIM_MAX_FRAMES) throw new Error("too many frames (" + ANIM_MAX_FRAMES + " max)");
+      return fs.addDoc(fs.collection(state.db, "animations"), {
+        title: title,
+        author: author,
+        fps: 12,
+        w: Math.round(a.w) || 480,
+        h: Math.round(a.h) || 360,
+        frames: frames,
+        votes: 0,
+        createdAt: fs.serverTimestamp(),
+        day: dayStr(),
+      }).then(function (ref) { return ref.id; });
+    });
+  }
+
+  // sort: "top" (by votes, default) | "new" (by createdAt). Pass the `_cursor`
+  // of the last row from a previous page to fetch the next page.
+  function animList(sort, n, cursor) {
+    return init().then(function () {
+      var fs = state.fs;
+      var field = sort === "new" ? "createdAt" : "votes";
+      var parts = [fs.collection(state.db, "animations"), fs.orderBy(field, "desc")];
+      if (cursor) parts.push(fs.startAfter(cursor));
+      parts.push(fs.limit(n || 24));
+      return fs.getDocs(fs.query.apply(null, parts)).then(function (snap) {
+        var out = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          out.push({
+            id: doc.id, title: d.title || "", author: d.author || "anon",
+            fps: d.fps || 12, w: d.w || 480, h: d.h || 360,
+            frames: d.frames || [], votes: d.votes || 0, _cursor: doc,
+          });
+        });
+        return out;
+      });
+    });
+  }
+
+  function animVote(id) {
+    return init().then(function () {
+      var fs = state.fs;
+      return fs.updateDoc(fs.doc(state.db, "animations", id), { votes: fs.increment(1) });
+    });
+  }
+
+  function animComments(id) {
+    return init().then(function () {
+      var fs = state.fs;
+      var q = fs.query(
+        fs.collection(state.db, "anim_comments"),
+        fs.where("animId", "==", id),
+        fs.orderBy("createdAt", "asc"),
+        fs.limit(300)
+      );
+      return fs.getDocs(q).then(function (snap) {
+        var out = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          out.push({ author: d.author, body: d.body });
+        });
+        return out;
+      });
+    });
+  }
+
+  function animComment(id, author, body) {
+    return init().then(function () {
+      var fs = state.fs;
+      author = String(author).trim().slice(0, 20);
+      body = String(body).trim().slice(0, 600);
+      if (!author) throw new Error("name required");
+      if (!body) throw new Error("say something");
+      return fs.addDoc(fs.collection(state.db, "anim_comments"), {
+        animId: id, author: author, body: body, createdAt: fs.serverTimestamp(),
+      });
+    });
+  }
+
   /* ---------- UI panel ---------- */
 
   function el(tag, cls, text) {
@@ -337,6 +438,12 @@
     topDay: topDay,
     bestByDay: bestByDay,
     recent: recent,
+    animPublish: animPublish,
+    animList: animList,
+    animVote: animVote,
+    animComments: animComments,
+    animComment: animComment,
+    ANIM_MAX_FRAMES: ANIM_MAX_FRAMES,
     mountPanel: mountPanel,
   };
 })();

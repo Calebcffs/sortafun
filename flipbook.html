@@ -64,6 +64,25 @@
   .thumb span { display: block; }
   .thumb.on { border-color: #e5533d; background: #fff3f0; }
   .hint { font-size: 12px; color: #888; margin: 6px 0 0; }
+  .post {
+    margin: 10px auto 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+  }
+  .post input {
+    font-size: 14px;
+    padding: 6px 8px;
+    border: 2px solid #000;
+    border-radius: 8px;
+    width: 180px;
+    outline: none;
+  }
+  .post .btn { font-size: 13px; padding: 6px 12px; text-decoration: none; }
+  .post-msg { flex-basis: 100%; font-size: 13px; color: #1faf3a; min-height: 16px; }
+  .post-msg.err { color: #d64545; }
 </style>
 </head>
 <body>
@@ -110,11 +129,20 @@
     <button id="wipe">start over</button>
   </div>
 
+  <div class="post">
+    <input id="postTitle" maxlength="60" placeholder="title (optional)" autocomplete="off" spellcheck="false">
+    <button id="postBtn">post to gallery</button>
+    <a class="btn" href="anim-gallery.html">browse gallery &rarr;</a>
+    <div class="post-msg" id="postMsg"></div>
+  </div>
+
   <p class="hint">keys: space play/stop &middot; , . prev/next &middot; p l r c e tools &middot; o onion. saved in this browser.</p>
 
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
 <script>
 "use strict";
 
@@ -476,6 +504,65 @@ document.addEventListener("keydown", function (e) {
   else if (k === "c") { tool = "circle"; refreshUI(); }
   else if (k === "e") { tool = "eraser"; refreshUI(); }
   else if (k === "o") { onionBox.checked = !onionBox.checked; onion = onionBox.checked; compose(); }
+});
+
+/* ---------- post to the gallery ---------- */
+
+var postBtn = document.getElementById("postBtn");
+var postMsg = document.getElementById("postMsg");
+var postTitle = document.getElementById("postTitle");
+
+function setMsg(text, isErr) {
+  postMsg.textContent = text;
+  postMsg.classList.toggle("err", !!isErr);
+}
+
+if (!window.SortafunLB) {
+  postBtn.disabled = true;
+  setMsg("gallery offline", true);
+}
+
+postBtn.addEventListener("click", function () {
+  if (!window.SortafunLB) return;
+  var nonEmpty = frames.some(function (f) {
+    var d = f.getContext("2d").getImageData(0, 0, W, H).data;
+    for (var i = 3; i < d.length; i += 40) if (d[i]) return true;
+    return false;
+  });
+  if (!nonEmpty) { setMsg("draw something first", true); return; }
+  if (frames.length > SortafunLB.ANIM_MAX_FRAMES) {
+    setMsg("too long to post (" + SortafunLB.ANIM_MAX_FRAMES + " frames max)", true);
+    return;
+  }
+
+  var name = "";
+  try { name = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
+  name = (prompt("post as (your name):", name) || "").trim();
+  if (!name) return;
+  try { localStorage.setItem("sortafun-name", name); } catch (e) {}
+
+  if (playing) stop();
+  postBtn.disabled = true;
+  setMsg("posting...");
+
+  SortafunLB.animPublish({
+    title: postTitle.value,
+    author: name,
+    w: W, h: H,
+    frames: frames.map(function (f) { return f.toDataURL("image/png"); }),
+  }).then(function (id) {
+    setMsg("posted! it's in the gallery now.");
+    postTitle.value = "";
+    var a = document.createElement("a");
+    a.href = "anim-gallery.html#" + id;
+    a.textContent = " see it";
+    a.className = "btn";
+    postMsg.appendChild(a);
+  }).catch(function (e) {
+    postBtn.disabled = false;
+    setMsg(e && e.message ? e.message : "post failed (open console)", true);
+    console.warn("[flipbook] post failed", e);
+  });
 });
 
 /* ---------- boot ---------- */

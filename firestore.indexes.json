@@ -25,6 +25,14 @@
         { "fieldPath": "day", "order": "DESCENDING" },
         { "fieldPath": "rankValue", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "anim_comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "animId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

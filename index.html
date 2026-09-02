@@ -25,7 +25,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; press &darr; to enter &nbsp;&middot;&nbsp; click a sign &nbsp;&middot;&nbsp; run right for the gallery</div>
+<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; press &darr; to enter &nbsp;&middot;&nbsp; click a sign</div>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
@@ -44,6 +44,7 @@ const DOORS = [
   { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69, game: "circuit" },
   { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65, game: "typing" },
   { label: "animation studio", url: "flipbook.html",                                       ar: 188 / 64 },
+  { label: "animation gallery", url: "anim-gallery.html",                                   ar: 188 / 64 },
   { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58 },
   { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64, recent: true },
 ];
@@ -75,33 +76,19 @@ function lbFmt(game, score) {
   return g.format ? g.format(score) : score + " " + g.unit;
 }
 
-const signImg = new Image(); signImg.src = "assets/art-gallery-sign.png";
-const SIGN_AR = 252 / 124;
-
-// gallery photos live in art/ (1200x846 each). caption text is deliberately
-// illegible — squiggles on a little plaque.
-const ART = [
-  { src: "art/1.jpg" },
-  { src: "art/2.jpg" },
-  { src: "art/3.jpg" },
-  { src: "art/4.jpg" },
-];
-ART.forEach((a) => { a.img = new Image(); a.img.src = a.src; });
-const ART_RATIO = 1200 / 846;
+// The art gallery used to be a room off to the right. It's now an easter egg:
+// the potted plant in the corner is a door to gallery.html. Nothing on this
+// page hints at it.
 
 let W = 0, H = 0;
 let groundY = 0;
 let wallTop = 80;
 let doorLayout = [];
-let frames = [];
 let WORLD_W = 0;
-let menuMidX = 0, galleryMidX = 0;
-let signRect = null;
+let menuMidX = 0;
+let plantX = 0;
 
 let camX = 0;
-let previewT = 0;      // 0 = preview tucked below the floor, 1 = fully up
-let activeArt = null;  // frame the guy is currently standing under
-let shownArt = null;   // last art shown, kept while the panel slides away
 
 const GRAV = 0.6;
 const JUMP = 12;
@@ -175,25 +162,9 @@ function resize() {
   });
   menuMidX = W / 2;
 
-  // --- art gallery sign, pinned to the top-right corner ---
-  const signW = Math.min(158, W * 0.20);
-  const signH = signW / SIGN_AR;
-  signRect = { x: W - signW - 14, y: 8, w: signW, h: signH };
-
-  // --- gallery, off to the right ---
-  const frameH = Math.min((groundY - wallTop) * 0.60, W * 0.27);
-  const frameW = frameH * ART_RATIO;
-  const galleryX0 = W + 250;
-  const frameGap = frameW + Math.max(70, W * 0.10);
-
-  frames = ART.map((a, i) => {
-    const cx = galleryX0 + frameW / 2 + i * frameGap;
-    return { art: a, cx, w: frameW, h: frameH };
-  });
-
-  const lastRight = frames[frames.length - 1].cx + frameW / 2;
-  WORLD_W = lastRight + 190;
-  galleryMidX = (galleryX0 + lastRight) / 2;
+  // the lobby is one screenful wide — you can't walk out of it
+  WORLD_W = W;
+  plantX = W - 52;
 
   guy.x = clamp(guy.x, 20, WORLD_W - 20);
 }
@@ -210,27 +181,43 @@ function hitBox(mx, my) {
   return null;
 }
 
+// the corner plant — the hidden door to the art gallery
+function hitPlant(mx, my) {
+  return mx >= plantX - 20 && mx <= plantX + 18 &&
+         my >= groundY - 54 && my <= groundY + 2;
+}
+
+function leaveVia(url, atX) {
+  guy.entering = true;
+  guy.enterT = 0;
+  guy.targetUrl = url;
+  guy.enterDoor = null;
+  guy.x = atX;
+  guy.vx = 0;
+  guy.yOff = 0;
+  guy.vy = 0;
+  guy.onGround = true;
+}
+
 canvas.addEventListener("mousemove", (e) => {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left + camX;
   const my = e.clientY - r.top;
-  canvas.style.cursor = hitBox(mx, my) ? "pointer" : "default";
+  canvas.style.cursor = (hitBox(mx, my) || hitPlant(mx, my)) ? "pointer" : "default";
 });
 
 canvas.addEventListener("click", (e) => {
   if (guy.entering) return;
   const r = canvas.getBoundingClientRect();
-  const p = hitBox(e.clientX - r.left + camX, e.clientY - r.top);
+  const mx = e.clientX - r.left + camX;
+  const my = e.clientY - r.top;
+  const p = hitBox(mx, my);
   if (p) {
-    guy.entering = true;
-    guy.enterT = 0;
-    guy.targetUrl = p.url;
+    leaveVia(p.url, p.cx);
     guy.enterDoor = p;
-    guy.x = p.cx;
-    guy.vx = 0;
-    guy.yOff = 0;
-    guy.vy = 0;
-    guy.onGround = true;
+    guy.enterT = 0;
+  } else if (hitPlant(mx, my)) {
+    leaveVia("gallery.html", plantX);
   }
 });
 
@@ -277,18 +264,7 @@ function update() {
     guy.onGround = true;
   }
 
-  // which picture are we standing under?
-  activeArt = null;
-  if (guy.onGround) {
-    let bd = 1e9;
-    for (const f of frames) {
-      const d = Math.abs(guy.x - f.cx);
-      if (d < f.w * 0.58 && d < bd) { bd = d; activeArt = f; }
-    }
-  }
-  if (activeArt) shownArt = activeArt;
-  previewT += ((activeArt ? 1 : 0) - previewT) * 0.14;
-  hintEl.style.opacity = previewT > 0.05 ? "0" : "0.9";
+  hintEl.style.opacity = guy.entering ? "0" : "0.9";
 }
 
 let t = 0;
@@ -349,24 +325,6 @@ function draw() {
 
   drawTitle(menuMidX, 52);
 
-  // art gallery sign, pinned by the title
-  if (signRect && signImg.complete && signImg.naturalWidth) {
-    ctx.drawImage(signImg, signRect.x, signRect.y, signRect.w, signRect.h);
-  }
-
-  ctx.font = "30px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillStyle = INK;
-  ctx.fillText("art gallery", galleryMidX, 52);
-
-  // signposts in the gap between the two rooms
-  ctx.font = "15px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillStyle = "#666";
-  ctx.textAlign = "left";
-  ctx.fillText("the art gallery, this way  →", W + 40, groundY - 42);
-  ctx.fillText("←  back to the lobby", W + 40, groundY - 16);
-  ctx.textAlign = "center";
-  ctx.fillStyle = INK;
-
   // menu signs — hand-drawn buttons, cut to their wonky outline
   for (let i = 0; i < doorLayout.length; i++) {
     const p = doorLayout[i];
@@ -404,13 +362,8 @@ function draw() {
     }
   }
 
-  // gallery frames on the wall
-  for (const f of frames) {
-    drawFrame(f);
-  }
-
-  // a little potted plant by the gallery door, for coziness
-  drawPlant(frames[0].cx - frames[0].w / 2 - 34, groundY);
+  // the corner plant — looks like decor, actually the way to the art gallery
+  drawPlant(plantX, groundY);
 
   // black doors standing on the floor under each sign
   const { p: near, d: nearD } = nearestDoor();
@@ -435,8 +388,6 @@ function draw() {
   ctx.moveTo(0, groundY);
   ctx.lineTo(W, groundY);
   ctx.stroke();
-
-  drawPreview();
 }
 
 function drawDoor(p, lit, open) {
@@ -529,71 +480,6 @@ function drawSignboards() {
   ctx.restore();
 }
 
-// cover-fit an image into a rect, cropping the overflow
-function drawImageCover(img, x, y, w, h) {
-  if (!img.complete || !img.naturalWidth) {
-    ctx.fillStyle = "#eee";
-    ctx.fillRect(x, y, w, h);
-    return;
-  }
-  const ir = img.naturalWidth / img.naturalHeight;
-  const rr = w / h;
-  let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
-  if (ir > rr) { sw = sh * rr; sx = (img.naturalWidth - sw) / 2; }
-  else { sh = sw / rr; sy = (img.naturalHeight - sh) / 2; }
-  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-}
-
-function drawFrame(f) {
-  const x = f.cx - f.w / 2;
-  const y = wallTop + 6;
-
-  // hanging wire
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(f.cx - f.w * 0.28, y);
-  ctx.lineTo(f.cx, y - 16);
-  ctx.lineTo(f.cx + f.w * 0.28, y);
-  ctx.stroke();
-
-  // frame + mat + photo
-  ctx.fillStyle = INK;
-  ctx.fillRect(x - 6, y - 6, f.w + 12, f.h + 12);
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(x - 3, y - 3, f.w + 6, f.h + 6);
-  drawImageCover(f.art.img, x, y, f.w, f.h);
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(x, y, f.w, f.h);
-
-  // illegible plaque under the frame
-  const pw = 96, ph = 26;
-  const py = y + f.h + 12;
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(f.cx - pw / 2, py, pw, ph);
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(f.cx - pw / 2, py, pw, ph);
-  squiggle(f.cx - pw / 2 + 8, py + 9, pw - 16, 1.4, 3, "#000");
-  squiggle(f.cx - pw / 2 + 8, py + 17, pw - 22, 1.4, 3, "#000");
-}
-
-// a wobbly horizontal scribble standing in for text
-function squiggle(x, y, w, amp, waves, color) {
-  ctx.strokeStyle = color || INK;
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  const steps = Math.max(12, Math.floor(w / 4));
-  for (let i = 0; i <= steps; i++) {
-    const px = x + (w * i) / steps;
-    const py = y + Math.sin((i / steps) * Math.PI * 2 * waves) * amp;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.stroke();
-}
-
 function drawPlant(x, baseY) {
   ctx.strokeStyle = INK;
   ctx.fillStyle = PAPER;
@@ -616,57 +502,6 @@ function drawPlant(x, baseY) {
   ctx.moveTo(x, baseY - 20);
   ctx.lineTo(x, baseY - 44);
   ctx.stroke();
-}
-
-function drawPreview() {
-  if (previewT < 0.02 || !shownArt) return;
-
-  const bandH = H - groundY;
-  const ease = 1 - Math.pow(1 - previewT, 2);
-  const slide = (1 - ease) * bandH;
-  const alpha = clamp(previewT * 1.4, 0, 1);
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-
-  const pad = 14;
-  const photoH = Math.min(bandH - pad * 2, 240);
-  const photoW = photoH * ART_RATIO;
-  const capW = Math.min(W * 0.32, 300);
-  const total = photoW + 26 + capW;
-  const x0 = (W - total) / 2;
-  const y0 = groundY + pad + slide;
-
-  // backing panel so the photo reads as its own strip
-  ctx.fillStyle = "rgba(255,255,255,0.96)";
-  ctx.fillRect(0, groundY + 1, W, bandH);
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY + 1);
-  ctx.lineTo(W, groundY + 1);
-  ctx.stroke();
-
-  // photo, contained, framed
-  ctx.fillStyle = INK;
-  ctx.fillRect(x0 - 4, y0 - 4, photoW + 8, photoH + 8);
-  const img = shownArt.art.img;
-  if (img.complete && img.naturalWidth) {
-    ctx.drawImage(img, x0, y0, photoW, photoH);
-  } else {
-    ctx.fillStyle = "#eee";
-    ctx.fillRect(x0, y0, photoW, photoH);
-  }
-
-  // illegible caption block
-  const cx = x0 + photoW + 26;
-  const lines = 4;
-  for (let i = 0; i < lines; i++) {
-    const ly = y0 + 14 + (photoH - 24) * (i / (lines - 1));
-    squiggle(cx, ly, capW * (i === lines - 1 ? 0.55 : 0.92), 2, 4 + i, INK);
-  }
-
-  ctx.restore();
 }
 
 function drawGuy() {
