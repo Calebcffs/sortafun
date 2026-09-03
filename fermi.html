@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fermi quiz &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #q { font-size: 20px; margin: 16px auto 8px; max-width: 460px; min-height: 52px; }
+  #guess { font: inherit; font-size: 24px; width: 200px; text-align: center; border: 2px solid #000; border-radius: 8px; padding: 6px; outline: none; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+  .hud { font-size: 16px; margin: 8px 0; }
+  .hud b { font-size: 20px; }
+  #reveal { font-size: 15px; color: #333; min-height: 40px; margin-top: 8px; max-width: 460px; margin-left: auto; margin-right: auto; }
+  .prog { font-size: 13px; color: #777; letter-spacing: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>fermi quiz</h1>
+  <p class="sub">eight order of magnitude guesses. you do not need the exact number, you need the right ballpark. closer to the true value scores more. no googling, that is the whole point.</p>
+
+  <p class="prog" id="prog"></p>
+  <div id="q">loading...</div>
+  <div class="row">
+    <input id="guess" inputmode="decimal" autocomplete="off" placeholder="a number">
+    <button id="go">guess</button>
+  </div>
+  <div id="reveal"></div>
+  <p class="hud">score <b id="score">0</b></p>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">new quiz</button></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+// { q: question, a: answer, u: unit/context shown on reveal }
+var BANK = [
+  { q: "How many seconds are in a 24 hour day?", a: 86400, u: "60 x 60 x 24" },
+  { q: "How many bones are in the adult human body?", a: 206, u: "" },
+  { q: "How far is the Moon from Earth, in kilometres?", a: 384000, u: "about 384,400 km on average" },
+  { q: "How many countries are members of the United Nations?", a: 193, u: "" },
+  { q: "How many hairs are on a typical human head?", a: 100000, u: "roughly 90k to 150k" },
+  { q: "How many litres of blood are in an adult human?", a: 5, u: "about 5 litres" },
+  { q: "How many piano tuners are there in Chicago?", a: 200, u: "Fermi's own estimate, roughly 100 to 300" },
+  { q: "How many words are in the printed English Bible (KJV)?", a: 783000, u: "about 783,000" },
+  { q: "How tall is the Eiffel Tower, in metres?", a: 330, u: "330 m to the tip" },
+  { q: "How many people live in Tokyo (city proper), in millions?", a: 14, u: "about 14 million; 37M in the greater metro" },
+  { q: "How many keys are on a standard piano?", a: 88, u: "" },
+  { q: "How many chromosomes are in a human body cell?", a: 46, u: "23 pairs" },
+  { q: "How fast does light travel, in kilometres per second?", a: 300000, u: "299,792 km/s" },
+  { q: "How many minutes does sunlight take to reach Earth?", a: 8, u: "about 8 minutes 20 seconds" },
+  { q: "How many elements are on the periodic table?", a: 118, u: "" },
+  { q: "How many heartbeats does an average person have in a lifetime, in billions?", a: 3, u: "roughly 2.5 to 3.5 billion" },
+  { q: "How many McDonald's restaurants are there worldwide?", a: 40000, u: "about 40,000" },
+  { q: "How many cells are in the human body, as a power of ten?", a: 37000000000000, u: "about 37 trillion" },
+  { q: "How many islands make up Indonesia?", a: 17000, u: "about 17,500" },
+  { q: "How deep is the Mariana Trench, in metres?", a: 11000, u: "about 10,935 m" },
+  { q: "How many languages are spoken in the world today?", a: 7000, u: "roughly 7,000" },
+  { q: "How many gallons of water go over Niagara Falls per second?", a: 750000, u: "about 750,000 US gallons/s at peak" },
+  { q: "How many stars are in the Milky Way, in billions?", a: 200, u: "estimates 100 to 400 billion" },
+  { q: "How many people have ever lived on Earth, in billions?", a: 110, u: "roughly 110 billion" },
+  { q: "How many breaths does a person take per day?", a: 20000, u: "about 20,000" },
+  { q: "How many books are in the US Library of Congress, in millions?", a: 25, u: "about 25 million catalogued books" },
+  { q: "How many ants are estimated to be alive on Earth, as a number?", a: 20000000000000000, u: "about 20 quadrillion" },
+  { q: "How many taste buds are on the human tongue?", a: 6000, u: "roughly 2,000 to 10,000" },
+  { q: "How many kilometres of blood vessels are in the human body?", a: 100000, u: "about 100,000 km end to end" },
+  { q: "How many pyramids are there in Egypt?", a: 120, u: "at least 118 identified" },
+  { q: "How many moons does Jupiter have?", a: 95, u: "95 confirmed as of recent counts" },
+  { q: "How many possible games of chess are there (Shannon number), as a power of ten?", a: 1e120, u: "about 10 to the 120" },
+];
+
+var ROUND = 8;
+var qEl = document.getElementById("q");
+var guessEl = document.getElementById("guess");
+var revealEl = document.getElementById("reveal");
+var scoreEl = document.getElementById("score");
+var progEl = document.getElementById("prog");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var quiz, at, score, phase;
+
+function pickQuiz() {
+  var pool = BANK.slice();
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = (Math.random() * (i + 1)) | 0;
+    var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+  }
+  return pool.slice(0, ROUND);
+}
+
+function reset() {
+  quiz = pickQuiz();
+  at = 0; score = 0; phase = "ask";
+  scoreEl.textContent = "0";
+  statusEl.textContent = "";
+  revealEl.textContent = "";
+  guessEl.disabled = false;
+  document.getElementById("go").disabled = false;
+  lbEl.innerHTML = "";
+  showQ();
+}
+
+function showQ() {
+  progEl.textContent = "question " + (at + 1) + " / " + ROUND;
+  qEl.textContent = quiz[at].q;
+  guessEl.value = "";
+  revealEl.textContent = "";
+  guessEl.focus();
+  phase = "ask";
+}
+
+function scoreGuess(g, a) {
+  if (!(g > 0) || !(a > 0)) return 0;
+  var err = Math.abs(Math.log(g / a) / Math.LN10); // orders of magnitude off
+  return Math.max(0, Math.round(100 * (1 - err / 2)));
+}
+
+function go() {
+  if (phase === "done") return;
+  if (phase === "reveal") {
+    at++;
+    if (at >= ROUND) { finish(); return; }
+    document.getElementById("go").textContent = "guess";
+    showQ();
+    return;
+  }
+  // phase === "ask": grade the guess
+  var g = Number(guessEl.value.replace(/[, _]/g, "").trim());
+  if (!isFinite(g) || g <= 0) { statusEl.textContent = "enter a positive number"; return; }
+  statusEl.textContent = "";
+  var a = quiz[at].a;
+  var pts = scoreGuess(g, a);
+  score += pts;
+  scoreEl.textContent = score;
+  var word = pts >= 90 ? "spot on" : pts >= 65 ? "close" : pts >= 35 ? "ballpark" : pts > 0 ? "way off" : "not even close";
+  revealEl.textContent = word + " (+" + pts + "). answer: " + fmt(a) + (quiz[at].u ? ". " + quiz[at].u : "");
+  phase = "reveal";
+  document.getElementById("go").textContent = (at + 1 >= ROUND) ? "see score" : "next";
+}
+
+function fmt(n) {
+  if (n >= 1e6 || n < 0.001) return n.toExponential(1).replace("e+", " x 10^").replace("e-", " x 10^-");
+  return n.toLocaleString("en-US");
+}
+
+function finish() {
+  phase = "done";
+  guessEl.disabled = true;
+  document.getElementById("go").disabled = true;
+  document.getElementById("go").textContent = "guess";
+  statusEl.textContent = "done. " + score + " / " + (ROUND * 100) + " points";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "fermi", { score: score });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+document.getElementById("go").addEventListener("click", go);
+guessEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go(); } });
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

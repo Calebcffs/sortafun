@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cursor maze &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #maze { touch-action: none; }
+  #wrapbox { position: relative; width: 384px; margin: 10px auto 4px; }
+  #big { font-size: 19px; min-height: 24px; margin: 6px 0; }
+  .hint2 { font-size: 13px; color: #777; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>cursor maze</h1>
+  <p class="sub">mouse from the green corner to the red corner without touching a wall. the clock starts when you leave the start box. touch a wall and you go back to the start. mouse only.</p>
+
+  <div id="wrapbox"><canvas id="maze" width="384" height="384"></canvas></div>
+  <div id="big">move into the green box to start</div>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">new maze</button></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var N = 8;                       // cells per side
+var cv = document.getElementById("maze");
+var ctx = cv.getContext("2d");
+var big = document.getElementById("big");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var PAD = 14;
+var CELL = (cv.width - PAD * 2) / N;
+
+var walls;                       // walls[r][c] = {n,e,s,w} true = wall present
+var phase, startT, best;
+
+function rnd(n) { return (Math.random() * n) | 0; }
+
+function genMaze() {
+  walls = [];
+  for (var r = 0; r < N; r++) {
+    walls.push([]);
+    for (var c = 0; c < N; c++) walls[r].push({ n: true, e: true, s: true, w: true, seen: false });
+  }
+  var stack = [[0, 0]];
+  walls[0][0].seen = true;
+  while (stack.length) {
+    var cur = stack[stack.length - 1];
+    var r = cur[0], c = cur[1];
+    var opts = [];
+    if (r > 0 && !walls[r - 1][c].seen) opts.push("n");
+    if (r < N - 1 && !walls[r + 1][c].seen) opts.push("s");
+    if (c > 0 && !walls[r][c - 1].seen) opts.push("w");
+    if (c < N - 1 && !walls[r][c + 1].seen) opts.push("e");
+    if (!opts.length) { stack.pop(); continue; }
+    var d = opts[rnd(opts.length)];
+    if (d === "n") { walls[r][c].n = false; walls[r - 1][c].s = false; walls[r - 1][c].seen = true; stack.push([r - 1, c]); }
+    if (d === "s") { walls[r][c].s = false; walls[r + 1][c].n = false; walls[r + 1][c].seen = true; stack.push([r + 1, c]); }
+    if (d === "w") { walls[r][c].w = false; walls[r][c - 1].e = false; walls[r][c - 1].seen = true; stack.push([r, c - 1]); }
+    if (d === "e") { walls[r][c].e = false; walls[r][c + 1].w = false; walls[r][c + 1].seen = true; stack.push([r, c + 1]); }
+  }
+}
+
+function wob() { return (Math.random() - 0.5) * 2.2; }
+
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  // start / end pads
+  ctx.fillStyle = "#d6f5d6";
+  ctx.fillRect(PAD, PAD, CELL, CELL);
+  ctx.fillStyle = "#f7d6d6";
+  ctx.fillRect(PAD + (N - 1) * CELL, PAD + (N - 1) * CELL, CELL, CELL);
+
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  for (var r = 0; r < N; r++) {
+    for (var c = 0; c < N; c++) {
+      var x = PAD + c * CELL, y = PAD + r * CELL;
+      var w = walls[r][c];
+      if (w.n) seg(x, y, x + CELL, y);
+      if (w.w) seg(x, y, x, y + CELL);
+      if (w.e) seg(x + CELL, y, x + CELL, y + CELL);
+      if (w.s) seg(x, y + CELL, x + CELL, y + CELL);
+    }
+  }
+}
+
+function seg(x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1 + wob(), y1 + wob());
+  ctx.quadraticCurveTo((x1 + x2) / 2 + wob(), (y1 + y2) / 2 + wob(), x2 + wob(), y2 + wob());
+  ctx.stroke();
+}
+
+function isWall(px, py) {
+  if (px < 1 || py < 1 || px > cv.width - 1 || py > cv.height - 1) return true;
+  var d = ctx.getImageData(px | 0, py | 0, 1, 1).data;
+  // wall = near-black pixel
+  return d[3] > 40 && d[0] < 80 && d[1] < 80 && d[2] < 80;
+}
+
+function inStart(px, py) {
+  return px >= PAD && px <= PAD + CELL && py >= PAD && py <= PAD + CELL;
+}
+function inEnd(px, py) {
+  return px >= PAD + (N - 1) * CELL && px <= PAD + N * CELL &&
+         py >= PAD + (N - 1) * CELL && py <= PAD + N * CELL;
+}
+
+function reset() {
+  genMaze();
+  draw();
+  phase = "idle";
+  startT = null;
+  big.textContent = "move into the green box to start";
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+}
+
+function pos(e) {
+  var rct = cv.getBoundingClientRect();
+  var t = e.touches ? e.touches[0] : e;
+  return [
+    (t.clientX - rct.left) * (cv.width / rct.width),
+    (t.clientY - rct.top) * (cv.height / rct.height),
+  ];
+}
+
+function onMove(e) {
+  if (phase === "done") return;
+  var p = pos(e), px = p[0], py = p[1];
+
+  if (phase === "idle") {
+    if (inStart(px, py)) { phase = "armed"; big.textContent = "go!"; }
+    return;
+  }
+  if (phase === "armed") {
+    if (!inStart(px, py) && !isWall(px, py)) {
+      phase = "run";
+      startT = performance.now();
+    }
+    return;
+  }
+  if (phase === "run") {
+    if (inEnd(px, py)) { win(); return; }
+    if (isWall(px, py)) {
+      phase = "idle";
+      startT = null;
+      big.textContent = "wall! back to the green box";
+      return;
+    }
+    big.textContent = ((performance.now() - startT) / 1000).toFixed(2) + " s";
+  }
+}
+
+function win() {
+  phase = "done";
+  var ms = Math.round(performance.now() - startT);
+  big.textContent = "out in " + (ms / 1000).toFixed(2) + " s";
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "maze", { score: ms });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+cv.addEventListener("mousemove", onMove);
+cv.addEventListener("touchmove", function (e) { e.preventDefault(); onMove(e); }, { passive: false });
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

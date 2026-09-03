@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>anagram sprint &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .hud { display: flex; gap: 22px; justify-content: center; font-size: 16px; margin: 10px 0 4px; }
+  .hud b { font-size: 20px; }
+  #scram { font-size: 40px; letter-spacing: 10px; margin: 18px 0 6px; text-transform: uppercase; }
+  #ans { font: inherit; font-size: 24px; letter-spacing: 3px; width: 220px; text-align: center; text-transform: lowercase; border: 2px solid #000; border-radius: 8px; padding: 6px; outline: none; }
+  #ans.bad { background: #f7d6d6; }
+  #ans.good { background: #d6f5d6; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>anagram sprint</h1>
+  <p class="sub">unscramble the word, hit enter. sixty seconds, one point each. stuck? skip it, no penalty.</p>
+
+  <div class="hud">
+    <span>time <b id="time">60</b></span>
+    <span>solved <b id="score">0</b></span>
+  </div>
+
+  <div id="scram">- - - - -</div>
+  <div class="row">
+    <input id="ans" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type it">
+    <button id="skip">skip</button>
+  </div>
+
+  <div class="status" id="status">press a key to start</div>
+  <div><button id="restart">again</button></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="words.js"></script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var FALLBACK = "about above actor adult after again agent album alert alien alike alive allow alone along aloud amount anger angle apart apple apply april argue arise armed array arrow aside asset audio avoid awake award aware badly baker basic beach began begin being below bench birth black blame blank blast blaze blind block blood board boost booth bound brain brand brave bread break breed brick brief bring broad brown brush build built cabin cable candy cargo carry catch cause chain chair chaos charm chart chase cheap check chess chest chief child china claim class clean clear click cliff climb clock close cloth cloud coach coast could count court cover crack craft crash cream crime cross crowd crown curve cycle daily dance death delay depth doubt dozen draft drama drank dream dress drink drive early earth eight elite empty enemy enjoy enter equal error event every exact exist extra faith false fault fiber field fifth fight final first flame flash fleet float floor fluid focus force forth forty forum found frame fresh front fruit fully funny giant given glass globe grace grade grain grand grant grass great green group grown guard guess guest guide happy heart heavy horse hotel house human ideal image index inner input issue joint judge known label large laser later laugh layer learn least leave legal level light limit local logic loose lower lucky lunch magic major maker march match maybe mayor meant medal media metal meter might minor minus mixed model money month moral motor mount mouse mouth movie music needs never newly night noise north noted novel nurse ocean offer often order other ought paint panel paper party peace phase phone photo piece pilot pitch place plain plane plant plate point pound power press price pride prime print prior prize proof proud prove queen quick quiet quite radio raise range rapid ratio reach ready refer right rival river robot roman rough round route royal rural scale scene scope score sense serve seven shall shape share sharp sheet shelf shell shift shine shirt shock shoot short shown sight since sixth sixty sized skill sleep slide small smart smile smoke solid solve sorry sound south space speak speed spend spent split spoke sport staff stage stand start state steam steel stick still stock stone stood store storm story strip stuck study stuff style sugar suite super sweet table taken taste teach terms thank theft their theme there thick thing think third those three throw tight times tired title today topic total touch tough tower track trade train treat trend trial tried tries truck truly trust truth twice under union unity until upper upset urban usage usual valid value video virus visit vital vocal voice waste watch water wheel where which while white whole whose woman world worry worse worst worth would wound write wrong young youth".split(/\s+/);
+
+var BANK = (window.SORTAFUN_WORDS && window.SORTAFUN_WORDS.top1000)
+  ? window.SORTAFUN_WORDS.top1000.filter(function (w) { return w.length >= 4 && w.length <= 7 && /^[a-z]+$/.test(w); })
+  : FALLBACK;
+if (BANK.length < 40) BANK = FALLBACK;
+
+var LEN = 60;
+var scramEl = document.getElementById("scram");
+var ansEl = document.getElementById("ans");
+var timeEl = document.getElementById("time");
+var scoreEl = document.getElementById("score");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var cur, running, ended, score, startT, timer, flashT;
+
+function shuffle(w) {
+  var a = w.split("");
+  for (var tries = 0; tries < 12; tries++) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    if (a.join("") !== w) break;
+  }
+  return a.join("");
+}
+
+function next() {
+  cur = BANK[(Math.random() * BANK.length) | 0];
+  scramEl.textContent = shuffle(cur).split("").join(" ");
+  ansEl.value = "";
+  ansEl.focus();
+}
+
+function reset() {
+  clearInterval(timer);
+  clearTimeout(flashT);
+  running = false; ended = false; score = 0; startT = null;
+  timeEl.textContent = LEN;
+  scoreEl.textContent = "0";
+  statusEl.textContent = "press a key to start";
+  ansEl.disabled = false;
+  lbEl.innerHTML = "";
+  next();
+}
+
+function startMaybe() {
+  if (running || ended) return;
+  running = true;
+  startT = Date.now();
+  statusEl.textContent = "";
+  timer = setInterval(tick, 100);
+}
+
+function tick() {
+  var left = LEN - (Date.now() - startT) / 1000;
+  if (left <= 0) { timeEl.textContent = "0"; finish(); return; }
+  timeEl.textContent = Math.ceil(left);
+}
+
+function flash(cls) {
+  ansEl.classList.remove("good", "bad");
+  void ansEl.offsetWidth;
+  ansEl.classList.add(cls);
+  clearTimeout(flashT);
+  flashT = setTimeout(function () { ansEl.classList.remove("good", "bad"); }, 200);
+}
+
+function submit() {
+  if (ended) return;
+  startMaybe();
+  var v = ansEl.value.trim().toLowerCase();
+  if (!v) return;
+  if (v === cur) {
+    score++;
+    scoreEl.textContent = score;
+    flash("good");
+    next();
+  } else {
+    flash("bad");
+  }
+}
+
+function finish() {
+  ended = true; running = false;
+  clearInterval(timer);
+  ansEl.disabled = true;
+  statusEl.textContent = "time! " + score + " unscrambled";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "anagram", { score: score });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+ansEl.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { e.preventDefault(); submit(); }
+});
+ansEl.addEventListener("input", startMaybe);
+document.getElementById("skip").addEventListener("click", function () {
+  if (ended) return;
+  startMaybe();
+  next();
+});
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>call it &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #coin {
+    width: 120px; height: 120px;
+    margin: 18px auto 8px;
+    border: 4px solid #000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px; font-weight: bold;
+    background: #fff;
+  }
+  #coin.spin { animation: sp .5s linear; }
+  @keyframes sp { to { transform: rotateY(720deg); } }
+  .calls { display: flex; gap: 12px; justify-content: center; margin: 10px 0; }
+  .calls button { font-size: 18px; padding: 10px 22px; }
+  #streak { font-size: 22px; margin: 6px 0; }
+  #streak b { font-size: 30px; }
+  .hint2 { font-size: 13px; color: #777; max-width: 360px; margin: 8px auto 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>call it</h1>
+  <p class="sub">call heads or tails. call it right, keep going. call it wrong and the run is over. how long a streak can you ride.</p>
+
+  <div id="coin">?</div>
+  <div id="streak">streak <b id="n">0</b></div>
+
+  <div class="calls">
+    <button id="heads">heads</button>
+    <button id="tails">tails</button>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">new run</button></div>
+  <p class="hint2" id="hint2">it is a fair coin. this is not a game of skill and everyone knows it. the leaderboard is just a monument to variance.</p>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var coin = document.getElementById("coin");
+var nEl = document.getElementById("n");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+var heads = document.getElementById("heads");
+var tails = document.getElementById("tails");
+
+var streak = 0, over = false, busy = false;
+
+function reset() {
+  streak = 0; over = false; busy = false;
+  nEl.textContent = "0";
+  coin.textContent = "?";
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+  heads.disabled = false;
+  tails.disabled = false;
+}
+
+function call(guess) {
+  if (over || busy) return;
+  busy = true;
+  coin.classList.remove("spin");
+  void coin.offsetWidth;
+  coin.classList.add("spin");
+  coin.textContent = "";
+  setTimeout(function () {
+    var flip = Math.random() < 0.5 ? "heads" : "tails";
+    coin.textContent = flip === "heads" ? "H" : "T";
+    if (flip === guess) {
+      streak++;
+      nEl.textContent = streak;
+      statusEl.textContent = flip + ". still in.";
+      busy = false;
+    } else {
+      over = true;
+      heads.disabled = true;
+      tails.disabled = true;
+      statusEl.textContent = flip + ". run over at " + streak + ".";
+      lbEl.innerHTML = "";
+      if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "callit", { score: streak });
+      else lbEl.textContent = "leaderboard offline";
+    }
+  }, 500);
+}
+
+heads.addEventListener("click", function () { call("heads"); });
+tails.addEventListener("click", function () { call("tails"); });
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

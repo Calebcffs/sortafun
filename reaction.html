@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reaction light &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #light {
+    width: 150px;
+    margin: 14px auto 6px;
+    border: 3px solid #000;
+    border-radius: 22px;
+    padding: 14px 0;
+    background: #fff;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .lamp {
+    width: 96px;
+    height: 96px;
+    margin: 10px auto;
+    border: 3px solid #000;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .lamp.red    { background: #000; }
+  .lamp.green  { background: #000; }
+  #light.go .lamp.green { background: #d6f5d6; }
+  #light.go .lamp.red   { background: #fff; }
+  #light.wait .lamp.red { background: #000; }
+  #bigmsg { font-size: 20px; min-height: 26px; margin: 6px 0; }
+  .rounds { font-size: 15px; color: #333; letter-spacing: 2px; min-height: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>reaction light</h1>
+  <p class="sub">click to start. wait for the bottom lamp to light up, then click as fast as you can. click early and the round is void. five rounds, your average is the score.</p>
+
+  <div id="light" class="idle">
+    <div class="lamp red"></div>
+    <div class="lamp amber"></div>
+    <div class="lamp green"></div>
+  </div>
+
+  <div id="bigmsg">click the light to begin</div>
+  <div class="rounds" id="rounds"></div>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">start over</button></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var ROUNDS = 5;
+var light = document.getElementById("light");
+var bigmsg = document.getElementById("bigmsg");
+var roundsEl = document.getElementById("rounds");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var times, round, phase, greenAt, armTimer;
+
+function reset() {
+  clearTimeout(armTimer);
+  times = [];
+  round = 0;
+  phase = "idle";
+  light.className = "idle";
+  bigmsg.textContent = "click the light to begin";
+  roundsEl.textContent = "";
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+}
+
+function arm() {
+  phase = "wait";
+  light.className = "wait";
+  bigmsg.textContent = "wait for it...";
+  var delay = 1200 + Math.random() * 3200;
+  armTimer = setTimeout(function () {
+    phase = "go";
+    light.className = "go";
+    greenAt = performance.now();
+    bigmsg.textContent = "CLICK";
+  }, delay);
+}
+
+function hit() {
+  if (phase === "done") return;
+
+  if (phase === "idle" || phase === "ready") {
+    if (phase === "idle") round = 1;
+    drawRounds();
+    arm();
+    return;
+  }
+  if (phase === "wait") {
+    clearTimeout(armTimer);
+    phase = "early";
+    light.className = "idle";
+    bigmsg.textContent = "too soon. click to retry round " + round;
+    return;
+  }
+  if (phase === "early") { arm(); return; }
+  if (phase === "go") {
+    var ms = Math.round(performance.now() - greenAt);
+    times.push(ms);
+    drawRounds();
+    light.className = "idle";
+    if (round >= ROUNDS) { finish(); return; }
+    round++;
+    phase = "ready";
+    bigmsg.textContent = ms + " ms. click for round " + round;
+  }
+}
+
+function drawRounds() {
+  var cells = [];
+  for (var i = 0; i < ROUNDS; i++) {
+    cells.push(times[i] != null ? times[i] : (i + 1 === round ? "[ ]" : "."));
+  }
+  roundsEl.textContent = cells.join("  ");
+}
+
+function finish() {
+  phase = "done";
+  var avg = Math.round(times.reduce(function (a, b) { return a + b; }, 0) / times.length);
+  bigmsg.textContent = "average " + avg + " ms";
+  statusEl.textContent = "best round " + Math.min.apply(null, times) + " ms";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "reaction", { score: avg });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+light.addEventListener("click", hit);
+light.addEventListener("touchstart", function (e) { e.preventDefault(); hit(); }, { passive: false });
+window.addEventListener("keydown", function (e) {
+  if (e.code === "Space") { e.preventDefault(); hit(); }
+});
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

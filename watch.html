@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>watch the guy &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #stage { border: 2px solid #000; background: #fff; display: block; margin: 12px auto 6px; }
+  #big { font-size: 19px; min-height: 26px; margin: 6px 0; }
+  #rest { font-size: 26px; }
+  #rest b { font-size: 34px; }
+  .hint2 { font-size: 13px; color: #777; max-width: 400px; margin: 8px auto 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>watch the guy</h1>
+  <p class="sub">he runs because you are watching. close the tab and he stops. every second this tab is hidden, he rests, and the rest counts. the only way to win is to look away.</p>
+
+  <canvas id="stage" width="360" height="180"></canvas>
+  <div id="big">he can see you</div>
+  <div id="rest">rested <b id="secs">0</b> s</div>
+
+  <div><button id="log">log it to the board</button> <button id="reset">reset my rest</button></div>
+  <p class="hint2">switch tabs, minimise the window, lock your phone. come back and see what he banked.</p>
+
+  <div class="status" id="status"></div>
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var KEY = "sortafun-watch-rested";
+var cv = document.getElementById("stage");
+var ctx = cv.getContext("2d");
+var big = document.getElementById("big");
+var secsEl = document.getElementById("secs");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var rested = 0;
+try { rested = Math.max(0, Number(localStorage.getItem(KEY)) || 0); } catch (e) {}
+
+var hiddenAt = null;
+var t = 0;
+var watching = true;
+
+function save() {
+  try { localStorage.setItem(KEY, String(Math.floor(rested))); } catch (e) {}
+}
+
+function showSecs() { secsEl.textContent = Math.floor(rested); }
+
+function onHide() {
+  if (hiddenAt == null) hiddenAt = Date.now();
+  watching = false;
+}
+function onShow() {
+  if (hiddenAt != null) {
+    rested += (Date.now() - hiddenAt) / 1000;
+    hiddenAt = null;
+    save();
+    showSecs();
+    big.textContent = "back already. he was resting.";
+  }
+  watching = true;
+}
+
+document.addEventListener("visibilitychange", function () {
+  if (document.hidden) onHide(); else onShow();
+});
+window.addEventListener("blur", onHide);
+window.addEventListener("focus", onShow);
+
+function draw() {
+  t += 1;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  var groundY = 150;
+  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(cv.width, groundY); ctx.stroke();
+
+  var x = cv.width / 2;
+  var runFrame = Math.sin(t * 0.3);
+
+  ctx.save();
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  if (watching) {
+    // running on the spot
+    var bob = Math.sin(t * 0.3) * 2;
+    var headY = groundY - 44 + bob, hipY = groundY - 20 + bob;
+    ctx.beginPath(); ctx.arc(x, headY, 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, headY + 8); ctx.lineTo(x, hipY); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, hipY - 12); ctx.lineTo(x - 9, hipY - 4 + runFrame * 6);
+    ctx.moveTo(x, hipY - 12); ctx.lineTo(x + 9, hipY - 4 - runFrame * 6);
+    ctx.moveTo(x, hipY); ctx.lineTo(x - runFrame * 8, groundY + bob);
+    ctx.moveTo(x, hipY); ctx.lineTo(x + runFrame * 8, groundY + bob);
+    ctx.stroke();
+    // motion scuffs
+    ctx.strokeStyle = "#bbb";
+    ctx.beginPath();
+    ctx.moveTo(x - 20, groundY - 3); ctx.lineTo(x - 34, groundY - 3);
+    ctx.moveTo(x + 18, groundY - 6); ctx.lineTo(x + 30, groundY - 6);
+    ctx.stroke();
+  } else {
+    // sitting down, resting
+    var headY = groundY - 22, hipY = groundY - 2;
+    ctx.beginPath(); ctx.arc(x - 6, headY, 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 6, headY + 8); ctx.lineTo(x + 2, hipY); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 2, hipY); ctx.lineTo(x + 20, hipY);
+    ctx.lineTo(x + 20, groundY);
+    ctx.moveTo(x + 2, hipY); ctx.lineTo(x + 14, groundY);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  requestAnimationFrame(draw);
+}
+draw();
+showSecs();
+
+setInterval(function () {
+  if (watching) {
+    var lines = ["he can see you", "nothing is happening", "still watching", "he is not tired yet", "you could just leave"];
+    big.textContent = lines[(Math.random() * lines.length) | 0];
+  }
+}, 2600);
+
+document.getElementById("log").addEventListener("click", function () {
+  var s = Math.floor(rested);
+  if (s < 1) { statusEl.textContent = "he has not rested yet. go away for a bit."; return; }
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "watch", { score: s });
+  else lbEl.textContent = "leaderboard offline";
+});
+document.getElementById("reset").addEventListener("click", function () {
+  rested = 0; save(); showSecs();
+  statusEl.textContent = "rest wiped. he is furious (running).";
+  lbEl.innerHTML = "";
+});
+</script>
+</body>
+</html>

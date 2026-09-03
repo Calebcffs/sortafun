@@ -82,14 +82,12 @@
 <div id="changelog">
   <button type="button" class="cl-hide" id="clHide">hide</button>
   <h2>changelog</h2>
-  <p class="cl-date">2026-09-03</p>
+  <p class="cl-date">2026-09-04</p>
   <ul>
-    <li>typing: top 200 or top 1000 word lists</li>
-    <li>typing: the word you type holds still</li>
-    <li>flipbook: undo (ctrl+z) + eraser slider</li>
-    <li>gallery: comment counts + posted times</li>
-    <li>boards: date + time on every row</li>
-    <li>boards: dead last all time glows gold</li>
+    <li>the lobby has room now: walk it</li>
+    <li>eleven new games in the play row</li>
+    <li>typing rebuilt, monkeytype style</li>
+    <li>signs grouped: play, make, the rest</li>
   </ul>
 </div>
 <script src="firebase-config.js"></script>
@@ -113,6 +111,17 @@ const DOORS = [
   { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72, game: "puzzle", zone: "play" },
   { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69, game: "circuit", zone: "play" },
   { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65, game: "typing", zone: "play" },
+  { label: "reaction light", url: "reaction.html", ar: 2.7, game: "reaction", zone: "play" },
+  { label: "cursor maze",    url: "maze.html",     ar: 2.5, game: "maze", zone: "play" },
+  { label: "aim trainer",    url: "aim.html",      ar: 2.5, game: "aim", zone: "play" },
+  { label: "stop the bar",   url: "stopbar.html",  ar: 2.6, game: "stopbar", zone: "play" },
+  { label: "word ladder",    url: "ladder.html",   ar: 2.6, game: "ladder", zone: "play" },
+  { label: "anagram sprint", url: "anagram.html",  ar: 2.9, game: "anagram", zone: "play" },
+  { label: "minesweeper",    url: "mines.html",    ar: 2.7, game: "mines", zone: "play" },
+  { label: "fermi quiz",     url: "fermi.html",    ar: 2.4, game: "fermi", zone: "play" },
+  { label: "how long is a minute", url: "minute.html", ar: 3.6, game: "minute", zone: "play" },
+  { label: "call it",        url: "callit.html",   ar: 2.0, game: "callit", zone: "play" },
+  { label: "watch the guy",  url: "watch.html",    ar: 2.7, game: "watch", zone: "play" },
   { label: "animation studio", url: "flipbook.html",   ar: 188 / 64, zone: "make" },
   { label: "animation gallery", url: "anim-gallery.html", ar: 188 / 64, zone: "make" },
   { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58, zone: "meta" },

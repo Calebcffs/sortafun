@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>minesweeper &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(9, 34px);
+    gap: 3px;
+    justify-content: center;
+    margin: 12px auto 6px;
+    width: max-content;
+  }
+  .cell {
+    width: 34px; height: 34px;
+    border: 2px solid #000;
+    background: #fff;
+    font: inherit; font-size: 17px; font-weight: bold;
+    padding: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  .cell.open { background: #eee; cursor: default; }
+  .cell.flag { background: #ffe9a8; }
+  .cell.boom { background: #f7d6d6; }
+  .cell.n1 { color: #1565c0; } .cell.n2 { color: #2e7d32; } .cell.n3 { color: #c62828; }
+  .cell.n4 { color: #4527a0; } .cell.n5 { color: #8d6e00; } .cell.n6 { color: #00838f; }
+  .cell.n7 { color: #000; } .cell.n8 { color: #666; }
+  .hud { display: flex; gap: 22px; justify-content: center; font-size: 16px; margin: 6px 0; }
+  .hud b { font-size: 20px; }
+  .hint2 { font-size: 13px; color: #777; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>minesweeper</h1>
+  <p class="sub">nine by nine, ten mines. left click clears, right click (or long press) flags. first click is always safe. clear every empty square as fast as you can.</p>
+
+  <div class="hud">
+    <span>mines left <b id="left">10</b></span>
+    <span>time <b id="time">0.0</b></span>
+  </div>
+
+  <div id="grid"></div>
+  <p class="hint2" id="hint2">left click a square to begin</p>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">new board</button></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var N = 9, MINES = 10;
+var gridEl = document.getElementById("grid");
+var leftEl = document.getElementById("left");
+var timeEl = document.getElementById("time");
+var statusEl = document.getElementById("status");
+var hint2 = document.getElementById("hint2");
+var lbEl = document.getElementById("lb");
+
+var mine, open, flag, count, cells, started, dead, wonFlag, startT, timer, flags, lpTimer;
+
+function idx(r, c) { return r * N + c; }
+function around(r, c) {
+  var out = [];
+  for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+    if (!dr && !dc) continue;
+    var nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < N && nc >= 0 && nc < N) out.push([nr, nc]);
+  }
+  return out;
+}
+
+function reset() {
+  clearInterval(timer);
+  mine = []; open = []; flag = []; count = [];
+  for (var i = 0; i < N * N; i++) { mine[i] = false; open[i] = false; flag[i] = false; count[i] = 0; }
+  started = false; dead = false; wonFlag = false; startT = null; flags = 0;
+  leftEl.textContent = MINES;
+  timeEl.textContent = "0.0";
+  statusEl.textContent = "";
+  hint2.textContent = "left click a square to begin";
+  lbEl.innerHTML = "";
+  build();
+}
+
+function build() {
+  gridEl.innerHTML = "";
+  cells = [];
+  for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) {
+    (function (r, c) {
+      var b = document.createElement("button");
+      b.className = "cell";
+      b.addEventListener("click", function () { reveal(r, c); });
+      b.addEventListener("contextmenu", function (e) { e.preventDefault(); toggleFlag(r, c); });
+      b.addEventListener("touchstart", function () {
+        lpTimer = setTimeout(function () { toggleFlag(r, c); lpTimer = null; }, 400);
+      }, { passive: true });
+      b.addEventListener("touchend", function (e) {
+        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+        else e.preventDefault();
+      });
+      gridEl.appendChild(b);
+      cells[idx(r, c)] = b;
+    })(r, c);
+  }
+}
+
+function lay(safeR, safeC) {
+  var forbidden = {};
+  forbidden[idx(safeR, safeC)] = true;
+  around(safeR, safeC).forEach(function (p) { forbidden[idx(p[0], p[1])] = true; });
+  var placed = 0;
+  while (placed < MINES) {
+    var i = (Math.random() * N * N) | 0;
+    if (mine[i] || forbidden[i]) continue;
+    mine[i] = true; placed++;
+  }
+  for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) {
+    var n = 0;
+    around(r, c).forEach(function (p) { if (mine[idx(p[0], p[1])]) n++; });
+    count[idx(r, c)] = n;
+  }
+}
+
+function tick() {
+  timeEl.textContent = ((Date.now() - startT) / 1000).toFixed(1);
+}
+
+function reveal(r, c) {
+  if (dead || wonFlag) return;
+  var i = idx(r, c);
+  if (open[i] || flag[i]) return;
+  if (!started) {
+    started = true;
+    lay(r, c);
+    startT = Date.now();
+    timer = setInterval(tick, 100);
+    hint2.textContent = "";
+  }
+  if (mine[i]) { boom(i); return; }
+  flood(r, c);
+  checkWin();
+}
+
+function flood(r, c) {
+  var stack = [[r, c]];
+  while (stack.length) {
+    var p = stack.pop(), i = idx(p[0], p[1]);
+    if (open[i] || flag[i]) continue;
+    open[i] = true;
+    var b = cells[i];
+    b.classList.add("open");
+    if (count[i]) { b.textContent = count[i]; b.classList.add("n" + count[i]); }
+    else around(p[0], p[1]).forEach(function (q) { stack.push(q); });
+  }
+}
+
+function toggleFlag(r, c) {
+  if (dead || wonFlag || !started) return;
+  var i = idx(r, c);
+  if (open[i]) return;
+  flag[i] = !flag[i];
+  cells[i].classList.toggle("flag", flag[i]);
+  cells[i].textContent = flag[i] ? "?" : "";
+  flags += flag[i] ? 1 : -1;
+  leftEl.textContent = MINES - flags;
+}
+
+function boom(hit) {
+  dead = true;
+  clearInterval(timer);
+  for (var i = 0; i < N * N; i++) {
+    if (mine[i]) { cells[i].classList.add("open"); cells[i].textContent = "*"; }
+  }
+  cells[hit].classList.add("boom");
+  statusEl.textContent = "boom. new board and try again";
+}
+
+function checkWin() {
+  var cleared = 0;
+  for (var i = 0; i < N * N; i++) if (open[i]) cleared++;
+  if (cleared === N * N - MINES) win();
+}
+
+function win() {
+  wonFlag = true;
+  clearInterval(timer);
+  var ms = Date.now() - startT;
+  timeEl.textContent = (ms / 1000).toFixed(1);
+  for (var i = 0; i < N * N; i++) if (mine[i] && !flag[i]) {
+    cells[i].classList.add("flag"); cells[i].textContent = "?";
+  }
+  statusEl.textContent = "cleared in " + (ms / 1000).toFixed(1) + " s";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "mines", { score: ms });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

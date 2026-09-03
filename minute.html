@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>how long is a minute &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #btn {
+    font: inherit;
+    font-size: 22px;
+    padding: 24px 40px;
+    margin: 26px auto 10px;
+    border: 3px solid #000;
+    border-radius: 16px;
+    background: #fff;
+    cursor: pointer;
+    display: block;
+  }
+  #btn.counting { background: #ffe9a8; }
+  #dots { font-size: 30px; letter-spacing: 6px; min-height: 40px; color: #000; }
+  #result { font-size: 20px; min-height: 30px; margin-top: 6px; }
+  .hint2 { font-size: 13px; color: #777; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>how long is a minute</h1>
+  <p class="sub">press start, then press stop when you reckon exactly sixty seconds have gone by. no clock, no counting out loud that is cheating. how close were you.</p>
+
+  <button id="btn">start</button>
+  <div id="dots"></div>
+  <div id="result"></div>
+  <p class="hint2">closest to sixty seconds wins. score is how many milliseconds off you were.</p>
+
+  <div class="status" id="status"></div>
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var TARGET = 60000;
+var btn = document.getElementById("btn");
+var dots = document.getElementById("dots");
+var result = document.getElementById("result");
+var lbEl = document.getElementById("lb");
+
+var phase = "idle", startT, anim;
+
+function breathe() {
+  // a slow pulse that carries no timing information
+  var n = 1 + (Math.floor(Date.now() / 650) % 3);
+  dots.textContent = ".".repeat(n);
+  anim = requestAnimationFrame(breathe);
+}
+
+btn.addEventListener("click", function () {
+  if (phase === "idle" || phase === "done") {
+    phase = "counting";
+    startT = Date.now();
+    btn.textContent = "stop";
+    btn.classList.add("counting");
+    result.textContent = "";
+    lbEl.innerHTML = "";
+    breathe();
+    return;
+  }
+  if (phase === "counting") {
+    var elapsed = Date.now() - startT;
+    cancelAnimationFrame(anim);
+    dots.textContent = "";
+    phase = "done";
+    btn.textContent = "try again";
+    btn.classList.remove("counting");
+    var off = elapsed - TARGET;
+    var sign = off > 0 ? "over" : "under";
+    result.textContent = (elapsed / 1000).toFixed(2) + " s  —  " +
+      Math.abs(off / 1000).toFixed(2) + " s " + sign;
+    if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "minute", { score: Math.abs(off) });
+    else lbEl.textContent = "leaderboard offline";
+  }
+});
+</script>
+</body>
+</html>

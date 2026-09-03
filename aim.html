@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aim trainer &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #arena {
+    position: relative;
+    width: 380px;
+    height: 380px;
+    margin: 10px auto 4px;
+    border: 2px solid #000;
+    background: #fff;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: manipulation;
+  }
+  #target {
+    position: absolute;
+    border: 3px solid #000;
+    border-radius: 50%;
+    background: #fff;
+    box-sizing: border-box;
+    display: none;
+  }
+  #target::after {
+    content: "";
+    position: absolute;
+    inset: 30%;
+    background: #000;
+    border-radius: 50%;
+  }
+  .hud { display: flex; gap: 22px; justify-content: center; font-size: 16px; margin: 8px 0 2px; }
+  .hud b { font-size: 20px; }
+  #startbtn { font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>aim trainer</h1>
+  <p class="sub">click the dot. it jumps somewhere new every time you hit it. thirty seconds, count the hits.</p>
+
+  <div class="hud">
+    <span>time <b id="time">30</b></span>
+    <span>hits <b id="hits">0</b></span>
+    <span>acc <b id="acc">-</b></span>
+  </div>
+
+  <div id="arena"><div id="target"></div></div>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">again</button></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var LEN = 30;
+var arena = document.getElementById("arena");
+var target = document.getElementById("target");
+var timeEl = document.getElementById("time");
+var hitsEl = document.getElementById("hits");
+var accEl = document.getElementById("acc");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var running, ended, hits, clicks, startT, timer;
+
+function reset() {
+  clearInterval(timer);
+  running = false; ended = false;
+  hits = 0; clicks = 0; startT = null;
+  timeEl.textContent = LEN;
+  hitsEl.textContent = "0";
+  accEl.textContent = "-";
+  statusEl.textContent = "click the dot to start";
+  lbEl.innerHTML = "";
+  place();
+  target.style.display = "block";
+}
+
+function rint(a, b) { return a + Math.floor(Math.random() * (b - a)); }
+
+function place() {
+  var size = rint(30, 52);
+  target.style.width = size + "px";
+  target.style.height = size + "px";
+  target.style.left = rint(4, arena.clientWidth - size - 4) + "px";
+  target.style.top = rint(4, arena.clientHeight - size - 4) + "px";
+}
+
+function tick() {
+  var left = LEN - (Date.now() - startT) / 1000;
+  if (left <= 0) { timeEl.textContent = "0"; finish(); return; }
+  timeEl.textContent = Math.ceil(left);
+}
+
+function finish() {
+  ended = true; running = false;
+  clearInterval(timer);
+  target.style.display = "none";
+  statusEl.textContent = "time! " + hits + " hits";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "aim", { score: hits });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+target.addEventListener("pointerdown", function (e) {
+  e.stopPropagation();
+  if (ended) return;
+  if (!running) {
+    running = true;
+    startT = Date.now();
+    timer = setInterval(tick, 100);
+    statusEl.textContent = "";
+  }
+  hits++; clicks++;
+  hitsEl.textContent = hits;
+  accEl.textContent = Math.round(hits / clicks * 100) + "%";
+  place();
+});
+
+arena.addEventListener("pointerdown", function () {
+  if (!running || ended) return;
+  clicks++;
+  accEl.textContent = Math.round(hits / clicks * 100) + "%";
+});
+
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

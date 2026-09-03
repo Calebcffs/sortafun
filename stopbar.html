@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>stop the bar &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #bar { border: 2px solid #000; background: #fff; margin: 12px auto 4px; display: block; touch-action: manipulation; cursor: pointer; }
+  #big { font-size: 20px; min-height: 26px; margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>stop the bar</h1>
+  <p class="sub">the marker sweeps back and forth. click or hit space to stop it inside the green band. every hit shrinks the band and speeds things up. one miss and you are out.</p>
+
+  <canvas id="bar" width="420" height="90"></canvas>
+  <div id="big">click or press space to start</div>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">start over</button></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var cv = document.getElementById("bar");
+var ctx = cv.getContext("2d");
+var big = document.getElementById("big");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var M = 16;                        // track margin
+var trackW = cv.width - M * 2;
+var pts, phase, marker, dir, speed, zoneX, zoneW, raf;
+
+function reset() {
+  cancelAnimationFrame(raf);
+  pts = 0;
+  phase = "idle";
+  marker = M;
+  dir = 1;
+  speed = 3.4;
+  zoneW = trackW * 0.34;
+  zoneX = M + (trackW - zoneW) / 2;
+  big.textContent = "click or press space to start";
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+  render();
+}
+
+function newZone() {
+  zoneW = Math.max(10, zoneW * 0.82);
+  zoneX = M + Math.random() * (trackW - zoneW);
+  speed = Math.min(11, speed + 0.5);
+}
+
+function loop() {
+  marker += dir * speed;
+  if (marker <= M) { marker = M; dir = 1; }
+  if (marker >= cv.width - M) { marker = cv.width - M; dir = -1; }
+  render();
+  raf = requestAnimationFrame(loop);
+}
+
+function render() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  // track
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(M, cv.height / 2);
+  ctx.lineTo(cv.width - M, cv.height / 2);
+  ctx.stroke();
+  // end caps
+  ctx.beginPath();
+  ctx.moveTo(M, 20); ctx.lineTo(M, 70);
+  ctx.moveTo(cv.width - M, 20); ctx.lineTo(cv.width - M, 70);
+  ctx.stroke();
+  // green band
+  ctx.fillStyle = "#d6f5d6";
+  ctx.fillRect(zoneX, 26, zoneW, 38);
+  ctx.strokeStyle = "#1faf3a";
+  ctx.strokeRect(zoneX, 26, zoneW, 38);
+  // marker
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(marker, 16);
+  ctx.lineTo(marker, 74);
+  ctx.stroke();
+}
+
+function act() {
+  if (phase === "over") return;
+  if (phase === "idle" || phase === "between") {
+    phase = "run";
+    big.textContent = "stop it!";
+    cancelAnimationFrame(raf);
+    loop();
+    return;
+  }
+  // phase === "run": stop the marker
+  cancelAnimationFrame(raf);
+  if (marker >= zoneX && marker <= zoneX + zoneW) {
+    pts++;
+    newZone();
+    phase = "between";
+    big.textContent = pts + " point" + (pts === 1 ? "" : "s") + ". go again";
+    render();
+  } else {
+    phase = "over";
+    big.textContent = "missed. final score " + pts;
+    render();
+    lbEl.innerHTML = "";
+    if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "stopbar", { score: pts });
+    else lbEl.textContent = "leaderboard offline";
+  }
+}
+
+cv.addEventListener("pointerdown", function (e) { e.preventDefault(); act(); });
+window.addEventListener("keydown", function (e) {
+  if (e.code === "Space") { e.preventDefault(); act(); }
+});
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>
