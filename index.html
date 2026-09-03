@@ -77,7 +77,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="wordmark">SORTAFUN.ORG</div>
-<div id="hint">&larr; &rarr; walk &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; press &darr; to enter a door &nbsp;&middot;&nbsp; or click a sign</div>
+<div id="hint">&larr; &rarr; walk &nbsp;&middot;&nbsp; &uarr; jump &nbsp;&middot;&nbsp; &darr; enter a door &nbsp;&middot;&nbsp; &uarr;/&darr; at the stairs to change floor &nbsp;&middot;&nbsp; or click a sign</div>
 
 <div id="changelog">
   <button type="button" class="cl-hide" id="clHide">hide</button>
@@ -119,16 +119,18 @@ const DOORS = [
   { label: "anagram sprint", url: "anagram.html",  ar: 2.9, game: "anagram", zone: "play" },
   { label: "minesweeper",    url: "mines.html",    ar: 2.7, game: "mines", zone: "play" },
   { label: "fermi quiz",     url: "fermi.html",    ar: 2.4, game: "fermi", zone: "play" },
-  { label: "how long is a minute", url: "minute.html", ar: 3.6, game: "minute", zone: "play" },
-  { label: "call it",        url: "callit.html",   ar: 2.0, game: "callit", zone: "play" },
-  { label: "watch the guy",  url: "watch.html",    ar: 2.7, game: "watch", zone: "play" },
   { label: "animation studio", url: "flipbook.html",   ar: 188 / 64, zone: "make" },
   { label: "animation gallery", url: "anim-gallery.html", ar: 188 / 64, zone: "make" },
   { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58, zone: "meta" },
   { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64, recent: true, zone: "meta" },
+  { label: "how long is a minute", url: "minute.html", ar: 3.6, game: "minute", zone: "down" },
+  { label: "call it",        url: "callit.html",   ar: 2.0, game: "callit", zone: "down" },
+  { label: "watch the guy",  url: "watch.html",    ar: 2.7, game: "watch", zone: "down" },
 ];
 
-const ZONE_LABELS = { play: "play", make: "make stuff", meta: "the rest" };
+// zone -> floor. ground = 0, up one = -1, basement = +1
+const ZONE_FLOOR = { play: 0, make: -1, meta: -1, down: 1 };
+const ZONE_LABELS = { play: "play", make: "make stuff", meta: "the rest", down: "the basement" };
 DOORS.forEach((p) => { if (p.btn) { p.img = new Image(); p.img.src = p.btn; } });
 
 // tiny leaderboard readouts under the signs — Firestore, best-effort.
@@ -164,15 +166,18 @@ function lbFmt(game, score) {
 // page hints at it.
 
 let W = 0, H = 0;
-let groundY = 0;
+let groundY = 0;               // y of the ground floor (floor 0)
+let FH = 420;                  // vertical gap between floors
+let floorY = { "-1": 0, "0": 0, "1": 0 };   // floor index -> ground line y
 let wallTop = 80;
 let doorLayout = [];
-let zoneMarks = [];       // { label, x } faint banner above each zone's first sign
-let WORLD_W = 0;
+let zoneMarks = [];       // { label, x, floor } faint banner above each cluster
+let ladders = [];         // { x, up, down }  up/down are floor indices
+let WORLD_W = 0, WORLD_H = 0;
 let menuMidX = 0;
 let plantX = 0;
 
-let camX = 0;
+let camX = 0, camY = 0;
 
 const GRAV = 0.6;
 const JUMP = 12;
@@ -181,21 +186,37 @@ const guy = {
   x: 60,
   vx: 0,
   speed: 3.2,
-  yOff: 0,      // 0 = on ground, negative = airborne
+  floor: 0,       // which floor index the guy stands on
+  yOff: 0,        // 0 = on the floor, negative = airborne
   vy: 0,
   onGround: true,
+  climbing: false,
+  climbFrom: 0, climbTo: 0, climbT: 0, climbX: 0,
   entering: false,
   enterT: 0,
   targetUrl: null,
   enterDoor: null,
 };
 
+function guyFeetY() {
+  if (guy.climbing) {
+    const a = floorY[guy.climbFrom], b = floorY[guy.climbTo];
+    return a + (b - a) * guy.climbT;
+  }
+  return floorY[guy.floor] + guy.yOff;
+}
+
 const keys = {};
 window.addEventListener("keydown", (e) => {
   keys[e.key] = true;
   if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", " "].includes(e.key)) e.preventDefault();
-  if ((e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") && !guy.entering) jump();
-  if ((e.key === "ArrowDown" || e.key === "Enter") && !guy.entering) tryEnter();
+  if (guy.entering || guy.climbing) return;
+  const up = e.key === "ArrowUp" || e.key === "w" || e.key === "W";
+  const down = e.key === "ArrowDown" || e.key === "s" || e.key === "S";
+  if (up && nearLadder(-1)) { climb(-1); return; }
+  if (down && nearLadder(1)) { climb(1); return; }
+  if (up || e.key === " ") jump();
+  if (e.key === "ArrowDown" || e.key === "Enter") tryEnter();
 });
 window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
@@ -206,55 +227,98 @@ function jump() {
   }
 }
 
+// is there a ladder from the guy's floor going in direction dir (-1 up, +1 down)?
+function nearLadder(dir) {
+  if (!guy.onGround) return null;
+  for (const L of ladders) {
+    if (Math.abs(guy.x - L.x) > 26) continue;
+    if (dir < 0 && L.up === guy.floor - 1 && L.down === guy.floor) return L;
+    if (dir > 0 && L.down === guy.floor + 1 && L.up === guy.floor) return L;
+  }
+  return null;
+}
+
+function climb(dir) {
+  const L = nearLadder(dir);
+  if (!L) return;
+  guy.climbing = true;
+  guy.climbFrom = guy.floor;
+  guy.climbTo = dir < 0 ? guy.floor - 1 : guy.floor + 1;
+  guy.climbT = 0;
+  guy.climbX = L.x;
+  guy.x = L.x;
+  guy.vx = 0; guy.vy = 0; guy.yOff = 0;
+}
+
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  groundY = Math.min(H - 90, H * 0.62 + 60);
+  FH = clamp(Math.round(H * 0.92), 380, 560);
+  const TOP = Math.round(FH * 0.6);         // headroom above the top floor's line
+  floorY = { "-1": TOP, "0": TOP + FH, "1": TOP + 2 * FH };
+  groundY = floorY["0"];
   wallTop = 80;
 
-  // --- menu signs: fixed readable size, laid out in one long row you walk ---
-  // the row is as wide as it needs to be; the camera pans to follow the guy.
-  const boxTop = 118;
-  const boxH = clamp(Math.round(H * 0.135), 56, 76);
+  // --- menu signs: fixed readable size, one row per floor, camera follows ---
+  const boxH = clamp(Math.round(H * 0.12), 52, 70);
   const gap = boxH * 0.30;
-  const zoneGap = boxH * 1.15;             // extra breathing room between zones
-  const leftPad = Math.max(W < 520 ? 236 : 368, Math.round(W * 0.08));
-  const rightPad = Math.max(140, Math.round(W * 0.28));
-
-  const doorH = Math.min(78, boxH * 1.06);
+  const zoneGap = boxH * 1.1;
+  const leftPad = Math.max(W < 520 ? 236 : 360, Math.round(W * 0.08));
+  const rightPad = Math.max(140, Math.round(W * 0.26));
+  const doorH = Math.min(74, boxH * 1.06);
   const doorW = doorH * 0.46;
 
-  let x = leftPad;
-  let prevZone = null;
+  // group the DOORS by floor, keeping their array order
+  const byFloor = { "-1": [], "0": [], "1": [] };
+  DOORS.forEach((p) => byFloor[ZONE_FLOOR[p.zone]].push(p));
+
   zoneMarks = [];
-  doorLayout = DOORS.map((p) => {
-    if (prevZone !== null && p.zone !== prevZone) x += zoneGap;
-    if (p.zone !== prevZone) zoneMarks.push({ label: ZONE_LABELS[p.zone] || p.zone, x: x });
-    prevZone = p.zone;
-    const boxX = x;
-    const boxW = boxH * p.ar;
-    const cx = boxX + boxW / 2;
-    x += boxW + gap;
-    return {
-      ...p,
-      boxX, boxTop, boxW, boxH,
-      doorW, doorH,
-      doorX: cx - doorW / 2,
-      cx,
-    };
+  let widest = W;
+  doorLayout = [];
+  Object.keys(byFloor).forEach((f) => {
+    const fy = floorY[f];
+    const boxTop = fy - Math.min(FH * 0.42, fy - 22);   // signs float above the floor line
+    let x = leftPad;
+    let prevZone = null;
+    byFloor[f].forEach((p) => {
+      if (prevZone !== null && p.zone !== prevZone) x += zoneGap;
+      if (p.zone !== prevZone) zoneMarks.push({ label: ZONE_LABELS[p.zone] || p.zone, x: x, top: boxTop - 12 });
+      prevZone = p.zone;
+      const boxW = boxH * p.ar;
+      const cx = x + boxW / 2;
+      doorLayout.push({
+        ...p, floor: Number(f), floorLineY: fy,
+        boxX: x, boxTop, boxW, boxH,
+        doorW, doorH, doorX: cx - doorW / 2, cx,
+      });
+      x += boxW + gap;
+    });
+    widest = Math.max(widest, x - gap + rightPad);
   });
 
-  const rowEnd = x - gap + rightPad;
-  WORLD_W = Math.max(W, rowEnd);
+  WORLD_W = widest;
+  WORLD_H = floorY["1"] + 120;
   menuMidX = W / 2;
 
-  // the corner plant (hidden door to the art gallery) lives at the far right,
-  // past every sign — you have to walk the whole lobby to find it
+  // one stairwell near the entrance serving all three floors: from the ground
+  // floor you can go up to "the rest" or down to the basement
+  const stairX = Math.round(Math.max(90, leftPad * 0.5));
+  ladders = [
+    { x: stairX, up: -1, down: 0 },
+    { x: stairX, up: 0, down: 1 },
+  ];
+
+  // the corner plant (hidden door to the art gallery) is on the ground floor,
+  // far right, past every sign
   plantX = WORLD_W - 46;
 
   guy.x = clamp(guy.x, 20, WORLD_W - 20);
+
+  // snap the camera so a resize never leaves it mid-pan
+  camX = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
+  camY = clamp(guyFeetY() - H * 0.62, 0, Math.max(0, WORLD_H - H));
 }
 window.addEventListener("resize", resize);
 resize();
@@ -263,7 +327,7 @@ function hitBox(mx, my) {
   for (const p of doorLayout) {
     if (mx >= p.boxX && mx <= p.boxX + p.boxW && my >= p.boxTop && my <= p.boxTop + p.boxH)
       return p;
-    if (mx >= p.doorX && mx <= p.doorX + p.doorW && my >= groundY - p.doorH && my <= groundY)
+    if (mx >= p.doorX && mx <= p.doorX + p.doorW && my >= p.floorLineY - p.doorH && my <= p.floorLineY)
       return p;
   }
   return null;
@@ -272,7 +336,7 @@ function hitBox(mx, my) {
 // the corner plant — the hidden door to the art gallery
 function hitPlant(mx, my) {
   return mx >= plantX - 20 && mx <= plantX + 18 &&
-         my >= groundY - 54 && my <= groundY + 2;
+         my >= floorY["0"] - 54 && my <= floorY["0"] + 2;
 }
 
 function leaveVia(url, atX) {
@@ -290,7 +354,7 @@ function leaveVia(url, atX) {
 canvas.addEventListener("mousemove", (e) => {
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left + camX;
-  const my = e.clientY - r.top;
+  const my = e.clientY - r.top + camY;
   canvas.style.cursor = (hitBox(mx, my) || hitPlant(mx, my)) ? "pointer" : "default";
 });
 
@@ -298,7 +362,7 @@ canvas.addEventListener("click", (e) => {
   if (guy.entering) return;
   const r = canvas.getBoundingClientRect();
   const mx = e.clientX - r.left + camX;
-  const my = e.clientY - r.top;
+  const my = e.clientY - r.top + camY;
   const p = hitBox(mx, my);
   if (p) {
     leaveVia(p.url, p.cx);
@@ -312,6 +376,7 @@ canvas.addEventListener("click", (e) => {
 function nearestDoor() {
   let best = null, bd = 1e9;
   for (const p of doorLayout) {
+    if (p.floor !== guy.floor) continue;
     const d = Math.abs(guy.x - p.cx);
     if (d < bd) { bd = d; best = p; }
   }
@@ -319,7 +384,7 @@ function nearestDoor() {
 }
 
 function tryEnter() {
-  if (!guy.onGround) return;
+  if (!guy.onGround || guy.climbing) return;
   const { p, d } = nearestDoor();
   if (p && d < p.doorW * 0.9) {
     guy.entering = true;
@@ -337,27 +402,37 @@ function update() {
     if (guy.enterT >= 1) window.location.href = guy.targetUrl;
     return;
   }
-  let dir = 0;
-  if (keys["ArrowLeft"] || keys["a"] || keys["A"]) dir -= 1;
-  if (keys["ArrowRight"] || keys["d"] || keys["D"]) dir += 1;
-  guy.vx = dir * guy.speed;
-  guy.x += guy.vx;
-  guy.x = clamp(guy.x, 20, WORLD_W - 20);
 
-  guy.vy += GRAV;
-  guy.yOff += guy.vy;
-  if (guy.yOff >= 0) {
-    guy.yOff = 0;
-    guy.vy = 0;
-    guy.onGround = true;
+  if (guy.climbing) {
+    guy.climbT += 0.045;
+    guy.x = guy.climbX;
+    if (guy.climbT >= 1) {
+      guy.climbing = false;
+      guy.floor = guy.climbTo;
+      guy.yOff = 0; guy.vy = 0; guy.onGround = true;
+    }
+  } else {
+    let dir = 0;
+    if (keys["ArrowLeft"] || keys["a"] || keys["A"]) dir -= 1;
+    if (keys["ArrowRight"] || keys["d"] || keys["D"]) dir += 1;
+    guy.vx = dir * guy.speed;
+    guy.x += guy.vx;
+    guy.x = clamp(guy.x, 20, WORLD_W - 20);
+
+    guy.vy += GRAV;
+    guy.yOff += guy.vy;
+    if (guy.yOff >= 0) {
+      guy.yOff = 0;
+      guy.vy = 0;
+      guy.onGround = true;
+    }
   }
 
-  hintEl.style.opacity = guy.entering ? "0" : "0.9";
+  hintEl.style.opacity = "0.9";
 
-  // the changelog note is nailed to the wall at spawn — it slides away as you
-  // walk into the lobby so it never sits over the signs
+  // the changelog note is on the wall at spawn — it fades as you move away
   if (changelogEl && !changelogEl.hidden) {
-    const fade = clamp(1 - camX / 220, 0, 1);
+    const fade = clamp(Math.min(1 - camX / 220, guy.floor === 0 ? 1 : 0), 0, 1);
     changelogEl.style.opacity = String(fade);
     changelogEl.style.pointerEvents = fade > 0.4 ? "auto" : "none";
   }
@@ -399,25 +474,56 @@ function drawTitle(cx, cy) {
 function draw() {
   t += 1;
 
-  // start every frame from a known-clean context state
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
 
-  const targetCam = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
-  camX += (targetCam - camX) * 0.16;
-  if (Math.abs(targetCam - camX) < 0.4) camX = targetCam;
+  const targetCamX = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
+  camX += (targetCamX - camX) * 0.16;
+  if (Math.abs(targetCamX - camX) < 0.4) camX = targetCamX;
+
+  const targetCamY = clamp(guyFeetY() - H * 0.62, 0, Math.max(0, WORLD_H - H));
+  camY += (targetCamY - camY) * 0.14;
+  if (Math.abs(targetCamY - camY) < 0.4) camY = targetCamY;
 
   drawBg();
 
   // ---------- world space ----------
   ctx.save();
-  ctx.translate(-camX, 0);
+  ctx.translate(-camX, -camY);
+
+  // the basement reads as a dim room below the ground floor
+  ctx.fillStyle = "#efeeec";
+  ctx.fillRect(0, floorY["0"] + 2, WORLD_W, WORLD_H - floorY["0"]);
 
   ctx.strokeStyle = INK;
   ctx.fillStyle = INK;
   ctx.lineWidth = 2;
+
+  // floor lines, one per storey
+  ["-1", "0", "1"].forEach((f) => {
+    const y = floorY[f];
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(WORLD_W, y);
+    ctx.stroke();
+  });
+
+  // the stairwell
+  drawStairwell();
+
+  // basement flavour — fills the void, nods to the floor-clip lore
+  ctx.save();
+  ctx.fillStyle = "#c9c7c3";
   ctx.textAlign = "center";
+  ctx.font = "italic 15px 'Comic Sans MS', 'Segoe Print', cursive";
+  const bMid = (floorY["0"] + floorY["1"]) / 2;
+  const bx = camX + W / 2;
+  ctx.fillText("you found the basement", bx, bMid - 14);
+  ctx.fillText("(not a feature. not getting fixed.)", bx, bMid + 12);
+  ctx.restore();
 
   // faint zone banners above the first sign of each cluster
   ctx.save();
@@ -425,53 +531,41 @@ function draw() {
   ctx.textAlign = "left";
   ctx.font = "13px 'Comic Sans MS', 'Segoe Print', cursive";
   for (const z of zoneMarks) {
-    ctx.fillText(z.label + "  " + "-".repeat(6), z.x, doorLayout[0].boxTop - 12);
+    ctx.fillText(z.label + "  " + "-".repeat(6), z.x, z.top);
   }
   ctx.restore();
 
-  // menu signs — hand-drawn buttons, cut to their wonky outline
+  // menu signs
+  ctx.textAlign = "center";
   for (let i = 0; i < doorLayout.length; i++) {
     const p = doorLayout[i];
     if (p.img && p.img.complete && p.img.naturalWidth) {
       ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
     } else {
-      // no hand-drawn button art — draw one in the same wobbly-marker style as
-      // the tile slider / crossword signs so it doesn't read as a plain box
       drawWonkySign(p, i);
     }
   }
 
-  // the corner plant — looks like decor, actually the way to the art gallery
-  drawPlant(plantX, groundY);
+  drawPlant(plantX, floorY["0"]);
 
-  // black doors standing on the floor under each sign
   const { p: near, d: nearD } = nearestDoor();
   for (const p of doorLayout) {
     const isEnterDoor = guy.entering && p === guy.enterDoor;
     const open = isEnterDoor ? clamp(guy.enterT * 1.5, 0, 1) : 0;
-    const lit = !guy.entering && p === near && nearD < p.doorW * 0.9 && guy.onGround;
+    const lit = !guy.entering && p === near && nearD < p.doorW * 0.9 && guy.onGround && !guy.climbing;
     drawDoor(p, lit, open);
   }
 
   drawGuy();
-
   drawSignboards();
 
   ctx.restore();
   // ---------- /world space ----------
 
-  // floor line — continuous everywhere, so it stays in screen space
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY);
-  ctx.lineTo(W, groundY);
-  ctx.stroke();
-
   drawEdgeHints();
 
-  // welcome WordArt — screen space, greets you at spawn and fades as you walk in
-  const tFade = clamp(1 - camX / 260, 0, 1);
+  // welcome WordArt — screen space, greets you at spawn and fades as you leave
+  const tFade = clamp(Math.min(1 - camX / 260, guy.floor === 0 ? 1 : 0), 0, 1);
   if (tFade > 0.01) {
     ctx.save();
     ctx.globalAlpha = tFade;
@@ -480,19 +574,60 @@ function draw() {
   }
 }
 
-// "there is more this way" — a nudge so people know to walk. also a little
-// "room N / M" tag over the guy naming the sign he's closest to.
+function drawStairwell() {
+  const sx = ladders[0].x;
+  const yTop = floorY["-1"], yBot = floorY["1"];
+  ctx.save();
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  // uprights
+  ctx.beginPath();
+  ctx.moveTo(sx - 12, yTop); ctx.lineTo(sx - 12, yBot);
+  ctx.moveTo(sx + 12, yTop); ctx.lineTo(sx + 12, yBot);
+  ctx.stroke();
+  // rungs
+  ctx.strokeStyle = "#999";
+  for (let y = yTop + 14; y < yBot; y += 20) {
+    ctx.beginPath();
+    ctx.moveTo(sx - 12, y); ctx.lineTo(sx + 12, y);
+    ctx.stroke();
+  }
+  // labels at each floor
+  ctx.fillStyle = "#888";
+  ctx.textAlign = "left";
+  ctx.font = "11px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillText("up: the rest", sx + 18, floorY["-1"] - 8);
+  ctx.fillText("down: basement", sx + 18, floorY["1"] - 8);
+
+  // a "you are here" directory board on the ground floor next to the stairs
+  const dx = sx + 20, dy = floorY["0"] - 118, dw = 168, dh = 96;
+  ctx.fillStyle = PAPER;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(dx, dy, dw, dh);
+  ctx.fillStyle = INK;
+  ctx.font = "bold 12px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillText("YOU ARE HERE", dx + 10, dy + 20);
+  ctx.font = "11px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillStyle = "#444";
+  ctx.fillText("up   . make + the rest", dx + 10, dy + 42);
+  ctx.fillText("here . play, 12 games", dx + 10, dy + 60);
+  ctx.fillText("down . the basement", dx + 10, dy + 78);
+  ctx.restore();
+}
+
+// "there is more this way" + a "room N / M" tag over the guy, screen space
 function drawEdgeHints() {
   if (guy.entering) return;
   const maxCam = Math.max(0, WORLD_W - W);
+  const feet = guyFeetY() - camY;
   ctx.save();
   ctx.fillStyle = INK;
   ctx.textBaseline = "middle";
 
-  const edgeY = groundY - 116;
+  const edgeY = clamp(feet - 116, 40, H - 40);
   if (camX < maxCam - 4) {
-    const a = 0.4 + 0.35 * Math.sin(t * 0.12);
-    ctx.globalAlpha = a;
+    ctx.globalAlpha = 0.4 + 0.35 * Math.sin(t * 0.12);
     ctx.textAlign = "right";
     ctx.font = "bold 28px 'Comic Sans MS', 'Arial Black', sans-serif";
     ctx.fillText("»", W - 14, edgeY);
@@ -509,23 +644,36 @@ function drawEdgeHints() {
     ctx.globalAlpha = 1;
   }
 
-  // room counter, floating over the guy's head
+  if (nearLadder(-1) && nearLadder(1)) hintClimb("up: the rest   down: basement", feet);
+  else if (nearLadder(-1)) hintClimb("press up for the rest", feet);
+  else if (nearLadder(1)) hintClimb("press down for the basement", feet);
+
+  const floorDoors = doorLayout.filter((p) => p.floor === guy.floor);
   const { p } = nearestDoor();
-  if (p) {
-    const idx = doorLayout.indexOf(p) + 1;
+  if (p && !guy.climbing) {
+    const idx = floorDoors.indexOf(p) + 1;
     ctx.globalAlpha = 0.65;
     ctx.textAlign = "center";
     ctx.font = "11px 'Comic Sans MS', 'Segoe Print', cursive";
-    ctx.fillText("room " + idx + " / " + doorLayout.length, guy.x - camX, groundY - 82);
+    ctx.fillText("room " + idx + " / " + floorDoors.length, guy.x - camX, clamp(feet - 104, 20, H - 20));
   }
   ctx.restore();
   ctx.textBaseline = "alphabetic";
+}
+
+function hintClimb(txt, feet) {
+  ctx.globalAlpha = 0.85;
+  ctx.textAlign = "center";
+  ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.fillText(txt, guy.x - camX, clamp(feet - 132, 20, H - 20));
+  ctx.globalAlpha = 1;
 }
 
 
 function drawDoor(p, lit, open) {
   open = open || 0;
   const x = p.doorX, w = p.doorW, h = p.doorH;
+  const groundY = p.floorLineY;
   const y = groundY - h;
   const r = Math.min(10, w * 0.4);
   const ease = 1 - Math.pow(1 - open, 3);
@@ -705,10 +853,10 @@ function drawGuy() {
   // fade into the doorway on entry
   if (guy.entering) ctx.globalAlpha = Math.max(0, 1 - guy.enterT * 1.15);
 
-  let feetY = groundY + guy.yOff;
+  let feetY = guyFeetY();
   let bob = 0;
-  if (!guy.entering && guy.vx !== 0 && guy.onGround) bob = Math.sin(t * 0.3) * 2;
-  const airborne = !guy.onGround && !guy.entering;
+  if (!guy.entering && !guy.climbing && guy.vx !== 0 && guy.onGround) bob = Math.sin(t * 0.3) * 2;
+  const airborne = (!guy.onGround && !guy.entering) || guy.climbing;
 
   const x = guy.x;
   const headR = 9;
