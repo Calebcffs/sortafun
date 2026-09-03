@@ -24,7 +24,8 @@
   }
 
   var GAMES = {
-    typing:  { label: "typing game",  unit: "wpm",   better: "high" },
+    typing:     { label: "typing (top 200)",  unit: "wpm",   better: "high" },
+    typing1000: { label: "typing (top 1000)", unit: "wpm",   better: "high" },
     driving: { label: "driving game", unit: "score", better: "high" }, // retired arcade dodger — kept so old scores keep meaning, no page submits to it any more
     puzzle:  { label: "tile slider",  unit: "moves", better: "low"  },
     circuit: { label: "circuit race", unit: "ms",    better: "low", format: fmtLapTime },
@@ -42,6 +43,22 @@
     return d.getUTCFullYear() + "-" +
       String(d.getUTCMonth() + 1).padStart(2, "0") + "-" +
       String(d.getUTCDate()).padStart(2, "0");
+  }
+
+  // A Firestore Timestamp (or Date, or null) rendered in Singapore time as
+  // "YYYY-MM-DD HH:MM" — same clock the day buckets use, so it never disagrees
+  // with them. Returns "" for a server timestamp that hasn't landed yet.
+  function fmtWhen(ts) {
+    var d = null;
+    if (ts && typeof ts.toDate === "function") d = ts.toDate();
+    else if (ts instanceof Date) d = ts;
+    if (!d || isNaN(d.getTime())) return "";
+    var s = new Date(d.getTime() + SG_OFFSET_MS);
+    return s.getUTCFullYear() + "-" +
+      String(s.getUTCMonth() + 1).padStart(2, "0") + "-" +
+      String(s.getUTCDate()).padStart(2, "0") + " " +
+      String(s.getUTCHours()).padStart(2, "0") + ":" +
+      String(s.getUTCMinutes()).padStart(2, "0");
   }
 
   function configLooksReal(cfg) {
@@ -118,16 +135,37 @@
         var out = [];
         snap.forEach(function (doc) {
           var d = doc.data();
-          out.push({ name: d.name, score: d.score });
+          out.push({ name: d.name, score: d.score, ts: d.ts || null });
         });
         return out;
       });
     });
   }
 
-  // period: "day" | "all". Returns [{ name, score }], best first, max 10.
+  // period: "day" | "all". Returns [{ name, score, ts }], best first, max 10.
   function top(game, period) {
     return runScoreQuery(game, period === "day" ? dayStr() : null, 10);
+  }
+
+  // The single worst all-time score for a game ("first from the bottom").
+  // Returns { name, score } or null. Fail-soft: callers treat a rejection as
+  // "no glow". Uses an ascending rankValue sort; if Firestore wants a dedicated
+  // (game ASC, rankValue ASC) index it prints a console link, see SETUP.md.
+  function lastPlace(game) {
+    return init().then(function () {
+      var fs = state.fs;
+      var q = fs.query(
+        fs.collection(state.db, "scores"),
+        fs.where("game", "==", game),
+        fs.orderBy("rankValue", "asc"),
+        fs.limit(1)
+      );
+      return fs.getDocs(q).then(function (snap) {
+        var r = null;
+        snap.forEach(function (doc) { var d = doc.data(); r = { name: d.name, score: d.score }; });
+        return r;
+      });
+    });
   }
 
   // Top n scores for one specific day (any past day, not just today) — used
@@ -250,7 +288,8 @@
           out.push({
             id: doc.id, title: d.title || "", author: d.author || "anon",
             fps: d.fps || 12, w: d.w || 480, h: d.h || 360,
-            frames: d.frames || [], votes: d.votes || 0, _cursor: doc,
+            frames: d.frames || [], votes: d.votes || 0,
+            createdAt: d.createdAt || null, _cursor: doc,
           });
         });
         return out;
@@ -278,10 +317,24 @@
         var out = [];
         snap.forEach(function (doc) {
           var d = doc.data();
-          out.push({ author: d.author, body: d.body });
+          out.push({ author: d.author, body: d.body, createdAt: d.createdAt || null });
         });
         return out;
       });
+    });
+  }
+
+  // Just how many comments an animation has, counted server-side (cheap). The
+  // query is a bare animId equality — a single-field index Firestore builds
+  // automatically, no composite index needed.
+  function animCommentCount(id) {
+    return init().then(function () {
+      var fs = state.fs;
+      var q = fs.query(
+        fs.collection(state.db, "anim_comments"),
+        fs.where("animId", "==", id)
+      );
+      return fs.getCountFromServer(q).then(function (snap) { return snap.data().count; });
     });
   }
 
@@ -334,7 +387,7 @@
     var tabs = root.querySelectorAll(".lb-tabs button");
     var period = "day";
 
-    function render(rows) {
+    function render(rows, worst) {
       listEl.innerHTML = "";
       if (!rows.length) {
         msgEl.textContent = "nobody yet. be the first.";
@@ -343,8 +396,15 @@
       msgEl.textContent = "";
       rows.forEach(function (r) {
         var li = el("li");
-        li.appendChild(el("span", "lb-name", r.name));
-        li.appendChild(el("span", "lb-score", fmtScore(g, r.score)));
+        var line = el("div", "lb-row");
+        line.appendChild(el("span", "lb-name", r.name));
+        line.appendChild(el("span", "lb-score", fmtScore(g, r.score)));
+        li.appendChild(line);
+        var when = fmtWhen(r.ts);
+        if (when) li.appendChild(el("div", "lb-when", when));
+        if (worst && r.name === worst.name && r.score === worst.score) {
+          li.classList.add("lb-last");
+        }
         listEl.appendChild(li);
       });
     }
@@ -352,7 +412,14 @@
     function load() {
       msgEl.textContent = "loading...";
       listEl.innerHTML = "";
-      top(game, period).then(render).catch(function (e) {
+      var jobs = [
+        top(game, period),
+        period === "all" ? lastPlace(game).catch(function () { return null; })
+                         : Promise.resolve(null),
+      ];
+      Promise.all(jobs).then(function (res) {
+        render(res[0], res[1]);
+      }).catch(function (e) {
         listEl.innerHTML = "";
         msgEl.textContent = state.offline
           ? "leaderboard offline"
@@ -414,10 +481,23 @@
       ".lb-tabs button{font:inherit;font-size:12px;border:2px solid #000;background:#fff;",
         "border-radius:6px;padding:2px 7px;margin-left:4px;cursor:pointer;}",
       ".lb-tabs button.on{background:#ffe9a8;}",
-      ".lb-list{list-style:decimal inside;margin:0;padding:6px 10px;font-size:14px;min-height:22px;}",
-      ".lb-list li{display:flex;justify-content:space-between;gap:8px;padding:1px 0;}",
+      ".lb-list{list-style:none;counter-reset:lb;margin:0;padding:6px 10px;font-size:14px;min-height:22px;}",
+      ".lb-list li{counter-increment:lb;padding:2px 0;}",
+      ".lb-row{display:flex;justify-content:space-between;gap:8px;}",
       ".lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
+      ".lb-name::before{content:counter(lb) '. ';color:#888;}",
       ".lb-score{flex:none;color:#1faf3a;}",
+      ".lb-when{font-size:11px;color:#999;margin-top:1px;}",
+      ".lb-last{border-radius:7px;margin:2px -6px;padding:2px 6px;",
+        "background:linear-gradient(90deg,#fff8d9,#ffe9a8);",
+        "animation:lb-gold 1.6s ease-in-out infinite alternate;}",
+      "@keyframes lb-gold{from{box-shadow:0 0 4px 1px rgba(255,193,7,.45);}",
+        "to{box-shadow:0 0 10px 3px rgba(255,193,7,.9);}}",
+      ".lb-last .lb-name{font-weight:bold;color:#7a5c00;}",
+      ".lb-last .lb-name::after{content:' (first from the bottom)';",
+        "font-weight:normal;font-size:10px;color:#a67c00;}",
+      ".lb-last .lb-score{color:#7a5c00;}",
+      ".lb-last .lb-when{color:#a67c00;}",
       ".lb-msg{padding:0 10px 8px;font-size:12px;color:#666;min-height:8px;}",
       ".lb-submit{display:flex;gap:6px;padding:8px;border-bottom:2px dashed #000;}",
       ".lb-input{flex:1;font:inherit;font-size:14px;border:2px solid #000;border-radius:6px;",
@@ -434,9 +514,11 @@
   window.SortafunLB = {
     GAMES: GAMES,
     dayStr: dayStr,
+    fmtWhen: fmtWhen,
     submit: submit,
     top: top,
     topDay: topDay,
+    lastPlace: lastPlace,
     bestByDay: bestByDay,
     recent: recent,
     animPublish: animPublish,
@@ -444,6 +526,7 @@
     animVote: animVote,
     animComments: animComments,
     animComment: animComment,
+    animCommentCount: animCommentCount,
     ANIM_MAX_FRAMES: ANIM_MAX_FRAMES,
     mountPanel: mountPanel,
   };

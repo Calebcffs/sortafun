@@ -44,7 +44,9 @@
   .comments { margin-top: 10px; border-top: 2px dashed #000; padding-top: 8px; }
   .cmt { font-size: 14px; margin: 6px 0; }
   .cmt b { color: #000; }
-  .cmt span { color: #333; word-break: break-word; }
+  .cmt .cmt-body { color: #333; word-break: break-word; }
+  .cmt .cmt-when { color: #999; font-size: 12px; margin-left: 4px; }
+  .posted { font-size: 12px; color: #999; margin: -6px 0 10px; }
   .cmt-none { font-size: 13px; color: #999; }
   .cmt-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .cmt-form input {
@@ -157,6 +159,8 @@ function makeCard(a) {
   var meta = el("div", "meta");
   var ttl = el("div", "ttl" + (a.title ? "" : " untitled"), a.title || "untitled");
   var by = el("div", "by", "by " + a.author);
+  var when = (window.SortafunLB && SortafunLB.fmtWhen) ? SortafunLB.fmtWhen(a.createdAt) : "";
+  var posted = when ? el("div", "posted", "posted " + when) : null;
   var acts = el("div", "acts");
 
   var already = votedIds().indexOf(a.id) !== -1;
@@ -179,15 +183,32 @@ function makeCard(a) {
   var box = el("div", "comments");
   box.hidden = true;
   var loaded = false;
+  var cmtCount = null;                 // null = not counted yet
+  function setCbtnLabel() {
+    cbtn.textContent = (box.hidden ? "comments" : "hide comments") +
+      (cmtCount == null ? "" : " (" + cmtCount + ")");
+  }
+  setCbtnLabel();
   cbtn.addEventListener("click", function () {
     box.hidden = !box.hidden;
-    if (!box.hidden && !loaded) { loaded = true; loadComments(a.id, box, cbtn); }
+    setCbtnLabel();
+    if (!box.hidden && !loaded) {
+      loaded = true;
+      loadComments(a.id, box, function (n) { cmtCount = n; setCbtnLabel(); });
+    }
   });
+  if (window.SortafunLB && SortafunLB.animCommentCount) {
+    SortafunLB.animCommentCount(a.id).then(function (n) {
+      cmtCount = n;
+      setCbtnLabel();
+    }).catch(function (e) { console.warn("[gallery] count failed", e); });
+  }
 
   acts.appendChild(vote);
   acts.appendChild(cbtn);
   meta.appendChild(ttl);
   meta.appendChild(by);
+  if (posted) meta.appendChild(posted);
   meta.appendChild(acts);
   row.appendChild(meta);
   card.appendChild(row);
@@ -207,25 +228,32 @@ function makeCard(a) {
   return card;
 }
 
-function loadComments(id, box, cbtn) {
+function cmtRow(author, body, when) {
+  var c = el("div", "cmt");
+  c.appendChild(el("b", null, author + ": "));
+  c.appendChild(el("span", "cmt-body", body));
+  if (when) c.appendChild(el("span", "cmt-when", when));
+  return c;
+}
+
+function loadComments(id, box, onCount) {
   box.innerHTML = "";
   var status = el("div", "cmt-none", "loading...");
   box.appendChild(status);
 
   SortafunLB.animComments(id).then(function (rows) {
     box.innerHTML = "";
-    cbtn.textContent = "hide comments (" + rows.length + ")";
+    var count = rows.length;
+    onCount(count);
     if (!rows.length) {
       box.appendChild(el("div", "cmt-none", "no comments yet."));
     } else {
+      var fw = (window.SortafunLB && SortafunLB.fmtWhen) || function () { return ""; };
       rows.forEach(function (r) {
-        var c = el("div", "cmt");
-        c.appendChild(el("b", null, r.author + ": "));
-        c.appendChild(el("span", null, r.body));
-        box.appendChild(c);
+        box.appendChild(cmtRow(r.author, r.body, fw(r.createdAt)));
       });
     }
-    box.appendChild(commentForm(id, box, cbtn));
+    box.appendChild(commentForm(id, box, function () { onCount(++count); }));
   }).catch(function (e) {
     box.innerHTML = "";
     box.appendChild(el("div", "cmt-none", "couldn't load comments"));
@@ -233,7 +261,7 @@ function loadComments(id, box, cbtn) {
   });
 }
 
-function commentForm(id, box, cbtn) {
+function commentForm(id, box, onAdded) {
   var form = el("div", "cmt-form");
   var name = el("input");
   name.maxLength = 20;
@@ -254,15 +282,14 @@ function commentForm(id, box, cbtn) {
     send.textContent = "...";
     saveName(nm);
     SortafunLB.animComment(id, nm, bd).then(function () {
-      var c = el("div", "cmt");
-      c.appendChild(el("b", null, nm + ": "));
-      c.appendChild(el("span", null, bd));
-      box.insertBefore(c, form);
+      var fw = (window.SortafunLB && SortafunLB.fmtWhen) || function () { return ""; };
+      box.insertBefore(cmtRow(nm, bd, fw(new Date())), form);
+      var none = box.querySelector(".cmt-none");
+      if (none) none.remove();
       body.value = "";
       send.disabled = false;
       send.textContent = "post";
-      var m = /\((\d+)\)/.exec(cbtn.textContent);
-      cbtn.textContent = "hide comments (" + ((m ? +m[1] : 0) + 1) + ")";
+      onAdded();
     }).catch(function (e) {
       send.disabled = false;
       send.textContent = "try again";

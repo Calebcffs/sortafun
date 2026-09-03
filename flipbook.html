@@ -20,6 +20,16 @@
     border-radius: 8px;
   }
   .tool.on { background: #ffe9a8; }
+  .ersize {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #666;
+  }
+  .ersize input[type=range] { width: 110px; }
+  .ersize b { color: #000; min-width: 22px; text-align: right; }
+  .ersize[hidden], .seg[hidden] { display: none; }
   .seg { display: inline-flex; gap: 0; }
   .seg button { border-radius: 0; margin: 0; border-right-width: 1px; }
   .seg button:first-child { border-radius: 8px 0 0 8px; }
@@ -101,11 +111,16 @@
     <button class="tool" data-tool="rect">square</button>
     <button class="tool" data-tool="circle">circle</button>
     <button class="tool" data-tool="eraser">eraser</button>
-    <span class="seg" role="group" aria-label="brush size">
+    <span class="seg" id="brushSeg" role="group" aria-label="brush size">
       <button data-size="2">S</button>
       <button data-size="4">M</button>
       <button data-size="8">L</button>
     </span>
+    <label class="ersize" id="erWrap" hidden>
+      eraser size
+      <input type="range" id="erSize" min="6" max="100" value="24" aria-label="eraser size">
+      <b id="erVal">24</b>
+    </label>
   </div>
 
   <div class="onion-row">
@@ -123,6 +138,7 @@
   <div class="frameinfo">frame <b id="fnum">1</b> / <b id="ftot">1</b></div>
 
   <div class="bar">
+    <button id="undo" disabled>&#8630; undo</button>
     <button id="prev">&larr; prev</button>
     <button id="play">play &#9654;</button>
     <button id="next">next &rarr;</button>
@@ -147,7 +163,7 @@
     <div class="post-msg" id="postMsg"></div>
   </div>
 
-  <p class="hint">keys: space play &middot; , . frame &middot; a s d f blank / copy / clear / delete &middot; p l r c e tools &middot; o onion. saved in this browser.</p>
+  <p class="hint">keys: space play &middot; , . frame &middot; a s d f blank / copy / clear / delete &middot; p l r c e tools &middot; o onion &middot; ctrl+z undo. saved in this browser.</p>
 
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
@@ -173,8 +189,80 @@ var cur = 0;
 var onion = true;
 var tool = "pen";
 var size = 4;
+var eraserSize = 24;
 var playing = false;
 var playTimer = null;
+
+/* ---------- undo ---------- */
+var undoStack = [];
+var UNDO_MAX = 40;
+var restoring = false;
+var undoBtn = null;
+
+function snapUrl(i) { return frames[i].toDataURL("image/png"); }
+
+function pushUndo(entry) {
+  undoStack.push(entry);
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+  updateUndoBtn();
+}
+
+function updateUndoBtn() {
+  if (undoBtn) undoBtn.disabled = restoring || !undoStack.length;
+}
+
+function loadUrlInto(canvas, url, cb) {
+  var img = new Image();
+  img.onload = img.onerror = function () {
+    var g = canvas.getContext("2d");
+    g.clearRect(0, 0, W, H);
+    if (img.width) g.drawImage(img, 0, 0);
+    cb();
+  };
+  img.src = url;
+}
+
+function undo() {
+  if (restoring || !undoStack.length) return;
+  if (playing) stop();
+  var e = undoStack.pop();
+
+  if (e.t === "pixels") {
+    if (!frames[e.i]) { updateUndoBtn(); return; }
+    restoring = true; updateUndoBtn();
+    cur = Math.min(e.i, frames.length - 1);
+    loadUrlInto(frames[e.i], e.url, function () {
+      restoring = false;
+      rebuildStrip(); compose(); refreshUI(); saveSoon(); updateUndoBtn();
+    });
+  } else if (e.t === "del") {
+    if (frames.length > 1 && frames[e.i]) frames.splice(e.i, 1);
+    cur = Math.max(0, Math.min(e.back != null ? e.back : e.i - 1, frames.length - 1));
+    rebuildStrip(); compose(); refreshUI(); saveSoon(); updateUndoBtn();
+  } else if (e.t === "ins") {
+    restoring = true; updateUndoBtn();
+    var c = makeFrame();
+    frames.splice(Math.min(e.i, frames.length), 0, c);
+    loadUrlInto(c, e.url, function () {
+      restoring = false;
+      cur = Math.min(e.i, frames.length - 1);
+      rebuildStrip(); compose(); refreshUI(); saveSoon(); updateUndoBtn();
+    });
+  } else if (e.t === "all") {
+    restoring = true; updateUndoBtn();
+    frames = e.urls.map(makeFrame);
+    var pending = e.urls.length;
+    e.urls.forEach(function (u, i) {
+      loadUrlInto(frames[i], u, function () {
+        if (--pending === 0) {
+          restoring = false;
+          cur = Math.min(e.cur || 0, frames.length - 1);
+          rebuildStrip(); compose(); refreshUI(); saveSoon(); updateUndoBtn();
+        }
+      });
+    });
+  }
+}
 
 /* ---------- frame helpers ---------- */
 
@@ -248,18 +336,19 @@ function drawShape(g, kind, a, b, lw) {
 var drawing = false, startPt = null, lastPt = null;
 
 view.addEventListener("pointerdown", function (e) {
-  if (playing) return;
+  if (playing || restoring) return;
   e.preventDefault();
   try { view.setPointerCapture(e.pointerId); } catch (err) {}
   drawing = true;
   startPt = lastPt = pos(e);
   if (tool === "pen" || tool === "eraser") {
+    pushUndo({ t: "pixels", i: cur, url: snapUrl(cur) });
     var c = fctx();
     c.lineCap = "round";
     c.lineJoin = "round";
     c.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
     c.strokeStyle = "#000";
-    c.lineWidth = tool === "eraser" ? size * 4 : size;
+    c.lineWidth = tool === "eraser" ? eraserSize : size;
     c.beginPath();
     c.moveTo(startPt.x, startPt.y);
     c.lineTo(startPt.x + 0.01, startPt.y + 0.01);
@@ -289,9 +378,12 @@ function endStroke() {
   if (!drawing) return;
   drawing = false;
   if (tool !== "pen" && tool !== "eraser" && startPt && lastPt) {
-    var c = fctx();
-    c.globalCompositeOperation = "source-over";
-    drawShape(c, tool, startPt, lastPt, size);
+    if (Math.abs(lastPt.x - startPt.x) > 1 || Math.abs(lastPt.y - startPt.y) > 1) {
+      pushUndo({ t: "pixels", i: cur, url: snapUrl(cur) });
+      var c = fctx();
+      c.globalCompositeOperation = "source-over";
+      drawShape(c, tool, startPt, lastPt, size);
+    }
   }
   fctx().globalCompositeOperation = "source-over";
   compose();
@@ -311,10 +403,12 @@ function go(i) {
 }
 
 function addFrame(copy) {
+  var prevCur = cur;
   var f = makeFrame();
   if (copy) f.getContext("2d").drawImage(frames[cur], 0, 0);
   frames.splice(cur + 1, 0, f);
   cur++;
+  pushUndo({ t: "del", i: cur, back: prevCur });
   rebuildStrip();
   compose();
   refreshUI();
@@ -322,6 +416,7 @@ function addFrame(copy) {
 }
 
 function clearFrame() {
+  pushUndo({ t: "pixels", i: cur, url: snapUrl(cur) });
   fctx().clearRect(0, 0, W, H);
   compose();
   updateThumb(cur);
@@ -333,6 +428,7 @@ function delFrame() {
     clearFrame();
     return;
   }
+  pushUndo({ t: "ins", i: cur, url: snapUrl(cur) });
   frames.splice(cur, 1);
   if (cur >= frames.length) cur = frames.length - 1;
   rebuildStrip();
@@ -465,6 +561,10 @@ function refreshUI() {
   document.querySelectorAll("[data-fps]").forEach(function (b) {
     b.classList.toggle("on", Number(b.dataset.fps) === FPS);
   });
+  var isEraser = tool === "eraser";
+  document.getElementById("erWrap").hidden = !isEraser;
+  document.getElementById("brushSeg").hidden = isEraser;
+  updateUndoBtn();
   highlightStrip();
 }
 
@@ -481,6 +581,17 @@ document.querySelectorAll("[data-size]").forEach(function (b) {
     refreshUI();
   });
 });
+
+var erSizeEl = document.getElementById("erSize");
+var erValEl = document.getElementById("erVal");
+erSizeEl.addEventListener("input", function () {
+  eraserSize = Number(erSizeEl.value);
+  erValEl.textContent = erSizeEl.value;
+});
+
+undoBtn = document.getElementById("undo");
+undoBtn.addEventListener("click", undo);
+updateUndoBtn();
 document.querySelectorAll("[data-fps]").forEach(function (b) {
   b.addEventListener("click", function () {
     FPS = Number(b.dataset.fps);
@@ -505,6 +616,7 @@ document.getElementById("del").addEventListener("click", function () { if (playi
 document.getElementById("wipe").addEventListener("click", function () {
   if (!confirm("Delete every frame and start over?")) return;
   if (playing) stop();
+  pushUndo({ t: "all", urls: frames.map(function (f, i) { return snapUrl(i); }), cur: cur });
   frames = [makeFrame()];
   cur = 0;
   rebuildStrip();
@@ -517,6 +629,8 @@ document.addEventListener("keydown", function (e) {
   var t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
   var k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === "z") { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey || e.metaKey) return;
   if (e.key === " ") { e.preventDefault(); togglePlay(); return; }
   if (playing && (k === "," || k === ".")) { stop(); }
   if (k === ",") { go(cur - 1); }

@@ -18,7 +18,7 @@ service cloud.firestore {
 
     function isValidScore(d) {
       return d.keys().hasOnly(['game', 'name', 'score', 'rankValue', 'day', 'ts'])
-        && d.game in ['typing', 'driving', 'puzzle', 'circuit']
+        && d.game in ['typing', 'typing1000', 'driving', 'puzzle', 'circuit']
         && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
         && d.score is int && d.score >= 0 && d.score <= 1000000
         && d.rankValue is int

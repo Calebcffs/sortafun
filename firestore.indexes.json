@@ -22,6 +22,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "game", "order": "ASCENDING" },
+        { "fieldPath": "rankValue", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "scores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "game", "order": "ASCENDING" },
         { "fieldPath": "day", "order": "DESCENDING" },
         { "fieldPath": "rankValue", "order": "DESCENDING" }
       ]

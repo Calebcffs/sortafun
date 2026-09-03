@@ -74,7 +74,7 @@ Collection `scores`, one document per submitted score:
 
 | field       | type   | notes                                        |
 |-------------|--------|----------------------------------------------|
-| `game`      | string | `typing` \| `driving` \| `puzzle` \| `circuit` |
+| `game`      | string | `typing` \| `typing1000` \| `driving` \| `puzzle` \| `circuit` |
 | `name`      | string | 1–20 chars, player-entered                   |
 | `score`     | int    | the value shown to players (circuit: lap time in ms) |
 | `rankValue` | int    | higher = better always; `puzzle`/`circuit` store `-score` |
@@ -84,6 +84,14 @@ Collection `scores`, one document per submitted score:
 `driving` is the old top-down dodge game's key, retired when it was replaced
 by the circuit race — its historical scores are just inert now, nothing reads
 or writes them any more.
+
+`typing` is the top-200-word list, `typing1000` the harder top-1000 list. They
+are separate boards on purpose. `typing1000` was added later, so if top-1000
+scores stop saving, re-check step 4 (the game enum in `firestore.rules`
+changed). The "first from the bottom" gold-glow row on any "all time" board
+runs one extra query ordered by `rankValue` ascending; if the glow never shows,
+open the console for a "create index" link, or paste `firestore.indexes.json`
+(it has a new `(game ASC, rankValue ASC)` entry).
 
 "Today" = `where day == <today in Singapore time>`. All-time = no day filter.
 Both sort by `rankValue` descending. The tile slider's daily puzzle is seeded

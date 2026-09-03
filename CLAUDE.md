@@ -247,10 +247,22 @@ Plain static HTML, no framework, no build. `game.css` is shared styling for the
 game sub-pages; `forum.html` deliberately does NOT use it (it's a period piece
 with its own Times New Roman styling).
 
+`typing.html`: 30-second word-typing sprint. Word banks come from `words.js`
+(`window.SORTAFUN_WORDS = { top200, top1000 }`, auto-generated from
+first20hours/google-10000-english, kept in frequency order, must load before
+the inline script). A segmented control picks the list; the choice is stored in
+`localStorage` (`sortafun-typing-diff`). The word you type is always the first
+one shown and it never moves, completed words are shifted off the front. The two
+lists submit to two leaderboards: `typing` (top 200) and `typing1000` (top
+1000).
+
 `flipbook.html` (the animation studio): each frame is an offscreen `<canvas>` of
 transparent black ink, onion skin recolours the previous frames red, and the
 whole flipbook autosaves to `localStorage` as an array of PNG data URLs (key
-`sortafun-flipbook-v1`). "Post to gallery" writes it to Firestore.
+`sortafun-flipbook-v1`). "Post to gallery" writes it to Firestore. Undo (button
+or ctrl+z) keeps a stack of typed entries (`pixels` / `del` / `ins` / `all`),
+not full-document snapshots. The eraser has its own size slider (shown only when
+the eraser tool is active); pen/line/shapes keep the S/M/L sizes.
 
 `anim-gallery.html`: the user gallery. Reads `animations` (sorted by `votes` or
 `createdAt`) and `anim_comments` from Firestore via `leaderboard.js` (the
@@ -271,6 +283,16 @@ be pasted into the Firebase console by hand whenever they change here, see
 
 The `flipbook` / `animation gallery` homepage signs have no hand-drawn button
 art, so `index.html` falls back to a plain lettered sign for them.
+
+`index.html` also has a sticky-note changelog (`#changelog`, `assets/sticky-note.png`)
+fixed in the middle of the screen. It is dismissible (`hide`), remembered per
+browser in `localStorage` (`sortafun-cl-hidden`). Add new entries at the top,
+newest date first, plain ASCII.
+
+Leaderboard rows (`leaderboard.js` `mountPanel`) and gallery posts / comments
+show a Singapore-time timestamp via `SortafunLB.fmtWhen`. On any "all time"
+board the single worst score glows gold (`.lb-last`, "first from the bottom"),
+found with `SortafunLB.lastPlace` (fail-soft: no glow if the query errors).
 
 CNAME points the repo's GitHub Pages at **sortafun.org**, so a push to `main` is
 a deploy. Don't push unless asked.

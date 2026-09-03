@@ -21,11 +21,66 @@
     color: #000;
     transition: opacity .25s ease;
   }
+  #changelog {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(-1.5deg);
+    width: 520px;
+    max-width: calc(100vw - 20px);
+    aspect-ratio: 545 / 391;
+    background: url("assets/sticky-note.png") no-repeat center / 100% 100%;
+    box-sizing: border-box;
+    padding: 54px 92px 20px 122px;
+    overflow: hidden;
+    font-size: 11.5px;
+    line-height: 1.32;
+    color: #1c1c1c;
+    z-index: 5;
+  }
+  #changelog h2 { margin: 0 0 1px; font-size: 17px; }
+  #changelog .cl-date { margin: 0 0 4px; font-size: 11px; color: #555; }
+  #changelog ul { margin: 0; padding-left: 16px; }
+  #changelog li { margin: 3px 0; overflow-wrap: break-word; }
+  #changelog .cl-hide {
+    position: absolute;
+    top: 30px;
+    right: 34px;
+    font: inherit;
+    font-size: 11px;
+    background: transparent;
+    border: 0;
+    color: #555;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  @media (max-width: 560px) {
+    #changelog { font-size: 9px; line-height: 1.22; padding: 24px 20px 10px 74px; }
+    #changelog h2 { font-size: 12px; }
+    #changelog .cl-date { font-size: 8px; margin-bottom: 2px; }
+    #changelog ul { padding-left: 12px; }
+    #changelog li { margin: 2px 0; }
+    #changelog .cl-hide { top: 13px; right: 14px; font-size: 8px; }
+  }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; press &darr; to enter &nbsp;&middot;&nbsp; click a sign</div>
+
+<div id="changelog">
+  <button type="button" class="cl-hide" id="clHide">hide</button>
+  <h2>changelog</h2>
+  <p class="cl-date">2026-09-03</p>
+  <ul>
+    <li>typing: pick top 200 or top 1000 words, each has its own board</li>
+    <li>typing: the word you type stays put, the next slides in</li>
+    <li>flipbook: undo (ctrl+z) and an eraser size slider</li>
+    <li>gallery: comment counts, and a posted time per flipbook</li>
+    <li>boards + gallery: every row shows date and time</li>
+    <li>boards: dead last all time glows gold (first from the bottom)</li>
+  </ul>
+</div>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
@@ -573,6 +628,18 @@ function loop() {
   requestAnimationFrame(loop);
 }
 loop();
+
+// the sticky note in the middle — changelog. dismissible, remembered per browser.
+(function () {
+  var cl = document.getElementById("changelog");
+  var hide = document.getElementById("clHide");
+  if (!cl || !hide) return;
+  try { if (localStorage.getItem("sortafun-cl-hidden") === "1") cl.hidden = true; } catch (e) {}
+  hide.addEventListener("click", function () {
+    cl.hidden = true;
+    try { localStorage.setItem("sortafun-cl-hidden", "1"); } catch (e) {}
+  });
+})();
 </script>
 </body>
 </html>

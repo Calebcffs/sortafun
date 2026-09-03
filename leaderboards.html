@@ -35,8 +35,12 @@
 
   <div class="boards">
     <div class="board-col">
-      <h2>typing game &mdash; most wpm</h2>
+      <h2>typing, top 200 words &mdash; most wpm</h2>
       <div id="lb-typing"></div>
+    </div>
+    <div class="board-col">
+      <h2>typing, top 1000 words &mdash; most wpm</h2>
+      <div id="lb-typing1000"></div>
     </div>
     <div class="board-col">
       <h2>circuit race &mdash; best lap</h2>
@@ -49,8 +53,10 @@
   </div>
 
   <p class="note">
-    crossword has no score to rank, so it's not here. scores are submitted from
-    your browser, so treat the numbers with a pinch of salt.
+    two typing boards now: the top 1000 word list is harder, so it keeps its own
+    scores. on any "all time" board the very last place glows gold, first from
+    the bottom. crossword has no score to rank, so it's not here. scores are
+    submitted from your browser, so treat the numbers with a pinch of salt.
   </p>
 
   <a class="back" href="index.html">&larr; back up the pipe</a>
@@ -59,7 +65,7 @@
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
-  ["typing", "circuit", "puzzle"].forEach(function (game) {
+  ["typing", "typing1000", "circuit", "puzzle"].forEach(function (game) {
     var el = document.getElementById("lb-" + game);
     if (window.SortafunLB) SortafunLB.mountPanel(el, game, {});
     else el.textContent = "leaderboard offline";
