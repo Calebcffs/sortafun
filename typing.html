@@ -5,52 +5,163 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>typing game &middot; SORTAFUN.ORG</title>
 <link rel="stylesheet" href="game.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap">
 <style>
-  .diffbar { display: flex; gap: 0; justify-content: center; margin: 6px 0 2px; }
-  .diffbar button { border-radius: 0; font-size: 13px; padding: 4px 12px; }
-  .diffbar button:first-child { border-radius: 8px 0 0 8px; }
-  .diffbar button:last-child { border-radius: 0 8px 8px 0; border-left-width: 1px; }
-  .diffbar button.on { background: #ffe9a8; }
-  #stream {
-    font-size: 24px;
-    line-height: 1.8;
-    min-height: 76px;
-    margin: 10px auto 4px;
-    max-width: 520px;
-    word-spacing: 6px;
+  /* monkeytype "serika dark" style, scoped to body.tt */
+  html { background: #323437; }
+  body.tt {
+    background: #323437;
+    color: #646669;
+    font-family: "Roboto Mono", "SF Mono", "Consolas", ui-monospace, monospace;
+  }
+  .tt .wrap { max-width: 900px; }
+  .tt h1 { color: #d1d0c5; font-family: inherit; transition: opacity .18s ease; }
+  .tt .sub { color: #646669; transition: opacity .18s ease; }
+
+  .tt .diffbar { display: flex; gap: 0; justify-content: center; margin: 6px 0 2px; transition: opacity .18s ease; }
+  .tt .diffbar button {
+    font-family: inherit; font-size: 13px; padding: 5px 14px;
+    background: #2c2e31; color: #646669; border: 2px solid #2c2e31; border-radius: 0; cursor: pointer;
+  }
+  .tt .diffbar button:first-child { border-radius: 8px 0 0 8px; }
+  .tt .diffbar button:last-child { border-radius: 0 8px 8px 0; }
+  .tt .diffbar button:hover { color: #d1d0c5; background: #2c2e31; }
+  .tt .diffbar button.on { background: #e2b714; color: #323437; border-color: #e2b714; }
+  .tt #diffnote { transition: opacity .18s ease; }
+
+  /* fade the chrome once the test is running */
+  .tt.typing h1,
+  .tt.typing .sub,
+  .tt.typing .diffbar,
+  .tt.typing #diffnote { opacity: 0; pointer-events: none; }
+
+  /* the countdown, the only thing on screen while typing */
+  #timer {
+    color: #e2b714;
+    font-size: 34px;
+    line-height: 1;
+    height: 40px;
+    text-align: left;
+    margin: 18px auto 2px;
+    max-width: 850px;
+    opacity: 0;
+    transition: opacity .15s ease;
+  }
+  .tt.typing #timer { opacity: 1; }
+
+  /* the words */
+  #wordsWrap {
+    position: relative;
+    max-width: 850px;
+    margin: 0 auto;
     overflow: hidden;
-    white-space: nowrap;
-    text-overflow: clip;
+    cursor: text;
+    user-select: none;
   }
-  .w { padding: 2px 4px; border-radius: 5px; }
-  .w.cur { background: #ffe9a8; }
-  #field {
-    font-size: 22px;
-    padding: 8px 12px;
-    border: 2px solid #000;
-    border-radius: 8px;
-    width: 260px;
-    text-align: center;
-    outline: none;
-    transition: background .1s ease;
-  }
-  #field.bad { background: #f7d6d6; }
-  #field.ok { background: #d3f5d3; }
-  #field.miss { background: #f7d6d6; }
-  .hud {
+  #words {
+    position: relative;
     display: flex;
-    gap: 20px;
-    justify-content: center;
-    font-size: 16px;
-    margin: 10px 0 4px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    justify-content: flex-start;
+    font-size: 28px;
+    transition: transform .18s ease, filter .12s ease;
   }
-  .big { font-size: 22px; }
+  #words.blurred { filter: blur(5px); }
+  .word { margin: 0 .36em; color: #646669; border-bottom: 2px solid transparent; }
+  .word.error { border-bottom-color: #ca4754; }
+  letter { display: inline-block; }
+  letter.correct { color: #d1d0c5; }
+  letter.incorrect { color: #ca4754; }
+  letter.extra { color: #7e2a33; }
+
+  #caret {
+    position: absolute;
+    width: 3px;
+    background: #e2b714;
+    border-radius: 2px;
+    left: 0; top: 0;
+    transition: left .09s ease, top .09s ease;
+  }
+  #caret.blink { animation: caretblink 1s steps(1) infinite; }
+  @keyframes caretblink { 50% { opacity: 0; } }
+
+  #field {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    left: -9999px;
+  }
+
+  #focusnote {
+    text-align: center;
+    font-size: 14px;
+    color: #646669;
+    margin: 12px 0 0;
+    height: 18px;
+    transition: opacity .12s ease;
+  }
+
+  /* once the test is over, the words and clock go away */
+  .tt.done #timer,
+  .tt.done #wordsWrap,
+  .tt.done #focusnote { display: none; }
+
+  /* results */
+  #results { display: none; margin-top: 8px; }
+  #results.show { display: block; }
+  .res-top { display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; }
+  .res-nums { text-align: left; flex: 0 0 auto; padding-top: 30px; }
+  .stat-lg .lbl { color: #646669; font-size: 20px; line-height: 1; }
+  .stat-lg .val { color: #e2b714; font-size: 64px; line-height: 1.05; font-weight: 500; }
+  .res-chart { flex: 1 1 380px; min-width: 280px; }
+  .tt .res-chart canvas { width: 100%; height: auto; display: block; background: transparent; border: 0; }
+  .res-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 20px;
+    text-align: left;
+    margin-top: 18px;
+    max-width: 640px;
+  }
+  .res-row .lbl { color: #646669; font-size: 14px; }
+  .res-row .val { color: #e2b714; font-size: 26px; line-height: 1.15; }
+  .res-row .val small { display: block; color: #7d7f83; font-size: 12px; }
+
+  .tt #restart {
+    font-family: inherit; font-size: 14px; margin-top: 4px;
+    background: #2c2e31; color: #646669; border: 2px solid #2c2e31; border-radius: 8px; padding: 7px 16px;
+  }
+  .tt #restart:hover { color: #d1d0c5; }
+  .tt .back {
+    color: #646669; border-color: #2c2e31; background: #2c2e31;
+  }
+  .tt .back:hover { color: #d1d0c5; background: #2c2e31; }
+  .tt .status { color: #646669; }
+
+  /* dark overrides for the shared leaderboard panel (its style tag loads after
+     this one, so these are scoped to win on specificity) */
+  body .lb { background: #2c2e31; border-color: #2c2e31; color: #d1d0c5; font-family: inherit; }
+  body .lb-head { border-bottom-color: #3a3c3f; }
+  body .lb-tabs button { background: #323437; color: #646669; border-color: #323437; }
+  body .lb-tabs button.on { background: #e2b714; color: #323437; border-color: #e2b714; }
+  body .lb-list li { color: #d1d0c5; }
+  body .lb-name::before { color: #646669; }
+  body .lb-score { color: #e2b714; }
+  body .lb-when { color: #7d7f83; }
+  body .lb-msg { color: #646669; }
+  body .lb-submit { border-bottom-color: #3a3c3f; }
+  body .lb-input { background: #323437; color: #d1d0c5; border-color: #323437; }
+  body .lb-go { background: #323437; color: #646669; border-color: #323437; }
+  body .lb-go:hover { color: #d1d0c5; background: #323437; }
+  body .lb-ok { color: #e2b714; }
 </style>
 </head>
-<body>
+<body class="tt">
 <div class="wrap">
   <h1>typing game</h1>
-  <p class="sub">type the first word, hit space. it never moves, the next one slides into its place. 30 seconds.</p>
+  <p class="sub">type the words. the caret follows you, wrong letters go red. 30 seconds.</p>
 
   <div class="diffbar" role="group" aria-label="word list">
     <button data-diff="200" class="on">top 200 words</button>
@@ -58,14 +169,30 @@
   </div>
   <p class="sub" id="diffnote" style="margin-top:2px;">easier: the 200 most common english words</p>
 
-  <div class="hud">
-    <span>time <b id="time" class="big">30</b></span>
-    <span>words <b id="count" class="big">0</b></span>
-    <span>wpm <b id="wpm" class="big">0</b></span>
-  </div>
+  <div id="timer">30</div>
 
-  <div id="stream"></div>
-  <input id="field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type here">
+  <div id="wordsWrap">
+    <div id="words"><div id="caret"></div></div>
+  </div>
+  <input id="field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
+  <p id="focusnote">click here or press any key to focus</p>
+
+  <div id="results">
+    <div class="res-top">
+      <div class="res-nums">
+        <div class="stat-lg"><div class="lbl">wpm</div><div class="val" id="rWpm">0</div></div>
+        <div class="stat-lg"><div class="lbl">acc</div><div class="val" id="rAcc">0%</div></div>
+      </div>
+      <div class="res-chart"><canvas id="chart" width="720" height="260"></canvas></div>
+    </div>
+    <div class="res-row">
+      <div><div class="lbl">test type</div><div class="val" id="rType">time 30<small>english</small></div></div>
+      <div><div class="lbl">characters</div><div class="val" id="rChars" title="correct / incorrect / extra / missed">0/0/0/0</div></div>
+      <div><div class="lbl">time</div><div class="val" id="rTime">30s<small>00:00:30 session</small></div></div>
+      <div><div class="lbl">raw</div><div class="val" id="rRaw">0</div></div>
+      <div><div class="lbl">consistency</div><div class="val" id="rCons">0%</div></div>
+    </div>
+  </div>
 
   <div class="status" id="status"></div>
   <div><button id="restart">restart</button></div>
@@ -81,7 +208,7 @@
 <script>
 "use strict";
 
-// word.js provides the real banks; this is a small fallback for file:// / offline.
+// words.js provides the real banks; this is a small fallback for file:// / offline.
 var FALLBACK = ("the of and to a in for is on that by this with you it not or be are from at as your all " +
   "new more an was we will home can us about if page my has search free but our one other do no time they " +
   "site he up may what which their news out use any there see only so his when here who web also now help get").split(/\s+/);
@@ -89,6 +216,9 @@ var FALLBACK = ("the of and to a in for is on that by this with you it not or be
 var WORDS = (window.SORTAFUN_WORDS && window.SORTAFUN_WORDS.top200)
   ? window.SORTAFUN_WORDS
   : { top200: FALLBACK, top1000: FALLBACK };
+
+var TEST_SECONDS = 30;
+var MULT = 12 / TEST_SECONDS; // (chars/5) / (seconds/60)  ->  wpm
 
 var DIFF_KEY = "sortafun-typing-diff";
 var diff = "200";
@@ -100,21 +230,150 @@ try {
 function bank() { return diff === "1000" ? WORDS.top1000 : WORDS.top200; }
 function gameKey() { return diff === "1000" ? "typing1000" : "typing"; }
 
-var streamEl = document.getElementById("stream");
+var wrapEl = document.getElementById("wordsWrap");
+var wordsEl = document.getElementById("words");
+var caretEl = document.getElementById("caret");
 var field = document.getElementById("field");
-var timeEl = document.getElementById("time");
-var countEl = document.getElementById("count");
-var wpmEl = document.getElementById("wpm");
+var timerEl = document.getElementById("timer");
 var statusEl = document.getElementById("status");
+var focusNote = document.getElementById("focusnote");
+var resultsEl = document.getElementById("results");
 var diffNote = document.getElementById("diffnote");
 var diffBtns = document.querySelectorAll(".diffbar button");
+var bodyEl = document.body;
 
-var WINDOW = 12;                     // words kept queued at once
-var words, correctChars, count, startTime, timer, running, ended, flashT;
+var words, wordEls, typedHist;   // parallel arrays; typedHist[i] = final typed string for word i
+var cursor;                    // index of the active word
+var typed;                     // typed string for the active word
+var lineH;                     // measured pixel height of one line
+var running, ended;
+var startTime, timer, idleT;
+var keystrokes, accRight, accWrong;         // live, keystroke-typedHist based
+var liveCorrect;                            // correct chars in finished words, for the wpm curve
+var samples;                                // per-second { raw, wpm, err }
+var secCount, secErr;                        // accumulators for the current second
 
-function rndWord() {
-  var b = bank();
-  return b[(Math.random() * b.length) | 0];
+function rndWord(prev) {
+  var b = bank(), w;
+  do { w = b[(Math.random() * b.length) | 0]; } while (w === prev && b.length > 1);
+  return w;
+}
+
+function addWords(n) {
+  var prev = words.length ? words[words.length - 1] : null;
+  for (var i = 0; i < n; i++) {
+    var w = rndWord(prev);
+    prev = w;
+    words.push(w);
+    var d = document.createElement("div");
+    d.className = "word";
+    d.textContent = w;
+    wordsEl.appendChild(d);
+    wordEls.push(d);
+  }
+}
+
+function ensureWords() {
+  while (wordEls.length - cursor < 45) addWords(30);
+}
+
+// build per-letter spans for one word. `str` is what was typed against it.
+function paintWord(i, str) {
+  var el = wordEls[i], target = words[i];
+  var n = Math.max(target.length, str.length);
+  var html = "";
+  for (var k = 0; k < n; k++) {
+    if (k >= target.length) {
+      html += '<letter class="extra">' + esc(str[k]) + "</letter>";
+    } else if (k < str.length) {
+      html += '<letter class="' + (str[k] === target[k] ? "correct" : "incorrect") + '">' + esc(target[k]) + "</letter>";
+    } else {
+      html += "<letter>" + esc(target[k]) + "</letter>";
+    }
+  }
+  el.innerHTML = html;
+}
+
+function esc(c) {
+  return c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c;
+}
+
+function positionCaret() {
+  var el = wordEls[cursor];
+  if (!el) return;
+  var letters = el.getElementsByTagName("letter");
+  var idx = typed.length, left, top;
+  if (letters.length && idx < letters.length) {
+    left = letters[idx].offsetLeft;
+    top = letters[idx].offsetTop;
+  } else if (letters.length) {
+    var last = letters[letters.length - 1];
+    left = last.offsetLeft + last.offsetWidth;
+    top = last.offsetTop;
+  } else {
+    left = el.offsetLeft;
+    top = el.offsetTop;
+  }
+  caretEl.style.height = Math.round(lineH * 0.72) + "px";
+  caretEl.style.left = left + "px";
+  caretEl.style.top = (top + (lineH - lineH * 0.72) / 2) + "px";
+}
+
+// keep the active line as the second visible line once we are past line one
+function scrollLines() {
+  var first = wordEls[0], act = wordEls[cursor];
+  if (!first || !act) return;
+  var lineIndex = Math.round((act.offsetTop - first.offsetTop) / lineH);
+  var shift = Math.max(0, lineIndex - 1) * lineH;
+  wordsEl.style.transform = "translateY(" + (-shift) + "px)";
+}
+
+function refreshActive() {
+  paintWord(cursor, typed);
+  positionCaret();
+  scrollLines();
+}
+
+function reset() {
+  clearInterval(timer);
+  clearTimeout(idleT);
+  running = false;
+  ended = false;
+  startTime = null;
+  keystrokes = 0; accRight = 0; accWrong = 0;
+  liveCorrect = 0;
+  samples = [];
+  secCount = 0; secErr = 0;
+  cursor = 0;
+  typed = "";
+  typedHist = [];
+
+  words = [];
+  wordEls = [];
+  wordsEl.innerHTML = "";
+  wordsEl.appendChild(caretEl);
+  wordsEl.style.transform = "translateY(0)";
+  addWords(80);
+
+  timerEl.textContent = String(TEST_SECONDS);
+  statusEl.textContent = "";
+  resultsEl.className = "";
+  resultsEl.style.display = "";
+  document.getElementById("lb").innerHTML = "";
+  field.value = "";
+  field.disabled = false;
+  bodyEl.classList.remove("typing", "done");
+
+  syncDiffUI();
+
+  // measure a line now that words are in the DOM
+  lineH = wordEls[0].offsetHeight || 53;
+  wrapEl.style.height = (lineH * 3) + "px";
+
+  paintWord(0, "");
+  positionCaret();
+  caretEl.classList.add("blink");
+  focusField();
 }
 
 function syncDiffUI() {
@@ -124,67 +383,298 @@ function syncDiffUI() {
     : "easier: the 200 most common english words";
 }
 
-function reset() {
-  words = [];
-  for (var i = 0; i < WINDOW; i++) words.push(rndWord());
-  correctChars = 0;
-  count = 0;
-  startTime = null;
-  running = false;
-  ended = false;
-  clearInterval(timer);
-  clearTimeout(flashT);
-  timeEl.textContent = "30";
-  countEl.textContent = "0";
-  wpmEl.textContent = "0";
-  statusEl.textContent = "";
+function focusField() {
+  field.focus({ preventScroll: true });
+}
+
+function onFocus() {
+  wordsEl.classList.remove("blurred");
+  focusNote.style.opacity = "0";
+  if (!ended) caretEl.style.display = "";
+}
+
+function onBlur() {
+  if (ended) return;
+  wordsEl.classList.add("blurred");
+  focusNote.style.opacity = "1";
+  caretEl.style.display = "none";
+}
+
+function bumpIdle() {
+  caretEl.classList.remove("blink");
+  clearTimeout(idleT);
+  idleT = setTimeout(function () { caretEl.classList.add("blink"); }, 1000);
+}
+
+function start() {
+  running = true;
+  startTime = Date.now();
+  bodyEl.classList.add("typing");
+  timer = setInterval(tock, 1000 / 4);
+}
+
+function tock() {
+  var elapsed = (Date.now() - startTime) / 1000;
+  var left = TEST_SECONDS - elapsed;
+  timerEl.textContent = String(Math.max(0, Math.ceil(left)));
+
+  // roll one-second buckets
+  while (samples.length < Math.floor(elapsed) && samples.length < TEST_SECONDS) {
+    var sec = samples.length + 1;
+    var raw = secCount * (60 / 5);
+    var wpm = sec > 0 ? Math.round((liveCorrect + partialCorrect()) * 12 / sec) : 0;
+    samples.push({ raw: Math.round(raw), wpm: wpm, err: secErr });
+    secCount = 0; secErr = 0;
+  }
+
+  if (left <= 0) finish();
+}
+
+// correct characters in the word being typed right now (for the live wpm curve)
+function partialCorrect() {
+  var t = words[cursor] || "", n = 0;
+  for (var i = 0; i < typed.length && i < t.length; i++) if (typed[i] === t[i]) n++;
+  return n;
+}
+
+field.addEventListener("keydown", function (e) {
+  if (ended) {
+    if (e.key === "Enter") { e.preventDefault(); reset(); }
+    return;
+  }
+  if (e.key === "Tab") { e.preventDefault(); reset(); return; }
+  if (e.key === "Escape") { e.preventDefault(); reset(); return; }
+  bumpIdle();
+
+  if (e.key === " ") {
+    e.preventDefault();
+    if (typed.length === 0) return;          // ignore a leading space
+    submitWord();
+    return;
+  }
+
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    if (typed.length > 0) {
+      typed = e.ctrlKey || e.altKey ? "" : typed.slice(0, -1);
+      refreshActive();
+    } else if (cursor > 0 && typedHist[cursor - 1] !== words[cursor - 1]) {
+      // step back into a word that had a mistake (monkeytype default)
+      cursor--;
+      typed = typedHist[cursor] || "";
+      typedHist[cursor] = undefined;
+      wordEls[cursor].classList.remove("error");
+      refreshActive();
+    }
+  }
+});
+
+field.addEventListener("input", function () {
+  if (ended) { field.value = ""; return; }
+  var v = field.value;
   field.value = "";
-  field.className = "";
-  field.disabled = false;
-  document.getElementById("lb").innerHTML = "";
-  syncDiffUI();
-  render();
-  field.focus();
-}
+  if (!v) return;
+  if (!running) start();
 
-// the first span is always the word you type, and it never moves. the rest
-// slide left as words are cleared off the front.
-function render() {
-  streamEl.innerHTML = "";
-  words.forEach(function (w, i) {
-    var span = document.createElement("span");
-    span.className = "w" + (i === 0 ? " cur" : "");
-    span.textContent = w;
-    streamEl.appendChild(span);
-    streamEl.appendChild(document.createTextNode(" "));
-  });
-}
+  for (var i = 0; i < v.length; i++) {
+    var ch = v[i];
+    if (ch === " ") { if (typed.length) submitWord(); continue; }
+    var target = words[cursor];
+    var expected = target[typed.length];
+    keystrokes++;
+    secCount++;
+    if (expected !== undefined && ch === expected) {
+      accRight++;
+    } else {
+      accWrong++;
+      secErr++;
+    }
+    typed += ch;
+  }
+  refreshActive();
+});
 
-function flash(ok) {
-  field.classList.remove("ok", "miss");
-  void field.offsetWidth;
-  field.classList.add(ok ? "ok" : "miss");
-  clearTimeout(flashT);
-  flashT = setTimeout(function () { field.classList.remove("ok", "miss"); }, 150);
-}
+function submitWord() {
+  typedHist[cursor] = typed;
+  var target = words[cursor];
+  if (typed !== target) wordEls[cursor].classList.add("error");
 
-function tick() {
-  var left = 30 - (Date.now() - startTime) / 1000;
-  if (left <= 0) { timeEl.textContent = "0"; finish(); return; }
-  timeEl.textContent = left.toFixed(1);
-  var mins = (Date.now() - startTime) / 60000;
-  wpmEl.textContent = mins > 0 ? Math.round((correctChars / 5) / mins) : 0;
+  // contribution to the live wpm curve: matching letters + the space
+  var m = 0;
+  for (var i = 0; i < typed.length && i < target.length; i++) if (typed[i] === target[i]) m++;
+  liveCorrect += m + 1;
+
+  // the space is a keystroke too
+  keystrokes++;
+  secCount++;
+  accRight++;
+
+  cursor++;
+  typed = "";
+  ensureWords();
+  if (!wordEls[cursor].getElementsByTagName("letter").length) paintWord(cursor, "");
+  positionCaret();
+  scrollLines();
 }
 
 function finish() {
+  if (ended) return;
   ended = true;
   running = false;
   clearInterval(timer);
+  clearTimeout(idleT);
   field.disabled = true;
-  var wpm = Math.round((correctChars / 5) / 0.5);
-  statusEl.textContent = "time! " + count + " words · " + wpm + " wpm 🟩";
-  wpmEl.textContent = wpm;
+  timerEl.textContent = "0";
+  caretEl.style.display = "none";
+  wordsEl.classList.remove("blurred");
+  focusNote.style.opacity = "0";
+  bodyEl.classList.add("done");
+  bodyEl.classList.remove("typing");
+
+  // final character tally, computed from the end state
+  var correct = 0, incorrect = 0, extra = 0, missed = 0;
+  var done = typedHist.slice(0, cursor);          // fully submitted words
+  var partialIdx = typed.length ? done.push(typed) - 1 : -1;  // word in progress at time-up
+  for (var i = 0; i < done.length; i++) {
+    var t = done[i] || "", w = words[i] || "";
+    for (var k = 0; k < Math.max(t.length, w.length); k++) {
+      if (k >= w.length) extra++;
+      else if (k >= t.length) missed++;
+      else if (t[k] === w[k]) correct++;
+      else incorrect++;
+    }
+    if (i !== partialIdx) correct++; // the space after a completed word
+  }
+
+  var wpm = Math.round(correct * MULT);
+  var raw = Math.round(keystrokes / 5 * (60 / TEST_SECONDS));
+  var accTotal = accRight + accWrong;
+  var acc = accTotal ? Math.round(accRight / accTotal * 100) : 100;
+
+  // pad any seconds the last tick did not record; carry the raw forward so the
+  // curve does not fall off a cliff on a partial final second
+  var lastRaw = samples.length ? samples[samples.length - 1].raw : 0;
+  while (samples.length < TEST_SECONDS) {
+    var sec = samples.length + 1;
+    samples.push({ raw: lastRaw, wpm: Math.round(correct * 12 / sec), err: 0 });
+  }
+  samples = samples.slice(0, TEST_SECONDS);
+  // a genuinely partial final second reads as a fake slowdown; flatten it
+  if (samples.length >= 2) {
+    var a = samples[samples.length - 1], b = samples[samples.length - 2];
+    if (a.raw < b.raw * 0.5) a.raw = b.raw;
+  }
+
+  var cons = Math.round(kogasa(cov(samples.map(function (s) { return s.raw; }))));
+
+  document.getElementById("rWpm").textContent = wpm;
+  document.getElementById("rAcc").textContent = acc + "%";
+  document.getElementById("rRaw").textContent = raw;
+  document.getElementById("rChars").textContent = correct + "/" + incorrect + "/" + extra + "/" + missed;
+  document.getElementById("rCons").textContent = cons + "%";
+  document.getElementById("rType").innerHTML = "time " + TEST_SECONDS + "<small>english" + (diff === "1000" ? " 1k" : "") + "</small>";
+  document.getElementById("rTime").innerHTML = TEST_SECONDS + "s<small>00:00:" + String(TEST_SECONDS).padStart(2, "0") + " session</small>";
+
+  resultsEl.className = "show";
+  statusEl.textContent = "";
+  drawChart();
   showBoard(wpm);
+}
+
+// monkeytype's consistency mapping
+function cov(arr) {
+  if (!arr.length) return 0;
+  var mean = arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
+  if (mean === 0) return 1;
+  var varr = arr.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / arr.length;
+  return Math.sqrt(varr) / mean;
+}
+function kogasa(c) {
+  return 100 * (1 - Math.tanh(c + c * c * c / 3 + c * c * c * c * c / 5));
+}
+
+function drawChart() {
+  var cv = document.getElementById("chart");
+  var W = cv.width, H = cv.height;
+  var ctx = cv.getContext("2d");
+  ctx.clearRect(0, 0, W, H);
+
+  var padL = 60, padR = 66, padT = 16, padB = 30;
+  var pw = W - padL - padR, ph = H - padT - padB;
+  var n = samples.length;
+
+  // ignore the noisy first second when scaling the wpm axis
+  var scaleFrom = samples.slice(n > 3 ? 1 : 0).reduce(function (a, s) {
+    return Math.max(a, s.raw, s.wpm);
+  }, 40);
+  var maxWpm = Math.ceil(scaleFrom / 40) * 40;
+  var maxErr = Math.max(1, samples.reduce(function (a, s) { return Math.max(a, s.err); }, 0));
+  var errAxis = maxErr + 1; // headroom so a lone error sits low, like monkeytype
+
+  function x(i) { return padL + (n <= 1 ? 0 : pw * i / (n - 1)); }
+  function yW(v) { return padT + ph - ph * v / maxWpm; }
+  function yE(v) { return padT + ph - ph * v / errAxis; }
+
+  // grid + left axis (wpm)
+  ctx.strokeStyle = "#3a3c3f";
+  ctx.fillStyle = "#646669";
+  ctx.font = '11px "Roboto Mono", monospace';
+  ctx.lineWidth = 1;
+  for (var g = 0; g <= maxWpm; g += 40) {
+    var gy = yW(g);
+    ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(W - padR, gy); ctx.stroke();
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(String(g), padL - 6, gy);
+  }
+  // right axis (errors)
+  ctx.textAlign = "left";
+  var eStep = Math.ceil(maxErr / 4) || 1;
+  for (var e = 0; e <= maxErr; e += eStep) {
+    ctx.fillText(String(e), W - padR + 6, yE(e));
+  }
+  // x axis labels
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (var i = 0; i < n; i++) {
+    if (i === 0 || (i + 1) % 3 === 0) ctx.fillText(String(i + 1), x(i), H - padB + 6);
+  }
+
+  // rotated axis titles
+  ctx.save();
+  ctx.translate(14, padT + ph / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Words per Minute", 0, 0);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(W - 12, padT + ph / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Errors", 0, 0);
+  ctx.restore();
+
+  // raw wpm, jagged grey
+  line(samples.map(function (s, i) { return [x(i), yW(s.raw)]; }), "#646669", 2);
+  // running wpm, smooth yellow
+  line(samples.map(function (s, i) { return [x(i), yW(s.wpm)]; }), "#e2b714", 2.5);
+
+  // error markers
+  ctx.strokeStyle = "#ca4754";
+  ctx.lineWidth = 2;
+  for (var j = 0; j < n; j++) {
+    if (!samples[j].err) continue;
+    var cx = x(j), cyy = yE(samples[j].err), r = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx - r, cyy - r); ctx.lineTo(cx + r, cyy + r);
+    ctx.moveTo(cx + r, cyy - r); ctx.lineTo(cx - r, cyy + r);
+    ctx.stroke();
+  }
+
+  function line(pts, color, w) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = w;
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    pts.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); });
+    ctx.stroke();
+  }
 }
 
 function showBoard(score) {
@@ -197,36 +687,20 @@ function showBoard(score) {
   }
 }
 
-field.addEventListener("input", function () {
+// focus plumbing
+field.addEventListener("focus", onFocus);
+field.addEventListener("blur", onBlur);
+wrapEl.addEventListener("mousedown", function (e) { e.preventDefault(); focusField(); });
+document.addEventListener("keydown", function (e) {
   if (ended) return;
-  if (!running) {
-    running = true;
-    startTime = Date.now();
-    timer = setInterval(tick, 100);
-  }
-  var target = words[0];
-  field.classList.toggle("bad", !target.startsWith(field.value.trimStart()));
+  if (document.activeElement !== field && e.key.length === 1) focusField();
 });
-
-field.addEventListener("keydown", function (e) {
-  if (e.key !== " " && e.key !== "Enter") return;
-  e.preventDefault();
-  if (ended) return;
-  var typed = field.value.trim();
-  if (typed.length === 0) return;
-  var target = words[0];
-  var ok = typed === target;
-  if (ok) {
-    correctChars += target.length + 1;
-    count++;
-    countEl.textContent = count;
-  }
-  flash(ok);
-  words.shift();
-  words.push(rndWord());
-  field.value = "";
-  field.classList.remove("bad");
-  render();
+window.addEventListener("resize", function () {
+  if (!wordEls || !wordEls.length) return;
+  lineH = wordEls[0].offsetHeight || lineH;
+  wrapEl.style.height = (lineH * 3) + "px";
+  positionCaret();
+  scrollLines();
 });
 
 diffBtns.forEach(function (b) {

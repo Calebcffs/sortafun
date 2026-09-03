@@ -247,14 +247,33 @@ Plain static HTML, no framework, no build. `game.css` is shared styling for the
 game sub-pages; `forum.html` deliberately does NOT use it (it's a period piece
 with its own Times New Roman styling).
 
-`typing.html`: 30-second word-typing sprint. Word banks come from `words.js`
+`typing.html`: 30-second typing test, styled as a monkeytype "serika dark"
+clone (own dark `<style>` scoped to `body.tt`, overrides `game.css`; loads
+Roboto Mono from Google Fonts). Word banks come from `words.js`
 (`window.SORTAFUN_WORDS = { top200, top1000 }`, auto-generated from
 first20hours/google-10000-english, kept in frequency order, must load before
 the inline script). A segmented control picks the list; the choice is stored in
-`localStorage` (`sortafun-typing-diff`). The word you type is always the first
-one shown and it never moves, completed words are shifted off the front. The two
-lists submit to two leaderboards: `typing` (top 200) and `typing1000` (top
-1000).
+`localStorage` (`sortafun-typing-diff`). The two lists submit to two
+leaderboards: `typing` (top 200) and `typing1000` (top 1000).
+
+How it plays: words wrap across three visible lines in `#wordsWrap`; you type
+into a hidden offscreen `#field` and letters colour inline (correct / incorrect
+/ extra), a blinking caret tracks the cursor, space submits a word, backspace
+steps back into the previous word only if it had a mistake. The active line is
+kept as the second visible line by translating `#words` up
+(`-max(0, lineIndex - 1) * lineHeight`); words use a stable index cursor and are
+never shifted off the array. Tab or Esc restarts (Tab only while running so the
+results screen keeps its tab order). The countdown is the only HUD; `body.typing`
+fades the page chrome, `body.done` hides the test and shows `#results`.
+
+Results maths (mirrors monkeytype): `wpm` = correctChars/5/minutes from the final
+typed state (partial credit on the last word); `raw` = every keystroke/5/minutes;
+`acc` = correct keystrokes / all keystrokes, tallied live one-per-character and
+never recomputed on backspace; `characters` = correct/incorrect/extra/missed from
+the end state; `consistency` = `kogasa()` (monkeytype's formula) of the
+coefficient of variation of the per-second raw-wpm series. The end chart is
+hand-drawn on a `<canvas>` (no chart library): grey instantaneous raw wpm, yellow
+running-average wpm, red X error markers on a right-hand errors axis.
 
 `flipbook.html` (the animation studio): each frame is an offscreen `<canvas>` of
 transparent black ink, onion skin recolours the previous frames red, and the
