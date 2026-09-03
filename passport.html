@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>passport &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .stamps { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-width: 520px; margin: 16px auto; }
+  .stamp {
+    border: 2px dashed #000; border-radius: 10px; padding: 10px 8px; text-align: center;
+    background: #fff; position: relative; min-height: 78px;
+  }
+  .stamp.got { border-style: solid; background: #eafaea; }
+  .stamp.got::after {
+    content: "STAMPED"; position: absolute; right: 6px; top: 6px;
+    font-size: 8px; color: #1faf3a; border: 1px solid #1faf3a; border-radius: 3px; padding: 1px 3px;
+    transform: rotate(9deg);
+  }
+  .stamp .ico { font-size: 24px; }
+  .stamp.locked { opacity: .45; }
+  .stamp b { display: block; font-size: 13px; margin: 3px 0 1px; }
+  .stamp span { font-size: 11px; color: #555; }
+  .who { font-size: 14px; color: #444; margin: 6px 0; }
+  #namebox { font: inherit; font-size: 15px; border: 2px solid #000; border-radius: 6px; padding: 4px 8px; width: 180px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>passport</h1>
+  <p class="sub">stamps you collect just by poking around the site. all kept in this browser only, nothing is sent anywhere.</p>
+
+  <p class="who">board name: <input id="namebox" placeholder="your name" autocomplete="off" spellcheck="false"> <span id="boardnote"></span></p>
+
+  <div class="stamps" id="stamps"></div>
+  <p class="sub" id="tally"></p>
+
+  <div><button id="wipe">wipe my passport</button></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+function has(k) { try { return localStorage.getItem("sortafun-stamp-" + k) === "1"; } catch (e) { return false; } }
+
+// night owl can be earned right here
+(function () {
+  var h = new Date().getHours();
+  if (h >= 2 && h < 5) { try { localStorage.setItem("sortafun-stamp-night", "1"); } catch (e) {} }
+})();
+
+var GAME_KEYS = window.SortafunLB
+  ? Object.keys(SortafunLB.GAMES).filter(function (g) { return g !== "driving"; })
+  : [];
+
+var STAMPS = [
+  { k: "scored",    ico: "*", t: "first score",   d: "post to any leaderboard" },
+  { k: "_five",     ico: "5", t: "regular",       d: "score on five different games" },
+  { k: "_all",      ico: "!", t: "the lot",       d: "score on every game" },
+  { k: "walked",    ico: ">", t: "the long walk", d: "reach the far end of the lobby" },
+  { k: "basement",  ico: "v", t: "spelunker",     d: "find the basement" },
+  { k: "gallery",   ico: "@", t: "green thumb",   d: "find the art gallery" },
+  { k: "guestbook", ico: "~", t: "left a mark",   d: "sign the guestbook" },
+  { k: "night",     ico: "(", t: "night shift",   d: "visit between 2 and 5am" },
+];
+
+var stampsEl = document.getElementById("stamps");
+var tallyEl = document.getElementById("tally");
+var nameBox = document.getElementById("namebox");
+var boardNote = document.getElementById("boardnote");
+
+try { nameBox.value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
+
+function gamesScored() {
+  var n = 0;
+  GAME_KEYS.forEach(function (g) { if (has("game-" + g)) n++; });
+  return n;
+}
+
+function render() {
+  var scored = gamesScored();
+  var got = {};
+  STAMPS.forEach(function (s) {
+    if (s.k === "_five") got[s.k] = scored >= 5;
+    else if (s.k === "_all") got[s.k] = GAME_KEYS.length > 0 && scored >= GAME_KEYS.length;
+    else got[s.k] = has(s.k);
+  });
+  stampsEl.innerHTML = "";
+  var n = 0;
+  STAMPS.forEach(function (s) {
+    if (got[s.k]) n++;
+    var div = document.createElement("div");
+    div.className = "stamp " + (got[s.k] ? "got" : "locked");
+    div.innerHTML = '<div class="ico">' + s.ico + '</div><b>' + s.t + '</b><span>' + s.d + '</span>';
+    stampsEl.appendChild(div);
+  });
+  tallyEl.textContent = n + " of " + STAMPS.length + " stamps" +
+    (GAME_KEYS.length ? "  ·  scored on " + scored + " / " + GAME_KEYS.length + " games" : "");
+}
+
+// pull the name's board history to light up the per-game stamps without needing
+// to have played on this exact browser
+function syncFromBoard() {
+  var name = nameBox.value.trim();
+  if (!name || !window.SortafunLB || !SortafunLB.byName) { render(); return; }
+  boardNote.textContent = "checking the boards...";
+  SortafunLB.byName(name).then(function (rows) {
+    var seen = {};
+    rows.forEach(function (r) { seen[r.game] = true; });
+    try {
+      if (rows.length) localStorage.setItem("sortafun-stamp-scored", "1");
+      Object.keys(seen).forEach(function (g) { localStorage.setItem("sortafun-stamp-game-" + g, "1"); });
+    } catch (e) {}
+    boardNote.textContent = rows.length ? "found " + Object.keys(seen).length + " games" : "no scores under that name";
+    render();
+  }).catch(function () { boardNote.textContent = ""; render(); });
+}
+
+nameBox.addEventListener("change", function () {
+  try { localStorage.setItem("sortafun-name", nameBox.value.trim()); } catch (e) {}
+  syncFromBoard();
+});
+
+document.getElementById("wipe").addEventListener("click", function () {
+  try {
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf("sortafun-stamp-") === 0) localStorage.removeItem(k);
+    });
+  } catch (e) {}
+  render();
+});
+
+syncFromBoard();
+</script>
+</body>
+</html>

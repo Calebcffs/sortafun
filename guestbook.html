@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>guestbook &middot; SORTAFUN.ORG</title>
+<style>
+  body {
+    margin: 0;
+    background: #000080;
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 16px;
+  }
+  .page {
+    max-width: 620px;
+    margin: 0 auto;
+    background: #f4f0e8;
+    border-left: 3px ridge #c0c0c0;
+    border-right: 3px ridge #c0c0c0;
+    min-height: 100vh;
+    padding: 18px 22px 60px;
+    box-sizing: border-box;
+  }
+  h1 {
+    text-align: center;
+    font-size: 30px;
+    color: #000080;
+    text-shadow: 1px 1px 0 #b0b0b0;
+    margin: 6px 0 2px;
+  }
+  .sub { text-align: center; font-style: italic; color: #444; margin: 0 0 16px; }
+  .blink { animation: bl 1s steps(1) infinite; color: #cc0000; font-weight: bold; }
+  @keyframes bl { 50% { opacity: 0; } }
+  form { border: 2px groove #c0c0c0; padding: 12px; background: #fffdf7; margin-bottom: 18px; }
+  label { display: block; margin: 6px 0 2px; font-weight: bold; }
+  input, textarea {
+    font-family: inherit; font-size: 15px; width: 100%; box-sizing: border-box;
+    border: 1px solid #808080; padding: 4px;
+  }
+  textarea { height: 70px; resize: vertical; }
+  button {
+    font-family: inherit; font-size: 15px; margin-top: 8px;
+    border: 2px outset #c0c0c0; background: #d4d0c8; padding: 3px 14px; cursor: pointer;
+  }
+  button:active { border-style: inset; }
+  .entry { border-bottom: 1px dashed #999; padding: 10px 2px; }
+  .entry .who { font-weight: bold; color: #000080; }
+  .entry .when { color: #777; font-size: 13px; }
+  .entry .msg { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; }
+  .msgline { color: #555; font-size: 14px; min-height: 18px; }
+  a { color: #000080; }
+  .back { display: inline-block; margin-top: 20px; }
+  hr { border: 0; border-top: 1px solid #b0b0b0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>~ sign my guestbook ~</h1>
+  <p class="sub">you are visitor. leave a mark. <span class="blink">NEW</span> messages daily (maybe)</p>
+
+  <form id="form">
+    <label for="gb-name">your name / handle</label>
+    <input id="gb-name" maxlength="30" autocomplete="off" placeholder="e.g. xX_griefer_Xx">
+    <label for="gb-msg">your message</label>
+    <textarea id="gb-msg" maxlength="400" placeholder="be nice. or don't."></textarea>
+    <button type="submit" id="go">sign it</button>
+    <span class="msgline" id="msgline"></span>
+  </form>
+
+  <hr>
+  <div id="list"><p class="msgline">loading the book...</p></div>
+  <div style="text-align:center;margin-top:10px"><button id="more" style="display:none">older entries</button></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var form = document.getElementById("form");
+var nameEl = document.getElementById("gb-name");
+var msgEl = document.getElementById("gb-msg");
+var go = document.getElementById("go");
+var msgline = document.getElementById("msgline");
+var listEl = document.getElementById("list");
+var moreBtn = document.getElementById("more");
+
+var cursor = null, loading = false;
+
+try { nameEl.value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+  });
+}
+
+function when(ts) {
+  if (window.SortafunLB && SortafunLB.fmtWhen) {
+    var w = SortafunLB.fmtWhen(ts);
+    if (w) return w;
+  }
+  return "just now";
+}
+
+function addEntries(rows, append) {
+  if (!append) listEl.innerHTML = "";
+  if (!rows.length && !append) {
+    listEl.innerHTML = '<p class="msgline">nobody has signed yet. go on.</p>';
+    return;
+  }
+  rows.forEach(function (r) {
+    var d = document.createElement("div");
+    d.className = "entry";
+    d.innerHTML = '<div><span class="who">' + esc(r.name) + '</span> ' +
+      '<span class="when">' + esc(when(r.ts)) + '</span></div>' +
+      '<div class="msg">' + esc(r.msg) + '</div>';
+    listEl.appendChild(d);
+    cursor = r._cursor;
+  });
+  moreBtn.style.display = rows.length >= 40 ? "" : "none";
+}
+
+function load(append) {
+  if (loading || !window.SortafunLB) {
+    if (!window.SortafunLB) listEl.innerHTML = '<p class="msgline">guestbook offline</p>';
+    return;
+  }
+  loading = true;
+  SortafunLB.guestbookList(40, append ? cursor : null).then(function (rows) {
+    loading = false;
+    addEntries(rows, append);
+  }).catch(function (e) {
+    loading = false;
+    listEl.innerHTML = '<p class="msgline">could not load the book</p>';
+    console.warn(e);
+  });
+}
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var name = nameEl.value.trim(), msg = msgEl.value.trim();
+  if (!name || !msg) { msgline.textContent = "need a name and a message"; return; }
+  if (!window.SortafunLB) { msgline.textContent = "guestbook offline"; return; }
+  go.disabled = true;
+  msgline.textContent = "signing...";
+  try { localStorage.setItem("sortafun-name", name); } catch (err) {}
+  SortafunLB.guestbookSign(name, msg).then(function () {
+    go.disabled = false;
+    try { localStorage.setItem("sortafun-stamp-guestbook", "1"); } catch (err2) {}
+    msgline.textContent = "signed. thanks.";
+    msgEl.value = "";
+    cursor = null;
+    load(false);
+  }).catch(function (err) {
+    go.disabled = false;
+    msgline.textContent = "did not go through: " + (err && err.message || "error");
+  });
+});
+
+moreBtn.addEventListener("click", function () { load(true); });
+load(false);
+</script>
+</body>
+</html>

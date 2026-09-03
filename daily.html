@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>daily board &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  table { border-collapse: collapse; margin: 14px auto; max-width: 480px; width: 100%; }
+  th, td { border: 2px solid #000; padding: 6px 10px; text-align: left; font-size: 15px; }
+  th { background: #ffe9a8; }
+  td.score { text-align: right; color: #1faf3a; white-space: nowrap; }
+  td.who { color: #333; }
+  .dim { color: #999; }
+  .day { font-size: 15px; color: #444; }
+  a.game { color: #000; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>daily board</h1>
+  <p class="sub">today's number one on every game, all in one place. rolls over at midnight singapore time, same as the tile slider's puzzle.</p>
+  <p class="day" id="day">-</p>
+
+  <table>
+    <thead><tr><th>game</th><th>today's leader</th><th style="text-align:right">score</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="3" class="dim">loading...</td></tr></tbody>
+  </table>
+
+  <p class="sub" id="foot"></p>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var GAMES = [
+  ["typing", "typing.html"], ["typing1000", "typing.html"], ["circuit", "driving.html"],
+  ["puzzle", "puzzle.html"], ["reaction", "reaction.html"], ["maze", "maze.html"],
+  ["aim", "aim.html"], ["stopbar", "stopbar.html"], ["ladder", "ladder.html"],
+  ["anagram", "anagram.html"], ["mines", "mines.html"], ["fermi", "fermi.html"],
+  ["minute", "minute.html"], ["callit", "callit.html"], ["watch", "watch.html"],
+];
+
+var rowsEl = document.getElementById("rows");
+var dayEl = document.getElementById("day");
+var footEl = document.getElementById("foot");
+
+if (window.SortafunLB) dayEl.textContent = SortafunLB.dayStr();
+
+if (!window.SortafunLB) {
+  rowsEl.innerHTML = '<tr><td colspan="3" class="dim">boards are offline</td></tr>';
+} else {
+  rowsEl.innerHTML = "";
+  var done = 0, anyone = 0;
+  GAMES.forEach(function (pair) {
+    var key = pair[0], g = SortafunLB.GAMES[key];
+    var tr = document.createElement("tr");
+    tr.innerHTML = '<td><a class="game" href="' + pair[1] + '">' + (g ? g.label : key) + '</a></td>' +
+      '<td class="who dim">...</td><td class="score dim">-</td>';
+    rowsEl.appendChild(tr);
+    SortafunLB.top(key, "day").then(function (list) {
+      done++;
+      var top = list[0];
+      var who = tr.children[1], sc = tr.children[2];
+      if (top) {
+        anyone++;
+        who.textContent = top.name;
+        who.className = "who";
+        sc.textContent = g && g.format ? g.format(top.score) : top.score + " " + (g ? g.unit : "");
+        sc.className = "score";
+      } else {
+        who.textContent = "nobody yet";
+      }
+      if (done === GAMES.length) {
+        footEl.textContent = anyone ? "" : "quiet day. go set some scores.";
+      }
+    }).catch(function () { done++; });
+  });
+}
+</script>
+</body>
+</html>

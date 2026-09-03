@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>profile &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #namebox { font: inherit; font-size: 16px; border: 2px solid #000; border-radius: 6px; padding: 5px 10px; width: 200px; text-align: center; }
+  table { border-collapse: collapse; margin: 16px auto; max-width: 460px; width: 100%; }
+  th, td { border: 2px solid #000; padding: 6px 10px; font-size: 15px; text-align: left; }
+  th { background: #ffe9a8; }
+  td.n { text-align: right; }
+  td.best { text-align: right; color: #1faf3a; white-space: nowrap; }
+  .big { font-size: 22px; }
+  .dim { color: #999; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>profile</h1>
+  <p class="sub">every score a name has left on the boards. type a name (or share the link with <code>?name=</code>).</p>
+
+  <p><input id="namebox" placeholder="a name" autocomplete="off" spellcheck="false"> <button id="go">look up</button></p>
+
+  <p class="big" id="head"></p>
+  <table id="tbl" style="display:none">
+    <thead><tr><th>game</th><th style="text-align:right">best</th><th style="text-align:right">tries</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p class="sub" id="msg"></p>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+var nameBox = document.getElementById("namebox");
+var head = document.getElementById("head");
+var tbl = document.getElementById("tbl");
+var rowsEl = document.getElementById("rows");
+var msg = document.getElementById("msg");
+
+var qName = new URLSearchParams(location.search).get("name");
+if (qName) nameBox.value = qName;
+else { try { nameBox.value = localStorage.getItem("sortafun-name") || ""; } catch (e) {} }
+
+function fmt(key, score) {
+  var g = window.SortafunLB && SortafunLB.GAMES[key];
+  if (!g) return String(score);
+  return g.format ? g.format(score) : score + " " + g.unit;
+}
+
+function lookup() {
+  var name = nameBox.value.trim();
+  head.textContent = "";
+  tbl.style.display = "none";
+  rowsEl.innerHTML = "";
+  msg.textContent = "";
+  if (!name) return;
+  if (!window.SortafunLB || !SortafunLB.byName) { msg.textContent = "boards are offline"; return; }
+  try { localStorage.setItem("sortafun-name", name); } catch (e) {}
+  history.replaceState(null, "", "?name=" + encodeURIComponent(name));
+  msg.textContent = "looking...";
+
+  SortafunLB.byName(name, 400).then(function (rows) {
+    if (!rows.length) { msg.textContent = "no scores under \"" + name + "\" yet"; return; }
+    msg.textContent = "";
+    var by = {};
+    rows.forEach(function (r) {
+      var g = SortafunLB.GAMES[r.game];
+      if (!by[r.game]) by[r.game] = { n: 0, best: null, better: g ? g.better : "high" };
+      var e = by[r.game];
+      e.n++;
+      if (e.best == null) e.best = r.score;
+      else if (e.better === "low") e.best = Math.min(e.best, r.score);
+      else e.best = Math.max(e.best, r.score);
+    });
+    var keys = Object.keys(by).sort();
+    head.textContent = name + " · " + keys.length + " game" + (keys.length === 1 ? "" : "s") + " · " + rows.length + " scores";
+    keys.forEach(function (k) {
+      var g = SortafunLB.GAMES[k];
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + (g ? g.label : k) + "</td>" +
+        '<td class="best">' + fmt(k, by[k].best) + "</td>" +
+        '<td class="n">' + by[k].n + "</td>";
+      rowsEl.appendChild(tr);
+    });
+    tbl.style.display = "";
+  }).catch(function (e) {
+    msg.textContent = "lookup failed (open console)";
+    console.warn(e);
+  });
+}
+
+document.getElementById("go").addEventListener("click", lookup);
+nameBox.addEventListener("keydown", function (e) { if (e.key === "Enter") lookup(); });
+if (nameBox.value.trim()) lookup();
+</script>
+</body>
+</html>

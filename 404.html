@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 &middot; SORTAFUN.ORG</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #fff; overflow: hidden;
+    font-family: "Comic Sans MS", "Segoe Print", cursive; color: #000; }
+  #c { display: block; }
+  #msg {
+    position: fixed; left: 0; right: 0; top: 40px; text-align: center;
+  }
+  #msg h1 { font-size: 46px; margin: 0; }
+  #msg p { font-size: 17px; margin: 6px 0 0; }
+  #msg a {
+    display: inline-block; margin-top: 14px; color: #000; text-decoration: none;
+    border: 2px solid #000; border-radius: 10px; padding: 8px 16px;
+  }
+  #msg a:hover { background: #f0f0f0; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="msg">
+  <h1>404</h1>
+  <p>the guy walked off the edge looking for this page. there's nothing here.</p>
+  <a href="/index.html">&larr; back up the pipe</a>
+</div>
+
+<script>
+const cv = document.getElementById("c");
+const ctx = cv.getContext("2d");
+let W, H, t = 0;
+function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+addEventListener("resize", resize);
+resize();
+
+// the guy falls forever past a broken floor edge
+const guy = { x: 0, y: 0, vy: 0 };
+function reset() { guy.x = W * 0.5; guy.y = H * 0.42; guy.vy = 0; }
+reset();
+
+function loop() {
+  t++;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
+
+  const floorY = H * 0.5;
+  // the broken floor: solid on the left, jagged stop in the middle
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, floorY);
+  ctx.lineTo(W * 0.42, floorY);
+  ctx.lineTo(W * 0.44, floorY + 10);
+  ctx.lineTo(W * 0.45, floorY - 4);
+  ctx.lineTo(W * 0.46, floorY + 16);
+  ctx.stroke();
+
+  // falling guy
+  guy.vy += 0.35;
+  guy.y += guy.vy;
+  guy.x += Math.sin(t * 0.05) * 0.6;
+  if (guy.y > H + 80) reset();
+
+  ctx.save();
+  ctx.translate(guy.x, guy.y);
+  ctx.rotate(Math.sin(t * 0.08) * 0.5);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, -22, 8, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -14); ctx.lineTo(0, 6);
+  ctx.moveTo(0, -8); ctx.lineTo(-11, -16);
+  ctx.moveTo(0, -8); ctx.lineTo(12, -15);
+  ctx.moveTo(0, 6); ctx.lineTo(-9, 20);
+  ctx.moveTo(0, 6); ctx.lineTo(10, 19);
+  ctx.stroke();
+  ctx.restore();
+
+  // motion lines
+  ctx.strokeStyle = "#ccc";
+  for (let i = 0; i < 5; i++) {
+    const lx = guy.x - 20 + i * 10;
+    ctx.beginPath();
+    ctx.moveTo(lx, guy.y - 60);
+    ctx.lineTo(lx, guy.y - 30);
+    ctx.stroke();
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

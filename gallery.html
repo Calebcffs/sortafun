@@ -31,6 +31,9 @@ const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const hintEl = document.getElementById("hint");
 
+// passport stamp: you found the hidden gallery
+try { localStorage.setItem("sortafun-stamp-gallery", "1"); } catch (e) {}
+
 const INK = "#000";
 const PAPER = "#fff";
 

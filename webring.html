@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>the webring &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .ring { max-width: 460px; margin: 14px auto; text-align: left; }
+  .site { border: 2px solid #000; border-radius: 8px; padding: 8px 12px; margin: 8px 0; background: #fff; }
+  .site a { color: #000; font-size: 16px; text-decoration: none; font-weight: bold; }
+  .site a:hover { text-decoration: underline; }
+  .site .d { font-size: 13px; color: #555; margin-top: 2px; }
+  .site.dead { opacity: .55; }
+  .site.dead .tag { color: #c0392b; }
+  .tag { font-size: 11px; float: right; color: #1faf3a; }
+  .nav { text-align: center; margin: 16px 0 4px; font-size: 15px; }
+  .nav a { color: #000; }
+  .badge {
+    display: block; width: 88px; margin: 10px auto; border: 2px solid #000;
+    text-align: center; font-size: 11px; padding: 4px; background: #ffe9a8;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>the webring</h1>
+  <p class="sub">a ring of hand made sites that link to each other in a circle. remember these. click "next" and eventually you come back here, which is the whole point.</p>
+
+  <div class="ring" id="ring"></div>
+
+  <div class="nav">
+    <a href="#" id="prev">&laquo; prev</a> &nbsp;|&nbsp;
+    <a href="webring.html" id="rand">random</a> &nbsp;|&nbsp;
+    <a href="#" id="next">next &raquo;</a>
+  </div>
+  <div class="badge">member since<br>a while ago</div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script>
+"use strict";
+
+// most of these do not exist. that is the joke. the ones that do point back
+// into sortafun. "next" and "prev" just cycle this list.
+var SITES = [
+  { name: "sortafun.org", url: "index.html", d: "you are here. a homepage that is also a game.", live: true },
+  { name: "the crossword corner", url: "crossword.html", d: "one themeless, updated never.", live: true },
+  { name: "geocitiesv2.neocities.org", url: "#", d: "under construction since 2004. still is.", live: false },
+  { name: "bluesparrow's lift photos", url: "#", d: "elevator inspection certificates, scanned.", live: false },
+  { name: "the odometer list", url: "#", d: "palindromic mile markers. photo or it didn't happen.", live: false },
+  { name: "mantis dad dot net", url: "forum.html", d: "instar logs and feeder-fly disasters. see the forum.", live: true },
+  { name: "webmaster's basement", url: "index.html", d: "clip through the floor right of the third door.", live: true },
+  { name: "ANGELFIRE MIRROR of a mirror", url: "#", d: "404. it was always going to be 404.", live: false },
+];
+
+var ringEl = document.getElementById("ring");
+SITES.forEach(function (s) {
+  var div = document.createElement("div");
+  div.className = "site" + (s.live ? "" : " dead");
+  div.innerHTML =
+    '<span class="tag">' + (s.live ? "online" : "offline") + '</span>' +
+    '<a href="' + s.url + '">' + s.name + '</a>' +
+    '<div class="d">' + s.d + '</div>';
+  ringEl.appendChild(div);
+});
+
+var i = 0;
+function hop(step) {
+  i = (i + step + SITES.length) % SITES.length;
+  var s = SITES[i];
+  if (s.live && s.url !== "#") location.href = s.url;
+  else alert('"' + s.name + '" is offline. try the next one. (this is the bit.)');
+}
+document.getElementById("next").addEventListener("click", function (e) { e.preventDefault(); hop(1); });
+document.getElementById("prev").addEventListener("click", function (e) { e.preventDefault(); hop(-1); });
+document.getElementById("rand").addEventListener("click", function (e) {
+  e.preventDefault();
+  var live = SITES.filter(function (s) { return s.live && s.url !== "#"; });
+  location.href = live[(Math.random() * live.length) | 0].url;
+});
+</script>
+</body>
+</html>

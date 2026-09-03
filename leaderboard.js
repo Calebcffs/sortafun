@@ -129,6 +129,13 @@
         rankValue: rankValueFor(game, score),
         day: dayStr(),
         ts: fs.serverTimestamp(),
+      }).then(function (ref) {
+        // passport stamps (local only, best-effort)
+        try {
+          localStorage.setItem("sortafun-stamp-scored", "1");
+          localStorage.setItem("sortafun-stamp-game-" + game, "1");
+        } catch (e) {}
+        return ref;
       });
     });
   }
@@ -245,6 +252,88 @@
         return out;
       });
     });
+  }
+
+  // Every score a given name has posted, any game, newest first. `where name ==`
+  // is a single-field filter Firestore indexes automatically; the sort is done
+  // client side so no composite index is needed. Returns [{ game, score, ts }].
+  function byName(name, n) {
+    return init().then(function () {
+      var fs = state.fs;
+      var q = fs.query(
+        fs.collection(state.db, "scores"),
+        fs.where("name", "==", String(name).trim().slice(0, 20)),
+        fs.limit(n || 300)
+      );
+      return fs.getDocs(q).then(function (snap) {
+        var out = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          out.push({ game: d.game, score: d.score, ts: d.ts || null });
+        });
+        out.sort(function (a, b) {
+          var ta = a.ts && a.ts.toMillis ? a.ts.toMillis() : 0;
+          var tb = b.ts && b.ts.toMillis ? b.ts.toMillis() : 0;
+          return tb - ta;
+        });
+        return out;
+      });
+    });
+  }
+
+  /* ---------- guestbook ----------
+   * collection "guestbook", one doc per signing: { name, msg, ts }. Append
+   * only, world readable. Same client-only, forgeable-but-fine trade.
+   */
+  function guestbookSign(name, msg) {
+    return init().then(function () {
+      var fs = state.fs;
+      name = String(name || "").trim().slice(0, 30);
+      msg = String(msg || "").trim().slice(0, 400);
+      if (!name) throw new Error("name required");
+      if (!msg) throw new Error("say something");
+      return fs.addDoc(fs.collection(state.db, "guestbook"), {
+        name: name, msg: msg, ts: fs.serverTimestamp(),
+      });
+    });
+  }
+  function guestbookList(n, cursor) {
+    return init().then(function () {
+      var fs = state.fs;
+      var parts = [fs.collection(state.db, "guestbook"), fs.orderBy("ts", "desc")];
+      if (cursor) parts.push(fs.startAfter(cursor));
+      parts.push(fs.limit(n || 40));
+      return fs.getDocs(fs.query.apply(null, parts)).then(function (snap) {
+        var out = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          out.push({ name: d.name, msg: d.msg, ts: d.ts || null, _cursor: doc });
+        });
+        return out;
+      });
+    });
+  }
+
+  /* ---------- hit counter ----------
+   * one doc stats/hits with an int `count`. bumpHits() adds 1 (rules only allow
+   * +1 and nothing else), getHits() just reads. Best-effort: any failure
+   * resolves to null and the caller shows nothing.
+   */
+  function getHits() {
+    return init().then(function () {
+      var fs = state.fs;
+      return fs.getDoc(fs.doc(state.db, "stats", "hits")).then(function (s) {
+        return s.exists() ? (s.data().count || 0) : 0;
+      });
+    }).catch(function () { return null; });
+  }
+  function bumpHits() {
+    return init().then(function () {
+      var fs = state.fs;
+      var ref = fs.doc(state.db, "stats", "hits");
+      return fs.setDoc(ref, { count: fs.increment(1) }, { merge: true })
+        .then(function () { return getHits(); });
+    }).catch(function () { return null; });
   }
 
   /* ---------- animation gallery ----------
@@ -534,6 +623,11 @@
     lastPlace: lastPlace,
     bestByDay: bestByDay,
     recent: recent,
+    byName: byName,
+    guestbookSign: guestbookSign,
+    guestbookList: guestbookList,
+    getHits: getHits,
+    bumpHits: bumpHits,
     animPublish: animPublish,
     animList: animList,
     animVote: animVote,

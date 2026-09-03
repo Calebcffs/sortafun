@@ -31,6 +31,21 @@
     color: #000;
     pointer-events: none;
   }
+  #hits {
+    position: fixed;
+    right: 8px;
+    top: 6px;
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    color: #000;
+    border: 2px solid #000;
+    background: #fff;
+    padding: 2px 5px;
+    letter-spacing: 2px;
+    pointer-events: none;
+  }
+  #hits.hidden { display: none; }
+  #hits .lbl { letter-spacing: 0; font-size: 9px; display: block; text-align: center; color: #666; }
   #changelog {
     position: fixed;
     left: 12px;
@@ -77,6 +92,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="wordmark">SORTAFUN.ORG</div>
+<div id="hits" class="hidden"><span class="lbl">visitors</span><span id="hitn">0000000</span></div>
 <div id="hint">&larr; &rarr; walk &nbsp;&middot;&nbsp; &uarr; jump &nbsp;&middot;&nbsp; &darr; enter a door &nbsp;&middot;&nbsp; &uarr;/&darr; at the stairs to change floor &nbsp;&middot;&nbsp; or click a sign</div>
 
 <div id="changelog">
@@ -84,10 +100,10 @@
   <h2>changelog</h2>
   <p class="cl-date">2026-09-04</p>
   <ul>
-    <li>the lobby has room now: walk it</li>
-    <li>eleven new games in the play row</li>
+    <li>the lobby has floors now: stairs on the left</li>
+    <li>eleven new games downstairs and in play</li>
+    <li>guestbook, daily board, passport, webring</li>
     <li>typing rebuilt, monkeytype style</li>
-    <li>signs grouped: play, make, the rest</li>
   </ul>
 </div>
 <script src="firebase-config.js"></script>
@@ -123,6 +139,10 @@ const DOORS = [
   { label: "animation gallery", url: "anim-gallery.html", ar: 188 / 64, zone: "make" },
   { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58, zone: "meta" },
   { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64, recent: true, zone: "meta" },
+  { label: "guestbook",      url: "guestbook.html",    ar: 2.2, zone: "meta" },
+  { label: "daily board",    url: "daily.html",        ar: 2.4, zone: "meta" },
+  { label: "passport",       url: "passport.html",     ar: 2.1, zone: "meta" },
+  { label: "the webring",    url: "webring.html",      ar: 2.2, zone: "meta" },
   { label: "how long is a minute", url: "minute.html", ar: 3.6, game: "minute", zone: "down" },
   { label: "call it",        url: "callit.html",   ar: 2.0, game: "callit", zone: "down" },
   { label: "watch the guy",  url: "watch.html",    ar: 2.7, game: "watch", zone: "down" },
@@ -150,6 +170,21 @@ function loadLB() {
     .catch(() => {});
 }
 loadLB();
+
+// odometer hit counter — bump once per browser session, otherwise just read
+(function () {
+  if (!window.SortafunLB || !SortafunLB.bumpHits) return;
+  var fresh = false;
+  try { fresh = !sessionStorage.getItem("sortafun-visited"); } catch (e) { fresh = true; }
+  var job = fresh ? SortafunLB.bumpHits() : SortafunLB.getHits();
+  try { sessionStorage.setItem("sortafun-visited", "1"); } catch (e) {}
+  job.then(function (n) {
+    if (n == null || !isFinite(n)) return;
+    var el = document.getElementById("hits");
+    document.getElementById("hitn").textContent = String(n).padStart(7, "0");
+    el.classList.remove("hidden");
+  });
+})();
 
 function lbTrunc(s, n) {
   s = String(s);
@@ -429,6 +464,12 @@ function update() {
   }
 
   hintEl.style.opacity = "0.9";
+
+  // passport stamps (local only)
+  try {
+    if (guy.floor === 1) localStorage.setItem("sortafun-stamp-basement", "1");
+    if (guy.x > WORLD_W - 90) localStorage.setItem("sortafun-stamp-walked", "1");
+  } catch (e) {}
 
   // the changelog note is on the wall at spawn — it fades as you move away
   if (changelogEl && !changelogEl.hidden) {

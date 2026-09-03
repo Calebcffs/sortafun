@@ -37,6 +37,30 @@ service cloud.firestore {
         && d.ts == request.time;
     }
 
+    // --- guestbook (guestbook.html) : append-only, world readable ---
+    match /guestbook/{id} {
+      allow read: if true;
+      allow update, delete: if false;
+      allow create: if isValidSig(request.resource.data);
+    }
+    function isValidSig(d) {
+      return d.keys().hasOnly(['name', 'msg', 'ts'])
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 30
+        && d.msg is string && d.msg.size() >= 1 && d.msg.size() <= 400
+        && d.ts == request.time;
+    }
+
+    // --- hit counter : one doc stats/hits, count only ever goes up by 1 ---
+    match /stats/{id} {
+      allow read: if true;
+      allow delete: if false;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && request.resource.data.count is int
+        && request.resource.data.count == resource.data.count + 1;
+    }
+
     // --- animation gallery (flipbook.html posts here, anim-gallery.html reads) ---
     //
     // Anyone reads. Anyone posts one animation that passes the shape check.
