@@ -21,11 +21,21 @@
     color: #000;
     transition: opacity .25s ease;
   }
+  #wordmark {
+    position: fixed;
+    left: 9px;
+    top: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: .5px;
+    color: #000;
+    pointer-events: none;
+  }
   #changelog {
     position: fixed;
-    left: 50%;
-    top: 176px;
-    transform: translateX(-50%) rotate(-1.5deg);
+    left: 12px;
+    top: 148px;
+    transform: rotate(-1.5deg);
     width: 340px;
     max-width: calc(100vw - 20px);
     aspect-ratio: 545 / 391;
@@ -55,18 +65,19 @@
     text-decoration: underline;
   }
   @media (max-width: 440px) {
-    #changelog { top: 150px; font-size: 8px; line-height: 1.2; padding: 24px 16px 10px 52px; }
+    #changelog { top: 132px; font-size: 8px; line-height: 1.2; padding: 24px 16px 10px 52px; }
     #changelog h2 { font-size: 11px; }
     #changelog .cl-date { font-size: 7px; margin-bottom: 2px; }
     #changelog ul { padding-left: 11px; }
     #changelog .cl-hide { top: 12px; right: 12px; font-size: 7px; }
   }
-  @media (max-height: 620px) { #changelog { top: 128px; } }
+  @media (max-height: 620px) { #changelog { top: 120px; } }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hint">&larr; &rarr; move &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; press &darr; to enter &nbsp;&middot;&nbsp; click a sign</div>
+<div id="wordmark">SORTAFUN.ORG</div>
+<div id="hint">&larr; &rarr; walk &nbsp;&middot;&nbsp; &uarr; / space jump &nbsp;&middot;&nbsp; press &darr; to enter a door &nbsp;&middot;&nbsp; or click a sign</div>
 
 <div id="changelog">
   <button type="button" class="cl-hide" id="clHide">hide</button>
@@ -87,30 +98,38 @@
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const hintEl = document.getElementById("hint");
+const changelogEl = document.getElementById("changelog");
 
 // --- palette: plain white paper, black line art ---
 const INK = "#000";
 const PAPER = "#fff";
 
 // each menu sign has a black door under it. walk up, press down, next page.
+// zone groups signs by vibe so the row reads left to right: play, then make,
+// then meta. a new game slots into the play cluster. signs with no btn png get
+// drawn by drawWonkySign in the same marker style.
 const DOORS = [
-  { label: "crossword game", url: "crossword.html",    btn: "assets/btn-crossword.png",    ar: 152 / 63 },
-  { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72, game: "puzzle" },
-  { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69, game: "circuit" },
-  { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65, game: "typing" },
-  { label: "animation studio", url: "flipbook.html",                                       ar: 188 / 64 },
-  { label: "animation gallery", url: "anim-gallery.html",                                   ar: 188 / 64 },
-  { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58 },
-  { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64, recent: true },
+  { label: "crossword game", url: "crossword.html",    btn: "assets/btn-crossword.png",    ar: 152 / 63, zone: "play" },
+  { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72, game: "puzzle", zone: "play" },
+  { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69, game: "circuit", zone: "play" },
+  { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65, game: "typing", zone: "play" },
+  { label: "animation studio", url: "flipbook.html",   ar: 188 / 64, zone: "make" },
+  { label: "animation gallery", url: "anim-gallery.html", ar: 188 / 64, zone: "make" },
+  { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58, zone: "meta" },
+  { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64, recent: true, zone: "meta" },
 ];
+
+const ZONE_LABELS = { play: "play", make: "make stuff", meta: "the rest" };
 DOORS.forEach((p) => { if (p.btn) { p.img = new Image(); p.img.src = p.btn; } });
 
 // tiny leaderboard readouts under the signs — Firestore, best-effort.
 // LB[game] = today's top 3 [{name,score}]; LB.recent = newest score anywhere.
-const LB = { puzzle: null, circuit: null, typing: null, recent: null };
+const LB_GAMES = [...new Set(DOORS.filter((d) => d.game).map((d) => d.game))];
+const LB = { recent: null };
+LB_GAMES.forEach((g) => { LB[g] = null; });
 function loadLB() {
   if (!window.SortafunLB) return;
-  ["puzzle", "circuit", "typing"].forEach((g) => {
+  LB_GAMES.forEach((g) => {
     SortafunLB.top(g, "day")
       .then((rows) => { LB[g] = rows.slice(0, 3); })
       .catch(() => {});
@@ -139,6 +158,7 @@ let W = 0, H = 0;
 let groundY = 0;
 let wallTop = 80;
 let doorLayout = [];
+let zoneMarks = [];       // { label, x } faint banner above each zone's first sign
 let WORLD_W = 0;
 let menuMidX = 0;
 let plantX = 0;
@@ -185,26 +205,27 @@ function resize() {
   groundY = Math.min(H - 90, H * 0.62 + 60);
   wallTop = 80;
 
-  // --- menu signs, hand-drawn, laid out across the first screenful ---
-  const boxTop = 104;
-  const n = DOORS.length;
-  const gapK = 0.26;                       // gap as a fraction of sign height
-  const arSum = DOORS.reduce((a, p) => a + p.ar, 0);
-  const spanK = arSum + gapK * (n - 1);    // total row width = boxH * spanK
-  let boxH = Math.min(84, H * 0.13);
-  const maxW = W - 36;
-  if (boxH * spanK > maxW) boxH = maxW / spanK;
-  const gap = boxH * gapK;
-  const widths = DOORS.map((p) => boxH * p.ar);
-  const total = boxH * spanK;
-  let x = (W - total) / 2;
+  // --- menu signs: fixed readable size, laid out in one long row you walk ---
+  // the row is as wide as it needs to be; the camera pans to follow the guy.
+  const boxTop = 118;
+  const boxH = clamp(Math.round(H * 0.135), 56, 76);
+  const gap = boxH * 0.30;
+  const zoneGap = boxH * 1.15;             // extra breathing room between zones
+  const leftPad = Math.max(W < 520 ? 236 : 368, Math.round(W * 0.08));
+  const rightPad = Math.max(140, Math.round(W * 0.28));
 
-  const doorH = Math.min(80, boxH * 1.05);
+  const doorH = Math.min(78, boxH * 1.06);
   const doorW = doorH * 0.46;
 
-  doorLayout = DOORS.map((p, i) => {
+  let x = leftPad;
+  let prevZone = null;
+  zoneMarks = [];
+  doorLayout = DOORS.map((p) => {
+    if (prevZone !== null && p.zone !== prevZone) x += zoneGap;
+    if (p.zone !== prevZone) zoneMarks.push({ label: ZONE_LABELS[p.zone] || p.zone, x: x });
+    prevZone = p.zone;
     const boxX = x;
-    const boxW = widths[i];
+    const boxW = boxH * p.ar;
     const cx = boxX + boxW / 2;
     x += boxW + gap;
     return {
@@ -215,11 +236,14 @@ function resize() {
       cx,
     };
   });
+
+  const rowEnd = x - gap + rightPad;
+  WORLD_W = Math.max(W, rowEnd);
   menuMidX = W / 2;
 
-  // the lobby is one screenful wide — you can't walk out of it
-  WORLD_W = W;
-  plantX = W - 52;
+  // the corner plant (hidden door to the art gallery) lives at the far right,
+  // past every sign — you have to walk the whole lobby to find it
+  plantX = WORLD_W - 46;
 
   guy.x = clamp(guy.x, 20, WORLD_W - 20);
 }
@@ -320,6 +344,14 @@ function update() {
   }
 
   hintEl.style.opacity = guy.entering ? "0" : "0.9";
+
+  // the changelog note is nailed to the wall at spawn — it slides away as you
+  // walk into the lobby so it never sits over the signs
+  if (changelogEl && !changelogEl.hidden) {
+    const fade = clamp(1 - camX / 220, 0, 1);
+    changelogEl.style.opacity = String(fade);
+    changelogEl.style.pointerEvents = fade > 0.4 ? "auto" : "none";
+  }
 }
 
 let t = 0;
@@ -378,7 +410,15 @@ function draw() {
   ctx.lineWidth = 2;
   ctx.textAlign = "center";
 
-  drawTitle(menuMidX, 52);
+  // faint zone banners above the first sign of each cluster
+  ctx.save();
+  ctx.fillStyle = "#bdbdbd";
+  ctx.textAlign = "left";
+  ctx.font = "13px 'Comic Sans MS', 'Segoe Print', cursive";
+  for (const z of zoneMarks) {
+    ctx.fillText(z.label + "  " + "-".repeat(6), z.x, doorLayout[0].boxTop - 12);
+  }
+  ctx.restore();
 
   // menu signs — hand-drawn buttons, cut to their wonky outline
   for (let i = 0; i < doorLayout.length; i++) {
@@ -418,7 +458,61 @@ function draw() {
   ctx.moveTo(0, groundY);
   ctx.lineTo(W, groundY);
   ctx.stroke();
+
+  drawEdgeHints();
+
+  // welcome WordArt — screen space, greets you at spawn and fades as you walk in
+  const tFade = clamp(1 - camX / 260, 0, 1);
+  if (tFade > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = tFade;
+    drawTitle(W / 2, 54);
+    ctx.restore();
+  }
 }
+
+// "there is more this way" — a nudge so people know to walk. also a little
+// "room N / M" tag over the guy naming the sign he's closest to.
+function drawEdgeHints() {
+  if (guy.entering) return;
+  const maxCam = Math.max(0, WORLD_W - W);
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.textBaseline = "middle";
+
+  const edgeY = groundY - 116;
+  if (camX < maxCam - 4) {
+    const a = 0.4 + 0.35 * Math.sin(t * 0.12);
+    ctx.globalAlpha = a;
+    ctx.textAlign = "right";
+    ctx.font = "bold 28px 'Comic Sans MS', 'Arial Black', sans-serif";
+    ctx.fillText("»", W - 14, edgeY);
+    ctx.globalAlpha = 0.8;
+    ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
+    ctx.fillText("more this way", W - 14, edgeY + 20);
+    ctx.globalAlpha = 1;
+  }
+  if (camX > 4) {
+    ctx.globalAlpha = 0.5;
+    ctx.textAlign = "left";
+    ctx.font = "bold 28px 'Comic Sans MS', 'Arial Black', sans-serif";
+    ctx.fillText("«", 14, edgeY);
+    ctx.globalAlpha = 1;
+  }
+
+  // room counter, floating over the guy's head
+  const { p } = nearestDoor();
+  if (p) {
+    const idx = doorLayout.indexOf(p) + 1;
+    ctx.globalAlpha = 0.65;
+    ctx.textAlign = "center";
+    ctx.font = "11px 'Comic Sans MS', 'Segoe Print', cursive";
+    ctx.fillText("room " + idx + " / " + doorLayout.length, guy.x - camX, groundY - 82);
+  }
+  ctx.restore();
+  ctx.textBaseline = "alphabetic";
+}
+
 
 function drawDoor(p, lit, open) {
   open = open || 0;
@@ -514,19 +608,22 @@ function drawSignboards() {
 // for the signs that have no PNG (animation studio / gallery). seed keeps the
 // wobble stable frame to frame.
 function drawWonkySign(p, seed) {
-  const x = p.boxX, y = p.boxTop, w = p.boxW, h = p.boxH;
-  const a = Math.min(7, h * 0.1);            // wobble amplitude
+  // inset a touch so the drawn outline reads at the same weight as the tighter
+  // hand-scanned PNG signs rather than filling the whole allocation
+  const padX = p.boxW * 0.06, padY = p.boxH * 0.05;
+  const x = p.boxX + padX, y = p.boxTop + padY;
+  const w = p.boxW - padX * 2, h = p.boxH - padY * 2;
+  const a = Math.min(6, h * 0.09);           // wobble amplitude
   function j(n) {
     const s = Math.sin(seed * 53.17 + n * 74.31) * 43758.5453;
     return ((s - Math.floor(s)) - 0.5) * 2 * a;
   }
-  // a corner point and the bowed midpoint of the edge leading to the next corner
   const L = x + j(1), R = x + w + j(2), T = y + j(3), B = y + h + j(4);
 
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.fillStyle = PAPER;
-  ctx.lineWidth = 2.6;
+  ctx.lineWidth = 2.1;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
 
@@ -543,15 +640,24 @@ function drawWonkySign(p, seed) {
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const fs = Math.min(17, h * 0.26);
-  ctx.font = fs + "px 'Comic Sans MS', 'Segoe Print', cursive";
   const words = p.label.split(" ");
-  const mid = y + h / 2;
+  // balance into at most two lines by word count
+  let l1 = p.label, l2 = "";
   if (words.length > 1) {
-    ctx.fillText(words[0], p.cx, mid - fs * 0.6);
-    ctx.fillText(words.slice(1).join(" "), p.cx, mid + fs * 0.6);
+    let cut = Math.ceil(words.length / 2);
+    l1 = words.slice(0, cut).join(" ");
+    l2 = words.slice(cut).join(" ");
+  }
+  const longest = Math.max(l1.length, l2.length);
+  let fs = Math.min(16, h * 0.3, (w * 1.7) / Math.max(1, longest));
+  fs = Math.max(9, fs);
+  ctx.font = fs + "px 'Comic Sans MS', 'Segoe Print', cursive";
+  const mid = p.boxTop + p.boxH / 2;
+  if (l2) {
+    ctx.fillText(l1, p.cx, mid - fs * 0.62);
+    ctx.fillText(l2, p.cx, mid + fs * 0.62);
   } else {
-    ctx.fillText(p.label, p.cx, mid);
+    ctx.fillText(l1, p.cx, mid);
   }
   ctx.restore();
   ctx.textBaseline = "alphabetic";
