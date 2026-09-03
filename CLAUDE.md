@@ -281,13 +281,15 @@ Leaderboards + the animation gallery use one client-only Firestore backend
 be pasted into the Firebase console by hand whenever they change here, see
 `SETUP.md`. The forum does not touch Firestore.
 
-The `flipbook` / `animation gallery` homepage signs have no hand-drawn button
-art, so `index.html` falls back to a plain lettered sign for them.
+The `animation studio` / `animation gallery` homepage signs have no hand-drawn
+button art, so `index.html` draws them with `drawWonkySign` (a seeded wobbly
+rounded box in the same marker style as the button PNGs).
 
 `index.html` also has a sticky-note changelog (`#changelog`, `assets/sticky-note.png`)
-fixed in the middle of the screen. It is dismissible (`hide`), remembered per
-browser in `localStorage` (`sortafun-cl-hidden`). Add new entries at the top,
-newest date first, plain ASCII.
+fixed near the top-middle, above the door row (short, so it clears the doors;
+`@media (max-height)` nudges it up on short screens). It is dismissible
+(`hide`), remembered per browser in `localStorage` (`sortafun-cl-hidden`). Keep
+it short. Add new entries at the top, newest date first, plain ASCII.
 
 Leaderboard rows (`leaderboard.js` `mountPanel`) and gallery posts / comments
 show a Singapore-time timestamp via `SortafunLB.fmtWhen`. On any "all time"

@@ -24,44 +24,44 @@
   #changelog {
     position: fixed;
     left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%) rotate(-1.5deg);
-    width: 520px;
+    top: 176px;
+    transform: translateX(-50%) rotate(-1.5deg);
+    width: 340px;
     max-width: calc(100vw - 20px);
     aspect-ratio: 545 / 391;
     background: url("assets/sticky-note.png") no-repeat center / 100% 100%;
     box-sizing: border-box;
-    padding: 54px 92px 20px 122px;
+    padding: 32px 22px 14px 70px;
     overflow: hidden;
-    font-size: 11.5px;
-    line-height: 1.32;
+    font-size: 9.5px;
+    line-height: 1.25;
     color: #1c1c1c;
     z-index: 5;
   }
-  #changelog h2 { margin: 0 0 1px; font-size: 17px; }
-  #changelog .cl-date { margin: 0 0 4px; font-size: 11px; color: #555; }
-  #changelog ul { margin: 0; padding-left: 16px; }
-  #changelog li { margin: 3px 0; overflow-wrap: break-word; }
+  #changelog h2 { margin: 0 0 1px; font-size: 13px; }
+  #changelog .cl-date { margin: 0 0 3px; font-size: 9px; color: #555; }
+  #changelog ul { margin: 0; padding-left: 13px; }
+  #changelog li { margin: 2px 0; overflow-wrap: break-word; }
   #changelog .cl-hide {
     position: absolute;
-    top: 30px;
-    right: 34px;
+    top: 20px;
+    right: 22px;
     font: inherit;
-    font-size: 11px;
+    font-size: 9px;
     background: transparent;
     border: 0;
     color: #555;
     cursor: pointer;
     text-decoration: underline;
   }
-  @media (max-width: 560px) {
-    #changelog { font-size: 9px; line-height: 1.22; padding: 24px 20px 10px 74px; }
-    #changelog h2 { font-size: 12px; }
-    #changelog .cl-date { font-size: 8px; margin-bottom: 2px; }
-    #changelog ul { padding-left: 12px; }
-    #changelog li { margin: 2px 0; }
-    #changelog .cl-hide { top: 13px; right: 14px; font-size: 8px; }
+  @media (max-width: 440px) {
+    #changelog { top: 150px; font-size: 8px; line-height: 1.2; padding: 24px 16px 10px 52px; }
+    #changelog h2 { font-size: 11px; }
+    #changelog .cl-date { font-size: 7px; margin-bottom: 2px; }
+    #changelog ul { padding-left: 11px; }
+    #changelog .cl-hide { top: 12px; right: 12px; font-size: 7px; }
   }
+  @media (max-height: 620px) { #changelog { top: 128px; } }
 </style>
 </head>
 <body>
@@ -73,12 +73,12 @@
   <h2>changelog</h2>
   <p class="cl-date">2026-09-03</p>
   <ul>
-    <li>typing: pick top 200 or top 1000 words, each has its own board</li>
-    <li>typing: the word you type stays put, the next slides in</li>
-    <li>flipbook: undo (ctrl+z) and an eraser size slider</li>
-    <li>gallery: comment counts, and a posted time per flipbook</li>
-    <li>boards + gallery: every row shows date and time</li>
-    <li>boards: dead last all time glows gold (first from the bottom)</li>
+    <li>typing: top 200 or top 1000 word lists</li>
+    <li>typing: the word you type holds still</li>
+    <li>flipbook: undo (ctrl+z) + eraser slider</li>
+    <li>gallery: comment counts + posted times</li>
+    <li>boards: date + time on every row</li>
+    <li>boards: dead last all time glows gold</li>
   </ul>
 </div>
 <script src="firebase-config.js"></script>
@@ -386,34 +386,9 @@ function draw() {
     if (p.img && p.img.complete && p.img.naturalWidth) {
       ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
     } else {
-      // no hand-drawn button art — draw a wonky labelled sign instead
-      ctx.save();
-      ctx.strokeStyle = INK;
-      ctx.fillStyle = PAPER;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(p.boxX + 3, p.boxTop + 1);
-      ctx.lineTo(p.boxX + p.boxW - 1, p.boxTop + 4);
-      ctx.lineTo(p.boxX + p.boxW - 3, p.boxTop + p.boxH - 1);
-      ctx.lineTo(p.boxX + 1, p.boxTop + p.boxH - 3);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = INK;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const fs = Math.min(17, p.boxH * 0.26);
-      ctx.font = fs + "px 'Comic Sans MS', 'Segoe Print', cursive";
-      const words = p.label.split(" ");
-      const mid = p.boxTop + p.boxH / 2;
-      if (words.length > 1) {
-        ctx.fillText(words[0], p.cx, mid - fs * 0.6);
-        ctx.fillText(words.slice(1).join(" "), p.cx, mid + fs * 0.6);
-      } else {
-        ctx.fillText(p.label, p.cx, mid);
-      }
-      ctx.restore();
-      ctx.textBaseline = "alphabetic";
+      // no hand-drawn button art — draw one in the same wobbly-marker style as
+      // the tile slider / crossword signs so it doesn't read as a plain box
+      drawWonkySign(p, i);
     }
   }
 
@@ -533,6 +508,53 @@ function drawSignboards() {
     }
   }
   ctx.restore();
+}
+
+// a labelled sign drawn in the same wobbly hand-marker style as the button art,
+// for the signs that have no PNG (animation studio / gallery). seed keeps the
+// wobble stable frame to frame.
+function drawWonkySign(p, seed) {
+  const x = p.boxX, y = p.boxTop, w = p.boxW, h = p.boxH;
+  const a = Math.min(7, h * 0.1);            // wobble amplitude
+  function j(n) {
+    const s = Math.sin(seed * 53.17 + n * 74.31) * 43758.5453;
+    return ((s - Math.floor(s)) - 0.5) * 2 * a;
+  }
+  // a corner point and the bowed midpoint of the edge leading to the next corner
+  const L = x + j(1), R = x + w + j(2), T = y + j(3), B = y + h + j(4);
+
+  ctx.save();
+  ctx.strokeStyle = INK;
+  ctx.fillStyle = PAPER;
+  ctx.lineWidth = 2.6;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(L + j(10), T + j(11));                                   // top-left
+  ctx.quadraticCurveTo((L + R) / 2 + j(12), T + j(13) - a * 0.4, R + j(14), T + j(15)); // top edge
+  ctx.quadraticCurveTo(R + j(16) + a * 0.4, (T + B) / 2 + j(17), R + j(18), B + j(19)); // right edge
+  ctx.quadraticCurveTo((L + R) / 2 + j(20), B + j(21) + a * 0.4, L + j(22), B + j(23)); // bottom edge
+  ctx.quadraticCurveTo(L + j(24) - a * 0.4, (T + B) / 2 + j(25), L + j(10), T + j(11)); // left edge
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = INK;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const fs = Math.min(17, h * 0.26);
+  ctx.font = fs + "px 'Comic Sans MS', 'Segoe Print', cursive";
+  const words = p.label.split(" ");
+  const mid = y + h / 2;
+  if (words.length > 1) {
+    ctx.fillText(words[0], p.cx, mid - fs * 0.6);
+    ctx.fillText(words.slice(1).join(" "), p.cx, mid + fs * 0.6);
+  } else {
+    ctx.fillText(p.label, p.cx, mid);
+  }
+  ctx.restore();
+  ctx.textBaseline = "alphabetic";
 }
 
 function drawPlant(x, baseY) {
