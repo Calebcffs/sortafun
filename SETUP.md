@@ -74,16 +74,35 @@ Collection `scores`, one document per submitted score:
 
 | field       | type   | notes                                        |
 |-------------|--------|----------------------------------------------|
-| `game`      | string | `typing` \| `typing1000` \| `driving` \| `puzzle` \| `circuit` |
+| `game`      | string | one of the keys below                        |
 | `name`      | string | 1–20 chars, player-entered                   |
-| `score`     | int    | the value shown to players (circuit: lap time in ms) |
-| `rankValue` | int    | higher = better always; `puzzle`/`circuit` store `-score` |
+| `score`     | int    | the value shown to players (times stored in ms) |
+| `rankValue` | int    | higher = better always; "low" games store `-score` |
 | `day`       | string | `YYYY-MM-DD`, Singapore time (UTC+8, no DST)  |
 | `ts`        | timestamp | server time                               |
 
+Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
+`reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram`, `mines`, `fermi`,
+`minute`, `callit`, `watch`. The enum lives in `firestore.rules`
+(`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
+sync, and **re-paste `firestore.rules` into the console whenever a game is
+added** or that game's scores are rejected. "low" games (rank lowest score
+best, store `rankValue == -score`): `puzzle`, `circuit`, `reaction`, `maze`,
+`ladder`, `mines`, `minute`. No new composite indexes are needed for new games
+— the score indexes key on `game` as an equality filter, so one index serves
+every game.
+
 `driving` is the old top-down dodge game's key, retired when it was replaced
-by the circuit race — its historical scores are just inert now, nothing reads
-or writes them any more.
+by the circuit race — its historical scores are just inert now.
+
+### Guestbook and hit counter
+
+`guestbook.html` writes collection `guestbook`: `{ name (1–30), msg (1–400),
+ts }`, append-only, world-readable. The lobby's odometer hit counter uses a
+single doc `stats/hits` with an int `count` that rules only ever let go up by
+1. Both are covered by `firestore.rules` (the `guestbook` and `stats` match
+blocks) — reads work without setup, but signing the guestbook and bumping the
+counter fail until the rules are pasted in. Neither needs an index.
 
 `typing` is the top-200-word list, `typing1000` the harder top-1000 list. They
 are separate boards on purpose. `typing1000` was added later, so if top-1000

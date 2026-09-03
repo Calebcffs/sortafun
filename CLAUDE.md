@@ -295,20 +295,61 @@ the only way to it is clicking the potted plant in the lobby's right corner.
 Nothing on the homepage hints at it. The Vietnam photos and the "he runs
 because you're watching" line live here now.
 
-Leaderboards + the animation gallery use one client-only Firestore backend
-(`firebase-config.js`, `leaderboard.js`). `firestore.rules` and the indexes must
-be pasted into the Firebase console by hand whenever they change here, see
-`SETUP.md`. The forum does not touch Firestore.
+### The other games (all one static file each, on `game.css` + the shared shell)
 
-The `animation studio` / `animation gallery` homepage signs have no hand-drawn
-button art, so `index.html` draws them with `drawWonkySign` (a seeded wobbly
-rounded box in the same marker style as the button PNGs).
+`reaction.html` `maze.html` `aim.html` `stopbar.html` `ladder.html`
+`anagram.html` `mines.html` `fermi.html` (ground floor), `minute.html`
+`callit.html` `watch.html` (basement). Each mounts `SortafunLB.mountPanel(el,
+key, {score})` on finish. `ladder.html` embeds a ~900-word four-letter list and
+generates the daily puzzle by seeded random-walk + BFS (so it is always
+solvable); `anagram.html` reuses `words.js`; `mines.html` and `maze.html` and
+`reaction.html` submit ms. `watch.html` is the anti-game: it accrues seconds
+while `document.hidden`, persists to `localStorage` (`sortafun-watch-rested`),
+and you press "log it" to submit. Game keys + which are "low" (rank lowest
+best): see `SETUP.md` — the list must match `firestore.rules` `isValidScore` /
+`isLowGame` and `leaderboard.js` `GAMES`. **Adding a game means re-pasting
+`firestore.rules`**; no new indexes needed.
 
-`index.html` also has a sticky-note changelog (`#changelog`, `assets/sticky-note.png`)
-fixed near the top-middle, above the door row (short, so it clears the doors;
-`@media (max-height)` nudges it up on short screens). It is dismissible
-(`hide`), remembered per browser in `localStorage` (`sortafun-cl-hidden`). Keep
-it short. Add new entries at the top, newest date first, plain ASCII.
+### The meta pages
+
+`guestbook.html` (Firestore `guestbook`, append-only, own 2003 navy/Times
+style), `daily.html` (today's #1 per game via `SortafunLB.top(g,"day")`),
+`profile.html?name=` (one name's history via new `SortafunLB.byName`),
+`passport.html` (stamps from `sortafun-stamp-*` localStorage flags; can sync
+per-game stamps from the boards by name), `webring.html` (a loop-back bit),
+`404.html` (GitHub Pages custom 404, the guy falling off a floor).
+
+Stamp flags are set by: `leaderboard.js submit()` (`-scored`, `-game-<key>`),
+`index.html` update() (`-walked`, `-basement`), `gallery.html` (`-gallery`),
+`guestbook.html` (`-guestbook`), `passport.html` itself (`-night`).
+
+The hit counter (`#hits` odometer, top-right of the lobby) reads/increments
+`stats/hits` via `SortafunLB.bumpHits`/`getHits`, once per browser session
+(`sessionStorage sortafun-visited`).
+
+### The lobby (`index.html`) is now a three-storey building
+
+`DOORS[]` entries carry `zone` (`play`/`make`/`meta`/`down`); `ZONE_FLOOR` maps
+zone -> floor index (`0` ground, `-1` up, `1` basement). `resize()` lays each
+floor's signs out as its own horizontal row (`floorY[f]`, `boxTop` above the
+line), computes `WORLD_W`/`WORLD_H`, and places one `ladders[]` stairwell near
+the entrance. The camera follows the guy on both axes (`camX`, `camY`);
+`guy.floor` + `guyFeetY()` + `climb()` handle vertical movement — up/down at the
+stairwell climbs instead of jumping. `nearestDoor` / `hitBox` / edge hints are
+all filtered to `guy.floor`. `drawStairwell` also draws the "YOU ARE HERE"
+directory board. `drawWonkySign` draws any sign with no `btn` PNG (now most of
+them) in the wobbly-marker style.
+
+Leaderboards + the animation gallery + guestbook + hit counter use one
+client-only Firestore backend (`firebase-config.js`, `leaderboard.js`).
+`firestore.rules` and any indexes must be pasted into the console by hand
+whenever they change, see `SETUP.md`. The forum does not touch Firestore.
+
+`index.html` has a sticky-note changelog (`#changelog`, `assets/sticky-note.png`)
+fixed at the left, "on the wall" at spawn; it fades out (opacity driven from
+`camX` / `guy.floor` each frame) as you move away. Dismissible (`hide`),
+remembered in `localStorage` (`sortafun-cl-hidden`). Keep it to ~4 short lines,
+newest date first, plain ASCII.
 
 Leaderboard rows (`leaderboard.js` `mountPanel`) and gallery posts / comments
 show a Singapore-time timestamp via `SortafunLB.fmtWhen`. On any "all time"
