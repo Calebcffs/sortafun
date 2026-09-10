@@ -7,13 +7,13 @@
 <meta name="description" content="Sortafun. A daily paper of small games and smaller stakes. Crosswords, typing, a tile slider, a forum, and a basement.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #17150f;
+    --ink: #1b1811;
     --paper: #f4efe1;
-    --paper-hi: #ece3cd;
-    --rule: #17150f;
+    --paper-hi: #eae0c8;
+    --rule: #1b1811;
     --faint: #6c6455;
     --serif: Georgia, "Times New Roman", "Nimbus Roman", serif;
     --head: "Playfair Display", Georgia, "Times New Roman", serif;
@@ -21,30 +21,28 @@
   }
 
   * { box-sizing: border-box; }
-
   html { -webkit-text-size-adjust: 100%; }
 
   body {
     margin: 0;
-    background: #d9d2bf;
+    background: #d7d0bc;
     color: var(--ink);
     font-family: var(--serif);
     line-height: 1.42;
     overflow-x: hidden;
-    /* faint newsprint tint, drawn with gradients so there is no image dependency */
     background-image:
-      radial-gradient(circle at 20% 15%, rgba(0,0,0,.025), transparent 40%),
-      radial-gradient(circle at 80% 60%, rgba(0,0,0,.03), transparent 45%);
+      radial-gradient(circle at 18% 12%, rgba(0,0,0,.03), transparent 42%),
+      radial-gradient(circle at 84% 64%, rgba(0,0,0,.035), transparent 46%);
   }
 
   a { color: inherit; }
 
   .paper {
-    max-width: 1040px;
+    max-width: 1060px;
     margin: 0 auto;
     background: var(--paper);
-    padding: 22px clamp(14px, 4vw, 40px) 46px;
-    box-shadow: 0 0 0 1px rgba(0,0,0,.15), 0 14px 40px rgba(0,0,0,.28);
+    padding: 24px clamp(14px, 4vw, 44px) 48px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.16), 0 16px 44px rgba(0,0,0,.3);
   }
 
   /* ---------- masthead ---------- */
@@ -69,8 +67,8 @@
     font-weight: 400;
     text-align: center;
     line-height: .92;
-    font-size: clamp(2.1rem, 11vw, 6rem);
-    margin: 12px 0 4px;
+    font-size: clamp(2.1rem, 11vw, 6.1rem);
+    margin: 14px 0 4px;
     letter-spacing: .01em;
     overflow-wrap: break-word;
   }
@@ -79,9 +77,16 @@
     text-align: center;
     font-family: var(--head);
     font-style: italic;
-    font-size: clamp(.95rem, 3.4vw, 1.25rem);
-    color: var(--ink);
-    margin: 0 0 12px;
+    font-size: clamp(.95rem, 3.4vw, 1.3rem);
+    margin: 0 0 6px;
+  }
+  .founded {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 0 0 10px;
   }
 
   .rule-double {
@@ -103,7 +108,7 @@
     color: var(--faint);
     border-bottom: 3px double var(--rule);
     padding-bottom: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
   .dateline-bottom .mid { flex: 1 1 auto; text-align: center; min-width: 160px; }
   #circulation b { font-variant-numeric: tabular-nums; letter-spacing: .18em; color: var(--ink); }
@@ -113,8 +118,8 @@
   #stoppress {
     border: 2px solid var(--rule);
     background: var(--paper-hi);
-    padding: 7px 12px;
-    margin-bottom: 16px;
+    padding: 8px 12px;
+    margin-bottom: 18px;
     font-size: 13.5px;
     text-align: center;
   }
@@ -128,11 +133,12 @@
 
   /* ---------- department headers ---------- */
 
+  section { margin-top: 30px; }
+
   .dept {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 26px 0 0;
   }
   .dept::before, .dept::after {
     content: "";
@@ -141,24 +147,48 @@
     border-bottom: 1px solid var(--rule);
     height: 3px;
   }
+  .dept .emblem { flex: none; line-height: 0; }
+  .dept .emblem svg { width: 30px; height: 30px; display: block; color: var(--ink); }
   .dept h2 {
     font-family: var(--head);
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: .16em;
-    font-size: clamp(.95rem, 3.2vw, 1.15rem);
+    font-size: clamp(1rem, 3.2vw, 1.2rem);
     margin: 0;
     text-align: center;
   }
-  .dept-note {
+
+  .standfirst {
     text-align: center;
+    font-family: var(--head);
     font-style: italic;
-    color: var(--faint);
-    font-size: 12.5px;
-    margin: 5px 0 12px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #3b3527;
+    max-width: 640px;
+    margin: 9px auto 15px;
+  }
+  .standfirst .part {
+    font-style: normal;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    font-size: 10.5px;
+    margin-right: 3px;
   }
 
-  /* ---------- story grid ---------- */
+  /* ---------- engraving block (shared icon frame) ---------- */
+
+  .icoframe {
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    display: grid;
+    place-items: center;
+  }
+  .icoframe svg { display: block; color: var(--ink); }
+
+  /* ---------- story grid (games + late edition) ---------- */
 
   .stories {
     display: grid;
@@ -168,16 +198,26 @@
   }
 
   .story {
+    position: relative;
     display: block;
     background: var(--paper);
     text-decoration: none;
-    padding: 13px 15px 15px;
+    padding: 14px 16px 16px 62px;
     border-right: 1px solid var(--rule);
     border-bottom: 1px solid var(--rule);
     transition: background .12s ease;
   }
   .story:hover, .story:focus-visible { background: var(--paper-hi); outline: none; }
   .story:focus-visible { box-shadow: inset 0 0 0 2px var(--rule); }
+
+  .story > .icoframe {
+    position: absolute;
+    left: 15px;
+    top: 15px;
+    width: 36px;
+    height: 36px;
+  }
+  .story > .icoframe svg { width: 24px; height: 24px; }
 
   .story .num {
     font-size: 10.5px;
@@ -190,8 +230,9 @@
     font-weight: 700;
     text-transform: capitalize;
     font-size: 1.16rem;
-    line-height: 1.12;
+    line-height: 1.14;
     margin: 3px 0 5px;
+    overflow-wrap: break-word;
   }
   .story h3 .tag {
     display: inline-block;
@@ -213,51 +254,120 @@
     color: #2b2820;
     overflow-wrap: break-word;
   }
-  .story h3 { overflow-wrap: break-word; }
   .story:hover h3 { text-decoration: underline; }
 
-  /* lead story spans the row */
-  .story.lead { grid-column: 1 / -1; padding: 18px 18px 20px; }
-  .story.lead h3 { font-size: clamp(1.5rem, 6vw, 2.3rem); margin-bottom: 8px; }
-  .story.lead p {
-    font-size: 14.5px;
-    color: #201e18;
-  }
+  .story.lead { grid-column: 1 / -1; padding: 22px 22px 24px 96px; }
+  .story.lead > .icoframe { left: 22px; top: 22px; width: 54px; height: 54px; }
+  .story.lead > .icoframe svg { width: 36px; height: 36px; }
+  .story.lead h3 { font-size: clamp(1.6rem, 6vw, 2.4rem); margin-bottom: 4px; }
+  .story.lead p { font-size: 14.5px; color: #201e18; text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
   .story.lead p::first-letter {
     float: left;
     font-family: var(--head);
     font-weight: 900;
     text-transform: uppercase;
-    font-size: 3.1em;
-    line-height: .72;
-    padding: 4px 8px 0 0;
+    font-size: 2.7em;
+    line-height: .78;
+    padding: 6px 8px 0 0;
   }
+
+  /* ---------- the workshop: two feature cards ---------- */
+
+  .features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--rule);
+  }
+  .features .feat {
+    text-align: center;
+    text-decoration: none;
+    padding: 22px 24px 24px;
+    border-right: 1px solid var(--rule);
+    transition: background .12s ease;
+  }
+  .features .feat:last-child { border-right: 0; }
+  .features .feat:hover, .features .feat:focus-visible { background: var(--paper-hi); outline: none; }
+  .features .icoframe {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 10px;
+  }
+  .features .icoframe svg { width: 36px; height: 36px; }
+  .features .feat h3 {
+    font-family: var(--head);
+    font-weight: 700;
+    text-transform: capitalize;
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  .features .feat h3::after {
+    content: "";
+    display: block;
+    width: 34px;
+    height: 2px;
+    background: var(--rule);
+    margin: 7px auto 0;
+  }
+  .features .feat:hover h3 { text-decoration: underline; }
+  .features .feat p { margin: 8px auto 0; max-width: 32ch; font-size: 13.5px; color: #2b2820; }
+
+  /* ---------- the notice board: classified listings ---------- */
+
+  .classifieds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--rule);
+  }
+  .classifieds .ad {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    padding: 12px 15px;
+    min-height: 60px;
+    text-decoration: none;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    transition: background .12s ease;
+  }
+  .classifieds .ad:hover, .classifieds .ad:focus-visible { background: var(--paper-hi); outline: none; }
+  .classifieds .ad svg { width: 22px; height: 22px; flex: none; margin-top: 2px; color: var(--ink); }
+  .classifieds .ad .txt { font-size: 12.5px; line-height: 1.42; color: #2b2820; }
+  .classifieds .ad .txt b {
+    font-family: var(--head);
+    font-weight: 700;
+    text-transform: capitalize;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .classifieds .ad:hover .txt b { text-decoration: underline; }
 
   /* ---------- late edition (basement) ---------- */
 
   .late {
-    margin-top: 26px;
+    margin-top: 30px;
     border: 2px solid var(--rule);
     background:
-      repeating-linear-gradient(45deg, transparent 0 9px, rgba(0,0,0,.03) 9px 10px),
+      repeating-linear-gradient(45deg, transparent 0 9px, rgba(0,0,0,.035) 9px 10px),
       var(--paper);
   }
   .late > summary {
     list-style: none;
     cursor: pointer;
-    padding: 10px 14px;
+    padding: 11px 14px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     font-family: var(--head);
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: .16em;
-    font-size: clamp(.9rem, 3vw, 1.05rem);
+    font-size: clamp(.92rem, 3vw, 1.08rem);
   }
   .late > summary::-webkit-details-marker { display: none; }
-  .late > summary::before { content: "\25B8"; font-size: .9em; }
+  .late > summary::before { content: "\25B8"; font-size: .8em; }
   .late[open] > summary::before { content: "\25BE"; }
+  .late > summary .emblem { line-height: 0; }
+  .late > summary .emblem svg { width: 22px; height: 22px; display: block; color: var(--ink); }
   .late > summary small {
     font-family: var(--serif);
     font-weight: 400;
@@ -267,14 +377,17 @@
     color: var(--faint);
     font-size: 12px;
   }
-  .late .stories { border: 0; border-top: 2px solid var(--rule); }
+  .late .stories { border: 0; border-top: 2px solid var(--rule); background: transparent; }
+  .late .story { background: transparent; }
+  .late .story:hover { background: var(--paper-hi); }
+  .late .icoframe { background: var(--paper); }
 
   /* ---------- corrections box ---------- */
 
   .corrections {
-    margin-top: 26px;
+    margin-top: 28px;
     border: 1px solid var(--rule);
-    padding: 12px 15px;
+    padding: 13px 16px;
     font-size: 12.5px;
     background: var(--paper);
   }
@@ -293,29 +406,39 @@
   /* ---------- colophon ---------- */
 
   .colophon {
-    margin-top: 30px;
+    margin-top: 32px;
     border-top: 3px double var(--rule);
-    padding-top: 12px;
+    padding-top: 13px;
     text-align: center;
     font-size: 11.5px;
-    letter-spacing: .05em;
+    letter-spacing: .04em;
     color: var(--faint);
   }
-  .colophon .orn { font-size: 15px; color: var(--ink); }
+  .colophon p { margin: 3px 0; }
+  .colophon .orn { font-size: 16px; color: var(--ink); }
   .colophon a.plant { text-decoration: none; color: inherit; cursor: default; }
 
   /* ---------- responsive ---------- */
 
-  @media (max-width: 860px) {
+  @media (max-width: 880px) {
     .stories { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .features, .classifieds { grid-template-columns: 1fr; }
+    .features .feat { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .features .feat:last-child { border-bottom: 0; }
   }
   @media (max-width: 560px) {
     .paper { padding: 16px 14px 40px; box-shadow: none; }
     body { background: var(--paper); }
     .stories { grid-template-columns: 1fr; }
-    .story { padding: 14px 14px 16px; }
-    .story h3 { font-size: 1.22rem; }
+    .story { padding: 14px 14px 16px 58px; }
+    .story > .icoframe { left: 13px; top: 14px; width: 34px; height: 34px; }
+    .story h3 { font-size: 1.2rem; }
     .story p { font-size: 13.5px; }
+    .story.lead { padding: 18px 16px 20px 72px; }
+    .story.lead > .icoframe { left: 16px; top: 18px; width: 44px; height: 44px; }
+    .story.lead > .icoframe svg { width: 30px; height: 30px; }
     .story.lead h3 { font-size: 1.7rem; }
     .story.lead p::first-letter { font-size: 2.6em; padding-right: 6px; }
     .dateline-top, .dateline-bottom {
@@ -330,7 +453,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .story { transition: none; }
+    .story, .feat, .ad { transition: none; }
   }
 </style>
 </head>
@@ -339,12 +462,13 @@
 
   <div class="dateline-top">
     <span>Vol. I &middot; No. 1</span>
-    <span class="mid">Singapore time &middot; the day turns at midnight</span>
+    <span class="mid">Singapore edition &middot; the day turns at midnight</span>
     <span>Price: free</span>
   </div>
 
   <h1 class="nameplate">The Sortafun Times</h1>
   <p class="kicker">A daily paper of small games and smaller stakes</p>
+  <p class="founded">Established 2025 &middot; printed fresh on every visit</p>
 
   <div class="rule-double"></div>
 
@@ -357,23 +481,41 @@
   <div id="stoppress" hidden><b>Stop press</b><span id="stoppress-body"></span></div>
 
   <!-- ================= THE GAMES DESK ================= -->
-  <div class="dept"><h2>The Games Desk</h2></div>
-  <p class="dept-note">twelve games. click a headline to play. your best today shows on the leaderboards.</p>
-  <div class="stories" id="games"></div>
+  <section>
+    <div class="dept">
+      <span class="emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><circle cx="8.5" cy="8.5" r="1.9" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.9" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.9" fill="currentColor" stroke="none"/></svg></span>
+      <h2>The Games Desk</h2>
+    </div>
+    <p class="standfirst"><span class="part">Part the First.</span> twelve games. click a headline to play, and your best today lands on the leaderboards.</p>
+    <div class="stories" id="games"></div>
+  </section>
 
   <!-- ================= THE WORKSHOP ================= -->
-  <div class="dept"><h2>The Workshop</h2></div>
-  <p class="dept-note">draw something. show it off. look at what other people drew.</p>
-  <div class="stories" id="workshop"></div>
+  <section>
+    <div class="dept">
+      <span class="emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 7 13l5 8 5-8z"/><path d="M12 2.5V21"/><path d="M9 13h6"/></svg></span>
+      <h2>The Workshop</h2>
+    </div>
+    <p class="standfirst"><span class="part">Part the Second.</span> draw something by hand, then go and see what everyone else drew.</p>
+    <div class="features" id="workshop"></div>
+  </section>
 
   <!-- ================= THE NOTICE BOARD ================= -->
-  <div class="dept"><h2>The Notice Board</h2></div>
-  <p class="dept-note">the parts of the site that are not games.</p>
-  <div class="stories" id="notices"></div>
+  <section>
+    <div class="dept">
+      <span class="emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5l-2.5 3h9L14 8V3"/><path d="M12 14v7"/></svg></span>
+      <h2>The Notice Board</h2>
+    </div>
+    <p class="standfirst"><span class="part">Part the Third.</span> the parts of the site that are not games. small ads, standing columns, and the guestbook.</p>
+    <div class="classifieds" id="notices"></div>
+  </section>
 
   <!-- ================= THE LATE EDITION ================= -->
   <details class="late" id="late">
-    <summary>The Late Edition <small>printed downstairs, after hours</small></summary>
+    <summary>
+      <span class="emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 14.5A8.5 8.5 0 1 1 11 4a6.6 6.6 0 0 0 10 10.5z"/><path d="M17.5 3.5l.8 1.8 2 .3-1.5 1.4.4 2-1.7-1-1.8 1 .4-2-1.4-1.4 1.9-.3z" fill="currentColor" stroke="none"/></svg></span>
+      The Late Edition <small>printed downstairs, after hours</small>
+    </summary>
     <div class="stories" id="basement"></div>
   </details>
 
@@ -382,15 +524,15 @@
     <h4>Corrections &amp; Amendments</h4>
     <p class="when">2026-09-10</p>
     <ul>
-      <li>the front page is a newspaper now. every game and page has a headline.</li>
-      <li>the lobby you walked around still exists in spirit. the basement moved to the late edition below.</li>
+      <li>the front page is a newspaper now. every game and page has its own headline and a little woodcut.</li>
+      <li>the lobby you used to walk around still exists in spirit. the basement moved to the late edition below.</li>
       <li>fixed the curly script font that showed up on phones.</li>
     </ul>
   </div>
 
   <div class="colophon">
     <p><span class="orn">&#10086;</span></p>
-    <p>Printed and bound at sortafun.org. Set in Playfair Display and Georgia.</p>
+    <p>Printed and bound at sortafun.org. Set in Playfair Display and Georgia, with a nameplate in UnifrakturMaguntia.</p>
     <p>Reader mail goes to the forum. Complaints go to the basement.
       <a class="plant" id="plant" href="gallery.html" aria-hidden="true" tabindex="-1">&#10087;</a></p>
   </div>
@@ -403,46 +545,146 @@
 "use strict";
 
 /* ------------------------------------------------------------------ *
- * The front page is a directory. DOORS from the old lobby, regrouped
- * as newspaper departments. Order is fixed and predictable on purpose,
- * so a reader learns where things live.
+ * The front page is a directory. Each row: [label, url, dek, icon].
+ * Four sections, each rendered in its own format so they do not all
+ * read the same: the games desk is a dense ruled grid with a lead
+ * story, the workshop is two feature cards, the notice board is
+ * classified listings, the late edition is a small grid in a box.
+ * Order inside each list is fixed on purpose.
  * ------------------------------------------------------------------ */
 
 var GAMES = [
-  ["crossword game",  "crossword.html", "today's themeless grid by Caleb Clayton. snacky, quick, and the clues occasionally bite back."],
-  ["tile slider",     "puzzle.html",    "the daily fifteen puzzle. one board for everyone, always solvable, scored by moves."],
-  ["circuit race",    "driving.html",   "three laps of a wire-frame track against the clock."],
-  ["typing game",     "typing.html",    "thirty seconds, words in frequency order, a full readout at the end."],
-  ["reaction light",  "reaction.html",  "wait for the lamp. click too early and the round is void. five rounds, best average wins."],
-  ["cursor maze",     "maze.html",      "walls are lava. steady hand, no clicking through corners."],
-  ["aim trainer",     "aim.html",       "pop the targets before the clock runs out."],
-  ["stop the bar",    "stopbar.html",   "a marker races across. stop it dead centre, again and again."],
-  ["word ladder",     "ladder.html",    "change one letter at a time. today's rungs are fixed and always reachable."],
-  ["anagram sprint",  "anagram.html",   "unscramble as many as you can before the timer."],
-  ["minesweeper",     "mines.html",     "the classic. flags optional, nerves required."],
-  ["fermi quiz",      "fermi.html",     "estimation questions. you do not need the answer, just the right ballpark."]
+  ["crossword game",  "crossword.html", "today's themeless grid by Caleb Clayton. snacky, quick, and the clues occasionally bite back.", "crossword"],
+  ["tile slider",     "puzzle.html",    "the daily fifteen puzzle. one board for everyone, always solvable, scored by moves.", "slider"],
+  ["circuit race",    "driving.html",   "three laps of a wire-frame track against the clock.", "race"],
+  ["typing game",     "typing.html",    "thirty seconds, words in frequency order, a full readout at the end.", "typing"],
+  ["reaction light",  "reaction.html",  "wait for the lamp. click too early and the round is void. five rounds, best average wins.", "reaction"],
+  ["cursor maze",     "maze.html",      "walls are lava. steady hand, no clicking through corners.", "maze"],
+  ["aim trainer",     "aim.html",       "pop the targets before the clock runs out.", "aim"],
+  ["stop the bar",    "stopbar.html",   "a marker races across. stop it dead centre, again and again.", "stopbar"],
+  ["word ladder",     "ladder.html",    "change one letter at a time. today's rungs are fixed and always reachable.", "ladder"],
+  ["anagram sprint",  "anagram.html",   "unscramble as many as you can before the timer.", "anagram"],
+  ["minesweeper",     "mines.html",     "the classic. flags optional, nerves required.", "mines"],
+  ["fermi quiz",      "fermi.html",     "estimation questions. you do not need the answer, just the right ballpark.", "fermi"]
 ];
 
 var WORKSHOP = [
-  ["animation studio",  "flipbook.html",     "draw a flipbook frame by frame. onion skin, autosave, post it once it moves."],
-  ["animation gallery", "anim-gallery.html", "everyone else's flipbooks. vote once, leave a note."]
+  ["animation studio",  "flipbook.html",     "draw a flipbook frame by frame. onion skin, autosave, and post it once it moves.", "studio"],
+  ["animation gallery", "anim-gallery.html", "everyone else's flipbooks. vote once, leave a note.", "animgallery"]
 ];
 
 var NOTICES = [
-  ["the forum",       "forum.html",          "a bulletin board that has been arguing since 2003. mostly still is."],
-  ["leaderboards",    "leaderboards.html",   "every game's standings, today and all time."],
-  ["daily board",     "daily.html",          "who is top of each game right now."],
-  ["guestbook",       "guestbook.html",      "sign in. it is append-only, so pick your words."],
-  ["passport",        "passport.html",       "stamps you collect just by poking around the site."],
-  ["the webring",     "webring.html",        "a door in and a door out. old web tradition, kept alive."],
-  ["slider archive",  "puzzle-archive.html", "past daily tile-slider boards, replayable any time."]
+  ["the forum",       "forum.html",          "a bulletin board that has been arguing since 2003. mostly still is.", "forum"],
+  ["leaderboards",    "leaderboards.html",   "every game's standings, today and all time.", "leaderboards"],
+  ["daily board",     "daily.html",          "who is top of each game right now.", "daily"],
+  ["guestbook",       "guestbook.html",      "sign in. it is append-only, so pick your words.", "guestbook"],
+  ["passport",        "passport.html",       "stamps you collect just by poking around the site.", "passport"],
+  ["the webring",     "webring.html",        "a door in and a door out. an old web tradition, kept alive.", "webring"],
+  ["slider archive",  "puzzle-archive.html", "past daily tile-slider boards, replayable any time.", "slider"]
 ];
 
 var BASEMENT = [
-  ["how long is a minute", "minute.html", "no clock on screen. start it, wait what feels like sixty seconds, stop it."],
-  ["call it",              "callit.html", "heads or tails, over and over. how long a streak can you call."],
-  ["watch the guy",        "watch.html",  "the anti-game. it scores you for looking away and closing the tab."]
+  ["how long is a minute", "minute.html", "no clock on screen. start it, wait what feels like sixty seconds, stop it.", "minute"],
+  ["call it",              "callit.html", "heads or tails, over and over. how long a streak can you call.", "callit"],
+  ["watch the guy",        "watch.html",  "the anti-game. it scores you for looking away and closing the tab.", "watch"]
 ];
+
+/* woodcut glyphs, one silhouette each, drawn on a 24x24 grid.
+   the stroke spec lives on the wrapper in svg() so the paths cannot drift. */
+var ICON = {
+  crossword:
+    '<rect x="3.5" y="3.5" width="17" height="17"/>' +
+    '<path d="M9 3.5v17M15 3.5v17M3.5 9h17M3.5 15h17"/>' +
+    '<rect x="3.5" y="3.5" width="5.5" height="5.5" fill="currentColor"/>' +
+    '<rect x="15" y="15" width="5.5" height="5.5" fill="currentColor"/>',
+  slider:
+    '<rect x="3.5" y="3.5" width="8" height="8"/>' +
+    '<rect x="12.5" y="3.5" width="8" height="8"/>' +
+    '<rect x="3.5" y="12.5" width="8" height="8"/>' +
+    '<path d="M13 16.5h6.6m0 0-2.4-2.4m2.4 2.4-2.4 2.4"/>',
+  race:
+    '<path d="M6 3v18"/>' +
+    '<path d="M6.5 4.5h12v8.4h-12z"/>' +
+    '<path d="M6.5 4.5h4v2.8h-4zM10.5 7.3h4v2.8h-4zM14.5 4.5h4v2.8h-4zM6.5 10.1h4v2.8h-4zM14.5 10.1h4v2.8h-4z" fill="currentColor" stroke="none"/>',
+  typing:
+    '<rect x="2.5" y="7" width="19" height="12" rx="1.5"/>' +
+    '<path d="M6 11h0M9.5 11h0M13 11h0M16.5 11h0M8 15h8" stroke-width="2"/>',
+  reaction:
+    '<rect x="8" y="2.5" width="8" height="16.5" rx="2.6"/>' +
+    '<path d="M12 19v2.5M9.5 21.5h5"/>' +
+    '<circle cx="12" cy="6.4" r="1.4"/><circle cx="12" cy="10.7" r="1.4"/>' +
+    '<circle cx="12" cy="15" r="1.4" fill="currentColor"/>',
+  maze:
+    '<rect x="3.5" y="3.5" width="17" height="17"/>' +
+    '<path d="M8 3.5v9h9M12 20.5v-8h5M3.5 16h4.5M17 8.5V3.5"/>',
+  aim:
+    '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/>' +
+    '<path d="M12 1.5v3.6M12 18.9v3.6M1.5 12h3.6M18.9 12h3.6"/>',
+  stopbar:
+    '<rect x="9" y="3" width="6" height="18" rx="1"/>' +
+    '<path d="M2.5 12h4.4M17.1 12h4.4"/>' +
+    '<path d="M7 12 4.5 9.5v5zM17 12l2.5-2.5v5z" fill="currentColor" stroke="none"/>',
+  ladder:
+    '<path d="M7 2.5v19M17 2.5v19M7 7h10M7 12h10M7 17h10"/>',
+  anagram:
+    '<rect x="2.5" y="7" width="9" height="9" rx="1.2" transform="rotate(-13 7 11.5)"/>' +
+    '<rect x="12.5" y="8" width="9" height="9" rx="1.2" transform="rotate(11 17 12.5)"/>' +
+    '<path d="M5.6 12.6 7.5 9.8l1.9 2.6M14 12.3l3 .2" stroke-width="1.3"/>',
+  mines:
+    '<rect x="3.5" y="3.5" width="17" height="17"/>' +
+    '<path d="M9.5 19V6l8 3.3-8 3.3"/><path d="M9.5 6V4"/>',
+  fermi:
+    '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4 21 21"/>' +
+    '<path d="M7.3 10c1-1.6 2.6-1.6 3.6 0s2.6 1.6 3.6 0" stroke-width="1.3"/>',
+  studio:
+    '<path d="M4 7v13.5h13.5"/>' +
+    '<rect x="7" y="3.5" width="13.5" height="13.5" rx="1.3"/>' +
+    '<path d="M11.5 8.2 16.2 11 11.5 13.8z" fill="currentColor" stroke="none"/>',
+  animgallery:
+    '<rect x="2.5" y="4" width="8.5" height="8.5"/>' +
+    '<rect x="13.5" y="7.5" width="8" height="8"/>' +
+    '<path d="M3.6 10.8 5.4 9l1.8 1.8 1.1-1.1M14.6 13.9l1.6-1.6 1.6 1.6 1-1"/>' +
+    '<path d="M2.5 19.5h19"/>',
+  forum:
+    '<path d="M3 4.5h12v8H8l-3.2 3v-3H3z"/>' +
+    '<path d="M9 8.5h11.5v7.5H17v3.2l-3.4-3.2"/>',
+  leaderboards:
+    '<path d="M3 21h18"/>' +
+    '<rect x="9.5" y="9.5" width="5" height="11.5"/>' +
+    '<rect x="3.5" y="13.5" width="5" height="7.5"/>' +
+    '<rect x="15.5" y="15.5" width="5" height="5.5"/>' +
+    '<path d="M12 2.2 13.25 4.8l2.85.4-2.05 2 .5 2.85L12 11.1 9.45 12.4l.5-2.85-2.05-2 2.85-.4z" fill="currentColor" stroke="none"/>',
+  daily:
+    '<rect x="3" y="4.5" width="18" height="16.5" rx="1.5"/>' +
+    '<path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>' +
+    '<path d="M12 11.5 13.05 13.7l2.35.35-1.7 1.65.4 2.35L12 18.9l-2.1 1.1.4-2.35-1.7-1.65 2.35-.35z" fill="currentColor" stroke="none"/>',
+  guestbook:
+    '<path d="M4 5c3-1.6 5.5-1.6 8 0 2.5-1.6 5-1.6 8 0v13.5c-3-1.6-5.5-1.6-8 0-2.5-1.6-5-1.6-8 0z"/>' +
+    '<path d="M12 5v13.5"/>' +
+    '<path d="M16 9.5 19.8 5.7l1.6 1.6-3.8 3.8z" fill="currentColor" stroke="none"/>',
+  passport:
+    '<rect x="5" y="3" width="14" height="18" rx="1.5"/>' +
+    '<circle cx="11.5" cy="11" r="3.4"/><path d="M8.5 17.5h6"/>' +
+    '<rect x="12.8" y="3.4" width="6.6" height="6.6" transform="rotate(16 16.1 6.7)" stroke-dasharray="2 1.6"/>',
+  webring:
+    '<circle cx="9.3" cy="12" r="5.5"/><circle cx="14.7" cy="12" r="5.5"/>',
+  minute:
+    '<path d="M6 3h12M6 21h12M8 3v3.2l4 4 4-4V3M8 21v-3.2l4-4 4 4V21"/>',
+  callit:
+    '<ellipse cx="12" cy="12" rx="5" ry="7.6" transform="rotate(20 12 12)"/>' +
+    '<path d="M10.8 9.3c1.4-.9 2.5.1 2.5 1.2M13.2 14.7c-1.4.9-2.5-.1-2.5-1.2" stroke-width="1.2"/>' +
+    '<path d="M4.6 6.6c-1.1 3.1-1.1 6.3 0 9.4" stroke-dasharray="1.6 2"/>',
+  watch:
+    '<path d="M2 12s3.8-6.8 10-6.8S22 12 22 12s-3.8 6.8-10 6.8S2 12 2 12z"/>' +
+    '<circle cx="12" cy="12" r="3"/>'
+};
+
+function svg(key, cls) {
+  return '<svg class="' + (cls || "ico") + '" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    (ICON[key] || "") + "</svg>";
+}
+function frame(key) { return '<span class="icoframe">' + svg(key) + "</span>"; }
 
 /* today's dateline */
 (function () {
@@ -455,8 +697,7 @@ var BASEMENT = [
   }
 })();
 
-/* day-of-year: rotates the editor's pick so one game is flagged each day,
-   without ever reordering the list */
+/* day-of-year: flags one game "pick of the day" without reordering the list */
 function dayOfYear() {
   var now = new Date();
   var start = new Date(now.getFullYear(), 0, 0);
@@ -464,25 +705,22 @@ function dayOfYear() {
 }
 var pickIdx = dayOfYear() % GAMES.length;
 
-function story(item, opts) {
+/* ---- the games desk + the late edition: ruled grid, story cards ---- */
+function gridCard(item, opts) {
   opts = opts || {};
   var a = document.createElement("a");
   a.className = "story" + (opts.lead ? " lead" : "");
   a.href = item[1];
   var tag = opts.pick ? '<span class="tag">pick of the day</span>' : "";
-  var num = opts.label ? '<span class="num">' + opts.label + '</span>' : "";
-  a.innerHTML =
-    num +
-    "<h3>" + item[0] + tag + "</h3>" +
-    "<p>" + item[2] + "</p>";
+  var num = opts.label ? '<span class="num">' + opts.label + "</span>" : "";
+  a.innerHTML = frame(item[3]) + num + "<h3>" + item[0] + tag + "</h3><p>" + item[2] + "</p>";
   return a;
 }
-
-function fill(elId, list, opts) {
+function fillGrid(elId, list, opts) {
   opts = opts || {};
   var wrap = document.getElementById(elId);
   list.forEach(function (item, i) {
-    wrap.appendChild(story(item, {
+    wrap.appendChild(gridCard(item, {
       label: opts.label ? opts.label + " " + (i + 1) : "",
       lead: opts.leadFirst && i === 0,
       pick: opts.picks && i === pickIdx
@@ -490,10 +728,32 @@ function fill(elId, list, opts) {
   });
 }
 
-fill("games", GAMES, { label: "Game", picks: true, leadFirst: true });
-fill("workshop", WORKSHOP, {});
-fill("notices", NOTICES, {});
-fill("basement", BASEMENT, {});
+/* ---- the workshop: two feature cards ---- */
+(function () {
+  var wrap = document.getElementById("workshop");
+  WORKSHOP.forEach(function (item) {
+    var a = document.createElement("a");
+    a.className = "feat";
+    a.href = item[1];
+    a.innerHTML = frame(item[3]) + "<h3>" + item[0] + "</h3><p>" + item[2] + "</p>";
+    wrap.appendChild(a);
+  });
+})();
+
+/* ---- the notice board: classified listings ---- */
+(function () {
+  var wrap = document.getElementById("notices");
+  NOTICES.forEach(function (item) {
+    var a = document.createElement("a");
+    a.className = "ad";
+    a.href = item[1];
+    a.innerHTML = svg(item[3]) + '<span class="txt"><b>' + item[0] + ".</b> " + item[2] + "</span>";
+    wrap.appendChild(a);
+  });
+})();
+
+fillGrid("games", GAMES, { label: "Game", picks: true, leadFirst: true });
+fillGrid("basement", BASEMENT, { label: "No." });
 
 /* ---------- circulation: the old hit counter, once per browser session ---------- */
 (function () {
@@ -526,8 +786,7 @@ fill("basement", BASEMENT, {});
 })();
 
 /* ---------- passport stamps, re-earned on the new front page ----------
-   old index set these while you walked the lobby / fell in the basement.
-   here: reading to the foot of the paper == the long walk,
+   reading to the foot of the paper == the long walk,
    opening the late edition == finding the basement. */
 function stamp(k) { try { localStorage.setItem("sortafun-stamp-" + k, "1"); } catch (e) {} }
 

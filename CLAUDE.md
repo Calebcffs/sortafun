@@ -343,16 +343,32 @@ Times": masthead in blackletter (`UnifrakturMaguntia` from Google Fonts, Georgia
 fallback), body in Georgia / Playfair Display.
 
 Every game and page is a headline. Four JS arrays near the top of the inline
-script hold `[label, url, dek]` rows: `GAMES` (12, `#games`), `WORKSHOP`
-(`#workshop`), `NOTICES` (`#notices`, includes `puzzle-archive.html`), `BASEMENT`
-(`#basement`, inside a collapsed `<details class="late">` = "The Late Edition").
-`fill()` builds the `.story` anchor cards into each `.stories` CSS grid (3 cols
-desktop, 2 at 860px, 1 at 560px). To add a game or page, push a row to the right
-array; order is fixed on purpose. `GAMES[0]` renders as the `.lead` (full-width,
-drop cap). `pickIdx` (day-of-year modulo) flags one game "pick of the day", no
-reordering. `gallery.html` is deliberately NOT listed (still an easter egg): the
-only link to it is the bare `&#10087;` ornament in the colophon (`#plant`,
-`aria-hidden`, `tabindex="-1"`, no label).
+script hold `[label, url, dek, icon]` rows (the `icon` is a key into the `ICON`
+map): `GAMES` (12, `#games`), `WORKSHOP` (`#workshop`), `NOTICES` (`#notices`,
+includes `puzzle-archive.html`), `BASEMENT` (`#basement`, inside a collapsed
+`<details class="late">` = "The Late Edition"). To add a game or page, push a row
+to the right array; order inside each list is fixed on purpose.
+
+Each section is rendered in a **different format** on purpose (the four used to
+look identical):
+- `GAMES` + `BASEMENT` -> `fillGrid()` builds `.story` anchor cards in a `.stories`
+  CSS grid (3 cols desktop, 2 at 880px, 1 at 560px). `GAMES[0]` is the `.lead`
+  (full-width, drop cap). `pickIdx` (day-of-year modulo) flags one game "pick of
+  the day", no reordering.
+- `WORKSHOP` -> two centred `.feat` feature cards in `.features`.
+- `NOTICES` -> `.ad` rows (icon + bold term + dek) in a two-column `.classifieds`
+  listing.
+
+Icons: `ICON` is a map of icon-key -> raw SVG path string. `svg(key)` wraps it
+with the one shared stroke spec (viewBox 24, `stroke-width 1.6`, round caps);
+`frame(key)` wraps that in a ruled `.icoframe` "engraving block". Each section
+header (`.dept .emblem`) and the colophon carry their own inline SVG. Keep new
+glyphs to a single readable silhouette at 24px; verify at render size, a wrong
+glyph is worse than none.
+
+`gallery.html` is deliberately NOT listed (still an easter egg): the only link to
+it is the bare `&#10087;` ornament in the colophon (`#plant`, `aria-hidden`,
+`tabindex="-1"`, no label).
 
 Carried over from the old lobby:
 - **Hit counter** -> masthead "Circulation" number (`#circulation b`), same
