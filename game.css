@@ -3,7 +3,7 @@ html, body {
   padding: 0;
   background: #fff;
   color: #000;
-  font-family: "Comic Sans MS", "Segoe Print", cursive;
+  font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Segoe Print", sans-serif;
 }
 .wrap {
   max-width: 640px;

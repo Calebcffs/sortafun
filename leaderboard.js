@@ -577,7 +577,7 @@
     s.id = "lb-style";
     s.textContent = [
       ".lb{max-width:360px;margin:20px auto 0;border:2px solid #000;background:#fff;",
-        "font-family:'Comic Sans MS','Segoe Print',cursive;text-align:left;}",
+        "font-family:'Comic Sans MS','Comic Sans','Chalkboard SE','Segoe Print',sans-serif;text-align:left;}",
       ".lb-head{display:flex;justify-content:space-between;align-items:center;",
         "border-bottom:2px solid #000;padding:6px 8px;font-size:14px;}",
       ".lb-tabs button{font:inherit;font-size:12px;border:2px solid #000;background:#fff;",

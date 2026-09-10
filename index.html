@@ -4,967 +4,544 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SORTAFUN.ORG</title>
+<meta name="description" content="Sortafun. A daily paper of small games and smaller stakes. Crosswords, typing, a tile slider, a forum, and a basement.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <style>
-  html, body {
+  :root {
+    --ink: #17150f;
+    --paper: #f4efe1;
+    --paper-hi: #ece3cd;
+    --rule: #17150f;
+    --faint: #6c6455;
+    --serif: Georgia, "Times New Roman", "Nimbus Roman", serif;
+    --head: "Playfair Display", Georgia, "Times New Roman", serif;
+    --black: "UnifrakturMaguntia", "Playfair Display", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
     margin: 0;
-    padding: 0;
-    background: #fff;
-    overflow: hidden;
-    font-family: "Comic Sans MS", "Segoe Print", cursive;
+    background: #d9d2bf;
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.42;
+    overflow-x: hidden;
+    /* faint newsprint tint, drawn with gradients so there is no image dependency */
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(0,0,0,.025), transparent 40%),
+      radial-gradient(circle at 80% 60%, rgba(0,0,0,.03), transparent 45%);
   }
-  canvas { display: block; }
-  #hint {
-    position: fixed;
-    left: 8px;
-    bottom: 6px;
-    font-size: 13px;
-    color: #000;
-    transition: opacity .25s ease;
+
+  a { color: inherit; }
+
+  .paper {
+    max-width: 1040px;
+    margin: 0 auto;
+    background: var(--paper);
+    padding: 22px clamp(14px, 4vw, 40px) 46px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.15), 0 14px 40px rgba(0,0,0,.28);
   }
-  #wordmark {
-    position: fixed;
-    left: 9px;
-    top: 6px;
-    font-size: 13px;
-    font-weight: bold;
-    letter-spacing: .5px;
-    color: #000;
-    pointer-events: none;
+
+  /* ---------- masthead ---------- */
+
+  .dateline-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 6px;
   }
-  #hits {
-    position: fixed;
-    right: 8px;
-    top: 6px;
-    font-family: "Courier New", monospace;
-    font-size: 12px;
-    color: #000;
-    border: 2px solid #000;
-    background: #fff;
-    padding: 2px 5px;
-    letter-spacing: 2px;
-    pointer-events: none;
+  .dateline-top .mid { flex: 1 1 auto; text-align: center; min-width: 140px; }
+
+  .nameplate {
+    font-family: var(--black);
+    font-weight: 400;
+    text-align: center;
+    line-height: .92;
+    font-size: clamp(2.1rem, 11vw, 6rem);
+    margin: 12px 0 4px;
+    letter-spacing: .01em;
+    overflow-wrap: break-word;
   }
-  #hits.hidden { display: none; }
-  #hits .lbl { letter-spacing: 0; font-size: 9px; display: block; text-align: center; color: #666; }
-  #changelog {
-    position: fixed;
-    left: 12px;
-    top: 148px;
-    transform: rotate(-1.5deg);
-    width: 340px;
-    max-width: calc(100vw - 20px);
-    aspect-ratio: 545 / 391;
-    background: url("assets/sticky-note.png") no-repeat center / 100% 100%;
-    box-sizing: border-box;
-    padding: 32px 22px 14px 70px;
-    overflow: hidden;
-    font-size: 9.5px;
-    line-height: 1.25;
-    color: #1c1c1c;
-    z-index: 5;
+
+  .kicker {
+    text-align: center;
+    font-family: var(--head);
+    font-style: italic;
+    font-size: clamp(.95rem, 3.4vw, 1.25rem);
+    color: var(--ink);
+    margin: 0 0 12px;
   }
-  #changelog h2 { margin: 0 0 1px; font-size: 13px; }
-  #changelog .cl-date { margin: 0 0 3px; font-size: 9px; color: #555; }
-  #changelog ul { margin: 0; padding-left: 13px; }
-  #changelog li { margin: 2px 0; overflow-wrap: break-word; }
-  #changelog .cl-hide {
-    position: absolute;
-    top: 20px;
-    right: 22px;
-    font: inherit;
+
+  .rule-double {
+    border-top: 3px double var(--rule);
+    border-bottom: 1px solid var(--rule);
+    height: 4px;
+    margin: 0 0 8px;
+  }
+
+  .dateline-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px 14px;
+    flex-wrap: wrap;
+    font-size: 11.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    border-bottom: 3px double var(--rule);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+  .dateline-bottom .mid { flex: 1 1 auto; text-align: center; min-width: 160px; }
+  #circulation b { font-variant-numeric: tabular-nums; letter-spacing: .18em; color: var(--ink); }
+
+  /* ---------- stop press ---------- */
+
+  #stoppress {
+    border: 2px solid var(--rule);
+    background: var(--paper-hi);
+    padding: 7px 12px;
+    margin-bottom: 16px;
+    font-size: 13.5px;
+    text-align: center;
+  }
+  #stoppress b {
+    font-family: var(--head);
+    font-weight: 900;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    margin-right: 6px;
+  }
+
+  /* ---------- department headers ---------- */
+
+  .dept {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 26px 0 0;
+  }
+  .dept::before, .dept::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    height: 3px;
+  }
+  .dept h2 {
+    font-family: var(--head);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    font-size: clamp(.95rem, 3.2vw, 1.15rem);
+    margin: 0;
+    text-align: center;
+  }
+  .dept-note {
+    text-align: center;
+    font-style: italic;
+    color: var(--faint);
+    font-size: 12.5px;
+    margin: 5px 0 12px;
+  }
+
+  /* ---------- story grid ---------- */
+
+  .stories {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+
+  .story {
+    display: block;
+    background: var(--paper);
+    text-decoration: none;
+    padding: 13px 15px 15px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    transition: background .12s ease;
+  }
+  .story:hover, .story:focus-visible { background: var(--paper-hi); outline: none; }
+  .story:focus-visible { box-shadow: inset 0 0 0 2px var(--rule); }
+
+  .story .num {
+    font-size: 10.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .story h3 {
+    font-family: var(--head);
+    font-weight: 700;
+    text-transform: capitalize;
+    font-size: 1.16rem;
+    line-height: 1.12;
+    margin: 3px 0 5px;
+  }
+  .story h3 .tag {
+    display: inline-block;
+    vertical-align: middle;
+    font-family: var(--serif);
     font-size: 9px;
-    background: transparent;
-    border: 0;
-    color: #555;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 1px 4px;
+    margin-left: 6px;
+  }
+  .story p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #2b2820;
+    overflow-wrap: break-word;
+  }
+  .story h3 { overflow-wrap: break-word; }
+  .story:hover h3 { text-decoration: underline; }
+
+  /* lead story spans the row */
+  .story.lead { grid-column: 1 / -1; padding: 18px 18px 20px; }
+  .story.lead h3 { font-size: clamp(1.5rem, 6vw, 2.3rem); margin-bottom: 8px; }
+  .story.lead p {
+    font-size: 14.5px;
+    color: #201e18;
+  }
+  .story.lead p::first-letter {
+    float: left;
+    font-family: var(--head);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 3.1em;
+    line-height: .72;
+    padding: 4px 8px 0 0;
+  }
+
+  /* ---------- late edition (basement) ---------- */
+
+  .late {
+    margin-top: 26px;
+    border: 2px solid var(--rule);
+    background:
+      repeating-linear-gradient(45deg, transparent 0 9px, rgba(0,0,0,.03) 9px 10px),
+      var(--paper);
+  }
+  .late > summary {
+    list-style: none;
     cursor: pointer;
-    text-decoration: underline;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--head);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    font-size: clamp(.9rem, 3vw, 1.05rem);
   }
-  @media (max-width: 440px) {
-    #changelog { top: 132px; font-size: 8px; line-height: 1.2; padding: 24px 16px 10px 52px; }
-    #changelog h2 { font-size: 11px; }
-    #changelog .cl-date { font-size: 7px; margin-bottom: 2px; }
-    #changelog ul { padding-left: 11px; }
-    #changelog .cl-hide { top: 12px; right: 12px; font-size: 7px; }
+  .late > summary::-webkit-details-marker { display: none; }
+  .late > summary::before { content: "\25B8"; font-size: .9em; }
+  .late[open] > summary::before { content: "\25BE"; }
+  .late > summary small {
+    font-family: var(--serif);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-style: italic;
+    color: var(--faint);
+    font-size: 12px;
   }
-  @media (max-height: 620px) { #changelog { top: 120px; } }
+  .late .stories { border: 0; border-top: 2px solid var(--rule); }
+
+  /* ---------- corrections box ---------- */
+
+  .corrections {
+    margin-top: 26px;
+    border: 1px solid var(--rule);
+    padding: 12px 15px;
+    font-size: 12.5px;
+    background: var(--paper);
+  }
+  .corrections h4 {
+    font-family: var(--head);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .82rem;
+    margin: 0 0 2px;
+  }
+  .corrections .when { color: var(--faint); font-style: italic; margin-bottom: 6px; }
+  .corrections ul { margin: 0; padding-left: 18px; }
+  .corrections li { margin: 3px 0; }
+
+  /* ---------- colophon ---------- */
+
+  .colophon {
+    margin-top: 30px;
+    border-top: 3px double var(--rule);
+    padding-top: 12px;
+    text-align: center;
+    font-size: 11.5px;
+    letter-spacing: .05em;
+    color: var(--faint);
+  }
+  .colophon .orn { font-size: 15px; color: var(--ink); }
+  .colophon a.plant { text-decoration: none; color: inherit; cursor: default; }
+
+  /* ---------- responsive ---------- */
+
+  @media (max-width: 860px) {
+    .stories { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .paper { padding: 16px 14px 40px; box-shadow: none; }
+    body { background: var(--paper); }
+    .stories { grid-template-columns: 1fr; }
+    .story { padding: 14px 14px 16px; }
+    .story h3 { font-size: 1.22rem; }
+    .story p { font-size: 13.5px; }
+    .story.lead h3 { font-size: 1.7rem; }
+    .story.lead p::first-letter { font-size: 2.6em; padding-right: 6px; }
+    .dateline-top, .dateline-bottom {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 3px;
+      font-size: 10.5px;
+    }
+    .dateline-top .mid, .dateline-bottom .mid { min-width: 0; }
+    .dept { gap: 8px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .story { transition: none; }
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="wordmark">SORTAFUN.ORG</div>
-<div id="hits" class="hidden"><span class="lbl">visitors</span><span id="hitn">0000000</span></div>
-<div id="hint">&larr; &rarr; walk &nbsp;&middot;&nbsp; &uarr; jump &nbsp;&middot;&nbsp; &darr; enter a door &nbsp;&middot;&nbsp; &uarr;/&darr; at the stairs to change floor &nbsp;&middot;&nbsp; or click a sign</div>
+<main class="paper">
 
-<div id="changelog">
-  <button type="button" class="cl-hide" id="clHide">hide</button>
-  <h2>changelog</h2>
-  <p class="cl-date">2026-09-04</p>
-  <ul>
-    <li>the lobby has floors now: stairs on the left</li>
-    <li>eleven new games downstairs and in play</li>
-    <li>guestbook, daily board, passport, webring</li>
-    <li>typing rebuilt, monkeytype style</li>
-  </ul>
-</div>
+  <div class="dateline-top">
+    <span>Vol. I &middot; No. 1</span>
+    <span class="mid">Singapore time &middot; the day turns at midnight</span>
+    <span>Price: free</span>
+  </div>
+
+  <h1 class="nameplate">The Sortafun Times</h1>
+  <p class="kicker">A daily paper of small games and smaller stakes</p>
+
+  <div class="rule-double"></div>
+
+  <div class="dateline-bottom">
+    <span id="today">&nbsp;</span>
+    <span class="mid">No sign-up &middot; scores kept for the day &middot; nothing tracked</span>
+    <span id="circulation">Circulation <b>....</b></span>
+  </div>
+
+  <div id="stoppress" hidden><b>Stop press</b><span id="stoppress-body"></span></div>
+
+  <!-- ================= THE GAMES DESK ================= -->
+  <div class="dept"><h2>The Games Desk</h2></div>
+  <p class="dept-note">twelve games. click a headline to play. your best today shows on the leaderboards.</p>
+  <div class="stories" id="games"></div>
+
+  <!-- ================= THE WORKSHOP ================= -->
+  <div class="dept"><h2>The Workshop</h2></div>
+  <p class="dept-note">draw something. show it off. look at what other people drew.</p>
+  <div class="stories" id="workshop"></div>
+
+  <!-- ================= THE NOTICE BOARD ================= -->
+  <div class="dept"><h2>The Notice Board</h2></div>
+  <p class="dept-note">the parts of the site that are not games.</p>
+  <div class="stories" id="notices"></div>
+
+  <!-- ================= THE LATE EDITION ================= -->
+  <details class="late" id="late">
+    <summary>The Late Edition <small>printed downstairs, after hours</small></summary>
+    <div class="stories" id="basement"></div>
+  </details>
+
+  <!-- ================= CORRECTIONS ================= -->
+  <div class="corrections">
+    <h4>Corrections &amp; Amendments</h4>
+    <p class="when">2026-09-10</p>
+    <ul>
+      <li>the front page is a newspaper now. every game and page has a headline.</li>
+      <li>the lobby you walked around still exists in spirit. the basement moved to the late edition below.</li>
+      <li>fixed the curly script font that showed up on phones.</li>
+    </ul>
+  </div>
+
+  <div class="colophon">
+    <p><span class="orn">&#10086;</span></p>
+    <p>Printed and bound at sortafun.org. Set in Playfair Display and Georgia.</p>
+    <p>Reader mail goes to the forum. Complaints go to the basement.
+      <a class="plant" id="plant" href="gallery.html" aria-hidden="true" tabindex="-1">&#10087;</a></p>
+  </div>
+
+</main>
+
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
-const hintEl = document.getElementById("hint");
-const changelogEl = document.getElementById("changelog");
+"use strict";
 
-// --- palette: plain white paper, black line art ---
-const INK = "#000";
-const PAPER = "#fff";
+/* ------------------------------------------------------------------ *
+ * The front page is a directory. DOORS from the old lobby, regrouped
+ * as newspaper departments. Order is fixed and predictable on purpose,
+ * so a reader learns where things live.
+ * ------------------------------------------------------------------ */
 
-// each menu sign has a black door under it. walk up, press down, next page.
-// zone groups signs by vibe so the row reads left to right: play, then make,
-// then meta. a new game slots into the play cluster. signs with no btn png get
-// drawn by drawWonkySign in the same marker style.
-const DOORS = [
-  { label: "crossword game", url: "crossword.html",    btn: "assets/btn-crossword.png",    ar: 152 / 63, zone: "play" },
-  { label: "tile slider",    url: "puzzle.html",       btn: "assets/btn-tile-slider.png",  ar: 168 / 72, game: "puzzle", zone: "play" },
-  { label: "circuit race",   url: "driving.html",      btn: "assets/btn-circuit-race.png", ar: 178 / 69, game: "circuit", zone: "play" },
-  { label: "typing game",    url: "typing.html",       btn: "assets/btn-typing-game.png",  ar: 173 / 65, game: "typing", zone: "play" },
-  { label: "reaction light", url: "reaction.html", ar: 2.7, game: "reaction", zone: "play" },
-  { label: "cursor maze",    url: "maze.html",     ar: 2.5, game: "maze", zone: "play" },
-  { label: "aim trainer",    url: "aim.html",      ar: 2.5, game: "aim", zone: "play" },
-  { label: "stop the bar",   url: "stopbar.html",  ar: 2.6, game: "stopbar", zone: "play" },
-  { label: "word ladder",    url: "ladder.html",   ar: 2.6, game: "ladder", zone: "play" },
-  { label: "anagram sprint", url: "anagram.html",  ar: 2.9, game: "anagram", zone: "play" },
-  { label: "minesweeper",    url: "mines.html",    ar: 2.7, game: "mines", zone: "play" },
-  { label: "fermi quiz",     url: "fermi.html",    ar: 2.4, game: "fermi", zone: "play" },
-  { label: "animation studio", url: "flipbook.html",   ar: 188 / 64, zone: "make" },
-  { label: "animation gallery", url: "anim-gallery.html", ar: 188 / 64, zone: "make" },
-  { label: "forum",          url: "forum.html",        btn: "assets/btn-forum.png",        ar: 116 / 58, zone: "meta" },
-  { label: "leaderboards",   url: "leaderboards.html", btn: "assets/btn-leaderboards.png", ar: 193 / 64, recent: true, zone: "meta" },
-  { label: "guestbook",      url: "guestbook.html",    ar: 2.2, zone: "meta" },
-  { label: "daily board",    url: "daily.html",        ar: 2.4, zone: "meta" },
-  { label: "passport",       url: "passport.html",     ar: 2.1, zone: "meta" },
-  { label: "the webring",    url: "webring.html",      ar: 2.2, zone: "meta" },
-  { label: "how long is a minute", url: "minute.html", ar: 3.6, game: "minute", zone: "down" },
-  { label: "call it",        url: "callit.html",   ar: 2.0, game: "callit", zone: "down" },
-  { label: "watch the guy",  url: "watch.html",    ar: 2.7, game: "watch", zone: "down" },
+var GAMES = [
+  ["crossword game",  "crossword.html", "today's themeless grid by Caleb Clayton. snacky, quick, and the clues occasionally bite back."],
+  ["tile slider",     "puzzle.html",    "the daily fifteen puzzle. one board for everyone, always solvable, scored by moves."],
+  ["circuit race",    "driving.html",   "three laps of a wire-frame track against the clock."],
+  ["typing game",     "typing.html",    "thirty seconds, words in frequency order, a full readout at the end."],
+  ["reaction light",  "reaction.html",  "wait for the lamp. click too early and the round is void. five rounds, best average wins."],
+  ["cursor maze",     "maze.html",      "walls are lava. steady hand, no clicking through corners."],
+  ["aim trainer",     "aim.html",       "pop the targets before the clock runs out."],
+  ["stop the bar",    "stopbar.html",   "a marker races across. stop it dead centre, again and again."],
+  ["word ladder",     "ladder.html",    "change one letter at a time. today's rungs are fixed and always reachable."],
+  ["anagram sprint",  "anagram.html",   "unscramble as many as you can before the timer."],
+  ["minesweeper",     "mines.html",     "the classic. flags optional, nerves required."],
+  ["fermi quiz",      "fermi.html",     "estimation questions. you do not need the answer, just the right ballpark."]
 ];
 
-// zone -> floor. ground = 0, up one = -1, basement = +1
-const ZONE_FLOOR = { play: 0, make: -1, meta: -1, down: 1 };
-const ZONE_LABELS = { play: "play", make: "make stuff", meta: "the rest", down: "the basement" };
-DOORS.forEach((p) => { if (p.btn) { p.img = new Image(); p.img.src = p.btn; } });
+var WORKSHOP = [
+  ["animation studio",  "flipbook.html",     "draw a flipbook frame by frame. onion skin, autosave, post it once it moves."],
+  ["animation gallery", "anim-gallery.html", "everyone else's flipbooks. vote once, leave a note."]
+];
 
-// tiny leaderboard readouts under the signs — Firestore, best-effort.
-// LB[game] = today's top 3 [{name,score}]; LB.recent = newest score anywhere.
-const LB_GAMES = [...new Set(DOORS.filter((d) => d.game).map((d) => d.game))];
-const LB = { recent: null };
-LB_GAMES.forEach((g) => { LB[g] = null; });
-function loadLB() {
-  if (!window.SortafunLB) return;
-  LB_GAMES.forEach((g) => {
-    SortafunLB.top(g, "day")
-      .then((rows) => { LB[g] = rows.slice(0, 3); })
-      .catch(() => {});
-  });
-  SortafunLB.recent(1)
-    .then((rows) => { LB.recent = rows[0] || null; })
-    .catch(() => {});
-}
-loadLB();
+var NOTICES = [
+  ["the forum",       "forum.html",          "a bulletin board that has been arguing since 2003. mostly still is."],
+  ["leaderboards",    "leaderboards.html",   "every game's standings, today and all time."],
+  ["daily board",     "daily.html",          "who is top of each game right now."],
+  ["guestbook",       "guestbook.html",      "sign in. it is append-only, so pick your words."],
+  ["passport",        "passport.html",       "stamps you collect just by poking around the site."],
+  ["the webring",     "webring.html",        "a door in and a door out. old web tradition, kept alive."],
+  ["slider archive",  "puzzle-archive.html", "past daily tile-slider boards, replayable any time."]
+];
 
-// odometer hit counter — bump once per browser session, otherwise just read
+var BASEMENT = [
+  ["how long is a minute", "minute.html", "no clock on screen. start it, wait what feels like sixty seconds, stop it."],
+  ["call it",              "callit.html", "heads or tails, over and over. how long a streak can you call."],
+  ["watch the guy",        "watch.html",  "the anti-game. it scores you for looking away and closing the tab."]
+];
+
+/* today's dateline */
 (function () {
-  if (!window.SortafunLB || !SortafunLB.bumpHits) return;
+  try {
+    var d = new Date();
+    document.getElementById("today").textContent =
+      d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  } catch (e) {
+    document.getElementById("today").textContent = "Today";
+  }
+})();
+
+/* day-of-year: rotates the editor's pick so one game is flagged each day,
+   without ever reordering the list */
+function dayOfYear() {
+  var now = new Date();
+  var start = new Date(now.getFullYear(), 0, 0);
+  return Math.floor((now - start) / 86400000);
+}
+var pickIdx = dayOfYear() % GAMES.length;
+
+function story(item, opts) {
+  opts = opts || {};
+  var a = document.createElement("a");
+  a.className = "story" + (opts.lead ? " lead" : "");
+  a.href = item[1];
+  var tag = opts.pick ? '<span class="tag">pick of the day</span>' : "";
+  var num = opts.label ? '<span class="num">' + opts.label + '</span>' : "";
+  a.innerHTML =
+    num +
+    "<h3>" + item[0] + tag + "</h3>" +
+    "<p>" + item[2] + "</p>";
+  return a;
+}
+
+function fill(elId, list, opts) {
+  opts = opts || {};
+  var wrap = document.getElementById(elId);
+  list.forEach(function (item, i) {
+    wrap.appendChild(story(item, {
+      label: opts.label ? opts.label + " " + (i + 1) : "",
+      lead: opts.leadFirst && i === 0,
+      pick: opts.picks && i === pickIdx
+    }));
+  });
+}
+
+fill("games", GAMES, { label: "Game", picks: true, leadFirst: true });
+fill("workshop", WORKSHOP, {});
+fill("notices", NOTICES, {});
+fill("basement", BASEMENT, {});
+
+/* ---------- circulation: the old hit counter, once per browser session ---------- */
+(function () {
+  var out = document.querySelector("#circulation b");
+  if (!window.SortafunLB || !SortafunLB.getHits) { if (out) out.textContent = "----"; return; }
   var fresh = false;
   try { fresh = !sessionStorage.getItem("sortafun-visited"); } catch (e) { fresh = true; }
-  var job = fresh ? SortafunLB.bumpHits() : SortafunLB.getHits();
+  var job = fresh && SortafunLB.bumpHits ? SortafunLB.bumpHits() : SortafunLB.getHits();
   try { sessionStorage.setItem("sortafun-visited", "1"); } catch (e) {}
   job.then(function (n) {
     if (n == null || !isFinite(n)) return;
-    var el = document.getElementById("hits");
-    document.getElementById("hitn").textContent = String(n).padStart(7, "0");
-    el.classList.remove("hidden");
-  });
+    out.textContent = String(n).padStart(7, "0");
+  }).catch(function () {});
 })();
 
-function lbTrunc(s, n) {
-  s = String(s);
-  return s.length > n ? s.slice(0, n) + ".." : s;
-}
-function lbFmt(game, score) {
-  const g = window.SortafunLB && SortafunLB.GAMES[game];
-  if (!g) return String(score);
-  return g.format ? g.format(score) : score + " " + g.unit;
-}
-
-// The art gallery used to be a room off to the right. It's now an easter egg:
-// the potted plant in the corner is a door to gallery.html. Nothing on this
-// page hints at it.
-
-let W = 0, H = 0;
-let groundY = 0;               // y of the ground floor (floor 0)
-let FH = 420;                  // vertical gap between floors
-let floorY = { "-1": 0, "0": 0, "1": 0 };   // floor index -> ground line y
-let wallTop = 80;
-let doorLayout = [];
-let zoneMarks = [];       // { label, x, floor } faint banner above each cluster
-let ladders = [];         // { x, up, down }  up/down are floor indices
-let WORLD_W = 0, WORLD_H = 0;
-let menuMidX = 0;
-let plantX = 0;
-
-let camX = 0, camY = 0;
-
-const GRAV = 0.6;
-const JUMP = 12;
-
-const guy = {
-  x: 60,
-  vx: 0,
-  speed: 3.2,
-  floor: 0,       // which floor index the guy stands on
-  yOff: 0,        // 0 = on the floor, negative = airborne
-  vy: 0,
-  onGround: true,
-  climbing: false,
-  climbFrom: 0, climbTo: 0, climbT: 0, climbX: 0,
-  entering: false,
-  enterT: 0,
-  targetUrl: null,
-  enterDoor: null,
-};
-
-function guyFeetY() {
-  if (guy.climbing) {
-    const a = floorY[guy.climbFrom], b = floorY[guy.climbTo];
-    return a + (b - a) * guy.climbT;
-  }
-  return floorY[guy.floor] + guy.yOff;
-}
-
-const keys = {};
-window.addEventListener("keydown", (e) => {
-  keys[e.key] = true;
-  if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", " "].includes(e.key)) e.preventDefault();
-  if (guy.entering || guy.climbing) return;
-  const up = e.key === "ArrowUp" || e.key === "w" || e.key === "W";
-  const down = e.key === "ArrowDown" || e.key === "s" || e.key === "S";
-  if (up && nearLadder(-1)) { climb(-1); return; }
-  if (down && nearLadder(1)) { climb(1); return; }
-  if (up || e.key === " ") jump();
-  if (e.key === "ArrowDown" || e.key === "Enter") tryEnter();
-});
-window.addEventListener("keyup", (e) => { keys[e.key] = false; });
-
-function jump() {
-  if (guy.onGround) {
-    guy.vy = -JUMP;
-    guy.onGround = false;
-  }
-}
-
-// is there a ladder from the guy's floor going in direction dir (-1 up, +1 down)?
-function nearLadder(dir) {
-  if (!guy.onGround) return null;
-  for (const L of ladders) {
-    if (Math.abs(guy.x - L.x) > 26) continue;
-    if (dir < 0 && L.up === guy.floor - 1 && L.down === guy.floor) return L;
-    if (dir > 0 && L.down === guy.floor + 1 && L.up === guy.floor) return L;
-  }
-  return null;
-}
-
-function climb(dir) {
-  const L = nearLadder(dir);
-  if (!L) return;
-  guy.climbing = true;
-  guy.climbFrom = guy.floor;
-  guy.climbTo = dir < 0 ? guy.floor - 1 : guy.floor + 1;
-  guy.climbT = 0;
-  guy.climbX = L.x;
-  guy.x = L.x;
-  guy.vx = 0; guy.vy = 0; guy.yOff = 0;
-}
-
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-  FH = clamp(Math.round(H * 0.92), 380, 560);
-  const TOP = Math.round(FH * 0.6);         // headroom above the top floor's line
-  floorY = { "-1": TOP, "0": TOP + FH, "1": TOP + 2 * FH };
-  groundY = floorY["0"];
-  wallTop = 80;
-
-  // --- menu signs: fixed readable size, one row per floor, camera follows ---
-  const boxH = clamp(Math.round(H * 0.12), 52, 70);
-  const gap = boxH * 0.30;
-  const zoneGap = boxH * 1.1;
-  const leftPad = Math.max(W < 520 ? 236 : 360, Math.round(W * 0.08));
-  const rightPad = Math.max(140, Math.round(W * 0.26));
-  const doorH = Math.min(74, boxH * 1.06);
-  const doorW = doorH * 0.46;
-
-  // group the DOORS by floor, keeping their array order
-  const byFloor = { "-1": [], "0": [], "1": [] };
-  DOORS.forEach((p) => byFloor[ZONE_FLOOR[p.zone]].push(p));
-
-  zoneMarks = [];
-  let widest = W;
-  doorLayout = [];
-  Object.keys(byFloor).forEach((f) => {
-    const fy = floorY[f];
-    const boxTop = fy - Math.min(FH * 0.42, fy - 22);   // signs float above the floor line
-    let x = leftPad;
-    let prevZone = null;
-    byFloor[f].forEach((p) => {
-      if (prevZone !== null && p.zone !== prevZone) x += zoneGap;
-      if (p.zone !== prevZone) zoneMarks.push({ label: ZONE_LABELS[p.zone] || p.zone, x: x, top: boxTop - 12 });
-      prevZone = p.zone;
-      const boxW = boxH * p.ar;
-      const cx = x + boxW / 2;
-      doorLayout.push({
-        ...p, floor: Number(f), floorLineY: fy,
-        boxX: x, boxTop, boxW, boxH,
-        doorW, doorH, doorX: cx - doorW / 2, cx,
-      });
-      x += boxW + gap;
-    });
-    widest = Math.max(widest, x - gap + rightPad);
-  });
-
-  WORLD_W = widest;
-  WORLD_H = floorY["1"] + 120;
-  menuMidX = W / 2;
-
-  // one stairwell near the entrance serving all three floors: from the ground
-  // floor you can go up to "the rest" or down to the basement
-  const stairX = Math.round(Math.max(90, leftPad * 0.5));
-  ladders = [
-    { x: stairX, up: -1, down: 0 },
-    { x: stairX, up: 0, down: 1 },
-  ];
-
-  // the corner plant (hidden door to the art gallery) is on the ground floor,
-  // far right, past every sign
-  plantX = WORLD_W - 46;
-
-  guy.x = clamp(guy.x, 20, WORLD_W - 20);
-
-  // snap the camera so a resize never leaves it mid-pan
-  camX = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
-  camY = clamp(guyFeetY() - H * 0.62, 0, Math.max(0, WORLD_H - H));
-}
-window.addEventListener("resize", resize);
-resize();
-
-function hitBox(mx, my) {
-  for (const p of doorLayout) {
-    if (mx >= p.boxX && mx <= p.boxX + p.boxW && my >= p.boxTop && my <= p.boxTop + p.boxH)
-      return p;
-    if (mx >= p.doorX && mx <= p.doorX + p.doorW && my >= p.floorLineY - p.doorH && my <= p.floorLineY)
-      return p;
-  }
-  return null;
-}
-
-// the corner plant — the hidden door to the art gallery
-function hitPlant(mx, my) {
-  return mx >= plantX - 20 && mx <= plantX + 18 &&
-         my >= floorY["0"] - 54 && my <= floorY["0"] + 2;
-}
-
-function leaveVia(url, atX) {
-  guy.entering = true;
-  guy.enterT = 0;
-  guy.targetUrl = url;
-  guy.enterDoor = null;
-  guy.x = atX;
-  guy.vx = 0;
-  guy.yOff = 0;
-  guy.vy = 0;
-  guy.onGround = true;
-}
-
-canvas.addEventListener("mousemove", (e) => {
-  const r = canvas.getBoundingClientRect();
-  const mx = e.clientX - r.left + camX;
-  const my = e.clientY - r.top + camY;
-  canvas.style.cursor = (hitBox(mx, my) || hitPlant(mx, my)) ? "pointer" : "default";
-});
-
-canvas.addEventListener("click", (e) => {
-  if (guy.entering) return;
-  const r = canvas.getBoundingClientRect();
-  const mx = e.clientX - r.left + camX;
-  const my = e.clientY - r.top + camY;
-  const p = hitBox(mx, my);
-  if (p) {
-    leaveVia(p.url, p.cx);
-    guy.enterDoor = p;
-    guy.enterT = 0;
-  } else if (hitPlant(mx, my)) {
-    leaveVia("gallery.html", plantX);
-  }
-});
-
-function nearestDoor() {
-  let best = null, bd = 1e9;
-  for (const p of doorLayout) {
-    if (p.floor !== guy.floor) continue;
-    const d = Math.abs(guy.x - p.cx);
-    if (d < bd) { bd = d; best = p; }
-  }
-  return { p: best, d: bd };
-}
-
-function tryEnter() {
-  if (!guy.onGround || guy.climbing) return;
-  const { p, d } = nearestDoor();
-  if (p && d < p.doorW * 0.9) {
-    guy.entering = true;
-    guy.enterT = 0;
-    guy.targetUrl = p.url;
-    guy.enterDoor = p;
-    guy.x = p.cx;
-    guy.vx = 0;
-  }
-}
-
-function update() {
-  if (guy.entering) {
-    guy.enterT += 0.02;
-    if (guy.enterT >= 1) window.location.href = guy.targetUrl;
-    return;
-  }
-
-  if (guy.climbing) {
-    guy.climbT += 0.045;
-    guy.x = guy.climbX;
-    if (guy.climbT >= 1) {
-      guy.climbing = false;
-      guy.floor = guy.climbTo;
-      guy.yOff = 0; guy.vy = 0; guy.onGround = true;
-    }
-  } else {
-    let dir = 0;
-    if (keys["ArrowLeft"] || keys["a"] || keys["A"]) dir -= 1;
-    if (keys["ArrowRight"] || keys["d"] || keys["D"]) dir += 1;
-    guy.vx = dir * guy.speed;
-    guy.x += guy.vx;
-    guy.x = clamp(guy.x, 20, WORLD_W - 20);
-
-    guy.vy += GRAV;
-    guy.yOff += guy.vy;
-    if (guy.yOff >= 0) {
-      guy.yOff = 0;
-      guy.vy = 0;
-      guy.onGround = true;
-    }
-  }
-
-  hintEl.style.opacity = "0.9";
-
-  // passport stamps (local only)
-  try {
-    if (guy.floor === 1) localStorage.setItem("sortafun-stamp-basement", "1");
-    if (guy.x > WORLD_W - 90) localStorage.setItem("sortafun-stamp-walked", "1");
-  } catch (e) {}
-
-  // the changelog note is on the wall at spawn — it fades as you move away
-  if (changelogEl && !changelogEl.hidden) {
-    const fade = clamp(Math.min(1 - camX / 220, guy.floor === 0 ? 1 : 0), 0, 1);
-    changelogEl.style.opacity = String(fade);
-    changelogEl.style.pointerEvents = fade > 0.4 ? "auto" : "none";
-  }
-}
-
-let t = 0;
-
-function drawBg() {
-  // the white fill is also the per-frame canvas clear — keep it unconditional
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, W, H);
-}
-
-// static clipart WordArt — chunky letters with a flat grey extrusion, no motion
-function drawTitle(cx, cy) {
-  const text = "SORTAFUN.ORG";
-  const fs = Math.min(40, Math.round(W / 20));
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = `bold ${fs}px 'Comic Sans MS', 'Arial Black', Impact, sans-serif`;
-
-  const depth = 7;
-  ctx.fillStyle = "#c9c9c9";
-  for (let i = depth; i >= 1; i--) {
-    ctx.fillText(text, i * 1.6, i * 1.3);
-  }
-
-  ctx.fillStyle = PAPER;
-  ctx.fillText(text, 0, 0);
-  ctx.lineWidth = 1.6;
-  ctx.strokeStyle = INK;
-  ctx.strokeText(text, 0, 0);
-
-  ctx.restore();
-}
-
-function draw() {
-  t += 1;
-
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalAlpha = 1;
-  ctx.shadowBlur = 0;
-
-  const targetCamX = clamp(guy.x - W / 2, 0, Math.max(0, WORLD_W - W));
-  camX += (targetCamX - camX) * 0.16;
-  if (Math.abs(targetCamX - camX) < 0.4) camX = targetCamX;
-
-  const targetCamY = clamp(guyFeetY() - H * 0.62, 0, Math.max(0, WORLD_H - H));
-  camY += (targetCamY - camY) * 0.14;
-  if (Math.abs(targetCamY - camY) < 0.4) camY = targetCamY;
-
-  drawBg();
-
-  // ---------- world space ----------
-  ctx.save();
-  ctx.translate(-camX, -camY);
-
-  // the basement reads as a dim room below the ground floor
-  ctx.fillStyle = "#efeeec";
-  ctx.fillRect(0, floorY["0"] + 2, WORLD_W, WORLD_H - floorY["0"]);
-
-  ctx.strokeStyle = INK;
-  ctx.fillStyle = INK;
-  ctx.lineWidth = 2;
-
-  // floor lines, one per storey
-  ["-1", "0", "1"].forEach((f) => {
-    const y = floorY[f];
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(WORLD_W, y);
-    ctx.stroke();
-  });
-
-  // the stairwell
-  drawStairwell();
-
-  // basement flavour — fills the void, nods to the floor-clip lore
-  ctx.save();
-  ctx.fillStyle = "#c9c7c3";
-  ctx.textAlign = "center";
-  ctx.font = "italic 15px 'Comic Sans MS', 'Segoe Print', cursive";
-  const bMid = (floorY["0"] + floorY["1"]) / 2;
-  const bx = camX + W / 2;
-  ctx.fillText("you found the basement", bx, bMid - 14);
-  ctx.fillText("(not a feature. not getting fixed.)", bx, bMid + 12);
-  ctx.restore();
-
-  // faint zone banners above the first sign of each cluster
-  ctx.save();
-  ctx.fillStyle = "#bdbdbd";
-  ctx.textAlign = "left";
-  ctx.font = "13px 'Comic Sans MS', 'Segoe Print', cursive";
-  for (const z of zoneMarks) {
-    ctx.fillText(z.label + "  " + "-".repeat(6), z.x, z.top);
-  }
-  ctx.restore();
-
-  // menu signs
-  ctx.textAlign = "center";
-  for (let i = 0; i < doorLayout.length; i++) {
-    const p = doorLayout[i];
-    if (p.img && p.img.complete && p.img.naturalWidth) {
-      ctx.drawImage(p.img, p.boxX, p.boxTop, p.boxW, p.boxH);
-    } else {
-      drawWonkySign(p, i);
-    }
-  }
-
-  drawPlant(plantX, floorY["0"]);
-
-  const { p: near, d: nearD } = nearestDoor();
-  for (const p of doorLayout) {
-    const isEnterDoor = guy.entering && p === guy.enterDoor;
-    const open = isEnterDoor ? clamp(guy.enterT * 1.5, 0, 1) : 0;
-    const lit = !guy.entering && p === near && nearD < p.doorW * 0.9 && guy.onGround && !guy.climbing;
-    drawDoor(p, lit, open);
-  }
-
-  drawGuy();
-  drawSignboards();
-
-  ctx.restore();
-  // ---------- /world space ----------
-
-  drawEdgeHints();
-
-  // welcome WordArt — screen space, greets you at spawn and fades as you leave
-  const tFade = clamp(Math.min(1 - camX / 260, guy.floor === 0 ? 1 : 0), 0, 1);
-  if (tFade > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = tFade;
-    drawTitle(W / 2, 54);
-    ctx.restore();
-  }
-}
-
-function drawStairwell() {
-  const sx = ladders[0].x;
-  const yTop = floorY["-1"], yBot = floorY["1"];
-  ctx.save();
-  ctx.strokeStyle = "#000";
-  ctx.lineWidth = 2;
-  // uprights
-  ctx.beginPath();
-  ctx.moveTo(sx - 12, yTop); ctx.lineTo(sx - 12, yBot);
-  ctx.moveTo(sx + 12, yTop); ctx.lineTo(sx + 12, yBot);
-  ctx.stroke();
-  // rungs
-  ctx.strokeStyle = "#999";
-  for (let y = yTop + 14; y < yBot; y += 20) {
-    ctx.beginPath();
-    ctx.moveTo(sx - 12, y); ctx.lineTo(sx + 12, y);
-    ctx.stroke();
-  }
-  // labels at each floor
-  ctx.fillStyle = "#888";
-  ctx.textAlign = "left";
-  ctx.font = "11px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillText("up: the rest", sx + 18, floorY["-1"] - 8);
-  ctx.fillText("down: basement", sx + 18, floorY["1"] - 8);
-
-  // a "you are here" directory board on the ground floor next to the stairs
-  const dx = sx + 20, dy = floorY["0"] - 118, dw = 168, dh = 96;
-  ctx.fillStyle = PAPER;
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(dx, dy, dw, dh);
-  ctx.fillStyle = INK;
-  ctx.font = "bold 12px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillText("YOU ARE HERE", dx + 10, dy + 20);
-  ctx.font = "11px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillStyle = "#444";
-  ctx.fillText("up   . make + the rest", dx + 10, dy + 42);
-  ctx.fillText("here . play, 12 games", dx + 10, dy + 60);
-  ctx.fillText("down . the basement", dx + 10, dy + 78);
-  ctx.restore();
-}
-
-// "there is more this way" + a "room N / M" tag over the guy, screen space
-function drawEdgeHints() {
-  if (guy.entering) return;
-  const maxCam = Math.max(0, WORLD_W - W);
-  const feet = guyFeetY() - camY;
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.textBaseline = "middle";
-
-  const edgeY = clamp(feet - 116, 40, H - 40);
-  if (camX < maxCam - 4) {
-    ctx.globalAlpha = 0.4 + 0.35 * Math.sin(t * 0.12);
-    ctx.textAlign = "right";
-    ctx.font = "bold 28px 'Comic Sans MS', 'Arial Black', sans-serif";
-    ctx.fillText("»", W - 14, edgeY);
-    ctx.globalAlpha = 0.8;
-    ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
-    ctx.fillText("more this way", W - 14, edgeY + 20);
-    ctx.globalAlpha = 1;
-  }
-  if (camX > 4) {
-    ctx.globalAlpha = 0.5;
-    ctx.textAlign = "left";
-    ctx.font = "bold 28px 'Comic Sans MS', 'Arial Black', sans-serif";
-    ctx.fillText("«", 14, edgeY);
-    ctx.globalAlpha = 1;
-  }
-
-  if (nearLadder(-1) && nearLadder(1)) hintClimb("up: the rest   down: basement", feet);
-  else if (nearLadder(-1)) hintClimb("press up for the rest", feet);
-  else if (nearLadder(1)) hintClimb("press down for the basement", feet);
-
-  const floorDoors = doorLayout.filter((p) => p.floor === guy.floor);
-  const { p } = nearestDoor();
-  if (p && !guy.climbing) {
-    const idx = floorDoors.indexOf(p) + 1;
-    ctx.globalAlpha = 0.65;
-    ctx.textAlign = "center";
-    ctx.font = "11px 'Comic Sans MS', 'Segoe Print', cursive";
-    ctx.fillText("room " + idx + " / " + floorDoors.length, guy.x - camX, clamp(feet - 104, 20, H - 20));
-  }
-  ctx.restore();
-  ctx.textBaseline = "alphabetic";
-}
-
-function hintClimb(txt, feet) {
-  ctx.globalAlpha = 0.85;
-  ctx.textAlign = "center";
-  ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
-  ctx.fillText(txt, guy.x - camX, clamp(feet - 132, 20, H - 20));
-  ctx.globalAlpha = 1;
-}
-
-
-function drawDoor(p, lit, open) {
-  open = open || 0;
-  const x = p.doorX, w = p.doorW, h = p.doorH;
-  const groundY = p.floorLineY;
-  const y = groundY - h;
-  const r = Math.min(10, w * 0.4);
-  const ease = 1 - Math.pow(1 - open, 3);
-
-  // outer frame
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(x - 4, y - 4, w + 8, h + 4);
-
-  // lit doorway behind the panel, revealed as it swings (white = light beyond)
-  if (ease > 0.01) {
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(x, y, w, h);
-  }
-
-  // the panel — hinged at the left edge, foreshortening to a thin strip
-  const pw = w * (1 - ease * 0.86);
-  const lift = ease * 3;
-  const rr = Math.min(r, pw) * (1 - ease);   // right corner squares off as it turns
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.moveTo(x, groundY);
-  ctx.lineTo(x, y + Math.min(r, pw));
-  ctx.quadraticCurveTo(x, y, x + Math.min(r, pw), y);
-  ctx.lineTo(x + pw - rr, y - lift);
-  ctx.quadraticCurveTo(x + pw, y - lift, x + pw, y - lift + rr);
-  ctx.lineTo(x + pw, groundY);
-  ctx.closePath();
-  ctx.fill();
-
-  // lit outer edge of the swinging panel
-  if (ease > 0.02) {
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x + pw, y - lift);
-    ctx.lineTo(x + pw, groundY);
-    ctx.stroke();
-  }
-
-  // knob near the free edge
-  ctx.fillStyle = PAPER;
-  ctx.beginPath();
-  ctx.arc(x + pw - Math.min(7, pw * 0.3), y + h * 0.55, 2.6, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (lit) {
-    ctx.fillStyle = INK;
-    ctx.textAlign = "center";
-    ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
-    ctx.fillText("press ↓ to enter", p.cx, y - 10);
-    ctx.font = "17px 'Comic Sans MS', 'Segoe Print', cursive";
-  }
-}
-
-// tiny leaderboard readouts pinned under each sign (world space)
-function drawSignboards() {
-  if (!window.SortafunLB) return;
-  ctx.save();
-  ctx.textAlign = "center";
-  for (const p of doorLayout) {
-    const lines = [];
-    if (p.game && LB[p.game] && LB[p.game].length) {
-      lines.push({ t: "today", head: true });
-      LB[p.game].forEach((r, i) => {
-        lines.push({ t: (i + 1) + ". " + lbTrunc(r.name, 8) + "  " + lbFmt(p.game, r.score) });
-      });
-    } else if (p.recent && LB.recent) {
-      const r = LB.recent;
-      const gl = (SortafunLB.GAMES[r.game] || {}).label || r.game;
-      lines.push({ t: "latest score", head: true });
-      lines.push({ t: lbTrunc(r.name, 14) });
-      lines.push({ t: gl + "  " + lbFmt(r.game, r.score) });
-    }
-    if (!lines.length) continue;
-
-    let ly = p.boxTop + p.boxH + 10;
-    for (const ln of lines) {
-      ctx.fillStyle = ln.head ? "#999" : "#555";
-      ctx.font = (ln.head ? "8px" : "9px") + " 'Comic Sans MS', 'Segoe Print', cursive";
-      ctx.fillText(ln.t, p.cx, ly);
-      ly += ln.head ? 9 : 11;
-    }
-  }
-  ctx.restore();
-}
-
-// a labelled sign drawn in the same wobbly hand-marker style as the button art,
-// for the signs that have no PNG (animation studio / gallery). seed keeps the
-// wobble stable frame to frame.
-function drawWonkySign(p, seed) {
-  // inset a touch so the drawn outline reads at the same weight as the tighter
-  // hand-scanned PNG signs rather than filling the whole allocation
-  const padX = p.boxW * 0.06, padY = p.boxH * 0.05;
-  const x = p.boxX + padX, y = p.boxTop + padY;
-  const w = p.boxW - padX * 2, h = p.boxH - padY * 2;
-  const a = Math.min(6, h * 0.09);           // wobble amplitude
-  function j(n) {
-    const s = Math.sin(seed * 53.17 + n * 74.31) * 43758.5453;
-    return ((s - Math.floor(s)) - 0.5) * 2 * a;
-  }
-  const L = x + j(1), R = x + w + j(2), T = y + j(3), B = y + h + j(4);
-
-  ctx.save();
-  ctx.strokeStyle = INK;
-  ctx.fillStyle = PAPER;
-  ctx.lineWidth = 2.1;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-
-  ctx.beginPath();
-  ctx.moveTo(L + j(10), T + j(11));                                   // top-left
-  ctx.quadraticCurveTo((L + R) / 2 + j(12), T + j(13) - a * 0.4, R + j(14), T + j(15)); // top edge
-  ctx.quadraticCurveTo(R + j(16) + a * 0.4, (T + B) / 2 + j(17), R + j(18), B + j(19)); // right edge
-  ctx.quadraticCurveTo((L + R) / 2 + j(20), B + j(21) + a * 0.4, L + j(22), B + j(23)); // bottom edge
-  ctx.quadraticCurveTo(L + j(24) - a * 0.4, (T + B) / 2 + j(25), L + j(10), T + j(11)); // left edge
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = INK;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  const words = p.label.split(" ");
-  // balance into at most two lines by word count
-  let l1 = p.label, l2 = "";
-  if (words.length > 1) {
-    let cut = Math.ceil(words.length / 2);
-    l1 = words.slice(0, cut).join(" ");
-    l2 = words.slice(cut).join(" ");
-  }
-  const longest = Math.max(l1.length, l2.length);
-  let fs = Math.min(16, h * 0.3, (w * 1.7) / Math.max(1, longest));
-  fs = Math.max(9, fs);
-  ctx.font = fs + "px 'Comic Sans MS', 'Segoe Print', cursive";
-  const mid = p.boxTop + p.boxH / 2;
-  if (l2) {
-    ctx.fillText(l1, p.cx, mid - fs * 0.62);
-    ctx.fillText(l2, p.cx, mid + fs * 0.62);
-  } else {
-    ctx.fillText(l1, p.cx, mid);
-  }
-  ctx.restore();
-  ctx.textBaseline = "alphabetic";
-}
-
-function drawPlant(x, baseY) {
-  ctx.strokeStyle = INK;
-  ctx.fillStyle = PAPER;
-  ctx.lineWidth = 2;
-  // pot
-  ctx.beginPath();
-  ctx.moveTo(x - 12, baseY - 20);
-  ctx.lineTo(x + 12, baseY - 20);
-  ctx.lineTo(x + 8, baseY);
-  ctx.lineTo(x - 8, baseY);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  // leaves
-  ctx.beginPath();
-  ctx.moveTo(x, baseY - 20);
-  ctx.quadraticCurveTo(x - 16, baseY - 34, x - 6, baseY - 48);
-  ctx.moveTo(x, baseY - 20);
-  ctx.quadraticCurveTo(x + 16, baseY - 34, x + 6, baseY - 48);
-  ctx.moveTo(x, baseY - 20);
-  ctx.lineTo(x, baseY - 44);
-  ctx.stroke();
-}
-
-function drawGuy() {
-  ctx.save();
-  ctx.strokeStyle = INK;
-  ctx.fillStyle = PAPER;
-  ctx.lineWidth = 2;
-
-  // fade into the doorway on entry
-  if (guy.entering) ctx.globalAlpha = Math.max(0, 1 - guy.enterT * 1.15);
-
-  let feetY = guyFeetY();
-  let bob = 0;
-  if (!guy.entering && !guy.climbing && guy.vx !== 0 && guy.onGround) bob = Math.sin(t * 0.3) * 2;
-  const airborne = (!guy.onGround && !guy.entering) || guy.climbing;
-
-  const x = guy.x;
-  const headR = 9;
-  const headCY = feetY - 46 + bob;
-  const hipY = feetY - 20 + bob;
-
-  ctx.beginPath();
-  ctx.arc(x, headCY, headR, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(x, headCY + headR);
-  ctx.lineTo(x, hipY);
-  ctx.stroke();
-
-  const swing = airborne ? -8 : (guy.vx !== 0 ? Math.sin(t * 0.3) * 6 : 3);
-  ctx.beginPath();
-  ctx.moveTo(x, hipY - 14);
-  ctx.lineTo(x - 9, hipY - 6 + swing);
-  ctx.moveTo(x, hipY - 14);
-  ctx.lineTo(x + 9, hipY - 6 - swing);
-  ctx.stroke();
-
-  let legSwing;
-  if (airborne) legSwing = guy.vy < 0 ? 3 : 9;
-  else legSwing = guy.vx !== 0 ? Math.sin(t * 0.3) * 7 : 5;
-  ctx.beginPath();
-  ctx.moveTo(x, hipY);
-  ctx.lineTo(x - legSwing, feetY + bob);
-  ctx.moveTo(x, hipY);
-  ctx.lineTo(x + legSwing, feetY + bob);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-function loop() {
-  try {
-    update();
-    draw();
-  } catch (err) {
-    console.error(err);   // never let one bad frame freeze input
-  }
-  requestAnimationFrame(loop);
-}
-loop();
-
-// the sticky note in the middle — changelog. dismissible, remembered per browser.
+/* ---------- stop press: newest score anywhere, best effort ---------- */
 (function () {
-  var cl = document.getElementById("changelog");
-  var hide = document.getElementById("clHide");
-  if (!cl || !hide) return;
-  try { if (localStorage.getItem("sortafun-cl-hidden") === "1") cl.hidden = true; } catch (e) {}
-  hide.addEventListener("click", function () {
-    cl.hidden = true;
-    try { localStorage.setItem("sortafun-cl-hidden", "1"); } catch (e) {}
-  });
+  if (!window.SortafunLB || !SortafunLB.recent) return;
+  SortafunLB.recent(1).then(function (rows) {
+    var r = rows && rows[0];
+    if (!r) return;
+    var g = SortafunLB.GAMES[r.game] || {};
+    var val = g.format ? g.format(r.score) : (r.score + " " + (g.unit || ""));
+    var label = g.label || r.game;
+    var box = document.getElementById("stoppress");
+    document.getElementById("stoppress-body").textContent =
+      " " + r.name + " just posted " + val.trim() + " at " + label + ".";
+    box.hidden = false;
+  }).catch(function () {});
+})();
+
+/* ---------- passport stamps, re-earned on the new front page ----------
+   old index set these while you walked the lobby / fell in the basement.
+   here: reading to the foot of the paper == the long walk,
+   opening the late edition == finding the basement. */
+function stamp(k) { try { localStorage.setItem("sortafun-stamp-" + k, "1"); } catch (e) {} }
+
+document.getElementById("late").addEventListener("toggle", function () {
+  if (this.open) stamp("basement");
+});
+
+(function () {
+  var foot = document.querySelector(".colophon");
+  if (!foot || !("IntersectionObserver" in window)) return;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting) { stamp("walked"); io.disconnect(); } });
+  }, { threshold: 0.4 });
+  io.observe(foot);
 })();
 </script>
 </body>

@@ -10,7 +10,7 @@
     padding: 0;
     background: #fff;
     overflow: hidden;
-    font-family: "Comic Sans MS", "Segoe Print", cursive;
+    font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Segoe Print", sans-serif;
   }
   canvas { display: block; }
   #hint {
@@ -199,11 +199,11 @@ function draw() {
 
   ctx.textAlign = "center";
   ctx.fillStyle = INK;
-  ctx.font = "30px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.font = "30px 'Comic Sans MS', 'Segoe Print', sans-serif";
   ctx.fillText("art gallery", titleX, 52);
 
   // one quiet line, near the entrance
-  ctx.font = "13px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.font = "13px 'Comic Sans MS', 'Segoe Print', sans-serif";
   ctx.fillStyle = "#999";
   ctx.textAlign = "left";
   ctx.fillText("he runs because you're watching. close the tab and he stops.", 250, groundY - 40);
@@ -257,7 +257,7 @@ function drawExitDoor() {
 
   const near = guy.onGround && !guy.entering && Math.abs(guy.x - p.cx) < w * 1.1;
   ctx.fillStyle = INK;
-  ctx.font = "12px 'Comic Sans MS', 'Segoe Print', cursive";
+  ctx.font = "12px 'Comic Sans MS', 'Segoe Print', sans-serif";
   ctx.fillText(near ? "press ↓ to leave" : "to the lobby", p.cx, y - 10);
 }
 

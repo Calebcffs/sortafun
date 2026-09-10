@@ -247,6 +247,13 @@ Plain static HTML, no framework, no build. `game.css` is shared styling for the
 game sub-pages; `forum.html` deliberately does NOT use it (it's a period piece
 with its own Times New Roman styling).
 
+Font stack: the casual pages use
+`"Comic Sans MS", "Comic Sans", "Chalkboard SE", "Segoe Print", sans-serif`. It
+must end in `sans-serif`, never `cursive` (on iOS `cursive` resolves to Snell
+Roundhand, a curly script, which is the "weird font on mobile" bug). Same rule in
+any `ctx.font` canvas string. Live copies: `game.css`, `404.html`, `gallery.html`
+(CSS + canvas), `leaderboard.js` `injectStyle()`.
+
 `typing.html`: 30-second typing test, styled as a monkeytype "serika dark"
 clone (own dark `<style>` scoped to `body.tt`, overrides `game.css`; loads
 Roboto Mono from Google Fonts). Word banks come from `words.js`
@@ -327,29 +334,47 @@ The hit counter (`#hits` odometer, top-right of the lobby) reads/increments
 `stats/hits` via `SortafunLB.bumpHits`/`getHits`, once per browser session
 (`sessionStorage sortafun-visited`).
 
-### The lobby (`index.html`) is now a three-storey building
+### The lobby (`index.html`) is a newspaper front page
 
-`DOORS[]` entries carry `zone` (`play`/`make`/`meta`/`down`); `ZONE_FLOOR` maps
-zone -> floor index (`0` ground, `-1` up, `1` basement). `resize()` lays each
-floor's signs out as its own horizontal row (`floorY[f]`, `boxTop` above the
-line), computes `WORLD_W`/`WORLD_H`, and places one `ladders[]` stairwell near
-the entrance. The camera follows the guy on both axes (`camX`, `camY`);
-`guy.floor` + `guyFeetY()` + `climb()` handle vertical movement — up/down at the
-stairwell climbs instead of jumping. `nearestDoor` / `hitBox` / edge hints are
-all filtered to `guy.floor`. `drawStairwell` also draws the "YOU ARE HERE"
-directory board. `drawWonkySign` draws any sign with no `btn` PNG (now most of
-them) in the wobbly-marker style.
+Rewritten 2026-09-10. The canvas walk-around building (the guy, floors, stairs,
+`DOORS[]`, `WORLD_W`, `climb()`, `drawWonkySign`, the sticky-note changelog) is
+gone. `index.html` is now static HTML styled as an old broadsheet, "The Sortafun
+Times": masthead in blackletter (`UnifrakturMaguntia` from Google Fonts, Georgia
+fallback), body in Georgia / Playfair Display.
+
+Every game and page is a headline. Four JS arrays near the top of the inline
+script hold `[label, url, dek]` rows: `GAMES` (12, `#games`), `WORKSHOP`
+(`#workshop`), `NOTICES` (`#notices`, includes `puzzle-archive.html`), `BASEMENT`
+(`#basement`, inside a collapsed `<details class="late">` = "The Late Edition").
+`fill()` builds the `.story` anchor cards into each `.stories` CSS grid (3 cols
+desktop, 2 at 860px, 1 at 560px). To add a game or page, push a row to the right
+array; order is fixed on purpose. `GAMES[0]` renders as the `.lead` (full-width,
+drop cap). `pickIdx` (day-of-year modulo) flags one game "pick of the day", no
+reordering. `gallery.html` is deliberately NOT listed (still an easter egg): the
+only link to it is the bare `&#10087;` ornament in the colophon (`#plant`,
+`aria-hidden`, `tabindex="-1"`, no label).
+
+Carried over from the old lobby:
+- **Hit counter** -> masthead "Circulation" number (`#circulation b`), same
+  once-per-session guard (`sessionStorage sortafun-visited`, `SortafunLB.bumpHits`
+  / `getHits`).
+- **Stop press** box (`#stoppress`) shows `SortafunLB.recent(1)`, hidden if
+  offline.
+- **Passport stamps**: the old canvas set `sortafun-stamp-walked` (far end of
+  lobby) and `-basement` (fell through the floor). The new page re-earns them:
+  `-walked` when an `IntersectionObserver` sees `.colophon` (read to the foot),
+  `-basement` on the `toggle` event of `#late` (open the late edition).
+  `passport.html`'s stamp descriptions were updated to match.
+- **Corrections & Amendments** (`.corrections`): the old changelog, now a boxed
+  column, not dismissible. ~3 short lines, newest date, plain ASCII.
+
+House voice still applies to every headline and dek: no em/en dashes, no smart
+quotes, no ellipsis character, plain ASCII, lowercase-leaning deks.
 
 Leaderboards + the animation gallery + guestbook + hit counter use one
 client-only Firestore backend (`firebase-config.js`, `leaderboard.js`).
 `firestore.rules` and any indexes must be pasted into the console by hand
 whenever they change, see `SETUP.md`. The forum does not touch Firestore.
-
-`index.html` has a sticky-note changelog (`#changelog`, `assets/sticky-note.png`)
-fixed at the left, "on the wall" at spawn; it fades out (opacity driven from
-`camX` / `guy.floor` each frame) as you move away. Dismissible (`hide`),
-remembered in `localStorage` (`sortafun-cl-hidden`). Keep it to ~4 short lines,
-newest date first, plain ASCII.
 
 Leaderboard rows (`leaderboard.js` `mountPanel`) and gallery posts / comments
 show a Singapore-time timestamp via `SortafunLB.fmtWhen`. On any "all time"
