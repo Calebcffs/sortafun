@@ -26,7 +26,10 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy rules and indexes
-        run: npx --yes firebase-tools@13 deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID" --non-interactive
+        # --force: let this repo's firestore.indexes.json be the source of truth and
+        # delete any live index it doesn't list, instead of failing the whole deploy
+        # (rules + indexes) whenever the console and the repo drift on an index.
+        run: npx --yes firebase-tools@13 deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID" --non-interactive --force
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
