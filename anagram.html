@@ -3,36 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>anagram sprint &middot; SORTAFUN.ORG</title>
+<title>word hive &middot; SORTAFUN.ORG</title>
 <link rel="stylesheet" href="game.css">
 <style>
-  .hud { display: flex; gap: 22px; justify-content: center; font-size: 16px; margin: 10px 0 4px; }
+  .hud { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; font-size: 16px; margin: 10px 0 4px; }
   .hud b { font-size: 20px; }
-  #scram { font-size: 40px; letter-spacing: 10px; margin: 18px 0 6px; text-transform: uppercase; }
-  #ans { font: inherit; font-size: 24px; letter-spacing: 3px; width: 220px; text-align: center; text-transform: lowercase; border: 2px solid #000; border-radius: 8px; padding: 6px; outline: none; }
-  #ans.bad { background: #f7d6d6; }
-  #ans.good { background: #d6f5d6; }
-  .row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+
+  #cur { font-size: 34px; letter-spacing: 6px; margin: 4px 0 10px; text-transform: uppercase; min-height: 42px; }
+  #cur.bad { color: #b00; }
+  #cur.good { color: #1faf3a; }
+
+  .hive { position: relative; width: 210px; height: 216px; margin: 6px auto 14px; }
+  .cell {
+    position: absolute; width: 80px; height: 70px; padding: 0;
+    background: none; border: none; outline: none; cursor: pointer;
+    font: inherit; font-size: 26px; font-weight: bold; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cell svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .cell polygon { fill: #fff; stroke: #000; stroke-width: 3; }
+  .cell:hover polygon { fill: #f0f0f0; }
+  .cell.center polygon { fill: #ffe9a8; }
+  .cell.center:hover polygon { fill: #ffdd7a; }
+  .cell .letter { position: relative; }
+
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 4px; }
+  .row button { min-width: 74px; }
+
+  #found { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 480px; margin: 14px auto 0; padding: 0; list-style: none; }
+  #found li { border: 2px solid #000; border-radius: 8px; padding: 3px 8px; font-size: 13px; background: #fff; }
+  #found li.pan { background: #ffe9a8; }
+
+  #tier { font-size: 13px; color: #666; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>anagram sprint</h1>
-  <p class="sub">unscramble the word, hit enter. sixty seconds, one point each. stuck? skip it, no penalty.</p>
+  <h1>word hive</h1>
+  <p class="sub">seven letters, one of them mandatory (gold). find every word you can, 4+ letters,
+    reuse letters as often as you like. no clock &mdash; stop whenever and submit your score.
+    same seven letters for everyone today.</p>
 
   <div class="hud">
-    <span>time <b id="time">60</b></span>
-    <span>solved <b id="score">0</b></span>
+    <span>score <b id="score">0</b></span>
+    <span>found <b id="foundCount">0</b></span>
+    <span id="tier">beginner</span>
   </div>
 
-  <div id="scram">- - - - -</div>
+  <div id="cur">- - - - -</div>
+
+  <div class="hive" id="hive"></div>
+
   <div class="row">
-    <input id="ans" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type it">
-    <button id="skip">skip</button>
+    <button id="del">delete</button>
+    <button id="shuffle">shuffle</button>
+    <button id="enter">enter</button>
   </div>
 
-  <div class="status" id="status">press a key to start</div>
-  <div><button id="restart">again</button></div>
+  <div class="status" id="status">type or click letters. the gold one is required in every word.</div>
+  <div><button id="finish">i'm done, submit score</button></div>
+
+  <ul id="found"></ul>
 
   <div id="lb"></div>
 
@@ -45,112 +76,248 @@
 <script>
 "use strict";
 
-var FALLBACK = "about above actor adult after again agent album alert alien alike alive allow alone along aloud amount anger angle apart apple apply april argue arise armed array arrow aside asset audio avoid awake award aware badly baker basic beach began begin being below bench birth black blame blank blast blaze blind block blood board boost booth bound brain brand brave bread break breed brick brief bring broad brown brush build built cabin cable candy cargo carry catch cause chain chair chaos charm chart chase cheap check chess chest chief child china claim class clean clear click cliff climb clock close cloth cloud coach coast could count court cover crack craft crash cream crime cross crowd crown curve cycle daily dance death delay depth doubt dozen draft drama drank dream dress drink drive early earth eight elite empty enemy enjoy enter equal error event every exact exist extra faith false fault fiber field fifth fight final first flame flash fleet float floor fluid focus force forth forty forum found frame fresh front fruit fully funny giant given glass globe grace grade grain grand grant grass great green group grown guard guess guest guide happy heart heavy horse hotel house human ideal image index inner input issue joint judge known label large laser later laugh layer learn least leave legal level light limit local logic loose lower lucky lunch magic major maker march match maybe mayor meant medal media metal meter might minor minus mixed model money month moral motor mount mouse mouth movie music needs never newly night noise north noted novel nurse ocean offer often order other ought paint panel paper party peace phase phone photo piece pilot pitch place plain plane plant plate point pound power press price pride prime print prior prize proof proud prove queen quick quiet quite radio raise range rapid ratio reach ready refer right rival river robot roman rough round route royal rural scale scene scope score sense serve seven shall shape share sharp sheet shelf shell shift shine shirt shock shoot short shown sight since sixth sixty sized skill sleep slide small smart smile smoke solid solve sorry sound south space speak speed spend spent split spoke sport staff stage stand start state steam steel stick still stock stone stood store storm story strip stuck study stuff style sugar suite super sweet table taken taste teach terms thank theft their theme there thick thing think third those three throw tight times tired title today topic total touch tough tower track trade train treat trend trial tried tries truck truly trust truth twice under union unity until upper upset urban usage usual valid value video virus visit vital vocal voice waste watch water wheel where which while white whole whose woman world worry worse worst worth would wound write wrong young youth".split(/\s+/);
+// seeded RNG from the Singapore day, same clock the site uses (see ladder.html)
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function daySeed() {
+  var s = (window.SortafunLB ? SortafunLB.dayStr() : new Date().toISOString().slice(0, 10));
+  return Number(s.replace(/-/g, ""));
+}
 
-var BANK = (window.SORTAFUN_WORDS && window.SORTAFUN_WORDS.top1000)
-  ? window.SORTAFUN_WORDS.top1000.filter(function (w) { return w.length >= 4 && w.length <= 7 && /^[a-z]+$/.test(w); })
-  : FALLBACK;
-if (BANK.length < 40) BANK = FALLBACK;
+var FALLBACK_ALL = "able about above accept acid acorn acre acted actor adapt adept admit adobe adopt adult after again agent agile aisle alarm album alert algae alibi alien align alike alive allow alloy almost alone along aloud alpha altar alter amber amend among ample amuse angel anger angle angry ankle apple apply april apron arena argue arise armor aroma array arrow ashen aside asset atlas atom audio audit aunt avoid await awake award aware badge baker basic basil batch beach beast began begin being below bench berry birth black blade blame bland blank blast blaze bleak blend bless blimp blind bliss block blond blood bloom blown blues bluff blunt board boast bonus boost booth bound brace brain brand brave bread break breed brick bride brief bring broad broke brook broom brown brush build built bunch burnt cabin cable candy canal candle canoe carbon cargo carol carry catch cause chair chalk champ chant chaos charm chart chase cheap check cheek chess chest chief child chili chill china chirp choir choke chose chunk cider civic civil claim clash class clean clear clerk click cliff climb cling cloak clock clone close cloth cloud clown coach coast cocoa comet comic condo cousin cover crack craft crane crash crawl cream credit creek crepe crest crime crisp cross crowd crown crumb crush crust curse curve cycle daily dairy dance dandy dared dealt dear debit debug debut decal decay decor delay dense depth derby diner dirty ditch diver dizzy dodge doing donor doubt dough dozen draft drain drama drank drape drawn dream dress dried drift drill drink drive droop drove drown dryer eager eagle early earth easel eaten eater edict elbow elder elect email empty enact endow enter entry equal equip erase erode error erupt essay ethic evade event every evict evoke exact exile exist extra fable facet faced facts faint fairy faith false fancy fatal fault fault favor feast fence ferry fetch fever fewer fiber field fiery fifth fifty fight final finch finer first fixed flair flake flame flare flash fleet flesh flick fling flint float flock flood floor flora flour flown fluid flush focal focus foggy folio force forge forth forty forum found frame frank fraud fresh fried front frost frown fruit fudge fully fumes funny fuzzy gauge geese ghost giant given glad glass glaze gleam glide gloom glory glove going goose grace grade grain grand grant grape graph grasp grass grave gravy greed green greet grief grill grime grind gross group grove grown guard guess guest guide gulls habit happy harsh harvest hasty haunt haven hazel heavy hedge hello hence herbs hertz hinge hippo hoist honey honor horse hound house hover human humid humor hunch hurry ideal idiot image imply inbox index inept inert infer input inset ionic irony issue ivory jelly jewel joint joist joker jolly judge juice jumbo junior kayak kneel knife knock known label lager laser laugh layer leach learn least ledge lemon level light limbo limit linen lined liner lodge logic loose lorry lover lower loyal lucid lucky lumen lunar lunch lung lurid lyric magic maize major maker mango manor march marsh match maybe mayor meant medal media melon mercy merge merit metal meter micro midst might minor minus mirth model modem month moody moral motel motor mound mount mourn mouse mouth moved mover mover movie music mused nasty naval needy nerve never newly niche night noble noise north notch novel nudge nurse oasis obese occur ocean offer often olive onion opera orbit order organ other otter ought outer owner ozone paint panel panic paper party pasta patch pause peace peach pearl pedal penny perch phase phone photo piano piece pilot pinch pitch pixel plain plaid plank plant plate plaza plead plow plumb plume plush poach poems point poise poker polar porch poser pouch pound pouty power press price pride prime print prior prize probe prone proof proud prove prowl pulse punch pupil purse quack quail quake queen query quest quiet quilt quirk quite quote radar radio raise range rapid ratio raven reach react ready realm rebel refer reign relax relay relic repay reply rerun reset resin retro rider ridge rifle right rigid rinse risky ritual rival river roast robin robot rodeo rogue roomy roost rough round route royal rugby ruler rumor rural saint salad salsa salty sauce scale scarf scary scene scent scoop scope score scout scrap screw scrub seal seam seed seedy seize sense serve seven sever shade shady shaft shake shall shame shape shard share shark sharp shave shawl shear sheep sheer sheet shelf shell shift shine shiny shirt shock shone shore short shout shown shrub shrug siege sight sigma silly since siren sixth sixty skate skirt slack slain slang slate slave sleek sleep slice slide slime sling slope slosh sloth small smart smash smell smile smoke snack snail snake sneak sneer snide sniff snore snort soapy solar solid solve sonic sound south space spade spare spark speak spear speck speech speed spell spend spent spice spike spill spine spiny spire spite splat split spoil spoke spoon sport spout spray spurt squad stack staff stage stain stair stake stale stalk stall stamp stand stare stark start state stead steak steal steam steel steep steer stern stew stick stiff still sting stock stole stomp stone stood stool story stout stove stray strip stuck study stuff style suede sugar suite sunny super swamp swarm swear sweat sweep sweet swell swept swift swing swirl sword syrup table taken tally tango taper taste taxes teach teary tempo tenth theme thigh thing think third thorn those three throb throw thumb tiger tight timid tired title toast today token tonal tonic torch touch tough towel tower toxic trace track trade trail train trait tramp trash tread treat trend trial tribe trick tried troll troop trout truce truck truly trunk trust truth tulip tumor tunic turbo tutor twice twine twist ultra uncle uncut under undue unfit union unite unity until upper upset urban usage usual utter vague valid valor value vapor vault venue verse video vigil vinyl viral virus visit vital vivid vocal vodka vogue voice voter vowel wagon waist waste watch water waver weary wedge weigh weird whale wharf wheat wheel where which while whine white whole whose widen widow width wince winch windy wired wisdom witch woken world worry worse worth would wound woven wrath wreck wrist write wrong yield young youth zebra zesty".split(/\s+/);
 
-var LEN = 60;
-var scramEl = document.getElementById("scram");
-var ansEl = document.getElementById("ans");
-var timeEl = document.getElementById("time");
+var WORDS = (window.SORTAFUN_WORDS && window.SORTAFUN_WORDS.top10000)
+  ? window.SORTAFUN_WORDS.top10000.filter(function (w) { return w.length >= 4 && /^[a-z]+$/.test(w); })
+  : FALLBACK_ALL;
+if (WORDS.length < 500) WORDS = FALLBACK_ALL;
+
+function uniqueLetters(w) {
+  var seen = {};
+  for (var i = 0; i < w.length; i++) seen[w[i]] = true;
+  return Object.keys(seen).sort().join("");
+}
+
+function scoreWord(w, isPangram) {
+  var base = w.length === 4 ? 1 : w.length;
+  return isPangram ? base + 7 : base;
+}
+
+// Builds today's puzzle: 7 unique letters (guaranteed at least one pangram),
+// a mandatory center letter chosen to maximize how many words use it, and the
+// full set of accepted answers (any word from WORDS whose letters are a
+// subset of the 7 - repeats allowed - that also contains the center letter).
+// Deterministic per Singapore day, so every player gets the same seven
+// letters. See CLAUDE.md for why this checks a real word list instead of one
+// fixed target word (that was the anagram-sprint bug this replaced).
+function buildPuzzle() {
+  var rnd = mulberry32(daySeed());
+  var sevenLetterWords = WORDS.filter(function (w) { return uniqueLetters(w).length === 7; });
+  // deterministic shuffle
+  for (var i = sevenLetterWords.length - 1; i > 0; i--) {
+    var j = (rnd() * (i + 1)) | 0;
+    var t = sevenLetterWords[i]; sevenLetterWords[i] = sevenLetterWords[j]; sevenLetterWords[j] = t;
+  }
+
+  var fallback = null;
+  for (var n = 0; n < Math.min(300, sevenLetterWords.length); n++) {
+    var letters = uniqueLetters(sevenLetterWords[n]).split("");
+    var setObj = {};
+    letters.forEach(function (l) { setObj[l] = true; });
+    var subsetWords = WORDS.filter(function (w) {
+      for (var k = 0; k < w.length; k++) if (!setObj[w[k]]) return false;
+      return true;
+    });
+
+    var bestCenter = letters[0], bestCount = -1;
+    letters.forEach(function (c) {
+      var cnt = subsetWords.filter(function (w) { return w.indexOf(c) !== -1; }).length;
+      if (cnt > bestCount) { bestCount = cnt; bestCenter = c; }
+    });
+
+    var finalWords = subsetWords.filter(function (w) { return w.indexOf(bestCenter) !== -1; });
+    var pangramCount = finalWords.filter(function (w) { return uniqueLetters(w).length === 7; }).length;
+
+    var candidate = makePuzzleFrom(letters, bestCenter, finalWords);
+    if (!fallback || finalWords.length > fallback._n) { fallback = candidate; fallback._n = finalWords.length; }
+    if (finalWords.length >= 15 && pangramCount >= 1) return candidate;
+  }
+  return fallback; // extremely unlikely path - see project notes, real word list clears this easily
+}
+
+function makePuzzleFrom(letters, center, finalWords) {
+  var answers = {}, maxScore = 0;
+  finalWords.forEach(function (w) {
+    var pts = scoreWord(w, uniqueLetters(w).length === 7);
+    answers[w] = pts;
+    maxScore += pts;
+  });
+  return { letters: letters, center: center, answers: answers, maxScore: maxScore };
+}
+
+var TIERS = [
+  [0, "beginner"], [0.02, "good start"], [0.05, "moving up"], [0.08, "good"],
+  [0.15, "solid"], [0.25, "nice"], [0.4, "great"], [0.5, "amazing"],
+  [0.7, "genius"], [1.0, "queen bee"]
+];
+function tierFor(score, maxScore) {
+  var frac = maxScore > 0 ? score / maxScore : 0;
+  var label = TIERS[0][1];
+  for (var i = 0; i < TIERS.length; i++) if (frac >= TIERS[i][0]) label = TIERS[i][1];
+  return label;
+}
+
+var puzzle = buildPuzzle();
+var allowed = {};
+puzzle.letters.forEach(function (l) { allowed[l] = true; });
+
+var typed = "";
+var score = 0;
+var foundWords = {}; // word -> points
+var done = false;
+
+var hiveEl = document.getElementById("hive");
+var curEl = document.getElementById("cur");
 var scoreEl = document.getElementById("score");
+var foundCountEl = document.getElementById("foundCount");
+var tierEl = document.getElementById("tier");
 var statusEl = document.getElementById("status");
+var foundEl = document.getElementById("found");
 var lbEl = document.getElementById("lb");
+var flashT;
 
-var cur, running, ended, score, startT, timer, flashT;
+// hex-flower positions: distance from center to each of the 6 neighbours
+// equals the hex's own height for flat-top hexagons (see CLAUDE.md notes on
+// this file) - one directly above, one directly below, four on the corners.
+var CELL_POS = {
+  center: { left: 65, top: 73 },
+  outer: [
+    { left: 65, top: 4 }, { left: 125, top: 38 }, { left: 125, top: 108 },
+    { left: 65, top: 142 }, { left: 5, top: 108 }, { left: 5, top: 38 }
+  ]
+};
 
-function shuffle(w) {
-  var a = w.split("");
-  for (var tries = 0; tries < 12; tries++) {
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = (Math.random() * (i + 1)) | 0;
-      var t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    if (a.join("") !== w) break;
+var HEX_SVG = '<svg viewBox="0 0 80 70"><polygon points="20,0 60,0 80,35 60,70 20,70 0,35"/></svg>';
+
+function makeCell(letter, pos, isCenter) {
+  var btn = document.createElement("button");
+  btn.className = isCenter ? "cell center" : "cell";
+  btn.style.left = pos.left + "px";
+  btn.style.top = pos.top + "px";
+  btn.innerHTML = HEX_SVG + '<span class="letter">' + letter + "</span>";
+  btn.addEventListener("click", function () { appendLetter(letter); });
+  return btn;
+}
+
+function renderHive() {
+  hiveEl.innerHTML = "";
+  hiveEl.appendChild(makeCell(puzzle.center, CELL_POS.center, true));
+
+  var outer = puzzle.letters.filter(function (l) { return l !== puzzle.center; });
+  for (var i = outer.length - 1; i > 0; i--) {
+    var j = (Math.random() * (i + 1)) | 0;
+    var t = outer[i]; outer[i] = outer[j]; outer[j] = t;
   }
-  return a.join("");
+  outer.forEach(function (l, i) { hiveEl.appendChild(makeCell(l, CELL_POS.outer[i], false)); });
 }
 
-function next() {
-  cur = BANK[(Math.random() * BANK.length) | 0];
-  scramEl.textContent = shuffle(cur).split("").join(" ");
-  ansEl.value = "";
-  ansEl.focus();
+function renderCur() {
+  curEl.textContent = typed ? typed.toUpperCase() : "- - - - -";
 }
 
-function reset() {
-  clearInterval(timer);
+function flash(cls, msg) {
+  if (msg != null) statusEl.textContent = msg;
+  curEl.classList.remove("good", "bad");
+  void curEl.offsetWidth;
+  curEl.classList.add(cls);
   clearTimeout(flashT);
-  running = false; ended = false; score = 0; startT = null;
-  timeEl.textContent = LEN;
-  scoreEl.textContent = "0";
-  statusEl.textContent = "press a key to start";
-  ansEl.disabled = false;
-  lbEl.innerHTML = "";
-  next();
+  flashT = setTimeout(function () { curEl.classList.remove("good", "bad"); }, 350);
 }
 
-function startMaybe() {
-  if (running || ended) return;
-  running = true;
-  startT = Date.now();
-  statusEl.textContent = "";
-  timer = setInterval(tick, 100);
+function appendLetter(l) {
+  if (done) return;
+  typed += l;
+  renderCur();
 }
 
-function tick() {
-  var left = LEN - (Date.now() - startT) / 1000;
-  if (left <= 0) { timeEl.textContent = "0"; finish(); return; }
-  timeEl.textContent = Math.ceil(left);
+function backspace() {
+  if (done) return;
+  typed = typed.slice(0, -1);
+  renderCur();
 }
 
-function flash(cls) {
-  ansEl.classList.remove("good", "bad");
-  void ansEl.offsetWidth;
-  ansEl.classList.add(cls);
-  clearTimeout(flashT);
-  flashT = setTimeout(function () { ansEl.classList.remove("good", "bad"); }, 200);
-}
-
-function submit() {
-  if (ended) return;
-  startMaybe();
-  var v = ansEl.value.trim().toLowerCase();
-  if (!v) return;
-  if (v === cur) {
-    score++;
-    scoreEl.textContent = score;
-    flash("good");
-    next();
-  } else {
-    flash("bad");
+function submitWord() {
+  if (done) return;
+  var w = typed.toLowerCase();
+  if (!w) return;
+  if (w.length < 4) { flash("bad", "too short (4 letters minimum)"); return; }
+  if (w.indexOf(puzzle.center) === -1) { flash("bad", "missing the gold letter (" + puzzle.center.toUpperCase() + ")"); return; }
+  for (var i = 0; i < w.length; i++) {
+    if (!allowed[w[i]]) { flash("bad", "only use this hive's letters"); return; }
   }
+  if (foundWords[w] != null) { flash("bad", "already found that one"); return; }
+  if (!(w in puzzle.answers)) { flash("bad", "not in the word list"); return; }
+
+  var pts = puzzle.answers[w];
+  foundWords[w] = pts;
+  score += pts;
+  typed = "";
+  renderCur();
+  updateHud();
+  addFoundChip(w, pts);
+  var isPan = uniqueLetters(w).length === 7;
+  flash("good", isPan ? "pangram! +" + pts : "nice, +" + pts);
+}
+
+function addFoundChip(w, pts) {
+  var li = document.createElement("li");
+  var isPan = uniqueLetters(w).length === 7;
+  if (isPan) li.className = "pan";
+  li.textContent = w + " " + pts;
+  foundEl.insertBefore(li, foundEl.firstChild);
+}
+
+function updateHud() {
+  scoreEl.textContent = score;
+  foundCountEl.textContent = Object.keys(foundWords).length;
+  tierEl.textContent = tierFor(score, puzzle.maxScore);
 }
 
 function finish() {
-  ended = true; running = false;
-  clearInterval(timer);
-  ansEl.disabled = true;
-  statusEl.textContent = "time! " + score + " unscrambled";
+  if (done) return;
+  done = true;
+  statusEl.textContent = "final score " + score + " (" + tierFor(score, puzzle.maxScore) +
+    "), " + Object.keys(foundWords).length + " words found";
+  document.getElementById("finish").disabled = true;
+  document.getElementById("enter").disabled = true;
+  document.getElementById("del").disabled = true;
+  document.getElementById("shuffle").disabled = true;
+  hiveEl.querySelectorAll(".cell").forEach(function (c) { c.disabled = true; });
   lbEl.innerHTML = "";
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "anagram", { score: score });
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "hive", { score: score });
   else lbEl.textContent = "leaderboard offline";
 }
 
-ansEl.addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { e.preventDefault(); submit(); }
+document.addEventListener("keydown", function (e) {
+  if (done) return;
+  if (e.key === "Enter") { e.preventDefault(); submitWord(); return; }
+  if (e.key === "Backspace") { e.preventDefault(); backspace(); return; }
+  var k = e.key.toLowerCase();
+  if (k.length === 1 && allowed[k]) appendLetter(k);
 });
-ansEl.addEventListener("input", startMaybe);
-document.getElementById("skip").addEventListener("click", function () {
-  if (ended) return;
-  startMaybe();
-  next();
-});
-document.getElementById("restart").addEventListener("click", reset);
-reset();
+document.getElementById("enter").addEventListener("click", submitWord);
+document.getElementById("del").addEventListener("click", backspace);
+document.getElementById("shuffle").addEventListener("click", renderHive);
+document.getElementById("finish").addEventListener("click", finish);
+
+renderHive();
+renderCur();
+updateHud();
 </script>
 </body>
 </html>

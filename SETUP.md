@@ -93,8 +93,9 @@ Collection `scores`, one document per submitted score:
 | `ts`        | timestamp | server time                               |
 
 Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
-`reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram`, `mines`, `fermi`,
-`minute`, `callit`, `watch`. The enum lives in `firestore.rules`
+`reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram` (retired, see
+`CLAUDE.md`), `mines`, `fermi`, `minute`, `callit`, `watch`, `hive`. The enum
+lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
 sync, and **update `firestore.rules` in the same commit whenever a game is
 added** (see step 4 above, it auto-deploys on push) or that game's scores are

@@ -563,7 +563,7 @@ var GAMES = [
   ["aim trainer",     "aim.html",       "pop the targets before the clock runs out.", "aim"],
   ["stop the bar",    "stopbar.html",   "a marker races across. stop it dead centre, again and again.", "stopbar"],
   ["word ladder",     "ladder.html",    "change one letter at a time. today's rungs are fixed and always reachable.", "ladder"],
-  ["anagram sprint",  "anagram.html",   "unscramble as many as you can before the timer.", "anagram"],
+  ["word hive",       "anagram.html",   "seven letters, one mandatory. find every 4+ letter word you can, no clock.", "anagram"],
   ["minesweeper",     "mines.html",     "the classic. flags optional, nerves required.", "mines"],
   ["fermi quiz",      "fermi.html",     "estimation questions. you do not need the answer, just the right ballpark.", "fermi"]
 ];
@@ -627,9 +627,8 @@ var ICON = {
   ladder:
     '<path d="M7 2.5v19M17 2.5v19M7 7h10M7 12h10M7 17h10"/>',
   anagram:
-    '<rect x="2.5" y="7" width="9" height="9" rx="1.2" transform="rotate(-13 7 11.5)"/>' +
-    '<rect x="12.5" y="8" width="9" height="9" rx="1.2" transform="rotate(11 17 12.5)"/>' +
-    '<path d="M5.6 12.6 7.5 9.8l1.9 2.6M14 12.3l3 .2" stroke-width="1.3"/>',
+    '<path d="M12 2.5 20 7.2 20 16.7 12 21.4 4 16.7 4 7.2Z"/>' +
+    '<circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none"/>',
   mines:
     '<rect x="3.5" y="3.5" width="17" height="17"/>' +
     '<path d="M9.5 19V6l8 3.3-8 3.3"/><path d="M9.5 6V4"/>',

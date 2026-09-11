@@ -36,7 +36,8 @@
     aim:      { label: "aim trainer",    unit: "hits",  better: "high" },
     stopbar:  { label: "stop the bar",   unit: "pts",   better: "high" },
     ladder:   { label: "word ladder",    unit: "rungs", better: "low" },
-    anagram:  { label: "anagram sprint", unit: "words", better: "high" },
+    anagram:  { label: "anagram sprint", unit: "words", better: "high" }, // retired 2026-09-11, anagram.html is now word hive (key "hive") - kept so old scores keep meaning, no page submits to it any more
+    hive:     { label: "word hive",      unit: "pts",   better: "high" },
     mines:    { label: "minesweeper",    unit: "ms",    better: "low", format: fmtSeconds },
     fermi:    { label: "fermi quiz",     unit: "pts",   better: "high" },
     minute:   { label: "how long is a minute", unit: "ms", better: "low", format: fmtMsOff },

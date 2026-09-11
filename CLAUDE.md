@@ -257,9 +257,11 @@ any `ctx.font` canvas string. Live copies: `game.css`, `404.html`, `gallery.html
 `typing.html`: 30-second typing test, styled as a monkeytype "serika dark"
 clone (own dark `<style>` scoped to `body.tt`, overrides `game.css`; loads
 Roboto Mono from Google Fonts). Word banks come from `words.js`
-(`window.SORTAFUN_WORDS = { top200, top1000 }`, auto-generated from
+(`window.SORTAFUN_WORDS = { top200, top1000, top10000 }`, auto-generated from
 first20hours/google-10000-english, kept in frequency order, must load before
-the inline script). A segmented control picks the list; the choice is stored in
+the inline script; `top10000` is the full list `top1000`/`top200` are slices
+of, added for `anagram.html` (word hive)'s word validation). A segmented control picks the
+list; the choice is stored in
 `localStorage` (`sortafun-typing-diff`). The two lists submit to two
 leaderboards: `typing` (top 200) and `typing1000` (top 1000).
 
@@ -318,7 +320,7 @@ not touch Firestore.
 `callit.html` `watch.html` (basement). Each mounts `SortafunLB.mountPanel(el,
 key, {score})` on finish. `ladder.html` embeds a ~900-word four-letter list and
 generates the daily puzzle by seeded random-walk + BFS (so it is always
-solvable); `anagram.html` reuses `words.js`; `mines.html` and `maze.html` and
+solvable); `mines.html` and `maze.html` and
 `reaction.html` submit ms. `watch.html` is the anti-game: it accrues seconds
 while `document.hidden`, persists to `localStorage` (`sortafun-watch-rested`),
 and you press "log it" to submit. Game keys + which are "low" (rank lowest
@@ -326,6 +328,22 @@ best): see `SETUP.md` — the list must match `firestore.rules` `isValidScore` /
 `isLowGame` and `leaderboard.js` `GAMES`. **Adding a game means updating
 `firestore.rules` in the same commit** (it auto-deploys on push, see above);
 no new indexes needed.
+
+`anagram.html` is now **word hive** (NYT Spelling Bee rules, 2026-09-11
+rewrite; the file/URL didn't change, only what's on it). Old anagram-sprint
+scores are inert under the `anagram` leaderboard key (same treatment as
+`driving`); new scores go to `hive`. It picks 7 unique letters + a mandatory
+center letter deterministically from the Singapore day (same `mulberry32` +
+day-seed pattern as `ladder.html`), so everyone gets the same seven letters;
+valid answers are any 4+ letter word from `words.js` `top10000` (not the
+smaller `top1000`/`top200` typing banks) whose letters are a subset of those
+seven and that contains the center letter, scored by real NYT rules (4-letter
+= 1pt, longer = 1pt/letter, pangram = +7). This replaced the old
+one-fixed-target-word check, which is why "aslt" -> "salt" used to fail if the
+puzzle's answer happened to be a different valid anagram like "slat" - the old
+game only accepted the one word it had picked, not any word the scramble could
+actually spell. Untimed, like `ladder.html`/`watch.html`: player stops and
+hits "i'm done" whenever, no fixed round length.
 
 ### The meta pages
 
