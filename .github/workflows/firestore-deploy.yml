@@ -1,0 +1,32 @@
+name: Deploy Firestore rules & indexes
+
+# Fixes the recurring "leaderboard.js submit failed ... Missing or insufficient
+# permissions" bug: firestore.rules living in this repo was never actually live
+# until someone manually pasted it into the Firebase console (see SETUP.md).
+# This makes that step automatic on every push that touches the rules/indexes.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "firebase.json"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write service account key
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy rules and indexes
+        run: npx --yes firebase-tools@13 deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID" --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}

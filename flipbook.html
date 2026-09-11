@@ -676,6 +676,16 @@ postBtn.addEventListener("click", function () {
     return;
   }
 
+  // Encode once up front so we can check the real size before bothering the
+  // player for a name, instead of finding out only when Firestore rejects it.
+  var frameUrls = frames.map(function (f) { return f.toDataURL("image/png"); });
+  var estBytes = SortafunLB.animEstimateBytes(frameUrls, postTitle.value, "");
+  if (estBytes > SortafunLB.ANIM_MAX_BYTES) {
+    setMsg("too large to post (" + Math.round(estBytes / 1024) + "kb of ~" +
+      Math.round(SortafunLB.ANIM_MAX_BYTES / 1024) + "kb budget) - remove frames or simplify drawings", true);
+    return;
+  }
+
   var name = "";
   try { name = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
   name = (prompt("post as (your name):", name) || "").trim();
@@ -691,7 +701,7 @@ postBtn.addEventListener("click", function () {
     author: name,
     fps: FPS,
     w: W, h: H,
-    frames: frames.map(function (f) { return f.toDataURL("image/png"); }),
+    frames: frameUrls,
   }).then(function (id) {
     setMsg("posted! it's in the gallery now.");
     postTitle.value = "";

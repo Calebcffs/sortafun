@@ -31,15 +31,26 @@ Firebase **free (Spark) plan**. No server, no credit card, no build step.
 1. Left nav → **Build → Firestore Database → Create database**.
 2. Start in **production mode**. Pick any location (can't change later).
 
-### 4. Paste the security rules
-1. Firestore Database → **Rules** tab.
-2. Replace everything with the contents of `firestore.rules`.
-3. **Publish**.
+### 4. Security rules deploy automatically
+A GitHub Action (`.github/workflows/firestore-deploy.yml`) pushes
+`firestore.rules` and `firestore.indexes.json` to Firebase on every push to
+`main` that touches either file. One-time setup so it can authenticate:
 
-This is a manual step every time `firestore.rules` in this repo changes — the
-Firebase console doesn't read the file from GitHub, so pushing a rules change
-here does nothing on its own. If scores stop saving after an update, this is
-the first thing to check.
+1. Firebase console → gear icon → **Project settings → Service accounts →
+   Generate new private key**. Downloads a JSON file.
+2. GitHub repo → **Settings → Secrets and variables → Actions → New repository
+   secret**:
+   - `FIREBASE_SERVICE_ACCOUNT` = the full contents of that JSON file.
+   - `FIREBASE_PROJECT_ID` = the project ID from Firebase project settings.
+3. First time only: also paste `firestore.rules` into the console's **Rules**
+   tab and Publish by hand (the Firestore database has to exist and have rules
+   published at least once before the Action can update them) — see step 3
+   above.
+
+After that, changing `firestore.rules` or `firestore.indexes.json` and pushing
+to `main` is enough. If scores stop saving after adding a game, check the
+Action's run log (repo → Actions tab) before assuming the rules are stale —
+that's the thing this used to silently get out of sync on.
 
 ### 5. Create the indexes
 The daily query, the all-time query, the tile slider archive calendar, and the
@@ -85,8 +96,9 @@ Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram`, `mines`, `fermi`,
 `minute`, `callit`, `watch`. The enum lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
-sync, and **re-paste `firestore.rules` into the console whenever a game is
-added** or that game's scores are rejected. "low" games (rank lowest score
+sync, and **update `firestore.rules` in the same commit whenever a game is
+added** (see step 4 above, it auto-deploys on push) or that game's scores are
+rejected. "low" games (rank lowest score
 best, store `rankValue == -score`): `puzzle`, `circuit`, `reaction`, `maze`,
 `ladder`, `mines`, `minute`. No new composite indexes are needed for new games
 — the score indexes key on `game` as an equality filter, so one index serves
@@ -105,9 +117,10 @@ blocks) — reads work without setup, but signing the guestbook and bumping the
 counter fail until the rules are pasted in. Neither needs an index.
 
 `typing` is the top-200-word list, `typing1000` the harder top-1000 list. They
-are separate boards on purpose. `typing1000` was added later, so if top-1000
-scores stop saving, re-check step 4 (the game enum in `firestore.rules`
-changed). The "first from the bottom" gold-glow row on any "all time" board
+are separate boards on purpose. `typing1000` was added later — that's the kind
+of change that needs the game enum in `firestore.rules` updated too (see the
+data model table above), which the Action in step 4 now deploys automatically
+on push. The "first from the bottom" gold-glow row on any "all time" board
 runs one extra query ordered by `rankValue` ascending; if the glow never shows,
 open the console for a "create index" link, or paste `firestore.indexes.json`
 (it has a new `(game ASC, rankValue ASC)` entry).
@@ -127,7 +140,7 @@ Collection `animations`, one document per posted flipbook:
 | `author`    | string    | 1–20 chars                                        |
 | `fps`       | int       | 8, 12 or 16 (the studio's fps selector)            |
 | `w`, `h`    | int       | frame pixel size (480 x 360)                      |
-| `frames`    | list      | PNG data URLs, 1–80 of them, one per frame        |
+| `frames`    | list      | PNG data URLs, 1–1000 of them, one per frame      |
 | `votes`     | int       | starts 0, only ever `+1` per update (rules-checked) |
 | `createdAt` | timestamp | server time                                       |
 | `day`       | string    | `YYYY-MM-DD` Singapore time                       |
@@ -137,9 +150,15 @@ Collection `anim_comments`, one document per comment: `animId` (string),
 
 Votes are deduped per browser in `localStorage` (`sortafun-anim-votes`), same
 forgeable-but-fine trade as the scores. The gallery list is sorted by `votes`
-desc (default) or `createdAt` desc ("newest"). A single flipbook of 80 line-art
-frames is roughly 100–300 KB, well under the 1 MiB Firestore document limit; the
-80-frame cap is enforced in `firestore.rules` and in `flipbook.html`.
+desc (default) or `createdAt` desc ("newest"). The 1000-frame cap
+(`firestore.rules`, `leaderboard.js` `ANIM_MAX_FRAMES`) is a soft backstop, not
+the real limit: Firestore hard-caps a document at 1 MiB regardless of plan, and
+detailed drawings encode far bigger than sparse ones, so frame count alone
+doesn't predict whether a post fits. `leaderboard.js` (`ANIM_MAX_BYTES`,
+`animEstimateBytes`) checks the actual encoded size before posting and fails
+with a clear message ("too large to post (Xkb of ~900kb budget)") instead of
+letting Firestore reject it. `flipbook.html` runs the same check up front so it
+never even prompts for a name on an animation that won't fit.
 
 ## Free tier headroom
 

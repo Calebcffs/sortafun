@@ -348,7 +348,21 @@
    * forgeable-but-fine trade as the scores.
    */
 
-  var ANIM_MAX_FRAMES = 80;
+  var ANIM_MAX_FRAMES = 1000;
+
+  // Firestore hard-caps a document at 1,048,487 bytes, no plan raises it. A
+  // frame count limit alone doesn't track that: detailed drawings encode much
+  // bigger than sparse ones, so a fixed frame cap can pass here and still get
+  // rejected by Firestore itself with a confusing error. This checks the real
+  // encoded size instead. 900000 leaves headroom for title/author/fps/etc and
+  // Firestore's own per-document overhead.
+  var ANIM_MAX_BYTES = 900000;
+
+  function animEstimateBytes(frames, title, author) {
+    var total = (title || "").length + (author || "").length + 200; // fixed fields + doc overhead
+    (frames || []).forEach(function (f) { total += f.length; });
+    return total;
+  }
 
   function animPublish(a) {
     return init().then(function () {
@@ -359,6 +373,11 @@
       if (!author) throw new Error("name required");
       if (!frames.length) throw new Error("nothing to post");
       if (frames.length > ANIM_MAX_FRAMES) throw new Error("too many frames (" + ANIM_MAX_FRAMES + " max)");
+      var bytes = animEstimateBytes(frames, title, author);
+      if (bytes > ANIM_MAX_BYTES) {
+        throw new Error("too large to post (" + Math.round(bytes / 1024) + "kb of ~" +
+          Math.round(ANIM_MAX_BYTES / 1024) + "kb budget) - remove frames or simplify drawings");
+      }
       var fps = [8, 12, 16].indexOf(a.fps) !== -1 ? a.fps : 12;
       return fs.addDoc(fs.collection(state.db, "animations"), {
         title: title,
@@ -635,6 +654,8 @@
     animComment: animComment,
     animCommentCount: animCommentCount,
     ANIM_MAX_FRAMES: ANIM_MAX_FRAMES,
+    ANIM_MAX_BYTES: ANIM_MAX_BYTES,
+    animEstimateBytes: animEstimateBytes,
     mountPanel: mountPanel,
   };
 })();

@@ -302,6 +302,15 @@ the only way to it is clicking the potted plant in the lobby's right corner.
 Nothing on the homepage hints at it. The Vietnam photos and the "he runs
 because you're watching" line live here now.
 
+Leaderboards + the animation gallery use one client-only Firestore backend
+(`firebase-config.js`, `leaderboard.js`). `firestore.rules` and the indexes
+auto-deploy to Firebase via `.github/workflows/firestore-deploy.yml` on push to
+`main` (one-time secret setup, see `SETUP.md`) — when adding a game or field,
+update `firestore.rules`' `isValidScore`/`isLowGame`/game enum in the same
+commit as the `leaderboard.js` change, or writes for it will fail with
+"Missing or insufficient permissions" until that push lands. The forum does
+not touch Firestore.
+
 ### The other games (all one static file each, on `game.css` + the shared shell)
 
 `reaction.html` `maze.html` `aim.html` `stopbar.html` `ladder.html`
@@ -314,8 +323,9 @@ solvable); `anagram.html` reuses `words.js`; `mines.html` and `maze.html` and
 while `document.hidden`, persists to `localStorage` (`sortafun-watch-rested`),
 and you press "log it" to submit. Game keys + which are "low" (rank lowest
 best): see `SETUP.md` — the list must match `firestore.rules` `isValidScore` /
-`isLowGame` and `leaderboard.js` `GAMES`. **Adding a game means re-pasting
-`firestore.rules`**; no new indexes needed.
+`isLowGame` and `leaderboard.js` `GAMES`. **Adding a game means updating
+`firestore.rules` in the same commit** (it auto-deploys on push, see above);
+no new indexes needed.
 
 ### The meta pages
 

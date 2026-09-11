@@ -88,7 +88,7 @@ service cloud.firestore {
         && d.fps is int && d.fps >= 1 && d.fps <= 24
         && d.w is int && d.w > 0 && d.w <= 2000
         && d.h is int && d.h > 0 && d.h <= 2000
-        && d.frames is list && d.frames.size() >= 1 && d.frames.size() <= 80
+        && d.frames is list && d.frames.size() >= 1 && d.frames.size() <= 1000
         && d.votes == 0
         && d.createdAt == request.time
         && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
