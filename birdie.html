@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>birdie &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css">
+<link rel="stylesheet" href="birdie/birdie.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body class="k-skill">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
+<div class="wrap birdie-wrap">
+  <h1>birdie</h1>
+  <p class="sub">be a bird. fly anywhere in an endless world of cities, hills, snow, islands and factories.
+    eat to fill your poo-o-meter, poo on people for points, build a nest and raise a chick for an extra life.
+    don't fly into walls, cars, power lines or people, and don't land too hard.</p>
+
+  <div id="stage" class="stage" tabindex="0">
+    <canvas id="view"></canvas>
+
+    <!-- in-game HUD -->
+    <div id="hud" class="hud" hidden>
+      <div class="hud-tl">
+        <div class="poocam-wrap">
+          <canvas id="poocam" width="150" height="150"></canvas>
+          <canvas id="arrows" width="150" height="150"></canvas>
+          <div class="poocam-label">poo-cam</div>
+        </div>
+        <div class="meters">
+          <div class="brand">birdie</div>
+          <div class="poometer"><div class="pm-label">poo-o-meter</div><div class="pm-bar"><div id="pm-fill"></div></div></div>
+          <div id="lives" class="lives"></div>
+          <div class="score">score <b id="score">0</b></div>
+          <div id="carry" class="carry"></div>
+        </div>
+      </div>
+      <div id="feed" class="feed"></div>
+      <div id="big" class="big"></div>
+      <div class="hud-br">
+        <div id="info" class="info"></div>
+      </div>
+      <div id="compass" class="compass"></div>
+      <div id="touch" class="touch" hidden>
+        <div id="stick" class="stick"><div id="knob" class="knob"></div></div>
+        <div class="tbtns">
+          <button id="t-poop" class="tbtn poo">POO</button>
+          <button id="t-flap" class="tbtn flap">FLAP</button>
+          <button id="t-call" class="tbtn call">CALL</button>
+        </div>
+      </div>
+      <button id="pausebtn" class="pausebtn" title="pause (P)">II</button>
+    </div>
+
+    <!-- menus -->
+    <div id="menu" class="menu">
+      <div id="m-title" class="m-screen">
+        <div class="m-logo">birdie</div>
+        <div class="m-tag">a free 3D bird flying game. no downloads!</div>
+        <div class="m-pick">
+          <div class="m-col">
+            <h3>1. pick your bird</h3>
+            <div id="birdlist" class="birdlist"></div>
+            <h3>2. pick where to start</h3>
+            <div id="scapes" class="scapes"></div>
+            <div class="m-row">
+              <label class="m-opt">world <input id="seed" type="text" maxlength="12" size="8"></label>
+              <button id="randseed" class="m-small">new world</button>
+              <label class="m-opt">graphics <select id="quality"><option value="low">low</option><option value="med">medium</option><option value="high">high</option></select></label>
+              <label class="m-opt"><input id="invert" type="checkbox"> invert up/down</label>
+            </div>
+            <button id="play" class="m-play">FLY! &#9654;</button>
+          </div>
+          <div class="m-col preview-col">
+            <canvas id="preview" width="420" height="300"></canvas>
+            <div id="birdinfo" class="birdinfo"></div>
+          </div>
+        </div>
+        <div class="m-keys"><b>arrows / WASD</b> fly &middot; <b>down / S</b> flap and climb &middot; <b>up / W</b> dive &middot; <b>space</b> poo, nest, lay, feed &middot; <b>shift</b> flap harder &middot; <b>C</b> call &middot; <b>V</b> camera &middot; <b>P</b> pause &middot; drag to look around</div>
+      </div>
+      <div id="m-loading" class="m-screen" hidden>
+        <div class="m-logo small">birdie</div>
+        <div class="m-tag" id="loadmsg">building the world...</div>
+        <div class="loadbar"><div id="loadfill"></div></div>
+      </div>
+      <div id="m-pause" class="m-screen" hidden>
+        <div class="m-logo small">paused</div>
+        <div class="m-stats" id="pausestats"></div>
+        <div class="m-row center">
+          <button id="resume" class="m-play">keep flying</button>
+        </div>
+        <div class="m-row center">
+          <label class="m-opt"><input id="invert2" type="checkbox"> invert up/down</label>
+          <label class="m-opt"><input id="sound" type="checkbox" checked> sound</label>
+          <label class="m-opt"><input id="daylock" type="checkbox"> stop the clock</label>
+        </div>
+        <div class="m-row center">
+          <button id="endflight" class="m-small">end flight &amp; post score</button>
+          <button id="newbird" class="m-small">change bird</button>
+        </div>
+      </div>
+      <div id="m-over" class="m-screen" hidden>
+        <div class="m-logo small">flown away</div>
+        <div class="m-tag" id="overwhy">you lost your last life.</div>
+        <div class="m-stats" id="overstats"></div>
+        <div id="lb"></div>
+        <div class="m-row center">
+          <button id="again" class="m-play">fly again</button>
+          <button id="again2" class="m-small">change bird</button>
+        </div>
+      </div>
+    </div>
+    <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
+  </div>
+
+  <div class="birdie-help">
+    <div><b>the poo-o-meter</b> is your fuel. flying drains it, flapping drains it faster, pooing takes a chunk. eat to fill it back up. if it runs out, you lose a life.</div>
+    <div><b>the poo-cam</b> (top left) looks straight down. arrows round its edge point to food:
+      <span class="dot y"></span>chips and pizza, <span class="dot g"></span>cherries, <span class="dot r"></span>carcass, <span class="dot b"></span>fish, <span class="dot p"></span>butterflies,
+      <span class="dot o"></span>twigs and <span class="dot v"></span>your nest. not every bird eats everything.</div>
+    <div><b>nesting:</b> pick up twigs (on the ground or in bins), land and press space to start a nest, bring more twigs, then press space in the finished nest to lay an egg. sit on it to keep it warm. when it hatches, feed the chick (space, next to it, when it's hungry) and it grows up and flies off, giving you a life.</div>
+    <div><b>lives:</b> you have five. you lose one for crashing, landing too hard, power lines, cars, getting caught by people, falling in water (only seagulls and swans can swim) or running out of food.</div>
+  </div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script type="module" src="birdie/main.js"></script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

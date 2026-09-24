@@ -256,6 +256,38 @@
   .h-news  { background: linear-gradient(#56d98a, var(--skill)); }
   .h-live  { background: linear-gradient(#ff5a5a, #e02828); }
 
+  /* ================= featured game ================= */
+  .feature .panel-head { background: linear-gradient(#56d98a, var(--skill)); }
+  .feature-body {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .feature-shot { position: relative; overflow: hidden; border-right: 3px solid var(--ink); aspect-ratio: 16 / 9; background: #7fb4e0; }
+  .feature-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 1.2s, transform 6s; }
+  .feature-shot img.off { opacity: 0; }
+  .feature-body:hover .feature-shot img { transform: scale(1.04); }
+  .feature-shot .ribbon {
+    position: absolute; top: 14px; left: -34px; transform: rotate(-35deg);
+    background: #ff2e63; color: #fff; font-family: var(--chunky); font-size: 15px;
+    padding: 4px 42px; border: 2px solid var(--ink); letter-spacing: 1px;
+  }
+  .feature-text { padding: 16px 18px; display: flex; flex-direction: column; justify-content: center; gap: 8px;
+    background: repeating-linear-gradient(-45deg, #f2fff6 0 14px, #fff 14px 28px); }
+  .feature-text h3 {
+    margin: 0; font-family: var(--chunky); font-weight: 400; font-size: 52px; line-height: 1;
+    color: var(--sun); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink);
+  }
+  .feature-text p { margin: 0; font-size: 13px; }
+  .feature-text ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: #4a4760; }
+  .feature-text .play-big { align-self: flex-start; }
+  @media (max-width: 760px) {
+    .feature-body { grid-template-columns: 1fr; }
+    .feature-shot { border-right: 0; border-bottom: 3px solid var(--ink); }
+    .feature-text h3 { font-size: 42px; }
+  }
+
   /* ================= hero ================= */
 
   .hero {
@@ -652,6 +684,7 @@
     <span class="lbl">NEWS</span>
     <div class="lane"><div class="run" id="tickrun">
       <span><b>NEW LOOK!</b> the whole site got a fresh coat of paint. every game has its own picture now.</span>
+      <span><b>BIRDIE IS HERE!</b> a whole 3D bird game. ten birds, an endless world, and a lot of poo.</span>
       <span><b>THREE NEW WORD GAMES!</b> five letters, four sides and word grab. go go go.</span>
       <span>the word games use a <b>real dictionary</b> now. 170,000 words, no names.</span>
       <span>scores reset at <b>midnight Singapore time</b>. the leaderboards never sleep.</span>
@@ -660,6 +693,28 @@
   </div>
 
   <p class="noresults" id="noresults">nothing found. try "word" or "race".</p>
+
+  <!-- ================= FEATURED ================= -->
+  <section class="panel feature" id="featured">
+    <div class="panel-head"><h2>&#9733; Featured Game</h2><p>our biggest one yet. a whole 3D world in your browser.</p></div>
+    <a class="feature-body" href="birdie.html">
+      <span class="feature-shot">
+        <img src="birdie/birdie-feature.jpg" alt="a pigeon gliding over the city in birdie" width="960" height="540">
+        <img class="off" src="birdie/birdie-island.jpg" alt="a seagull over the islands in birdie" width="960" height="540" loading="lazy">
+        <span class="ribbon">NEW!</span>
+      </span>
+      <span class="feature-text">
+        <h3>Birdie</h3>
+        <p>be a bird. glide, dive and flap your way round an endless world, and poo on everyone below.</p>
+        <ul>
+          <li>ten birds, from a tiny robin to a huge swan</li>
+          <li>cities, hills, snow, islands and factories that never end</li>
+          <li>eat, nest, raise a chick, dodge cars and power lines</li>
+        </ul>
+        <span class="play-big">FLY NOW! &#9654;</span>
+      </span>
+    </a>
+  </section>
 
   <!-- ================= GAME OF THE DAY + LIVE SCORES ================= -->
   <div class="hero" id="hero">
@@ -679,7 +734,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>fourteen games. your best today lands on the leaderboards.</p>
+      <p>fifteen games. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -727,6 +782,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-25</span> birdie! fly as one of ten birds round an endless 3D world. it's on the top of the page.</li>
         <li><span class="when">09-24</span> three new daily word games: five letters, four sides and word grab.</li>
         <li><span class="when">09-24</span> word hive and word ladder now take any real word (170,000 of them). the fermi quiz is gone.</li>
         <li><span class="when">09-24</span> new homepage! it's a proper game site now, with a picture for every game and a search box.</li>
@@ -771,6 +827,7 @@
  * ------------------------------------------------------------------ */
 
 var GAMES = [
+  { id: "birdie",    name: "Birdie",         url: "birdie.html",    cat: "skill",  key: "birdie",   badge: "new",   blurb: "be a bird in an endless 3D world. glide, dive, nest, and poo on people for points." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
   { id: "sides",     name: "Four Sides",     url: "sides.html",     cat: "word",   key: "sides",    badge: "new",   blurb: "twelve letters round a box. chain words together until you've used them all." },
@@ -894,6 +951,25 @@ var THUMB = {
     });
     return bg("#3bc9db") + '<circle cx="10" cy="110" r="34" fill="#22b8cf"/><circle cx="150" cy="10" r="30" fill="#66d9e8"/>' + g +
       stick(138, 108, .7, "wave");
+  },
+  birdie: function () {
+    var towers = "";
+    [[6, 40, 22, "#8fb7d6"], [30, 60, 18, "#c8c0b0"], [50, 34, 20, "#6fa0c9"], [72, 70, 16, "#b9b6ad"], [90, 46, 22, "#8fb7d6"], [114, 58, 18, "#c9c2b5"], [134, 38, 22, "#6fa0c9"]].forEach(function (t) {
+      towers += '<rect x="' + t[0] + '" y="' + (120 - t[1]) + '" width="' + t[2] + '" height="' + t[1] + '" fill="' + t[3] + '" stroke="' + K + '" stroke-width="2"/>';
+      for (var wy = 120 - t[1] + 5; wy < 116; wy += 7) towers += '<path d="M' + (t[0] + 4) + ' ' + wy + 'h' + (t[2] - 8) + '" stroke="#e8f2fa" stroke-width="2" stroke-dasharray="3 2"/>';
+    });
+    return bg("#7fc3f5") + '<circle cx="130" cy="22" r="13" fill="#ffe066"/>' +
+      '<ellipse cx="40" cy="26" rx="20" ry="7" fill="#fff" opacity=".85"/><ellipse cx="100" cy="16" rx="16" ry="5" fill="#fff" opacity=".7"/>' + towers +
+      '<g transform="translate(78 50) rotate(-8)">' +
+      '<path d="M-2 0 C-18 -14 -34 -16 -48 -10 C-36 -6 -24 -2 -8 4Z" fill="#b7bcc6" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<path d="M2 0 C18 -18 36 -20 50 -14 C38 -8 26 -2 8 4Z" fill="#b7bcc6" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<path d="M-20 -8 L-44 -9 M20 -10 L46 -13" stroke="#5d6270" stroke-width="3"/>' +
+      '<ellipse cx="0" cy="3" rx="9" ry="7" fill="#8e939f" stroke="' + K + '" stroke-width="2.5"/>' +
+      '<path d="M-5 9 L0 18 L5 9Z" fill="#8e939f" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<circle cx="0" cy="-5" r="5.5" fill="#6c7a74" stroke="' + K + '" stroke-width="2.5"/>' +
+      '<path d="M-1.5 -10 L0 -14 L1.5 -10Z" fill="#2a2528"/></g>' +
+      '<g transform="translate(60 92)"><ellipse rx="5" ry="3" fill="#fff" stroke="' + K + '" stroke-width="1.5"/></g>' +
+      '<path d="M60 76 v10" stroke="#fff" stroke-width="2" stroke-dasharray="2 3"/>';
   },
   five: function () {
     var rows = [["c", "r", "a", "n", "e"], ["s", "l", "i", "m", "e"], ["g", "r", "e", "a", "t"]];
@@ -1275,6 +1351,18 @@ fill("basegrid", BASEMENT);
     "<div><h3>" + esc(g.name) + "</h3><p>" + esc(g.blurb) + '</p><span class="play-big">PLAY NOW! &#9654;</span></div>';
 })();
 
+/* featured banner: cross-fade between screenshots */
+(function () {
+  var imgs = document.querySelectorAll(".feature-shot img");
+  if (imgs.length < 2) return;
+  var i = 0;
+  setInterval(function () {
+    imgs[i].classList.add("off");
+    i = (i + 1) % imgs.length;
+    imgs[i].classList.remove("off");
+  }, 5000);
+})();
+
 /* ------------------------------------------------------------------ *
  * category chips + search
  * ------------------------------------------------------------------ */
@@ -1304,6 +1392,7 @@ function applyFilters() {
   });
 
   document.getElementById("hero").style.display = q ? "none" : "";
+  document.getElementById("featured").style.display = q ? "none" : "";
   document.getElementById("noresults").style.display = q && !anyShown ? "block" : "none";
 }
 

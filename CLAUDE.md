@@ -399,6 +399,35 @@ every daily puzzle (they index into it), including today's.
 All daily seeds use `mulberry32` + the Singapore `SortafunLB.dayStr()`, each
 game with its own offset so they don't line up.
 
+### Birdie (`birdie.html` + `birdie/`)
+
+A 3D bird game modelled on Fly Like a Bird 3 (Gamevial, 2009), single player,
+three.js 0.160 from jsdelivr via an importmap, ES modules, no build step. The
+homepage features it in the `#featured` banner (screenshots in
+`birdie/birdie-*.jpg`) and in `GAMES` (key `birdie`, high score). Files (each
+has a header comment explaining it): `noise.js` (seeded rng/simplex),
+`terrain.js` (regions: city / hills / snow / island / industry on a jittered
+820m grid, heights, colours), `textures.js` (procedural canvas textures; the
+building atlas is a DataArrayTexture, one layer per surface, alpha marks
+windows that glow at night), `builders.js` (Batch geometry merger, trees with
+high/low LOD), `world.js` (128m chunks streamed round the bird, everything in a
+chunk merged into ~2-8 draw calls, colliders in a 16m spatial hash,
+`groundAt` / `collideSphere`), `sky.js` (Sky shader, day/night, fog tint per
+region, instanced billboard clouds and smoke, water, PMREM reflections),
+`species.js` (the ten birds: shape, paint, flight stats, diet, nest, egg),
+`model.js` (procedural rigged bird: body/neck/head, 3-bone wings with every
+feather, tail fan, legs and toes; all parts merged per material each frame by
+`syncMerged()` so a bird is ~8 draw calls), `flight.js` (the flight model),
+`game.js` (poo-o-meter, food, bins, poo and scoring, people, cars, nests, eggs,
+chicks, lives), `people.js`, `items.js`, `hud.js` (poo-cam = render target +
+circular overlay), `audio.js` (all synthesised), `menu.js`, `main.js` (loop,
+camera, spawn). `birdie.simulate(seconds, {pitch, turn, poop...})` runs the
+game headless for testing.
+
+Controls match the original: UP/W dives, DOWN/S flaps and climbs, space =
+poo / nest / lay / feed. Flight tuning lives in each species' `flight` block;
+check changes by simulating (climb / glide / dive numbers), not by eye.
+
 ### The meta pages
 
 `guestbook.html` (Firestore `guestbook`, append-only, own 2003 navy/Times

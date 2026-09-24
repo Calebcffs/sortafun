@@ -43,6 +43,7 @@
     five:     { label: "five letters",   unit: "guesses", better: "low" },
     sides:    { label: "four sides",     unit: "words", better: "low" },
     grab:     { label: "word grab",      unit: "pts",   better: "high" },
+    birdie:   { label: "birdie",         unit: "pts",   better: "high" },
     minute:   { label: "how long is a minute", unit: "ms", better: "low", format: fmtMsOff },
     callit:   { label: "call it",        unit: "streak", better: "high" },
     watch:    { label: "watch the guy",  unit: "s",     better: "high" },

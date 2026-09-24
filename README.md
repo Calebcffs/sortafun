@@ -11,6 +11,8 @@ via `game.css`.
 
 ### games
 
+- birdie - a 3D bird game in the spirit of Fly Like a Bird 3: ten birds, an endless procedural world (city, hills, snow, islands, industry), poo-o-meter, poo-cam, nests and chicks. `birdie.html` + `birdie/`.
+
 - crossword - a 15x15 themeless ("SNACKY BUT THEMELESS", from `Crosswords/*.ipuz`); across/down nav, click-a-clue, check/reveal, progress saved per browser
 - tile slider - sliding 8-puzzle, seeded by the Singapore-time date, with an archive of past days
 - circuit race - 3d, slowroads.io-ish closed-loop circuit; hit every checkpoint and cross the line for a lap time (three.js from a CDN)
