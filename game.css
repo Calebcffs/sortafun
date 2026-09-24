@@ -1,22 +1,91 @@
+@import url("https://fonts.googleapis.com/css2?family=Lilita+One&display=swap");
+
+/* shared shell for the game pages. the game itself sits in a white "window"
+   on the same tiled sky as the front page, so clicking in from the homepage
+   still feels like the same site. typing.html (body.tt) opts out of the
+   window and keeps its own dark look. */
+
 html, body {
   margin: 0;
   padding: 0;
-  background: #fff;
   color: #000;
   font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Segoe Print", sans-serif;
 }
+html { background: #2f9bff; }
+body {
+  min-height: 100vh;
+  background-color: #2f9bff;
+  background-image:
+    radial-gradient(circle at 20px 20px, rgba(255,255,255,.22) 0 5px, transparent 6px),
+    radial-gradient(circle at 60px 60px, rgba(255,255,255,.12) 0 3px, transparent 4px),
+    linear-gradient(180deg, #58b4ff 0, #2f9bff 420px);
+  background-size: 80px 80px, 80px 80px, 100% 100%;
+  background-repeat: repeat, repeat, no-repeat;
+}
+
+/* ---- the little SORTAFUN bar at the top of every game page ---- */
+.homebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 10px 12px 0;
+  font-family: Verdana, Tahoma, sans-serif;
+}
+.homebar .hb-logo {
+  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  color: #ffd43b;
+  text-decoration: none;
+  -webkit-text-stroke: 2.5px #1d1b2e;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 #1d1b2e;
+  transform: rotate(-2deg);
+  display: inline-block;
+}
+.homebar .hb-logo small { color: #fff; font-size: .55em; }
+.homebar .hb-all {
+  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+  font-size: 15px;
+  color: #fff;
+  text-decoration: none;
+  background: #ff7a1a;
+  border: 3px solid #1d1b2e;
+  border-radius: 10px;
+  padding: 6px 12px 5px;
+  text-shadow: 0 2px 0 rgba(0,0,0,.3);
+  box-shadow: 0 3px 0 #1d1b2e, inset 0 3px 0 rgba(255,255,255,.3);
+  white-space: nowrap;
+}
+.homebar .hb-all:hover { background: #ff9a3c; }
+
+/* ---- the game window ---- */
 .wrap {
   max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 16px 60px;
+  margin: 14px auto 20px;
+  padding: 22px 16px 26px;
   text-align: center;
+  background: #fff;
+  border: 3px solid #1d1b2e;
+  border-radius: 16px;
+  box-shadow: 0 6px 0 rgba(0,0,0,.35);
 }
+@media (max-width: 680px) {
+  .wrap { margin-left: 8px; margin-right: 8px; padding-left: 10px; padding-right: 10px; }
+}
+
 h1 {
-  font-size: 30px;
+  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+  font-weight: 400;
+  font-size: 34px;
+  letter-spacing: .5px;
   margin: 0 0 4px;
 }
 .sub {
-  color: #666;
+  color: #555;
   margin: 0 0 18px;
   font-size: 14px;
 }
@@ -34,18 +103,24 @@ button, .btn {
   border-radius: 10px;
   padding: 7px 14px;
   cursor: pointer;
+  box-shadow: 0 3px 0 #000;
 }
-button:hover, .btn:hover { background: #f0f0f0; }
+button:hover, .btn:hover { background: #fff3bf; }
+button:active, .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
 .back {
   display: inline-block;
   margin-top: 22px;
-  color: #000;
+  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+  font-size: 16px;
+  color: #1d1b2e;
   text-decoration: none;
-  border: 2px solid #000;
+  background: #ffd43b;
+  border: 3px solid #1d1b2e;
   border-radius: 10px;
-  padding: 8px 16px;
+  padding: 8px 16px 7px;
+  box-shadow: 0 3px 0 #1d1b2e;
 }
-.back:hover { background: #f0f0f0; }
+.back:hover { background: #ffe36e; }
 canvas {
   border: 2px solid #000;
   background: #fff;
@@ -55,3 +130,7 @@ canvas {
 input {
   font-family: inherit;
 }
+
+/* typing.html keeps its own dark monkeytype look */
+body.tt { background-image: none; }
+body.tt .wrap { background: none; border: 0; box-shadow: none; }

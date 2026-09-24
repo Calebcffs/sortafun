@@ -355,64 +355,57 @@ per-game stamps from the boards by name), `webring.html` (a loop-back bit),
 `404.html` (GitHub Pages custom 404, the guy falling off a floor).
 
 Stamp flags are set by: `leaderboard.js submit()` (`-scored`, `-game-<key>`),
-`index.html` update() (`-walked`, `-basement`), `gallery.html` (`-gallery`),
+`index.html` (`-walked`, `-basement`), `gallery.html` (`-gallery`),
 `guestbook.html` (`-guestbook`), `passport.html` itself (`-night`).
 
-The hit counter (`#hits` odometer, top-right of the lobby) reads/increments
+The hit counter (`#hits`, top-right of the homepage) reads/increments
 `stats/hits` via `SortafunLB.bumpHits`/`getHits`, once per browser session
 (`sessionStorage sortafun-visited`).
 
-### The lobby (`index.html`) is a newspaper front page
+### The homepage (`index.html`) is a flash-game portal
 
-Rewritten 2026-09-10. The canvas walk-around building (the guy, floors, stairs,
-`DOORS[]`, `WORLD_W`, `climb()`, `drawWonkySign`, the sticky-note changelog) is
-gone. `index.html` is now static HTML styled as an old broadsheet, "The Sortafun
-Times": masthead in blackletter (`UnifrakturMaguntia` from Google Fonts, Georgia
-fallback), body in Georgia / Playfair Display.
+Rewritten 2026-09-24 (replaced the 2026-09-10 newspaper front page, which
+replaced the canvas walk-around lobby). Styled after 2004-2009 flash game
+sites: tiled sky background, chunky "Lilita One" headings (Google Fonts),
+Verdana body, thick dark outlines, glossy buttons. Sticky nav (desktop only)
+with section tabs + a search box, a scrolling news ticker, a "Game of the Day"
+panel + "Just Played" feed, then four sections: `#games`, `#art`, `#hangout`,
+`#basement`.
 
-Every game and page is a headline. Four JS arrays near the top of the inline
-script hold `[label, url, dek, icon]` rows (the `icon` is a key into the `ICON`
-map): `GAMES` (12, `#games`), `WORKSHOP` (`#workshop`), `NOTICES` (`#notices`,
-includes `puzzle-archive.html`), `BASEMENT` (`#basement`, inside a collapsed
-`<details class="late">` = "The Late Edition"). To add a game or page, push a row
-to the right array; order inside each list is fixed on purpose.
+Content lives in four JS arrays of objects `{ id, name, url, blurb, cat, key?,
+badge? }`: `GAMES` (12; cat `word` | `puzzle` | `skill`, filtered by the chips),
+`ART`, `HANGOUT`, `BASEMENT` (inside `<details id="late">`, the door). `key` is
+the leaderboard key so "Just Played" rows link to the right page. `badge` is
+`new` | `daily` | `hot`. To add a game: push a row AND add a thumbnail function
+to `THUMB` under the same `id`.
 
-Each section is rendered in a **different format** on purpose (the four used to
-look identical):
-- `GAMES` + `BASEMENT` -> `fillGrid()` builds `.story` anchor cards in a `.stories`
-  CSS grid (3 cols desktop, 2 at 880px, 1 at 560px). `GAMES[0]` is the `.lead`
-  (full-width, drop cap). `pickIdx` (day-of-year modulo) flags one game "pick of
-  the day", no reordering.
-- `WORKSHOP` -> two centred `.feat` feature cards in `.features`.
-- `NOTICES` -> `.ad` rows (icon + bold term + dek) in a two-column `.classifieds`
-  listing.
+Thumbnails: `THUMB[id]()` returns SVG markup for a 160x120 board (wrapped by
+`thumb(id)`). Each is a little illustrated scene with thick `#1d1b2e` outlines,
+built with helpers `bg`, `txt`, `outlined`, `stick` (tiny stick guy), `hex`.
+Keep them readable at ~150px wide and obvious about what the game is.
 
-Icons: `ICON` is a map of icon-key -> raw SVG path string. `svg(key)` wraps it
-with the one shared stroke spec (viewBox 24, `stroke-width 1.6`, round caps);
-`frame(key)` wraps that in a ruled `.icoframe` "engraving block". Each section
-header (`.dept .emblem`) and the colophon carry their own inline SVG. Keep new
-glyphs to a single readable silhouette at 24px; verify at render size, a wrong
-glyph is worse than none.
+Game of the Day = `GAMES[day % 12]` on the Singapore date. Search filters every
+`.tile` by name/blurb/category and opens the basement only if a basement game
+matches. `index.html#basement` opens the door too.
 
-`gallery.html` is deliberately NOT listed (still an easter egg): the only link to
-it is the bare `&#10087;` ornament in the colophon (`#plant`, `aria-hidden`,
-`tabindex="-1"`, no label).
+`gallery.html` is still an easter egg: the only link is the seedling emoji in
+the footer (`#plant`, `aria-hidden`, `tabindex="-1"`).
 
-Carried over from the old lobby:
-- **Hit counter** -> masthead "Circulation" number (`#circulation b`), same
-  once-per-session guard (`sessionStorage sortafun-visited`, `SortafunLB.bumpHits`
-  / `getHits`).
-- **Stop press** box (`#stoppress`) shows `SortafunLB.recent(1)`, hidden if
-  offline.
-- **Passport stamps**: the old canvas set `sortafun-stamp-walked` (far end of
-  lobby) and `-basement` (fell through the floor). The new page re-earns them:
-  `-walked` when an `IntersectionObserver` sees `.colophon` (read to the foot),
-  `-basement` on the `toggle` event of `#late` (open the late edition).
-  `passport.html`'s stamp descriptions were updated to match.
-- **Corrections & Amendments** (`.corrections`): the old changelog, now a boxed
-  column, not dismissible. ~3 short lines, newest date, plain ASCII.
+Carried over:
+- **Hit counter** -> `#hits` ("you are visitor no."), once per session
+  (`sessionStorage sortafun-visited`, `SortafunLB.bumpHits` / `getHits`).
+- **Just Played** uses `SortafunLB.recent(6)`; the newest also goes on the ticker.
+- **Passport stamps**: `-walked` when the footer (`#foot`) scrolls into view,
+  `-basement` when `#late` is opened.
+- **What's New** panel is the changelog. ~3 short lines, newest first, plain ASCII.
 
-House voice still applies to every headline and dek: no em/en dashes, no smart
+Game pages: `game.css` puts `.wrap` in a white rounded "window" on the same
+sky, and every game.css page (except `typing.html`, which keeps its dark
+monkeytype look via `body.tt`) starts with a `.homebar` div (logo + "all
+games" button) right after `<body>`. Add that div to any new game page.
+`forum.html`, `guestbook.html` and `gallery.html` keep their own period styles.
+
+House voice still applies to every tile name and blurb: no em/en dashes, no smart
 quotes, no ellipsis character, plain ASCII, lowercase-leaning deks.
 
 Leaderboards + the animation gallery + guestbook + hit counter use one
