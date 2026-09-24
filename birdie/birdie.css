@@ -166,3 +166,29 @@
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink); vertical-align: -1px; }
 .dot.y { background: #ffd21f; } .dot.g { background: #38d449; } .dot.r { background: #e8322b; } .dot.b { background: #4fc3ff; }
 .dot.p { background: #ff7ad9; } .dot.o { background: #ff8c1a; } .dot.v { background: #a64dff; }
+
+/* small screens (phones, especially held sideways): a more compact HUD */
+@media (max-height: 520px), (max-width: 600px) {
+  .poocam-wrap { width: 92px; height: 92px; }
+  .poocam-label { font-size: 10px; bottom: -15px; }
+  .hud-tl { gap: 6px; left: 6px; top: 6px; }
+  .meters { min-width: 110px; gap: 3px; }
+  .brand { font-size: 18px; }
+  .pm-bar { width: 110px; height: 12px; border-width: 2px; }
+  .pm-label { font-size: 10px; }
+  .lives svg { width: 16px; height: 16px; }
+  .score { font-size: 12px; }
+  .score b { font-size: 16px; }
+  .carry { font-size: 10px; }
+  .compass { display: none; }
+  .feed { right: 50px; top: 6px; width: min(300px, 50%); }
+  .feed div { font-size: 11px; padding: 3px 8px; }
+  .hud-br { display: none; }
+  .stick { width: 110px; height: 110px; left: 14px; bottom: 14px; }
+  .knob { left: 27px; top: 27px; width: 50px; height: 50px; }
+  .tbtns { right: 56px; bottom: 12px; gap: 8px; }
+  .tbtn { width: 56px; height: 56px; font-size: 13px; }
+  .tbtn.poo { width: 66px; height: 66px; }
+  .pausebtn, .fsbtn { width: 32px; height: 32px; font-size: 14px; right: 8px; }
+  .big { font-size: 26px; top: 30%; }
+}

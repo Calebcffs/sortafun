@@ -18,6 +18,7 @@ import * as THREE from "three";
 import { makePerson, posePerson, carGeometry } from "./people.js";
 import { itemGeometry } from "./items.js";
 import { makeNest, makeEgg, makeChick, Bird } from "./model.js";
+import { WildBirds } from "./ambient.js";
 import { FOOD, SPECIES } from "./species.js";
 import { CHUNK } from "./world.js";
 import { CITY_PERIOD, SEA } from "./terrain.js";
@@ -70,6 +71,7 @@ export class GameRules {
     this.tmp = new THREE.Vector3();
     this.bubbleCanvas = new Map();
     this.g.hud.setLives(this.lives);
+    this.wild = new WildBirds(game, { low: 3, med: 6, high: 9 }[game.quality] || 5);
   }
 
   get diet() { return this.sp.life.diet; }
@@ -118,6 +120,7 @@ export class GameRules {
     this.updateNest(dt);
     this.updateSplats(dt);
     this.updateBubbles(dt);
+    this.wild.update(dt);
     // chimney smoke
     this.smokeT = (this.smokeT || 0) - dt;
     if (this.smokeT <= 0) {
@@ -666,6 +669,16 @@ export class GameRules {
         }
       }
       if (!hit) {
+        const w = this.wild.hit(p.pos);
+        if (w) {
+          this.stats.hits++;
+          this.addScore(5, "splat! you got a " + w.sp.name.toLowerCase());
+          this.g.hud.big("BIRD! +5", "good");
+          this.g.sound.splat(0.6);
+          hit = true;
+        }
+      }
+      if (!hit) {
         let n = null, col = null;
         this.world.collideSphere(p.pos, 0.06, (nn, depth, c) => { if (!n) { n = { x: nn.x, y: nn.y, z: nn.z }; col = c; } });
         if (n) {
@@ -907,6 +920,7 @@ export class GameRules {
       if (this.nest.chick) this.scene.remove(this.nest.chick.mesh);
       if (this.nest.fledgling) this.nest.fledgling.bird.dispose();
     }
+    this.wild.dispose();
     for (const k in this.geos) this.geos[k].dispose();
     for (const g of this.carGeos) g.dispose();
   }

@@ -584,7 +584,7 @@ export class World {
     for (let i = 0; i < nAc; i++) {
       const ax = x + (rnd() - 0.5) * (tw - 4), az = z + (rnd() - 0.5) * (td - 4);
       const s = 1.2 + rnd() * 1.6;
-      b.box(ax, roofY, az, s * 1.4, s * 0.8, s, 0, { color: [0.7, 0.72, 0.74] });
+      b.box(ax, roofY, az, s * 1.4, s * 0.8, s, 0, { side: L.WAREHOUSE, top: L.CONTAINER, color: [0.78, 0.8, 0.82], topColor: [0.6, 0.62, 0.64] });
       b.cyl(ax, roofY + s * 0.8, az, s * 0.3, 0.1, 10, L.WHITE, [0.3, 0.3, 0.32]);
       this.addBox(ctx, ax - s * 0.7, roofY, az - s / 2, ax + s * 0.7, roofY + s * 0.8, az + s / 2, "ac");
     }
