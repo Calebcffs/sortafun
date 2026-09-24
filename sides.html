@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>four sides &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #box { width: min(300px, 100%); display: block; margin: 6px auto; user-select: none; -webkit-user-select: none; }
+  #box .side { fill: #fff; stroke: #1d1b2e; stroke-width: 4; }
+  #box .dot { fill: #fff; stroke: #1d1b2e; stroke-width: 3; cursor: pointer; }
+  #box .dot.used { fill: #ffe066; }
+  #box .dot.last { fill: #ff7a1a; }
+  #box .ltr { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 24px; text-anchor: middle; dominant-baseline: central; pointer-events: none; text-transform: uppercase; fill: #1d1b2e; }
+  #box .ltr.used { fill: #b35c00; }
+  #box .done { stroke: #ffb800; stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: .7; }
+  #box .now { stroke: #ff3d8b; stroke-width: 4; fill: none; stroke-dasharray: 8 6; stroke-linecap: round; stroke-linejoin: round; }
+  #cur {
+    font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 30px; letter-spacing: 3px;
+    min-height: 40px; text-transform: uppercase; border-bottom: 3px solid #1d1b2e; width: min(280px, 90%); margin: 4px auto 8px;
+  }
+  #cur.bad { color: #e03131; animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  #words { font-size: 18px; min-height: 26px; margin: 6px 0; text-transform: uppercase; letter-spacing: 1px; }
+  #words span { display: inline-block; background: #fff3bf; border: 2px solid #1d1b2e; border-radius: 6px; padding: 1px 7px; margin: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .meta { font-size: 14px; color: #444; }
+</style>
+</head>
+<body>
+<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<div class="wrap">
+  <h1>four sides</h1>
+  <p class="sub">use all twelve letters. words need 3+ letters, and you can't use two letters from the same side in a row.
+    each new word starts with the last letter of the one before. fewest words wins. same box for everyone today.</p>
+  <p class="meta">par today: <b id="par">?</b> words</p>
+
+  <svg id="box" viewBox="0 0 300 300" aria-label="the letter box"></svg>
+
+  <div id="cur"></div>
+  <div class="row">
+    <button id="del">delete</button>
+    <button id="enter">enter</button>
+    <button id="restart">start over</button>
+  </div>
+  <div id="words"></div>
+  <div class="status" id="status">type or click letters</div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="dict.js"></script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function daySeed() {
+  var s = window.SortafunLB ? SortafunLB.dayStr() : new Date().toISOString().slice(0, 10);
+  return Number(s.replace(/-/g, ""));
+}
+function uniq(w) {
+  var o = [];
+  for (var i = 0; i < w.length; i++) if (o.indexOf(w[i]) === -1) o.push(w[i]);
+  return o;
+}
+function shuffle(a, rnd) {
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = (rnd() * (i + 1)) | 0;
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+/* ------------------------------------------------------------------ *
+ * today's box: find two common words, the second starting where the
+ * first ends, that use exactly twelve different letters between them.
+ * then split those letters onto four sides of three so neither word
+ * ever has two letters in a row from the same side. that pair is the
+ * par solution, so the box is always solvable in two.
+ * ------------------------------------------------------------------ */
+function makeBox() {
+  var rnd = mulberry32(daySeed() * 3 + 11);
+  var pool = SortafunDict.common.filter(function (w) {
+    if (w.length < 4 || w.length > 10 || /q/.test(w)) return false;
+    for (var i = 1; i < w.length; i++) if (w[i] === w[i - 1]) return false;
+    return !(/s$/.test(w) && !/ss$/.test(w));
+  });
+  var byFirst = {};
+  pool.forEach(function (w) { (byFirst[w[0]] = byFirst[w[0]] || []).push(w); });
+  var firsts = shuffle(pool.filter(function (w) { return w.length >= 6 && uniq(w).length >= 6; }), rnd);
+
+  for (var a = 0; a < firsts.length && a < 400; a++) {
+    var w1 = firsts[a], u1 = uniq(w1);
+    var seconds = shuffle((byFirst[w1[w1.length - 1]] || []).slice(), rnd);
+    for (var b = 0; b < seconds.length; b++) {
+      var w2 = seconds[b];
+      if (w2 === w1) continue;
+      var all = uniq(w1 + w2);
+      if (all.length !== 12) continue;
+      var sides = split(all, [w1, w2], rnd);
+      if (sides) return { sides: sides, par: [w1, w2] };
+    }
+  }
+  return null;
+}
+
+// backtracking: put 12 letters on 4 sides of 3, no word neighbours sharing a side
+function split(letters, words, rnd) {
+  var bad = {};
+  words.forEach(function (w) {
+    for (var i = 1; i < w.length; i++) { bad[w[i - 1] + w[i]] = true; bad[w[i] + w[i - 1]] = true; }
+  });
+  var order = shuffle(letters.slice(), rnd);
+  var sides = [[], [], [], []];
+  function place(i) {
+    if (i === order.length) return true;
+    var l = order[i];
+    for (var s = 0; s < 4; s++) {
+      if (sides[s].length === 3) continue;
+      if (sides[s].some(function (x) { return bad[x + l]; })) continue;
+      sides[s].push(l);
+      if (place(i + 1)) return true;
+      sides[s].pop();
+      if (!sides[s].length) break; // empty sides are interchangeable, don't retry them
+    }
+    return false;
+  }
+  return place(0) ? sides : null;
+}
+
+var puzzle = makeBox();
+var sideOf = {};
+puzzle.sides.forEach(function (s, i) { s.forEach(function (l) { sideOf[l] = i; }); });
+document.getElementById("par").textContent = puzzle.par.length;
+
+/* ---------------- drawing ---------------- */
+var boxEl = document.getElementById("box");
+var curEl = document.getElementById("cur");
+var wordsEl = document.getElementById("words");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+
+var POS = {};
+(function () {
+  var lo = 60, hi = 240, at = [105, 150, 195];
+  puzzle.sides.forEach(function (s, i) {
+    s.forEach(function (l, j) {
+      var p = i === 0 ? [at[j], lo] : i === 1 ? [hi, at[j]] : i === 2 ? [at[2 - j], hi] : [lo, at[2 - j]];
+      var out = i === 0 ? [0, -30] : i === 1 ? [30, 0] : i === 2 ? [0, 30] : [-30, 0];
+      POS[l] = { x: p[0], y: p[1], tx: p[0] + out[0], ty: p[1] + out[1] };
+    });
+  });
+})();
+
+var words = [];
+var cur = "";
+var over = false;
+
+function usedSet() {
+  var u = {};
+  words.concat([cur]).forEach(function (w) { for (var i = 0; i < w.length; i++) u[w[i]] = true; });
+  return u;
+}
+
+function pathD(w) {
+  return w.split("").map(function (l, i) { return (i ? "L" : "M") + POS[l].x + " " + POS[l].y; }).join("");
+}
+
+function draw() {
+  var used = usedSet();
+  var last = cur[cur.length - 1];
+  var s = '<rect class="side" x="60" y="60" width="180" height="180" rx="4"/>';
+  words.forEach(function (w) { s += '<path class="done" d="' + pathD(w) + '"/>'; });
+  if (cur.length > 1) s += '<path class="now" d="' + pathD(cur) + '"/>';
+  Object.keys(POS).forEach(function (l) {
+    var p = POS[l];
+    s += '<circle class="dot' + (l === last ? " last" : used[l] ? " used" : "") + '" data-l="' + l + '" cx="' + p.x + '" cy="' + p.y + '" r="9"/>';
+    s += '<circle data-l="' + l + '" cx="' + p.tx + '" cy="' + p.ty + '" r="18" fill="transparent" style="cursor:pointer"/>';
+    s += '<text class="ltr' + (used[l] ? " used" : "") + '" x="' + p.tx + '" y="' + p.ty + '">' + l + "</text>";
+  });
+  boxEl.innerHTML = s;
+  curEl.textContent = cur;
+  wordsEl.innerHTML = words.map(function (w) { return "<span>" + w + "</span>"; }).join(" ");
+}
+
+function nope(msg) {
+  statusEl.textContent = msg;
+  curEl.classList.remove("bad");
+  void curEl.offsetWidth;
+  curEl.classList.add("bad");
+}
+
+/* ---------------- input ---------------- */
+function addLetter(l) {
+  if (over) return;
+  if (!(l in sideOf)) return;
+  var prev = cur[cur.length - 1];
+  if (prev && sideOf[prev] === sideOf[l]) { nope("same side as " + prev.toUpperCase() + ", pick another side"); return; }
+  cur += l;
+  statusEl.textContent = "";
+  draw();
+}
+
+function backspace() {
+  if (over) return;
+  // on the carried-over first letter, backspace takes the last word back
+  if (words.length && cur.length <= 1) {
+    cur = words.pop();
+  } else {
+    cur = cur.slice(0, -1);
+  }
+  statusEl.textContent = "";
+  draw();
+}
+
+function enter() {
+  if (over) return;
+  if (cur.length < 3) { nope("words need 3+ letters"); return; }
+  if (!SortafunDict.has(cur)) { nope("not in the dictionary"); return; }
+  if (words.indexOf(cur) !== -1) { nope("already used that one"); return; }
+  words.push(cur);
+  var last = cur[cur.length - 1];
+  cur = last;
+  var used = usedSet();
+  var left = Object.keys(sideOf).filter(function (l) { return !used[l]; }).length;
+  if (!left) return win();
+  statusEl.textContent = left + " letter" + (left === 1 ? "" : "s") + " to go";
+  draw();
+}
+
+function win() {
+  over = true;
+  cur = "";
+  draw();
+  var n = words.length;
+  statusEl.textContent = "solved in " + n + " word" + (n === 1 ? "" : "s") +
+    (n < puzzle.par.length ? ", under par!" : n === puzzle.par.length ? ", that's par." : ".") +
+    " our answer was " + puzzle.par.join(" - ").toUpperCase() + ".";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "sides", { score: n });
+}
+
+function restart() {
+  words = []; cur = ""; over = false; lbEl.innerHTML = "";
+  statusEl.textContent = "type or click letters";
+  draw();
+}
+
+boxEl.addEventListener("click", function (e) {
+  var l = e.target.getAttribute && e.target.getAttribute("data-l");
+  if (l) addLetter(l);
+});
+document.getElementById("del").addEventListener("click", backspace);
+document.getElementById("enter").addEventListener("click", enter);
+document.getElementById("restart").addEventListener("click", restart);
+document.addEventListener("keydown", function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target && e.target.tagName === "INPUT") return;
+  if (e.key === "Enter") { e.preventDefault(); enter(); }
+  else if (e.key === "Backspace") { e.preventDefault(); backspace(); }
+  else if (/^[a-zA-Z]$/.test(e.key)) addLetter(e.key.toLowerCase());
+});
+
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>word grab &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  .hud { display: flex; justify-content: center; gap: 22px; font-size: 18px; margin: 6px 0 10px; }
+  .hud b { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 24px; }
+  #clock.low { color: #e03131; }
+  #grid {
+    position: relative;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    width: min(320px, 100%); margin: 0 auto; padding: 10px;
+    background: #1d8fe8; border: 3px solid #1d1b2e; border-radius: 14px;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  }
+  .cube {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 34px; text-transform: uppercase;
+    background: linear-gradient(#fffdf3, #ffe9a8); border: 3px solid #1d1b2e; border-radius: 10px;
+    box-shadow: 0 4px 0 #1d1b2e; cursor: pointer; padding: 0; color: #1d1b2e;
+  }
+  .cube.qu { font-size: 26px; }
+  .cube.on { background: linear-gradient(#ffb3d1, #ff5c9a); color: #fff; transform: translateY(2px); box-shadow: 0 2px 0 #1d1b2e; }
+  .cube.head { background: linear-gradient(#ff7ab0, #e0226c); }
+  #grid.hidden .cube { color: transparent; background: #ffe9a8; }
+  #cover {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(29,27,46,.25); border-radius: 11px;
+  }
+  #cover button { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 24px; background: #2fb84f; color: #fff; border: 3px solid #1d1b2e; border-radius: 999px; padding: 8px 26px; box-shadow: 0 4px 0 #1d1b2e; }
+  #cur {
+    font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 28px; letter-spacing: 3px; text-transform: uppercase;
+    min-height: 38px; margin: 10px auto 4px; width: min(280px, 90%); border-bottom: 3px solid #1d1b2e;
+  }
+  #cur.bad { color: #e03131; animation: shake .35s; }
+  #cur.good { color: #2fb84f; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  #found, #missed { list-style: none; padding: 0; margin: 10px auto; max-width: 520px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+  #found li, #missed li { font-size: 14px; text-transform: lowercase; padding: 2px 8px; border: 2px solid #1d1b2e; border-radius: 999px; background: #d3f9d8; }
+  #missed li { background: #f1f3f5; color: #555; border-color: #adb5bd; }
+  #missedWrap h3 { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-weight: 400; margin: 14px 0 0; }
+</style>
+</head>
+<body>
+<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<div class="wrap">
+  <h1>word grab</h1>
+  <p class="sub">two minutes. make words from letters that touch (sideways, up, down or diagonal), 3+ letters,
+    each cube once per word. type them or tap the cubes. longer words score way more. same grid for everyone today.</p>
+
+  <div class="hud">
+    <span>time <b id="clock">2:00</b></span>
+    <span>score <b id="score">0</b></span>
+    <span>words <b id="count">0</b></span>
+  </div>
+
+  <div id="grid" class="hidden"><div id="cover"><button id="go">START!</button></div></div>
+
+  <div id="cur"></div>
+  <div class="row">
+    <button id="clear">clear</button>
+    <button id="enter">enter</button>
+  </div>
+  <div class="status" id="status">3-4 letters = 1pt, 5 = 2, 6 = 3, 7 = 5, 8+ = 11</div>
+
+  <ul id="found"></ul>
+  <div id="lb"></div>
+  <div id="missedWrap" hidden><h3>some you missed</h3><ul id="missed"></ul></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="dict.js"></script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function daySeed() {
+  var s = window.SortafunLB ? SortafunLB.dayStr() : new Date().toISOString().slice(0, 10);
+  return Number(s.replace(/-/g, ""));
+}
+
+// the sixteen letter cubes from the classic tabletop game. "q" is always "qu".
+var DICE = ["aaeegn", "abbjoo", "achops", "affkps", "aoottw", "cimotu", "deilrx", "delrvy",
+            "distty", "eeghnw", "eeinsu", "ehrtvw", "eiosst", "elrtty", "himnuq", "hlnnrz"];
+var ROUND_MS = 120000;
+
+// which cubes touch which (including diagonals)
+var ADJ = [];
+for (var i = 0; i < 16; i++) {
+  ADJ[i] = [];
+  for (var j = 0; j < 16; j++) {
+    if (i !== j && Math.abs((i >> 2) - (j >> 2)) <= 1 && Math.abs((i & 3) - (j & 3)) <= 1) ADJ[i].push(j);
+  }
+}
+
+// a path of cube indexes spelling w on this board, or null
+function findPath(board, w) {
+  var path = [], used = [];
+  function go(cell, pos) {
+    var f = board[cell];
+    if (w.substr(pos, f.length) !== f) return false;
+    path.push(cell); used[cell] = true;
+    var next = pos + f.length;
+    if (next === w.length) return true;
+    var nb = ADJ[cell];
+    for (var k = 0; k < nb.length; k++) if (!used[nb[k]] && go(nb[k], next)) return true;
+    path.pop(); used[cell] = false;
+    return false;
+  }
+  for (var c = 0; c < 16; c++) if (go(c, 0)) return path;
+  return null;
+}
+
+function pointsFor(w) {
+  var n = w.length;
+  return n <= 4 ? 1 : n === 5 ? 2 : n === 6 ? 3 : n === 7 ? 5 : 11;
+}
+
+// every common word hiding in a board (used to pick a decent board and for "missed")
+function commonOn(board) {
+  var have = {};
+  board.forEach(function (f) { have[f[0]] = true; });
+  return SortafunDict.common.filter(function (w) {
+    return w.length >= 3 && w.length <= 16 && have[w[0]] && findPath(board, w);
+  });
+}
+
+// today's board: shuffle the cubes, roll each one, reroll until it's a good one
+function makeBoard() {
+  var rnd = mulberry32(daySeed() * 13 + 1);
+  var best = null;
+  for (var tries = 0; tries < 25; tries++) {
+    var dice = DICE.slice();
+    for (var a = dice.length - 1; a > 0; a--) {
+      var b = (rnd() * (a + 1)) | 0;
+      var t = dice[a]; dice[a] = dice[b]; dice[b] = t;
+    }
+    var board = dice.map(function (d) { var f = d[(rnd() * 6) | 0]; return f === "q" ? "qu" : f; });
+    var list = commonOn(board);
+    if (!best || list.length > best.list.length) best = { board: board, list: list };
+    if (list.length >= 60) break;
+  }
+  return best;
+}
+
+var today = makeBoard();
+var BOARD = today.board;
+
+var gridEl = document.getElementById("grid");
+var curEl = document.getElementById("cur");
+var statusEl = document.getElementById("status");
+var clockEl = document.getElementById("clock");
+var scoreEl = document.getElementById("score");
+var countEl = document.getElementById("count");
+var foundEl = document.getElementById("found");
+var lbEl = document.getElementById("lb");
+
+var cubes = BOARD.map(function (f, i) {
+  var b = document.createElement("button");
+  b.className = "cube" + (f === "qu" ? " qu" : "");
+  b.textContent = f === "qu" ? "Qu" : f;
+  b.dataset.i = i;
+  gridEl.appendChild(b);
+  return b;
+});
+
+var running = false, over = false, endAt = 0, timer = null;
+var cur = "", tapPath = null;
+var found = {}, score = 0;
+
+function lightPath(path) {
+  cubes.forEach(function (c) { c.classList.remove("on", "head"); });
+  if (!path) return;
+  path.forEach(function (i, k) {
+    cubes[i].classList.add("on");
+    if (k === path.length - 1) cubes[i].classList.add("head");
+  });
+}
+
+function refresh() {
+  curEl.textContent = cur;
+  curEl.classList.remove("bad", "good");
+  var path = tapPath || (cur ? findPath(BOARD, cur) : null);
+  lightPath(path);
+  if (cur && !path) curEl.classList.add("bad");
+}
+
+function flash(cls, msg) {
+  statusEl.textContent = msg;
+  curEl.classList.remove("bad", "good");
+  void curEl.offsetWidth;
+  curEl.classList.add(cls);
+}
+
+function submit() {
+  if (!running) return;
+  var w = cur;
+  if (!w) return;
+  var why = "";
+  if (w.length < 3) why = "3 letters minimum";
+  else if (found[w]) why = "already got that one";
+  else if (!(tapPath || findPath(BOARD, w))) why = "those letters don't connect";
+  else if (!SortafunDict.has(w)) why = "not in the dictionary";
+  if (why) { flash("bad", why); cur = ""; tapPath = null; setTimeout(refresh, 300); return; }
+  var pts = pointsFor(w);
+  found[w] = pts; score += pts;
+  scoreEl.textContent = score;
+  countEl.textContent = Object.keys(found).length;
+  var li = document.createElement("li");
+  li.textContent = w + " +" + pts;
+  foundEl.insertBefore(li, foundEl.firstChild);
+  flash("good", pts >= 5 ? "whoa! +" + pts : "+" + pts);
+  cur = ""; tapPath = null;
+  setTimeout(refresh, 250);
+}
+
+function tap(i) {
+  if (!running) return;
+  // switching from typing to tapping: carry on from the typed word's path
+  if (!tapPath) tapPath = cur ? findPath(BOARD, cur) : [];
+  if (!tapPath) { tapPath = []; cur = ""; }
+  var at = tapPath.indexOf(i);
+  if (at === tapPath.length - 1 && at >= 0) { submit(); return; } // tap the last cube again to enter
+  if (at !== -1) return;
+  if (tapPath.length && ADJ[tapPath[tapPath.length - 1]].indexOf(i) === -1) {
+    flash("bad", "that cube doesn't touch the last one");
+    return;
+  }
+  tapPath.push(i);
+  cur += BOARD[i];
+  statusEl.textContent = "";
+  refresh();
+}
+
+function start() {
+  if (running || over) return;
+  running = true;
+  gridEl.classList.remove("hidden");
+  document.getElementById("cover").remove();
+  endAt = Date.now() + ROUND_MS;
+  timer = setInterval(tick, 200);
+  tick();
+  statusEl.textContent = "go go go";
+}
+
+function tick() {
+  var left = Math.max(0, endAt - Date.now());
+  var s = Math.ceil(left / 1000);
+  clockEl.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  clockEl.classList.toggle("low", s <= 15);
+  if (left <= 0) end();
+}
+
+function end() {
+  clearInterval(timer);
+  running = false; over = true;
+  cur = ""; tapPath = null; refresh();
+  var n = Object.keys(found).length;
+  statusEl.textContent = "time! " + score + " point" + (score === 1 ? "" : "s") + " from " + n + " word" + (n === 1 ? "" : "s") +
+    ". there were at least " + today.list.length + " common words in there.";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "grab", { score: score });
+  var missed = today.list.filter(function (w) { return !found[w]; })
+    .sort(function (a, b) { return b.length - a.length || (a < b ? -1 : 1); }).slice(0, 24);
+  if (missed.length) {
+    document.getElementById("missed").innerHTML = missed.map(function (w) { return "<li>" + w + "</li>"; }).join("");
+    document.getElementById("missedWrap").hidden = false;
+  }
+}
+
+gridEl.addEventListener("click", function (e) {
+  var c = e.target.closest(".cube");
+  if (c) tap(Number(c.dataset.i));
+});
+document.getElementById("go").addEventListener("click", start);
+document.getElementById("enter").addEventListener("click", submit);
+document.getElementById("clear").addEventListener("click", function () { cur = ""; tapPath = null; statusEl.textContent = ""; refresh(); });
+document.addEventListener("keydown", function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target && e.target.tagName === "INPUT") return;
+  if (!running) {
+    if (e.key === "Enter" && !over) { e.preventDefault(); start(); }
+    return;
+  }
+  if (e.key === "Enter") { e.preventDefault(); submit(); }
+  else if (e.key === "Backspace") {
+    e.preventDefault();
+    if (tapPath && tapPath.length) { var last = tapPath.pop(); cur = cur.slice(0, cur.length - BOARD[last].length); }
+    else cur = cur.slice(0, -1);
+    if (tapPath && !tapPath.length) tapPath = null;
+    refresh();
+  } else if (/^[a-zA-Z]$/.test(e.key)) {
+    tapPath = null;
+    cur += e.key.toLowerCase();
+    statusEl.textContent = "";
+    refresh();
+  }
+});
+</script>
+</body>
+</html>

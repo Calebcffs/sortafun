@@ -55,7 +55,7 @@ function has(k) { try { return localStorage.getItem("sortafun-stamp-" + k) === "
 })();
 
 var GAME_KEYS = window.SortafunLB
-  ? Object.keys(SortafunLB.GAMES).filter(function (g) { return g !== "driving"; })
+  ? Object.keys(SortafunLB.GAMES).filter(function (g) { return !SortafunLB.GAMES[g].retired; })
   : [];
 
 var STAMPS = [

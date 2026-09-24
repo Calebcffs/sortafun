@@ -94,14 +94,15 @@ Collection `scores`, one document per submitted score:
 
 Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram` (retired, see
-`CLAUDE.md`), `mines`, `fermi`, `minute`, `callit`, `watch`, `hive`. The enum
+`CLAUDE.md`), `mines`, `fermi` (retired), `minute`, `callit`, `watch`, `hive`,
+`five`, `sides`, `grab`. The enum
 lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
 sync, and **update `firestore.rules` in the same commit whenever a game is
 added** (see step 4 above, it auto-deploys on push) or that game's scores are
 rejected. "low" games (rank lowest score
 best, store `rankValue == -score`): `puzzle`, `circuit`, `reaction`, `maze`,
-`ladder`, `mines`, `minute`. No new composite indexes are needed for new games
+`ladder`, `mines`, `minute`, `five`, `sides`. No new composite indexes are needed for new games
 — the score indexes key on `game` as an equality filter, so one index serves
 every game.
 

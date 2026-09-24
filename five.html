@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>five letters &middot; SORTAFUN.ORG</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  #board { display: grid; grid-template-rows: repeat(6, 1fr); gap: 6px; width: min(300px, 100%); margin: 12px auto; }
+  .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .row.shake { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  .tile {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+    font-size: 30px; text-transform: uppercase;
+    border: 3px solid #cfd3e0; border-radius: 8px; background: #fff;
+  }
+  .tile.filled { border-color: #1d1b2e; animation: pop .1s; }
+  @keyframes pop { 50% { transform: scale(1.08); } }
+  .tile.hit, .tile.near, .tile.miss { color: #fff; border-color: #1d1b2e; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  .hit  { background: #2fb84f !important; }
+  .near { background: #ffb800 !important; }
+  .miss { background: #8a8aa0 !important; }
+  .tile.flip { animation: flip .35s ease-in both; }
+  @keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+
+  #keys { max-width: 500px; margin: 14px auto 0; user-select: none; -webkit-user-select: none; }
+  .krow { display: flex; justify-content: center; gap: 5px; margin-bottom: 6px; }
+  .key {
+    flex: 1; max-width: 42px; height: 50px; padding: 0;
+    font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 17px;
+    text-transform: uppercase; background: #e4e7f2; border: 2px solid #1d1b2e; border-radius: 7px;
+    box-shadow: 0 3px 0 #1d1b2e;
+  }
+  .key.wide { max-width: 68px; flex: 1.5; font-size: 13px; }
+  .key.hit, .key.near, .key.miss { color: #fff; }
+  .legend { font-size: 13px; color: #555; }
+  .legend b { display: inline-block; width: 14px; height: 14px; border: 2px solid #1d1b2e; border-radius: 3px; vertical-align: -2px; margin: 0 3px 0 8px; }
+</style>
+</head>
+<body>
+<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<div class="wrap">
+  <h1>five letters</h1>
+  <p class="sub">guess today's five letter word in six tries. every guess has to be a real word.
+    same word for everyone today, and you only get one go at it.</p>
+  <p class="legend"><b class="hit"></b>right spot <b class="near"></b>wrong spot <b class="miss"></b>not in it</p>
+
+  <div id="board"></div>
+  <div class="status" id="status">start typing</div>
+  <div id="keys"></div>
+
+  <div id="lb"></div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="dict.js"></script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+"use strict";
+
+// seeded RNG from the Singapore day, same clock the site uses (see ladder.html)
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function dayStr() {
+  return window.SortafunLB ? SortafunLB.dayStr() : new Date().toISOString().slice(0, 10);
+}
+
+// today's answer: a common five letter word that isn't a plural or a past tense.
+// any real five letter word is a legal guess (dict.js).
+var ANSWERS = SortafunDict.commonLen(5).filter(function (w) {
+  return !(/s$/.test(w) && !/ss$/.test(w)) && !/ed$/.test(w);
+});
+var DAY = dayStr();
+var answer = (function () {
+  var rnd = mulberry32(Number(DAY.replace(/-/g, "")) * 7 + 5);
+  rnd(); rnd();
+  return ANSWERS[(rnd() * ANSWERS.length) | 0];
+})();
+
+var SAVE_KEY = "sortafun-five-" + DAY;
+var guesses = [];
+var cur = "";
+var over = false;
+
+var boardEl = document.getElementById("board");
+var statusEl = document.getElementById("status");
+var keysEl = document.getElementById("keys");
+var lbEl = document.getElementById("lb");
+
+// build the grid
+for (var r = 0; r < 6; r++) {
+  var row = document.createElement("div");
+  row.className = "row";
+  for (var c = 0; c < 5; c++) {
+    var t = document.createElement("div");
+    t.className = "tile";
+    row.appendChild(t);
+  }
+  boardEl.appendChild(row);
+}
+
+// build the keyboard
+var KEYROWS = ["qwertyuiop", "asdfghjkl", "+zxcvbnm-"];
+var keyEls = {};
+KEYROWS.forEach(function (line) {
+  var kr = document.createElement("div");
+  kr.className = "krow";
+  line.split("").forEach(function (ch) {
+    var b = document.createElement("button");
+    b.className = "key";
+    if (ch === "+") { b.textContent = "enter"; b.classList.add("wide"); b.dataset.k = "Enter"; }
+    else if (ch === "-") { b.innerHTML = "&#9003;"; b.classList.add("wide"); b.dataset.k = "Backspace"; }
+    else { b.textContent = ch; b.dataset.k = ch; keyEls[ch] = b; }
+    kr.appendChild(b);
+  });
+  keysEl.appendChild(kr);
+});
+keysEl.addEventListener("click", function (e) {
+  var b = e.target.closest(".key");
+  if (b) press(b.dataset.k);
+});
+
+// hit / near / miss per letter, handling repeated letters the proper way
+function mark(guess) {
+  var res = ["miss", "miss", "miss", "miss", "miss"];
+  var left = {};
+  for (var i = 0; i < 5; i++) {
+    if (guess[i] === answer[i]) res[i] = "hit";
+    else left[answer[i]] = (left[answer[i]] || 0) + 1;
+  }
+  for (i = 0; i < 5; i++) {
+    if (res[i] !== "hit" && left[guess[i]]) { res[i] = "near"; left[guess[i]]--; }
+  }
+  return res;
+}
+
+var RANK = { miss: 1, near: 2, hit: 3 };
+function paintKey(ch, cls) {
+  var k = keyEls[ch];
+  if (!k) return;
+  var had = k.dataset.state;
+  if (!had || RANK[cls] > RANK[had]) {
+    k.classList.remove("hit", "near", "miss");
+    k.classList.add(cls);
+    k.dataset.state = cls;
+  }
+}
+
+function rowEl(i) { return boardEl.children[i]; }
+
+function drawCurrent() {
+  var row = rowEl(guesses.length);
+  if (!row) return;
+  for (var i = 0; i < 5; i++) {
+    var t = row.children[i];
+    t.textContent = cur[i] || "";
+    t.classList.toggle("filled", !!cur[i]);
+  }
+}
+
+function reveal(i, guess, animate) {
+  var res = mark(guess);
+  var row = rowEl(i);
+  res.forEach(function (cls, j) {
+    var t = row.children[j];
+    t.textContent = guess[j];
+    function paint() { t.classList.add(cls); paintKey(guess[j], cls); }
+    if (animate) {
+      setTimeout(function () { t.classList.add("flip"); setTimeout(paint, 170); }, j * 220);
+    } else paint();
+  });
+  return res;
+}
+
+function save() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(guesses)); } catch (e) {}
+}
+
+var PRAISE = ["no way.", "unreal.", "great stuff.", "nice one.", "solid.", "phew!"];
+
+function finish(won, animate) {
+  over = true;
+  var delay = animate ? 1300 : 0;
+  setTimeout(function () {
+    if (won) {
+      var n = guesses.length;
+      statusEl.textContent = PRAISE[n - 1] + " got it in " + n + ".";
+      lbEl.innerHTML = "";
+      if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "five", { score: n });
+    } else {
+      statusEl.textContent = "out of guesses. it was " + answer.toUpperCase() + ". new word tomorrow.";
+      if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "five");
+    }
+  }, delay);
+}
+
+function submit() {
+  if (cur.length < 5) { shake("not enough letters"); return; }
+  if (!SortafunDict.has(cur)) { shake("not in the dictionary"); return; }
+  var g = cur;
+  guesses.push(g);
+  cur = "";
+  save();
+  var res = reveal(guesses.length - 1, g, true);
+  statusEl.textContent = "";
+  if (res.every(function (x) { return x === "hit"; })) finish(true, true);
+  else if (guesses.length === 6) finish(false, true);
+}
+
+function shake(msg) {
+  statusEl.textContent = msg;
+  var row = rowEl(guesses.length);
+  row.classList.remove("shake");
+  void row.offsetWidth;
+  row.classList.add("shake");
+}
+
+function press(k) {
+  if (over) return;
+  if (k === "Enter") submit();
+  else if (k === "Backspace") { cur = cur.slice(0, -1); drawCurrent(); }
+  else if (/^[a-z]$/.test(k) && cur.length < 5) { cur += k; drawCurrent(); }
+}
+
+document.addEventListener("keydown", function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target && e.target.tagName === "INPUT") return;
+  var k = e.key === "Enter" || e.key === "Backspace" ? e.key : e.key.toLowerCase();
+  if (k === "Enter" || k === "Backspace" || /^[a-z]$/.test(k)) { e.preventDefault(); press(k); }
+});
+
+// pick up where you left off today
+(function () {
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (e) {}
+  if (!Array.isArray(saved)) return;
+  saved.forEach(function (g) {
+    if (typeof g !== "string" || g.length !== 5 || guesses.length >= 6) return;
+    guesses.push(g);
+    reveal(guesses.length - 1, g, false);
+  });
+  if (guesses.length && guesses[guesses.length - 1] === answer) finish(true, false);
+  else if (guesses.length >= 6) finish(false, false);
+  else if (guesses.length) statusEl.textContent = "welcome back. " + (6 - guesses.length) + " guesses left.";
+})();
+</script>
+</body>
+</html>

@@ -42,8 +42,8 @@
 <div class="wrap">
   <h1>word hive</h1>
   <p class="sub">seven letters, one of them mandatory (gold). find every word you can, 4+ letters,
-    reuse letters as often as you like. no clock &mdash; stop whenever and submit your score.
-    same seven letters for everyone today.</p>
+    reuse letters as often as you like. any real word counts, no names.
+    no clock, stop whenever and submit your score. same seven letters for everyone today.</p>
 
   <div class="hud">
     <span>score <b id="score">0</b></span>
@@ -71,7 +71,7 @@
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
-<script src="words.js"></script>
+<script src="dict.js"></script>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
 <script>
@@ -91,17 +91,20 @@ function daySeed() {
   return Number(s.replace(/-/g, ""));
 }
 
-var FALLBACK_ALL = "able about above accept acid acorn acre acted actor adapt adept admit adobe adopt adult after again agent agile aisle alarm album alert algae alibi alien align alike alive allow alloy almost alone along aloud alpha altar alter amber amend among ample amuse angel anger angle angry ankle apple apply april apron arena argue arise armor aroma array arrow ashen aside asset atlas atom audio audit aunt avoid await awake award aware badge baker basic basil batch beach beast began begin being below bench berry birth black blade blame bland blank blast blaze bleak blend bless blimp blind bliss block blond blood bloom blown blues bluff blunt board boast bonus boost booth bound brace brain brand brave bread break breed brick bride brief bring broad broke brook broom brown brush build built bunch burnt cabin cable candy canal candle canoe carbon cargo carol carry catch cause chair chalk champ chant chaos charm chart chase cheap check cheek chess chest chief child chili chill china chirp choir choke chose chunk cider civic civil claim clash class clean clear clerk click cliff climb cling cloak clock clone close cloth cloud clown coach coast cocoa comet comic condo cousin cover crack craft crane crash crawl cream credit creek crepe crest crime crisp cross crowd crown crumb crush crust curse curve cycle daily dairy dance dandy dared dealt dear debit debug debut decal decay decor delay dense depth derby diner dirty ditch diver dizzy dodge doing donor doubt dough dozen draft drain drama drank drape drawn dream dress dried drift drill drink drive droop drove drown dryer eager eagle early earth easel eaten eater edict elbow elder elect email empty enact endow enter entry equal equip erase erode error erupt essay ethic evade event every evict evoke exact exile exist extra fable facet faced facts faint fairy faith false fancy fatal fault fault favor feast fence ferry fetch fever fewer fiber field fiery fifth fifty fight final finch finer first fixed flair flake flame flare flash fleet flesh flick fling flint float flock flood floor flora flour flown fluid flush focal focus foggy folio force forge forth forty forum found frame frank fraud fresh fried front frost frown fruit fudge fully fumes funny fuzzy gauge geese ghost giant given glad glass glaze gleam glide gloom glory glove going goose grace grade grain grand grant grape graph grasp grass grave gravy greed green greet grief grill grime grind gross group grove grown guard guess guest guide gulls habit happy harsh harvest hasty haunt haven hazel heavy hedge hello hence herbs hertz hinge hippo hoist honey honor horse hound house hover human humid humor hunch hurry ideal idiot image imply inbox index inept inert infer input inset ionic irony issue ivory jelly jewel joint joist joker jolly judge juice jumbo junior kayak kneel knife knock known label lager laser laugh layer leach learn least ledge lemon level light limbo limit linen lined liner lodge logic loose lorry lover lower loyal lucid lucky lumen lunar lunch lung lurid lyric magic maize major maker mango manor march marsh match maybe mayor meant medal media melon mercy merge merit metal meter micro midst might minor minus mirth model modem month moody moral motel motor mound mount mourn mouse mouth moved mover mover movie music mused nasty naval needy nerve never newly niche night noble noise north notch novel nudge nurse oasis obese occur ocean offer often olive onion opera orbit order organ other otter ought outer owner ozone paint panel panic paper party pasta patch pause peace peach pearl pedal penny perch phase phone photo piano piece pilot pinch pitch pixel plain plaid plank plant plate plaza plead plow plumb plume plush poach poems point poise poker polar porch poser pouch pound pouty power press price pride prime print prior prize probe prone proof proud prove prowl pulse punch pupil purse quack quail quake queen query quest quiet quilt quirk quite quote radar radio raise range rapid ratio raven reach react ready realm rebel refer reign relax relay relic repay reply rerun reset resin retro rider ridge rifle right rigid rinse risky ritual rival river roast robin robot rodeo rogue roomy roost rough round route royal rugby ruler rumor rural saint salad salsa salty sauce scale scarf scary scene scent scoop scope score scout scrap screw scrub seal seam seed seedy seize sense serve seven sever shade shady shaft shake shall shame shape shard share shark sharp shave shawl shear sheep sheer sheet shelf shell shift shine shiny shirt shock shone shore short shout shown shrub shrug siege sight sigma silly since siren sixth sixty skate skirt slack slain slang slate slave sleek sleep slice slide slime sling slope slosh sloth small smart smash smell smile smoke snack snail snake sneak sneer snide sniff snore snort soapy solar solid solve sonic sound south space spade spare spark speak spear speck speech speed spell spend spent spice spike spill spine spiny spire spite splat split spoil spoke spoon sport spout spray spurt squad stack staff stage stain stair stake stale stalk stall stamp stand stare stark start state stead steak steal steam steel steep steer stern stew stick stiff still sting stock stole stomp stone stood stool story stout stove stray strip stuck study stuff style suede sugar suite sunny super swamp swarm swear sweat sweep sweet swell swept swift swing swirl sword syrup table taken tally tango taper taste taxes teach teary tempo tenth theme thigh thing think third thorn those three throb throw thumb tiger tight timid tired title toast today token tonal tonic torch touch tough towel tower toxic trace track trade trail train trait tramp trash tread treat trend trial tribe trick tried troll troop trout truce truck truly trunk trust truth tulip tumor tunic turbo tutor twice twine twist ultra uncle uncut under undue unfit union unite unity until upper upset urban usage usual utter vague valid valor value vapor vault venue verse video vigil vinyl viral virus visit vital vivid vocal vodka vogue voice voter vowel wagon waist waste watch water waver weary wedge weigh weird whale wharf wheat wheel where which while whine white whole whose widen widow width wince winch windy wired wisdom witch woken world worry worse worth would wound woven wrath wreck wrist write wrong yield young youth zebra zesty".split(/\s+/);
-
-var WORDS = (window.SORTAFUN_WORDS && window.SORTAFUN_WORDS.top10000)
-  ? window.SORTAFUN_WORDS.top10000.filter(function (w) { return w.length >= 4 && /^[a-z]+$/.test(w); })
-  : FALLBACK_ALL;
-if (WORDS.length < 500) WORDS = FALLBACK_ALL;
+// dictionary: dict.js (see CLAUDE.md, "the dictionary"). any real word is
+// accepted; the puzzle itself and the rank tiers are built from the common
+// words only, so "queen bee" stays reachable without knowing every obscure word.
+var D = window.SortafunDict;
 
 function uniqueLetters(w) {
   var seen = {};
   for (var i = 0; i < w.length; i++) seen[w[i]] = true;
   return Object.keys(seen).sort().join("");
+}
+function maskOf(w) {
+  var m = 0;
+  for (var i = 0; i < w.length; i++) m |= 1 << (w.charCodeAt(i) - 97);
+  return m;
 }
 
 function scoreWord(w, isPangram) {
@@ -109,56 +112,56 @@ function scoreWord(w, isPangram) {
   return isPangram ? base + 7 : base;
 }
 
-// Builds today's puzzle: 7 unique letters (guaranteed at least one pangram),
-// a mandatory center letter chosen to maximize how many words use it, and the
-// full set of accepted answers (any word from WORDS whose letters are a
-// subset of the 7 - repeats allowed - that also contains the center letter).
-// Deterministic per Singapore day, so every player gets the same seven
-// letters. See CLAUDE.md for why this checks a real word list instead of one
-// fixed target word (that was the anagram-sprint bug this replaced).
+// Builds today's puzzle: 7 unique letters from a common pangram (no S, same as
+// the NYT, or every plural would count), a mandatory center letter picked to
+// give a decent haul, the common answers (for max score / tiers), and every
+// accepted answer from the full dictionary. Deterministic per Singapore day.
 function buildPuzzle() {
   var rnd = mulberry32(daySeed());
-  var sevenLetterWords = WORDS.filter(function (w) { return uniqueLetters(w).length === 7; });
-  // deterministic shuffle
-  for (var i = sevenLetterWords.length - 1; i > 0; i--) {
+  var common = D.common.filter(function (w) { return w.length >= 4 && w.indexOf("s") === -1; });
+  var commonMasks = common.map(maskOf);
+  var pangrams = common.filter(function (w) { return uniqueLetters(w).length === 7; });
+  for (var i = pangrams.length - 1; i > 0; i--) {
     var j = (rnd() * (i + 1)) | 0;
-    var t = sevenLetterWords[i]; sevenLetterWords[i] = sevenLetterWords[j]; sevenLetterWords[j] = t;
+    var t = pangrams[i]; pangrams[i] = pangrams[j]; pangrams[j] = t;
   }
 
-  var fallback = null;
-  for (var n = 0; n < Math.min(300, sevenLetterWords.length); n++) {
-    var letters = uniqueLetters(sevenLetterWords[n]).split("");
-    var setObj = {};
-    letters.forEach(function (l) { setObj[l] = true; });
-    var subsetWords = WORDS.filter(function (w) {
-      for (var k = 0; k < w.length; k++) if (!setObj[w[k]]) return false;
-      return true;
-    });
+  var best = null;
+  for (var n = 0; n < Math.min(200, pangrams.length); n++) {
+    var letters = uniqueLetters(pangrams[n]).split("");
+    var setMask = maskOf(pangrams[n]);
+    var inHive = [];
+    for (var k = 0; k < common.length; k++) if ((commonMasks[k] & ~setMask) === 0) inHive.push(common[k]);
 
-    var bestCenter = letters[0], bestCount = -1;
+    // center: the letter giving the most words, but not so many it's a slog
+    var pick = null;
     letters.forEach(function (c) {
-      var cnt = subsetWords.filter(function (w) { return w.indexOf(c) !== -1; }).length;
-      if (cnt > bestCount) { bestCount = cnt; bestCenter = c; }
+      var cnt = inHive.filter(function (w) { return w.indexOf(c) !== -1; }).length;
+      if (cnt >= 20 && cnt <= 60 && (!pick || cnt > pick.cnt)) pick = { c: c, cnt: cnt };
     });
-
-    var finalWords = subsetWords.filter(function (w) { return w.indexOf(bestCenter) !== -1; });
-    var pangramCount = finalWords.filter(function (w) { return uniqueLetters(w).length === 7; }).length;
-
-    var candidate = makePuzzleFrom(letters, bestCenter, finalWords);
-    if (!fallback || finalWords.length > fallback._n) { fallback = candidate; fallback._n = finalWords.length; }
-    if (finalWords.length >= 15 && pangramCount >= 1) return candidate;
+    if (pick) return makePuzzleFrom(letters, pick.c, inHive);
+    if (!best) best = { letters: letters, inHive: inHive };
   }
-  return fallback; // extremely unlikely path - see project notes, real word list clears this easily
+  return makePuzzleFrom(best.letters, best.letters[0], best.inHive);
 }
 
-function makePuzzleFrom(letters, center, finalWords) {
-  var answers = {}, maxScore = 0;
-  finalWords.forEach(function (w) {
+function makePuzzleFrom(letters, center, inHive) {
+  var setMask = maskOf(letters.join(""));
+  var common = {}, maxScore = 0;
+  inHive.forEach(function (w) {
+    if (w.indexOf(center) === -1) return;
     var pts = scoreWord(w, uniqueLetters(w).length === 7);
-    answers[w] = pts;
+    common[w] = pts;
     maxScore += pts;
   });
-  return { letters: letters, center: center, answers: answers, maxScore: maxScore };
+  // every dictionary word that fits, obscure ones included
+  var answers = {};
+  D.all.forEach(function (w) {
+    if (w.length >= 4 && w.indexOf(center) !== -1 && (maskOf(w) & ~setMask) === 0) {
+      answers[w] = scoreWord(w, uniqueLetters(w).length === 7);
+    }
+  });
+  return { letters: letters, center: center, answers: answers, common: common, maxScore: maxScore };
 }
 
 var TIERS = [
@@ -262,7 +265,7 @@ function submitWord() {
     if (!allowed[w[i]]) { flash("bad", "only use this hive's letters"); return; }
   }
   if (foundWords[w] != null) { flash("bad", "already found that one"); return; }
-  if (!(w in puzzle.answers)) { flash("bad", "not in the word list"); return; }
+  if (!(w in puzzle.answers)) { flash("bad", "not in the dictionary"); return; }
 
   var pts = puzzle.answers[w];
   foundWords[w] = pts;
@@ -272,7 +275,8 @@ function submitWord() {
   updateHud();
   addFoundChip(w, pts);
   var isPan = uniqueLetters(w).length === 7;
-  flash("good", isPan ? "pangram! +" + pts : "nice, +" + pts);
+  var deep = !(w in puzzle.common);
+  flash("good", (isPan ? "pangram! +" : deep ? "ooh, deep cut. +" : "nice, +") + pts);
 }
 
 function addFoundChip(w, pts) {

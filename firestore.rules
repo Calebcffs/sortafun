@@ -18,14 +18,15 @@ service cloud.firestore {
 
     // games whose leaderboard ranks lowest-score-best: they store rankValue == -score
     function isLowGame(g) {
-      return g in ['puzzle', 'circuit', 'reaction', 'maze', 'ladder', 'mines', 'minute'];
+      return g in ['puzzle', 'circuit', 'reaction', 'maze', 'ladder', 'mines', 'minute', 'five', 'sides'];
     }
 
     function isValidScore(d) {
       return d.keys().hasOnly(['game', 'name', 'score', 'rankValue', 'day', 'ts'])
         && d.game in ['typing', 'typing1000', 'driving', 'puzzle', 'circuit',
                       'reaction', 'maze', 'aim', 'stopbar', 'ladder', 'anagram',
-                      'mines', 'fermi', 'minute', 'callit', 'watch', 'hive']
+                      'mines', 'fermi', 'minute', 'callit', 'watch', 'hive',
+                      'five', 'sides', 'grab']
         && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
         && d.score is int && d.score >= 0 && d.score <= 1000000
         && d.rankValue is int

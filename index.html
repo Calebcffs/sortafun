@@ -652,7 +652,8 @@
     <span class="lbl">NEWS</span>
     <div class="lane"><div class="run" id="tickrun">
       <span><b>NEW LOOK!</b> the whole site got a fresh coat of paint. every game has its own picture now.</span>
-      <span><b>WORD HIVE</b> is out. seven letters, one in the middle, find as many words as you can.</span>
+      <span><b>THREE NEW WORD GAMES!</b> five letters, four sides and word grab. go go go.</span>
+      <span>the word games use a <b>real dictionary</b> now. 170,000 words, no names.</span>
       <span>scores reset at <b>midnight Singapore time</b>. the leaderboards never sleep.</span>
       <span>collect stamps in your <b>passport</b> just by poking around.</span>
     </div></div>
@@ -678,7 +679,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>twelve games. your best today lands on the leaderboards.</p>
+      <p>fourteen games. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -726,9 +727,9 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-24</span> three new daily word games: five letters, four sides and word grab.</li>
+        <li><span class="when">09-24</span> word hive and word ladder now take any real word (170,000 of them). the fermi quiz is gone.</li>
         <li><span class="when">09-24</span> new homepage! it's a proper game site now, with a picture for every game and a search box.</li>
-        <li><span class="when">09-11</span> the anagram game is now word hive. real words count now, not just the one it picked.</li>
-        <li><span class="when">09-04</span> eleven new small games, a guestbook, a passport and a hit counter.</li>
       </ul>
     </section>
     <section class="panel howto">
@@ -771,13 +772,15 @@
 
 var GAMES = [
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
-  { id: "hive",      name: "Word Hive",      url: "anagram.html",   cat: "word",   key: "hive",     badge: "new",   blurb: "seven letters, one in the middle. find every word you can. no clock." },
+  { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
+  { id: "sides",     name: "Four Sides",     url: "sides.html",     cat: "word",   key: "sides",    badge: "new",   blurb: "twelve letters round a box. chain words together until you've used them all." },
+  { id: "grab",      name: "Word Grab",      url: "grab.html",      cat: "word",   key: "grab",     badge: "new",   blurb: "a 4x4 grid of letter cubes and two minutes. grab every word you can find." },
+  { id: "hive",      name: "Word Hive",      url: "anagram.html",   cat: "word",   key: "hive",     badge: "daily", blurb: "seven letters, one in the middle. find every word you can. no clock." },
   { id: "ladder",    name: "Word Ladder",    url: "ladder.html",    cat: "word",   key: "ladder",   badge: "daily", blurb: "change one letter at a time to climb from the top word to the bottom one." },
   { id: "typing",    name: "Typing Test",    url: "typing.html",    cat: "word",   key: "typing",   badge: "hot",   blurb: "thirty seconds. how many words per minute have you got?" },
   { id: "slider",    name: "Tile Slider",    url: "puzzle.html",    cat: "puzzle", key: "puzzle",   badge: "daily", blurb: "slide the numbers back in order. one board for everyone each day." },
   { id: "mines",     name: "Minesweeper",    url: "mines.html",     cat: "puzzle", key: "mines",                    blurb: "the classic. clear the field without stepping on a mine." },
   { id: "maze",      name: "Cursor Maze",    url: "maze.html",      cat: "puzzle", key: "maze",                     blurb: "steer your mouse down the path. the walls are lava." },
-  { id: "fermi",     name: "Fermi Quiz",     url: "fermi.html",     cat: "puzzle", key: "fermi",                    blurb: "how many jellybeans fit in a bus? guess close enough to score." },
   { id: "race",      name: "Circuit Race",   url: "driving.html",   cat: "skill",  key: "circuit",  badge: "hot",   blurb: "three laps of a 3D track against the clock. hug the corners." },
   { id: "reaction",  name: "Reaction Light", url: "reaction.html",  cat: "skill",  key: "reaction",               blurb: "wait for green, then click. too early and you're out." },
   { id: "aim",       name: "Aim Trainer",    url: "aim.html",       cat: "skill",  key: "aim",                      blurb: "pop as many targets as you can before time runs out." },
@@ -892,6 +895,57 @@ var THUMB = {
     return bg("#3bc9db") + '<circle cx="10" cy="110" r="34" fill="#22b8cf"/><circle cx="150" cy="10" r="30" fill="#66d9e8"/>' + g +
       stick(138, 108, .7, "wave");
   },
+  five: function () {
+    var rows = [["c", "r", "a", "n", "e"], ["s", "l", "i", "m", "e"], ["g", "r", "e", "a", "t"]];
+    var cls = [["x", "y", "y", "x", "y"], ["x", "x", "x", "x", "y"], ["g", "g", "g", "g", "g"]];
+    var col = { g: "#2fb84f", y: "#ffb800", x: "#8a8aa0" };
+    var g = "";
+    rows.forEach(function (row, r) {
+      row.forEach(function (ch, c) {
+        var x = 18 + c * 25.5, y = 12 + r * 27;
+        g += '<rect x="' + x + '" y="' + y + '" width="22" height="22" rx="4" fill="' + col[cls[r][c]] + '" stroke="' + K + '" stroke-width="2.5"/>';
+        g += txt(x + 11, y + 17.5, ch.toUpperCase(), 16, "#fff");
+      });
+    });
+    for (var c = 0; c < 5; c++) g += '<rect x="' + (18 + c * 25.5) + '" y="93" width="22" height="22" rx="4" fill="#fff" stroke="#cfd3e0" stroke-width="2.5"/>';
+    return bg("#ff8fc1") + '<circle cx="150" cy="10" r="40" fill="#ffa8cc"/><circle cx="0" cy="120" r="40" fill="#f06595"/>' + g;
+  },
+  sides: function () {
+    var L = [["b", "o", "x"], ["w", "i", "n"], ["a", "r", "t"], ["l", "e", "d"]];
+    var P = {}, g = "", lo = 28, hi = 92, at = [44, 60, 76];
+    L.forEach(function (s, i) {
+      s.forEach(function (l, j) {
+        var p = i === 0 ? [at[j] + 20, lo] : i === 1 ? [hi + 20, at[j]] : i === 2 ? [at[2 - j] + 20, hi] : [lo + 20, at[2 - j]];
+        P[l] = p;
+      });
+    });
+    var word = "bread".split("");
+    var d = word.map(function (l, i) { return (i ? "L" : "M") + P[l][0] + " " + P[l][1]; }).join("");
+    g += '<rect x="48" y="28" width="64" height="64" fill="#fff"' + S + '/>';
+    g += '<path d="' + d + '" fill="none" stroke="#ff3d8b" stroke-width="3.5" stroke-linejoin="round"/>';
+    L.forEach(function (s, i) {
+      s.forEach(function (l) {
+        var p = P[l];
+        var o = i === 0 ? [0, -13] : i === 1 ? [13, 0] : i === 2 ? [0, 14] : [-13, 0];
+        g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4.5" fill="' + (word.indexOf(l) !== -1 ? "#ff7a1a" : "#fff") + '" stroke="' + K + '" stroke-width="2.5"/>';
+        g += txt(p[0] + o[0], p[1] + o[1] + 5, l.toUpperCase(), 14, K);
+      });
+    });
+    return bg("#20c997") + '<circle cx="10" cy="10" r="40" fill="#38d9a9"/><circle cx="160" cy="120" r="44" fill="#12b886"/>' + g;
+  },
+  grab: function () {
+    var letters = "wordgrabfunclick".split("");
+    var on = [0, 1, 2, 3], g = '<rect x="30" y="6" width="100" height="100" rx="10" fill="#1d8fe8"' + S + '/>';
+    letters.forEach(function (ch, i) {
+      var x = 37 + (i % 4) * 23, y = 13 + Math.floor(i / 4) * 23;
+      var lit = on.indexOf(i) !== -1;
+      g += '<rect x="' + x + '" y="' + y + '" width="20" height="20" rx="4" fill="' + (lit ? "#ff5c9a" : "#fff3bf") + '" stroke="' + K + '" stroke-width="2"/>';
+      g += txt(x + 10, y + 15.5, ch.toUpperCase(), 13, lit ? "#fff" : K);
+    });
+    return bg("#ffd43b") + '<circle cx="150" cy="10" r="40" fill="#ffe066"/><circle cx="0" cy="120" r="44" fill="#fab005"/>' + g +
+      '<g transform="translate(142 88)"><circle r="14" fill="#fff"' + S + '/><path d="M0-8V0l6 4" fill="none" stroke="' + K + '" stroke-width="2.5" stroke-linecap="round"/></g>' +
+      outlined(142, 116, "2:00", 12, "#fff");
+  },
   typing: function () {
     var g = '<rect x="10" y="56" width="140" height="56" rx="8" fill="#5c5f77"' + S + '/>';
     var rows = ["QWERTYUIO", "ASDFGHJK", "ZXCVBNM"];
@@ -974,22 +1028,6 @@ var THUMB = {
       '<rect x="138" y="72" width="18" height="24" fill="#51cf66" stroke="' + K + '" stroke-width="2.5"/>' + txt(147, 88, "!", 14, "#fff") +
       '<g transform="translate(76 22) rotate(-8)"><polygon points="0,0 0,26 7,20 12,31 17,29 12,18 20,18" fill="#fff" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/></g>' +
       outlined(126, 22, "HOT!", 16, "#ffd43b");
-  },
-  fermi: function () {
-    var beans = "";
-    var cols = ["#ff6b6b", "#ffd43b", "#69db7c", "#4dabf7", "#f783ac", "#ff922b", "#b197fc"];
-    var n = 0;
-    for (var r = 0; r < 6; r++) for (var c = 0; c < 6; c++) {
-      var x = 58 + c * 9 + (r % 2) * 4, y = 50 + r * 9.5;
-      if (r === 0 && (c === 0 || c === 5)) continue;
-      beans += '<ellipse cx="' + x + '" cy="' + y + '" rx="4.6" ry="3.4" transform="rotate(' + ((n * 47) % 180) + ' ' + x + ' ' + y + ')" fill="' + cols[n++ % cols.length] + '" stroke="' + K + '" stroke-width="1"/>';
-    }
-    return bg("#7048e8") + '<circle cx="20" cy="100" r="44" fill="#5f3dc4"/><circle cx="150" cy="20" r="34" fill="#845ef7"/>' +
-      '<rect x="60" y="24" width="50" height="10" rx="3" fill="#ffd43b"' + S + '/>' +
-      '<path d="M56 36h58q4 0 4 6v58q0 10-10 10H62q-10 0-10-10V42q0-6 4-6z" fill="#e7f5ff" fill-opacity=".55"' + S + '/>' +
-      beans +
-      '<path d="M60 44v50" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/>' +
-      outlined(28, 52, "?", 46, "#ffd43b") + outlined(136, 88, "?", 34, "#ff8fc1") + outlined(138, 50, "?", 22, "#8ce99a");
   },
   race: function () {
     return bg("#40c057") + '<circle cx="20" cy="10" r="30" fill="#51cf66"/><circle cx="150" cy="120" r="40" fill="#37b24d"/>' +

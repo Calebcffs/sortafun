@@ -28,7 +28,7 @@
   var GAMES = {
     typing:     { label: "typing (top 200)",  unit: "wpm",   better: "high" },
     typing1000: { label: "typing (top 1000)", unit: "wpm",   better: "high" },
-    driving: { label: "driving game", unit: "score", better: "high" }, // retired arcade dodger — kept so old scores keep meaning, no page submits to it any more
+    driving: { label: "driving game", unit: "score", better: "high", retired: true }, // retired arcade dodger — kept so old scores keep meaning, no page submits to it any more
     puzzle:  { label: "tile slider",  unit: "moves", better: "low"  },
     circuit: { label: "circuit race", unit: "ms",    better: "low", format: fmtLapTime },
     reaction: { label: "reaction light", unit: "ms",    better: "low" },
@@ -36,10 +36,13 @@
     aim:      { label: "aim trainer",    unit: "hits",  better: "high" },
     stopbar:  { label: "stop the bar",   unit: "pts",   better: "high" },
     ladder:   { label: "word ladder",    unit: "rungs", better: "low" },
-    anagram:  { label: "anagram sprint", unit: "words", better: "high" }, // retired 2026-09-11, anagram.html is now word hive (key "hive") - kept so old scores keep meaning, no page submits to it any more
+    anagram:  { label: "anagram sprint", unit: "words", better: "high", retired: true }, // retired 2026-09-11, anagram.html is now word hive (key "hive") - kept so old scores keep meaning, no page submits to it any more
     hive:     { label: "word hive",      unit: "pts",   better: "high" },
     mines:    { label: "minesweeper",    unit: "ms",    better: "low", format: fmtSeconds },
-    fermi:    { label: "fermi quiz",     unit: "pts",   better: "high" },
+    fermi:    { label: "fermi quiz",     unit: "pts",   better: "high", retired: true }, // removed 2026-09-24, old scores stay inert
+    five:     { label: "five letters",   unit: "guesses", better: "low" },
+    sides:    { label: "four sides",     unit: "words", better: "low" },
+    grab:     { label: "word grab",      unit: "pts",   better: "high" },
     minute:   { label: "how long is a minute", unit: "ms", better: "low", format: fmtMsOff },
     callit:   { label: "call it",        unit: "streak", better: "high" },
     watch:    { label: "watch the guy",  unit: "s",     better: "high" },
