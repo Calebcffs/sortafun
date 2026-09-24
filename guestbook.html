@@ -4,60 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>guestbook &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css">
 <style>
-  body {
-    margin: 0;
-    background: #000080;
-    color: #000;
-    font-family: "Times New Roman", Times, serif;
-    font-size: 16px;
-  }
-  .page {
-    max-width: 620px;
-    margin: 0 auto;
-    background: #f4f0e8;
-    border-left: 3px ridge #c0c0c0;
-    border-right: 3px ridge #c0c0c0;
-    min-height: 100vh;
-    padding: 18px 22px 60px;
-    box-sizing: border-box;
-  }
-  h1 {
-    text-align: center;
-    font-size: 30px;
-    color: #000080;
-    text-shadow: 1px 1px 0 #b0b0b0;
-    margin: 6px 0 2px;
-  }
-  .sub { text-align: center; font-style: italic; color: #444; margin: 0 0 16px; }
-  .blink { animation: bl 1s steps(1) infinite; color: #cc0000; font-weight: bold; }
+  .blink { animation: bl 1s steps(1) infinite; color: #e03131; font-weight: bold; }
   @keyframes bl { 50% { opacity: 0; } }
-  form { border: 2px groove #c0c0c0; padding: 12px; background: #fffdf7; margin-bottom: 18px; }
-  label { display: block; margin: 6px 0 2px; font-weight: bold; }
-  input, textarea {
-    font-family: inherit; font-size: 15px; width: 100%; box-sizing: border-box;
-    border: 1px solid #808080; padding: 4px;
+  form {
+    text-align: left; border: 3px solid var(--ink); border-radius: 12px;
+    padding: 12px 14px; background: #fff9db; margin-bottom: 18px;
   }
-  textarea { height: 70px; resize: vertical; }
-  button {
-    font-family: inherit; font-size: 15px; margin-top: 8px;
-    border: 2px outset #c0c0c0; background: #d4d0c8; padding: 3px 14px; cursor: pointer;
+  label { display: block; margin: 8px 0 3px; font-weight: bold; font-size: 13px; }
+  form input, form textarea { width: 100%; }
+  textarea { height: 80px; resize: vertical; }
+  #go {
+    margin-top: 10px; font-family: var(--chunky); font-weight: 400; font-size: 17px; color: #fff;
+    text-shadow: 0 1px 0 rgba(0,0,0,.3); background: linear-gradient(#5cf08e, #18a84b); border-radius: 999px; padding: 5px 20px 4px;
   }
-  button:active { border-style: inset; }
-  .entry { border-bottom: 1px dashed #999; padding: 10px 2px; }
-  .entry .who { font-weight: bold; color: #000080; }
-  .entry .when { color: #777; font-size: 13px; }
+  #go:hover { background: linear-gradient(#ffe36e, #ffb300); color: var(--ink); text-shadow: none; }
+  #list { text-align: left; }
+  .entry {
+    border: 2.5px solid var(--ink); border-radius: 12px; padding: 9px 12px; margin: 0 0 10px;
+    background: #fff; box-shadow: 0 3px 0 rgba(29,27,46,.2);
+  }
+  .entry:nth-child(odd) { background: var(--soft); }
+  .entry .who { font-weight: bold; color: var(--accent); }
+  .entry .when { color: #8a879c; font-size: 11px; }
   .entry .msg { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; }
-  .msgline { color: #555; font-size: 14px; min-height: 18px; }
-  a { color: #000080; }
-  .back { display: inline-block; margin-top: 20px; }
-  hr { border: 0; border-top: 1px solid #b0b0b0; }
+  .msgline { color: var(--muted); font-size: 13px; min-height: 18px; }
+  hr { border: 0; border-top: 3px dotted #c5cbe0; margin: 4px 0 14px; }
 </style>
 </head>
-<body>
-<div class="page">
+<body class="k-hang">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
+<div class="wrap">
   <h1>~ sign my guestbook ~</h1>
-  <p class="sub">you are visitor. leave a mark. <span class="blink">NEW</span> messages daily (maybe)</p>
+  <p class="sub">you are visitor. leave a mark. <span class="blink">NEW</span> messages daily (maybe). no take-backs, it's written in pen.</p>
 
   <form id="form">
     <label for="gb-name">your name / handle</label>
@@ -164,5 +145,6 @@ form.addEventListener("submit", function (e) {
 moreBtn.addEventListener("click", function () { load(true); });
 load(false);
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

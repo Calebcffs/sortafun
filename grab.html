@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>word grab &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   .hud { display: flex; justify-content: center; gap: 22px; font-size: 18px; margin: 6px 0 10px; }
@@ -45,8 +46,8 @@
   #missedWrap h3 { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-weight: 400; margin: 14px 0 0; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-word">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>word grab</h1>
   <p class="sub">two minutes. make words from letters that touch (sideways, up, down or diagonal), 3+ letters,
@@ -311,5 +312,6 @@ document.addEventListener("keydown", function (e) {
   }
 });
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

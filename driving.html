@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>circuit race &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   .stage { max-width: 900px; margin: 14px auto 0; position: relative; }
@@ -12,7 +13,7 @@
     width: 100%;
     aspect-ratio: 16 / 9;
     background: #bcd8e8;
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     border-radius: 4px;
     touch-action: none;
   }
@@ -45,7 +46,7 @@
   }
   .hud .badge {
     display: inline-block;
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     border-radius: 6px;
     padding: 2px 9px;
     margin: 0 3px;
@@ -59,7 +60,7 @@
     top: 8px; right: 8px;
     width: 130px; height: 100px;
     background: rgba(255, 255, 255, 0.8);
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     border-radius: 6px;
   }
   #confetti {
@@ -71,14 +72,14 @@
   .below { text-align: center; margin-top: 10px; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-skill">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>circuit race</h1>
   <p class="sub">
     drive to the start/finish line to begin, collect every glowing checkpoint gem in order, then
-    cross the line again to set a lap time — and keep going, every lap after that starts right away.
-    feel free to leave the road — nothing stops you, grass is just a little slower.
+    cross the line again to set a lap time, and keep going, every lap after that starts right away.
+    feel free to leave the road, nothing stops you, grass is just a little slower.
     &larr; &rarr; steer, &uarr; &darr; gas / brake, shift to boost, ctrl to drift.
   </p>
 </div>
@@ -109,7 +110,7 @@
 <script>
 import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then(main).catch((err) => {
   console.error("[circuit race] three.js failed to load", err);
-  document.getElementById("hudTop").textContent = "3d failed to load — check your connection and reload";
+  document.getElementById("hudTop").textContent = "3d failed to load, check your connection and reload";
 });
 
 function main(THREE) {
@@ -788,14 +789,14 @@ function updateHUD() {
 
   if (raceState === "waiting") {
     const d = Math.round(car.group.position.distanceTo(checkpoints[0].p));
-    hudTop.textContent = "drive to the start/finish line to begin — " + d + "m";
+    hudTop.textContent = "drive to the start/finish line to begin: " + d + "m";
     hudLap.innerHTML = bestLapMs != null ? "best " + fmtMs(bestLapMs) : "";
     return;
   }
 
   const elapsed = performance.now() - lapStartMs;
   const d = Math.round(car.group.position.distanceTo(checkpoints[expected].p));
-  hudTop.textContent = "checkpoint " + expected + " / " + (CHECKPOINTS - 1) + " — " + d + "m";
+  hudTop.textContent = "checkpoint " + expected + " / " + (CHECKPOINTS - 1) + ", " + d + "m";
   // "last" and "best" only show once a lap has actually been completed —
   // the first lap just shows the running current time
   let lapHtml = "current " + fmtMs(elapsed);
@@ -1094,5 +1095,6 @@ animate();
 
 }
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

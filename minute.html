@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>how long is a minute &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   #btn {
@@ -18,13 +19,13 @@
     display: block;
   }
   #btn.counting { background: #ffe9a8; }
-  #dots { font-size: 30px; letter-spacing: 6px; min-height: 40px; color: #000; }
+  #dots { font-size: 30px; letter-spacing: 6px; min-height: 40px; color: var(--ink); }
   #result { font-size: 20px; min-height: 30px; margin-top: 6px; }
   .hint2 { font-size: 13px; color: #777; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-base">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>how long is a minute</h1>
   <p class="sub">press start, then press stop when you reckon exactly sixty seconds have gone by. no clock, no counting out loud that is cheating. how close were you.</p>
@@ -87,5 +88,6 @@ btn.addEventListener("click", function () {
   }
 });
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

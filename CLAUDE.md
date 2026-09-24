@@ -243,20 +243,40 @@ consistent. A thread with 4 to 10 posts and 3 to 6 distinct posters reads best.
 
 ## Everything else in the repo
 
-Plain static HTML, no framework, no build. `game.css` is shared styling for the
-game sub-pages; `forum.html` deliberately does NOT use it (it's a period piece
-with its own Times New Roman styling).
+Plain static HTML, no framework, no build.
 
-Font stack: the casual pages use
-`"Comic Sans MS", "Comic Sans", "Chalkboard SE", "Segoe Print", sans-serif`. It
-must end in `sans-serif`, never `cursive` (on iOS `cursive` resolves to Snell
-Roundhand, a curly script, which is the "weird font on mobile" bug). Same rule in
-any `ctx.font` canvas string. Live copies: `game.css`, `404.html`, `gallery.html`
-(CSS + canvas), `leaderboard.js` `injectStyle()`.
+**One look everywhere (2026-09-24).** Every page matches the homepage: tiled
+sky, the yellow nav bar, content in a white rounded "window" with a thick
+`#1d1b2e` outline, Lilita One headings, Verdana body. Comic Sans is gone from
+the site. The kit lives in `game.css`, which EVERY sub-page loads (forum,
+guestbook and gallery included now):
 
-`typing.html`: 30-second typing test, styled as a monkeytype "serika dark"
-clone (own dark `<style>` scoped to `body.tt`, overrides `game.css`; loads
-Roboto Mono from Google Fonts). Word banks come from `words.js`
+- `<body class="k-...">` picks the section colour for the window's title band
+  and highlights the nav tab: `k-word`, `k-puzzle`, `k-skill`, `k-art`,
+  `k-hang`, `k-base`. Match the homepage category.
+- Straight after `<body>`: the `<header class="homebar">` nav bar (copy it
+  from any page). Before `</body>`: `<footer class="sitefoot">`.
+- `.wrap` is the window; its first `h1` becomes the coloured title band
+  (auto Title Case). `.sub` is the dashed "how to play" box. `.status`,
+  `.back` (yellow button) as before.
+- Generic `button`, inputs, `canvas` and tables are styled through `:where()`
+  (zero specificity) so a game's own rules always win. Page-specific CSS
+  should use `var(--ink)`, `var(--accent)`, `var(--body)`, `var(--chunky)`
+  rather than hard-coded black / fonts.
+- `leaderboard.js` `injectStyle()` draws the leaderboard panel in the same
+  kit (red header band, medals for the top 3).
+- `404.html` uses absolute paths (`/game.css`) because Pages serves it at any
+  depth. `gallery.html` is a walk-around room: the canvas fills a `.room`
+  window under the nav bar and sizes itself from `clientWidth/Height`.
+- `forum.html` keeps its threaded-board layout (the content) but is skinned
+  in the kit; `guestbook.html` likewise.
+
+Canvas text: any `ctx.font` must end in `sans-serif`, never `cursive` (on iOS
+`cursive` is a curly script).
+
+`typing.html`: 30-second typing test. The page is the standard window; the
+test itself runs inside a dark `.screen` panel in monkeytype "serika dark"
+colours (Roboto Mono from Google Fonts, styles scoped to `body.tt`). Word banks come from `words.js`
 (`window.SORTAFUN_WORDS = { top200, top1000, top10000 }`, auto-generated from
 first20hours/google-10000-english, kept in frequency order, must load before
 the inline script; `top10000` is the full list `top1000`/`top200` are slices
@@ -298,10 +318,8 @@ the eraser tool is active); pen/line/shapes keep the S/M/L sizes.
 per browser, deduped in `localStorage` (`sortafun-anim-votes`); the name field
 reuses the leaderboards' `sortafun-name` key.
 
-`gallery.html`: the art gallery, now an **easter egg**. It used to be a room to
-the right of the lobby in `index.html`; it's a standalone walk-around page, and
-the only way to it is clicking the potted plant in the lobby's right corner.
-Nothing on the homepage hints at it. The Vietnam photos and the "he runs
+`gallery.html`: the art gallery, an **easter egg**. A standalone walk-around
+room; the only way to it is the seedling in the homepage footer. The Vietnam photos and the "he runs
 because you're watching" line live here now.
 
 Leaderboards + the animation gallery use one client-only Firestore backend

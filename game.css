@@ -1,136 +1,237 @@
 @import url("https://fonts.googleapis.com/css2?family=Lilita+One&display=swap");
 
-/* shared shell for the game pages. the game itself sits in a white "window"
-   on the same tiled sky as the front page, so clicking in from the homepage
-   still feels like the same site. typing.html (body.tt) opts out of the
-   window and keeps its own dark look. */
+/* ------------------------------------------------------------------ *
+ * the shared look for every page that isn't the homepage.
+ * same kit as index.html: tiled sky, the yellow nav bar, a white window
+ * with a coloured title band, chunky outlined buttons, Verdana body text.
+ *
+ * the band colour comes from the section the page lives in, set by a
+ * class on <body>: k-word, k-puzzle, k-skill, k-art, k-hang, k-base.
+ *
+ * generic element styles use :where() so they have zero specificity and
+ * any page's own rules (the game itself) always win over them.
+ * ------------------------------------------------------------------ */
 
-html, body {
-  margin: 0;
-  padding: 0;
-  color: #000;
-  font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Segoe Print", sans-serif;
+:root {
+  --ink: #1d1b2e;
+  --sky: #2f9bff;
+  --sun: #ffd43b;
+  --soft: #f3f6ff;
+  --muted: #4a4760;
+  --good: #1fb85a;
+  --accent: #ff7a1a;
+  --accent2: #ff9a3c;
+  --chunky: "Lilita One", "Arial Black", "Trebuchet MS", Verdana, sans-serif;
+  --body: Verdana, Tahoma, "DejaVu Sans", Geneva, sans-serif;
 }
-html { background: #2f9bff; }
+body.k-word   { --accent: #ff7a1a; --accent2: #ff9a3c; }
+body.k-puzzle { --accent: #8a4dff; --accent2: #b27bff; }
+body.k-skill  { --accent: #1fb85a; --accent2: #56d98a; }
+body.k-art    { --accent: #ff3d8b; --accent2: #ff72ab; }
+body.k-hang   { --accent: #1d8fe8; --accent2: #4db0ff; }
+body.k-base   { --accent: #3a3550; --accent2: #5a5475; }
+
+* { box-sizing: border-box; }
+html { background: var(--sky); -webkit-text-size-adjust: 100%; }
 body {
+  margin: 0;
   min-height: 100vh;
-  background-color: #2f9bff;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 14px;
+  line-height: 1.4;
+  background-color: var(--sky);
   background-image:
     radial-gradient(circle at 20px 20px, rgba(255,255,255,.22) 0 5px, transparent 6px),
     radial-gradient(circle at 60px 60px, rgba(255,255,255,.12) 0 3px, transparent 4px),
-    linear-gradient(180deg, #58b4ff 0, #2f9bff 420px);
+    linear-gradient(180deg, #58b4ff 0, var(--sky) 420px);
   background-size: 80px 80px, 80px 80px, 100% 100%;
   background-repeat: repeat, repeat, no-repeat;
 }
+a { color: var(--accent); }
 
-/* ---- the little SORTAFUN bar at the top of every game page ---- */
+/* ================= top bar ================= */
+
 .homebar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 10px 14px;
   max-width: 1000px;
-  margin: 0 auto;
-  padding: 10px 12px 0;
-  font-family: Verdana, Tahoma, sans-serif;
+  margin: 10px auto 0;
+  padding: 7px 10px;
+  background: linear-gradient(#ffe36e, #ffc21a);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 5px 0 var(--ink);
+  flex-wrap: wrap;
 }
-.homebar .hb-logo {
-  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+@media (max-width: 1020px) { .homebar { margin-left: 10px; margin-right: 10px; } }
+.hb-logo {
+  font-family: var(--chunky);
   font-size: 30px;
   line-height: 1;
-  color: #ffd43b;
+  color: var(--sun);
   text-decoration: none;
-  -webkit-text-stroke: 2.5px #1d1b2e;
+  -webkit-text-stroke: 2.5px var(--ink);
   paint-order: stroke fill;
-  text-shadow: 0 3px 0 #1d1b2e;
+  text-shadow: 0 3px 0 var(--ink);
   transform: rotate(-2deg);
   display: inline-block;
+  padding: 0 2px 2px;
 }
-.homebar .hb-logo small { color: #fff; font-size: .55em; }
-.homebar .hb-all {
-  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+.hb-logo small { color: #fff; font-size: .55em; }
+.hb-nav { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.hb-nav a {
+  font-family: var(--chunky);
   font-size: 15px;
   color: #fff;
   text-decoration: none;
-  background: #ff7a1a;
-  border: 3px solid #1d1b2e;
+  padding: 5px 11px 4px;
+  border: 3px solid var(--ink);
   border-radius: 10px;
-  padding: 6px 12px 5px;
   text-shadow: 0 2px 0 rgba(0,0,0,.3);
-  box-shadow: 0 3px 0 #1d1b2e, inset 0 3px 0 rgba(255,255,255,.3);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.2), inset 0 3px 0 rgba(255,255,255,.3);
   white-space: nowrap;
 }
-.homebar .hb-all:hover { background: #ff9a3c; }
+.hb-nav a:hover { transform: translateY(-2px); }
+.hb-nav .n-games { background: #ff7a1a; }
+.hb-nav .n-art   { background: #ff3d8b; }
+.hb-nav .n-hang  { background: #1d8fe8; }
+.hb-nav .n-base  { background: #3a3550; }
+/* the section you're in gets a little yellow underline */
+body:is(.k-word, .k-puzzle, .k-skill) .n-games,
+body.k-art .n-art, body.k-hang .n-hang, body.k-base .n-base {
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.2), 0 0 0 3px #fff, 0 0 0 5px var(--ink);
+}
+@media (max-width: 560px) {
+  .hb-logo { font-size: 24px; }
+  .hb-nav { margin-left: 0; width: 100%; }
+  .hb-nav a { flex: 1; text-align: center; font-size: 13px; padding: 5px 4px 4px; }
+}
 
-/* ---- the game window ---- */
+/* ================= the window ================= */
+
 .wrap {
   max-width: 640px;
-  margin: 14px auto 20px;
-  padding: 22px 16px 26px;
+  margin: 18px auto 20px;
+  padding: 0 18px 24px;
   text-align: center;
   background: #fff;
-  border: 3px solid #1d1b2e;
+  border: 3px solid var(--ink);
   border-radius: 16px;
   box-shadow: 0 6px 0 rgba(0,0,0,.35);
+  overflow: hidden;
 }
 @media (max-width: 680px) {
-  .wrap { margin-left: 8px; margin-right: 8px; padding-left: 10px; padding-right: 10px; }
+  .wrap { margin-left: 10px; margin-right: 10px; padding-left: 12px; padding-right: 12px; }
 }
 
-h1 {
-  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
+/* the page title is the window's coloured title band */
+.wrap > h1:first-child {
+  margin: 0 -18px 16px;
+  padding: 10px 18px 9px;
+  font-family: var(--chunky);
   font-weight: 400;
-  font-size: 34px;
+  font-size: 30px;
+  line-height: 1.1;
   letter-spacing: .5px;
-  margin: 0 0 4px;
+  text-transform: capitalize;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0,0,0,.3);
+  background: linear-gradient(var(--accent2), var(--accent));
+  border-bottom: 3px solid var(--ink);
 }
+@media (max-width: 680px) { .wrap > h1:first-child { margin-left: -12px; margin-right: -12px; font-size: 26px; } }
+
+:where(.wrap) h1 { font-family: var(--chunky); font-weight: 400; font-size: 30px; margin: 0 0 6px; }
+:where(.wrap) h2, :where(.wrap) h3 { font-family: var(--chunky); font-weight: 400; letter-spacing: .3px; }
+
+/* how to play */
 .sub {
-  color: #555;
-  margin: 0 0 18px;
-  font-size: 14px;
+  max-width: 560px;
+  margin: 0 auto 16px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--soft);
+  border: 2px dashed #c5cbe0;
+  border-radius: 10px;
 }
+
 .status {
   min-height: 24px;
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 700;
   margin: 12px 0;
 }
-button, .btn {
-  font-family: inherit;
-  font-size: 15px;
-  background: #fff;
-  color: #000;
-  border: 2px solid #000;
+
+/* ================= controls ================= */
+
+:where(button), :where(.btn) {
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(#fff, #e6eaf6);
+  border: 3px solid var(--ink);
   border-radius: 10px;
-  padding: 7px 14px;
+  padding: 6px 14px;
   cursor: pointer;
-  box-shadow: 0 3px 0 #000;
-}
-button:hover, .btn:hover { background: #fff3bf; }
-button:active, .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
-.back {
-  display: inline-block;
-  margin-top: 22px;
-  font-family: "Lilita One", "Arial Black", Verdana, sans-serif;
-  font-size: 16px;
-  color: #1d1b2e;
+  box-shadow: 0 3px 0 var(--ink);
   text-decoration: none;
-  background: #ffd43b;
-  border: 3px solid #1d1b2e;
-  border-radius: 10px;
-  padding: 8px 16px 7px;
-  box-shadow: 0 3px 0 #1d1b2e;
 }
-.back:hover { background: #ffe36e; }
-canvas {
-  border: 2px solid #000;
+:where(button):hover, :where(.btn):hover { background: linear-gradient(#fffbe0, #ffe36e); }
+:where(button):active, :where(.btn):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+:where(button):disabled { opacity: .5; cursor: default; transform: none; }
+
+:where(input:not([type]), input[type=text], input[type=search], input[type=number], input[type=password], textarea, select) {
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 9px;
+  padding: 6px 9px;
+  outline: none;
+}
+:where(input, textarea, select):focus { box-shadow: 0 0 0 3px var(--sun); }
+
+:where(canvas) {
+  border: 3px solid var(--ink);
+  border-radius: 10px;
   background: #fff;
   touch-action: none;
   max-width: 100%;
 }
-input {
-  font-family: inherit;
-}
 
-/* typing.html keeps its own dark monkeytype look */
-body.tt { background-image: none; }
-body.tt .wrap { background: none; border: 0; box-shadow: none; }
+:where(.wrap table) { border-collapse: separate; border-spacing: 0; border: 3px solid var(--ink); border-radius: 10px; overflow: hidden; margin: 0 auto; }
+:where(.wrap th) { background: var(--accent); color: #fff; padding: 6px 10px; font-family: var(--chunky); font-weight: 400; font-size: 15px; text-align: left; }
+:where(.wrap td) { padding: 5px 10px; border-top: 1px solid #e1e5f0; text-align: left; }
+:where(.wrap tr:nth-child(even) td) { background: var(--soft); }
+
+/* back button */
+.back {
+  display: inline-block;
+  margin-top: 22px;
+  font-family: var(--chunky);
+  font-size: 16px;
+  color: var(--ink);
+  text-decoration: none;
+  background: linear-gradient(#ffe36e, #ffc21a);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  padding: 8px 16px 7px;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.back:hover { background: linear-gradient(#fff3a8, #ffd43b); }
+
+/* ================= footer ================= */
+
+.sitefoot {
+  text-align: center;
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 10px 24px;
+  text-shadow: 0 1px 0 rgba(0,0,0,.25);
+}
+.sitefoot a { color: #fff; }

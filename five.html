@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>five letters &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   #board { display: grid; grid-template-rows: repeat(6, 1fr); gap: 6px; width: min(300px, 100%); margin: 12px auto; }
@@ -40,8 +41,8 @@
   .legend b { display: inline-block; width: 14px; height: 14px; border: 2px solid #1d1b2e; border-radius: 3px; vertical-align: -2px; margin: 0 3px 0 8px; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-word">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>five letters</h1>
   <p class="sub">guess today's five letter word in six tries. every guess has to be a real word.
@@ -255,5 +256,6 @@ document.addEventListener("keydown", function (e) {
   else if (guesses.length) statusEl.textContent = "welcome back. " + (6 - guesses.length) + " guesses left.";
 })();
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

@@ -4,161 +4,187 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SORTAFUN Community Board</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css">
 <style>
-  /* deliberately an older, crustier artifact than the rest of the site.
-     no comic sans in here. this is a 2003 bulletin board. */
-  body {
-    margin: 0;
-    background: #c9d2dc;
-    font-family: "Times New Roman", Times, Georgia, serif;
-    font-size: 15px;
-    color: #101010;
-  }
-  a { color: #0000cc; }
-  a:visited { color: #551a8b; }
-  a:hover { color: #cc0000; }
+  /* the forum keeps its old-school threaded board layout, dressed in the
+     same kit as the rest of the site (game.css + the colours below). */
+  body { font-size: 14px; }
+  a { color: #1667c9; }
+  a:visited { color: #6a3fd1; }
+  a:hover { color: #e0226c; }
 
   #page {
-    max-width: 760px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-left: 2px solid #55606c;
-    border-right: 2px solid #55606c;
-    min-height: 100vh;
+    max-width: 860px;
+    margin: 18px auto 20px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.35);
+    overflow: hidden;
   }
+  @media (max-width: 880px) { #page { margin-left: 10px; margin-right: 10px; } }
 
   .titlebar {
-    background: #1c3f66;
+    background: linear-gradient(#4db0ff, #1d8fe8);
     color: #fff;
-    padding: 6px 10px;
-    border-bottom: 3px solid #7fa8d0;
+    padding: 10px 16px 9px;
+    border-bottom: 3px solid var(--ink);
   }
-  .titlebar .big { font-size: 20px; font-weight: bold; letter-spacing: 1px; }
-  .titlebar .sub { font-size: 12px; color: #b9d2ec; font-style: italic; }
+  .titlebar .big { font-family: var(--chunky); font-size: 28px; letter-spacing: .5px; text-shadow: 0 3px 0 rgba(0,0,0,.3); line-height: 1.1; }
+  .titlebar .sub { font-size: 12px; color: #e3f2ff; font-style: italic; background: none; border: 0; padding: 0; margin: 2px 0 0; max-width: none; }
 
   .navrow {
-    background: #dfe6ee;
-    border-bottom: 1px solid #90a0b0;
-    padding: 4px 8px;
+    background: #fff9db;
+    border-bottom: 3px solid var(--ink);
+    padding: 8px 10px;
     font-size: 13px;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 4px;
+    gap: 6px;
     align-items: center;
   }
   .navrow button, .navrow select {
-    font-family: inherit;
+    font-family: var(--body);
     font-size: 12px;
-    background: #eef2f6;
-    border: 2px outset #b7c2cd;
-    padding: 1px 8px;
+    font-weight: 700;
+    background: linear-gradient(#fff, #e6eaf6);
+    border: 2.5px solid var(--ink);
+    border-radius: 8px;
+    padding: 4px 10px;
     cursor: pointer;
-    color: #102040;
+    color: var(--ink);
+    box-shadow: 0 2px 0 var(--ink);
   }
-  .navrow button:active { border-style: inset; }
+  .navrow button:hover { background: linear-gradient(#fffbe0, #ffe36e); }
+  .navrow button:active { transform: translateY(2px); box-shadow: none; }
   .navrow .spacer { flex: 1; }
-  .navrow .who { font-size: 12px; color: #333; }
+  .navrow .who { font-size: 12px; color: var(--muted); font-weight: 700; }
 
-  #searchbox { font-family: inherit; font-size: 12px; border: 1px solid #7a8b9c; padding: 1px 4px; width: 130px; }
+  #searchbox { font-family: var(--body); font-size: 12px; border: 2.5px solid var(--ink); border-radius: 8px; padding: 4px 8px; width: 150px; outline: none; }
 
-  #board { padding: 8px 10px 40px; }
+  #board { padding: 12px 14px 30px; }
 
-  .section { margin: 0 0 14px; }
+  .section { margin: 0 0 16px; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; }
   .section > h2 {
-    font-size: 14px;
+    font-family: var(--chunky);
+    font-weight: 400;
+    font-size: 19px;
+    letter-spacing: .3px;
     margin: 0;
-    background: #b7c9dd;
-    border: 1px solid #6f8296;
-    padding: 3px 7px;
-    color: #14243a;
+    background: linear-gradient(#ff9a3c, #ff7a1a);
+    border-bottom: 3px solid var(--ink);
+    padding: 6px 10px 5px;
+    color: #fff;
+    text-shadow: 0 2px 0 rgba(0,0,0,.25);
   }
-  .section > h2 .meta { font-weight: normal; font-style: italic; color: #3d5064; font-size: 12px; }
-  .section .startlink { font-size: 12px; padding: 3px 7px; background: #eef2f6; border: 1px solid #6f8296; border-top: 0; }
+  .section:nth-child(3n+2) > h2 { background: linear-gradient(#b27bff, #8a4dff); }
+  .section:nth-child(3n+3) > h2 { background: linear-gradient(#56d98a, #1fb85a); }
+  .section > h2 .meta { font-family: var(--body); font-style: normal; color: #fff; opacity: .9; font-size: 11px; text-shadow: none; }
+  .section .startlink { font-size: 12px; padding: 6px 10px; background: var(--soft); border-bottom: 1px solid #dfe3ef; }
+  .section > ul.tree { padding: 6px 10px 8px; }
 
   ul.tree, ul.tree ul { list-style: none; margin: 0; padding: 0; }
-  ul.tree ul { margin-left: 15px; border-left: 1px dotted #9aa7b4; padding-left: 6px; }
+  ul.tree ul { margin-left: 15px; border-left: 2px dotted #b9c0d6; padding-left: 7px; }
   .node { padding: 1px 0; }
-  .node .row { font-size: 13.5px; cursor: pointer; }
-  .node .row .tw { color: #7a5; font-family: monospace; font-size: 12px; }
-  .node .row .ttl { color: #0000cc; }
+  .node .row { font-size: 13px; cursor: pointer; padding: 1px 0; }
+  .node .row:hover .ttl { text-decoration: underline; }
+  .node .row .tw { color: #18a84b; font-family: monospace; font-size: 12px; }
+  .node .row .ttl { color: #1667c9; }
   .node .row .ttl.head { font-weight: bold; }
-  .node.open .row .ttl { color: #cc0000; }
-  .node .row .by { color: #444; font-size: 12px; }
-  .node .row .dt { color: #666; font-size: 12px; }
-  .node .row .unread { color: #c00; font-weight: bold; }
+  .node.open .row .ttl { color: #e0226c; }
+  .node .row .by { color: var(--muted); font-size: 12px; }
+  .node .row .dt { color: #8a879c; font-size: 11px; }
+  .node .row .unread { color: #fff; background: #ff2e63; border-radius: 4px; padding: 0 4px; font-size: 10px; font-weight: bold; }
 
   .post {
-    margin: 3px 0 6px;
-    border: 1px solid #8894a0;
-    background: #f4f6f8;
-    font-size: 14px;
+    margin: 4px 0 8px;
+    border: 2.5px solid var(--ink);
+    border-radius: 10px;
+    background: #fff;
+    font-size: 13.5px;
+    overflow: hidden;
+    box-shadow: 0 3px 0 rgba(29,27,46,.2);
   }
   .post .phead {
-    background: #e2e8ee;
-    border-bottom: 1px solid #9aa7b4;
-    padding: 2px 6px;
+    background: var(--soft);
+    border-bottom: 2px solid #dfe3ef;
+    padding: 4px 8px;
     font-size: 12px;
-    color: #2a3a4a;
+    color: var(--muted);
     display: flex;
     justify-content: space-between;
     gap: 8px;
   }
-  .post .phead b { color: #14243a; }
-  .post .pbody { padding: 6px 8px; white-space: pre-wrap; line-height: 1.4; }
-  .post .pfoot { padding: 2px 8px 5px; font-size: 12px; }
+  .post .phead b { color: var(--ink); }
+  .post .pbody { padding: 8px 10px; white-space: pre-wrap; line-height: 1.45; }
+  .post .pfoot { padding: 2px 10px 7px; font-size: 12px; }
 
   .replyform, .threadform, #authpanel .box {
-    border: 2px solid #6f8296;
-    background: #eef3f8;
-    padding: 8px;
-    margin: 6px 0;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    background: #fff9db;
+    padding: 10px;
+    margin: 8px 0;
     font-size: 13px;
   }
   .replyform textarea, .threadform textarea, #authpanel textarea,
   .replyform input, .threadform input, #authpanel input, .threadform select {
-    font-family: inherit;
+    font-family: var(--body);
     font-size: 13px;
-    border: 1px solid #7a8b9c;
-    padding: 3px 4px;
+    border: 2.5px solid var(--ink);
+    border-radius: 8px;
+    padding: 5px 7px;
     box-sizing: border-box;
+    outline: none;
+    background: #fff;
   }
-  .replyform textarea, .threadform textarea { width: 100%; min-height: 70px; }
-  .replyform input[type=text], .threadform input[type=text], #authpanel input { width: 100%; margin: 2px 0 6px; }
+  .replyform textarea, .threadform textarea { width: 100%; min-height: 80px; }
+  .replyform input[type=text], .threadform input[type=text], #authpanel input { width: 100%; margin: 3px 0 7px; }
   .btn {
-    font-family: inherit; font-size: 13px;
-    background: #dbe6f2; border: 2px outset #a9bccf;
-    padding: 2px 12px; cursor: pointer; color: #102040;
+    font-family: var(--chunky); font-size: 15px; font-weight: 400;
+    color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.3);
+    background: linear-gradient(#5cf08e, #18a84b); border: 3px solid var(--ink); border-radius: 999px;
+    padding: 4px 16px 3px; cursor: pointer; box-shadow: 0 3px 0 var(--ink);
   }
-  .btn:active { border-style: inset; }
+  .btn:hover { background: linear-gradient(#ffe36e, #ffb300); color: var(--ink); text-shadow: none; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
 
   .warnbox {
-    border: 2px solid #a12; background: #ffecec;
-    padding: 6px 8px; margin: 6px 0; font-size: 12.5px; color: #611;
+    border: 3px solid #e03131; border-radius: 10px; background: #fff0f0;
+    padding: 8px 10px; margin: 6px 0; font-size: 12.5px; color: #8a1c1c;
   }
-  .msg { font-size: 12.5px; color: #611; min-height: 16px; }
-  .ok { color: #161; }
+  .msg { font-size: 12.5px; color: #c92a2a; min-height: 16px; font-weight: 700; }
+  .ok { color: #18a84b; }
 
-  #authpanel { padding: 8px 10px; border-bottom: 1px solid #90a0b0; background: #f3f6f9; font-size: 13px; display: none; }
+  #authpanel { padding: 10px 14px; border-bottom: 3px solid var(--ink); background: var(--soft); font-size: 13px; display: none; }
   #authpanel.show { display: block; }
-  #authpanel h3 { margin: 0 0 4px; font-size: 14px; }
-  .authtabs { margin-bottom: 6px; }
-  .authtabs button { font-family: inherit; font-size: 12px; border: 1px solid #6f8296; background: #dde5ee; padding: 2px 10px; cursor: pointer; }
-  .authtabs button.on { background: #fff; font-weight: bold; }
+  #authpanel h3 { margin: 0 0 6px; font-family: var(--chunky); font-weight: 400; font-size: 18px; }
+  .authtabs { margin-bottom: 8px; display: flex; gap: 6px; }
+  .authtabs button { font: 700 12px var(--body); border: 2.5px solid var(--ink); border-radius: 999px; background: #fff; padding: 3px 12px; cursor: pointer; color: var(--ink); }
+  .authtabs button.on { background: #ffd43b; }
 
-  .statline { font-size: 12px; color: #445; padding: 4px 10px; background: #eef2f6; border-top: 1px solid #b7c2cd; }
+  .statline { font-size: 12px; color: var(--muted); padding: 7px 14px; background: var(--soft); border-top: 3px solid var(--ink); }
 
-  .footlinks { text-align: center; font-size: 12px; color: #556; padding: 8px; }
+  .footlinks { text-align: center; font-size: 12px; color: var(--muted); padding: 8px; }
   .footlinks a { margin: 0 6px; }
-  .backhome { display: block; text-align: center; padding: 10px; font-size: 13px; }
+  .backhome {
+    display: table; margin: 12px auto 16px; text-decoration: none;
+    font-family: var(--chunky); font-size: 16px; color: var(--ink) !important;
+    background: linear-gradient(#ffe36e, #ffc21a); border: 3px solid var(--ink); border-radius: 10px;
+    padding: 7px 16px 6px; box-shadow: 0 3px 0 var(--ink);
+  }
 
   @media (max-width: 620px) {
-    body { font-size: 14px; }
+    body { font-size: 13px; }
     .navrow { font-size: 12px; }
-    ul.tree ul { margin-left: 9px; }
+    #searchbox { width: 100%; }
+    ul.tree ul { margin-left: 8px; }
   }
 </style>
 </head>
-<body>
+<body class="k-hang">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div id="page">
   <div class="titlebar">
     <div class="big">SORTAFUN&middot;ORG COMMUNITY BOARD</div>
@@ -1315,5 +1341,6 @@ if (!(window.crypto && crypto.subtle)) {
 refreshWho();
 render();
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

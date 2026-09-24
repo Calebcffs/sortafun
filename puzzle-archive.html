@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tile slider archive &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   .cal-head {
@@ -73,7 +74,7 @@
   .modal-back.open { display: flex; }
   .modal {
     background: #fff;
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     border-radius: 10px;
     max-width: 360px;
     width: 100%;
@@ -85,7 +86,7 @@
   .modal .disclaimer {
     font-size: 13px;
     color: #444;
-    border: 2px dashed #000;
+    border: 3px dashed var(--ink);
     border-radius: 8px;
     padding: 8px 10px;
     margin: 10px 0;
@@ -112,8 +113,8 @@
   .modal .lb-status { font-size: 13px; color: #666; margin-top: 8px; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-puzzle">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>tile slider archive</h1>
   <p class="sub">click a highlighted day to replay that puzzle and see its leaderboard. covers the past year.</p>
@@ -301,5 +302,6 @@ if (window.SortafunLB) {
   loadStatus.textContent = "leaderboard offline";
 }
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

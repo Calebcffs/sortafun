@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>leaderboards &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   .boards {
@@ -23,13 +24,13 @@
     color: #666;
     max-width: 420px;
     margin: 18px auto 0;
-    border-top: 2px dashed #000;
+    border-top: 3px dashed var(--ink);
     padding-top: 10px;
   }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-hang">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>leaderboards</h1>
   <p class="sub">top scores. today and all time. play a game, submit, come back and gloat.</p>
@@ -53,23 +54,23 @@
 <script>
   // order: the four originals, then the newer games
   var ORDER = [
-    ["typing",     "typing, top 200 words — most wpm"],
-    ["typing1000", "typing, top 1000 words — most wpm"],
-    ["circuit",    "circuit race — best lap"],
-    ["puzzle",     "tile slider — fewest moves"],
-    ["reaction",   "reaction light — fastest average"],
-    ["maze",       "cursor maze — fastest run"],
-    ["aim",        "aim trainer — most hits"],
-    ["stopbar",    "stop the bar — most points"],
-    ["ladder",     "word ladder — fewest rungs"],
-    ["hive",       "word hive — most points"],
+    ["typing",     "typing, top 200 words - most wpm"],
+    ["typing1000", "typing, top 1000 words - most wpm"],
+    ["circuit",    "circuit race - best lap"],
+    ["puzzle",     "tile slider - fewest moves"],
+    ["reaction",   "reaction light - fastest average"],
+    ["maze",       "cursor maze - fastest run"],
+    ["aim",        "aim trainer - most hits"],
+    ["stopbar",    "stop the bar - most points"],
+    ["ladder",     "word ladder - fewest rungs"],
+    ["hive",       "word hive - most points"],
     ["five",       "five letters - fewest guesses"],
     ["sides",      "four sides - fewest words"],
     ["grab",       "word grab - most points"],
-    ["mines",      "minesweeper — fastest clear"],
-    ["minute",     "how long is a minute — closest to 60s"],
-    ["callit",     "call it — longest streak"],
-    ["watch",      "watch the guy — most rest banked"],
+    ["mines",      "minesweeper - fastest clear"],
+    ["minute",     "how long is a minute - closest to 60s"],
+    ["callit",     "call it - longest streak"],
+    ["watch",      "watch the guy - most rest banked"],
   ];
   var boards = document.getElementById("boards");
   ORDER.forEach(function (row) {
@@ -85,5 +86,6 @@
     else slot.textContent = "leaderboard offline";
   });
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

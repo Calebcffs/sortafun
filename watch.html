@@ -4,17 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>watch the guy &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
-  #stage { border: 2px solid #000; background: #fff; display: block; margin: 12px auto 6px; }
+  #stage { border: 3px solid var(--ink); background: #fff; display: block; margin: 12px auto 6px; }
   #big { font-size: 19px; min-height: 26px; margin: 6px 0; }
   #rest { font-size: 26px; }
   #rest b { font-size: 34px; }
   .hint2 { font-size: 13px; color: #777; max-width: 400px; margin: 8px auto 0; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-base">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>watch the guy</h1>
   <p class="sub">he runs because you are watching. close the tab and he stops. every second this tab is hidden, he rests, and the rest counts. the only way to win is to look away.</p>
@@ -150,5 +151,6 @@ document.getElementById("reset").addEventListener("click", function () {
   lbEl.innerHTML = "";
 });
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

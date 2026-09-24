@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>profile &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
-  #namebox { font: inherit; font-size: 16px; border: 2px solid #000; border-radius: 6px; padding: 5px 10px; width: 200px; text-align: center; }
+  #namebox { font-family: var(--body); font-size: 16px; border: 3px solid var(--ink); border-radius: 6px; padding: 5px 10px; width: 200px; text-align: center; }
   table { border-collapse: collapse; margin: 16px auto; max-width: 460px; width: 100%; }
-  th, td { border: 2px solid #000; padding: 6px 10px; font-size: 15px; text-align: left; }
+  th, td { border: 3px solid var(--ink); padding: 6px 10px; font-size: 15px; text-align: left; }
   th { background: #ffe9a8; }
   td.n { text-align: right; }
   td.best { text-align: right; color: #1faf3a; white-space: nowrap; }
@@ -16,8 +17,8 @@
   .dim { color: #999; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-hang">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>profile</h1>
   <p class="sub">every score a name has left on the boards. type a name (or share the link with <code>?name=</code>).</p>
@@ -101,5 +102,6 @@ document.getElementById("go").addEventListener("click", lookup);
 nameBox.addEventListener("keydown", function (e) { if (e.key === "Enter") lookup(); });
 if (nameBox.value.trim()) lookup();
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

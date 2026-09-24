@@ -4,37 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>typing game &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap">
 <style>
-  /* monkeytype "serika dark" style, scoped to body.tt */
-  html { background: #323437; }
-  body.tt {
+  /* the page is the standard sortafun window (game.css). the test itself runs
+     on a dark "screen" inside it, monkeytype "serika dark" colours. */
+  .tt .wrap { max-width: 900px; }
+  .tt .sub, .tt .diffbar, .tt #diffnote { transition: opacity .18s ease; }
+
+  .tt .diffbar { display: flex; gap: 6px; justify-content: center; margin: 6px 0 2px; }
+  .tt .diffbar button { border-radius: 999px; font-size: 13px; padding: 5px 14px; }
+  .tt .diffbar button.on { background: #ffd43b; }
+  .tt #diffnote { background: none; border: 0; padding: 2px; }
+
+  /* fade the chrome once the test is running */
+  .tt.typing .sub,
+  .tt.typing .diffbar,
+  .tt.typing #diffnote { opacity: .15; pointer-events: none; }
+
+  .screen {
     background: #323437;
     color: #646669;
     font-family: "Roboto Mono", "SF Mono", "Consolas", ui-monospace, monospace;
+    border: 3px solid #1d1b2e;
+    border-radius: 14px;
+    box-shadow: inset 0 0 0 3px #2c2e31;
+    padding: 6px 18px 18px;
+    margin: 12px 0 6px;
+    text-align: left;
   }
-  .tt .wrap { max-width: 900px; }
-  .tt h1 { color: #d1d0c5; font-family: inherit; transition: opacity .18s ease; }
-  .tt .sub { color: #646669; transition: opacity .18s ease; }
-
-  .tt .diffbar { display: flex; gap: 0; justify-content: center; margin: 6px 0 2px; transition: opacity .18s ease; }
-  .tt .diffbar button {
-    font-family: inherit; font-size: 13px; padding: 5px 14px;
-    background: #2c2e31; color: #646669; border: 2px solid #2c2e31; border-radius: 0; cursor: pointer;
-  }
-  .tt .diffbar button:first-child { border-radius: 8px 0 0 8px; }
-  .tt .diffbar button:last-child { border-radius: 0 8px 8px 0; }
-  .tt .diffbar button:hover { color: #d1d0c5; background: #2c2e31; }
-  .tt .diffbar button.on { background: #e2b714; color: #323437; border-color: #e2b714; }
-  .tt #diffnote { transition: opacity .18s ease; }
-
-  /* fade the chrome once the test is running */
-  .tt.typing h1,
-  .tt.typing .sub,
-  .tt.typing .diffbar,
-  .tt.typing #diffnote { opacity: 0; pointer-events: none; }
 
   /* the countdown, the only thing on screen while typing */
   #timer {
@@ -129,38 +129,13 @@
   .res-row .val { color: #e2b714; font-size: 26px; line-height: 1.15; }
   .res-row .val small { display: block; color: #7d7f83; font-size: 12px; }
 
-  .tt #restart {
-    font-family: inherit; font-size: 14px; margin-top: 4px;
-    background: #2c2e31; color: #646669; border: 2px solid #2c2e31; border-radius: 8px; padding: 7px 16px;
-  }
-  .tt #restart:hover { color: #d1d0c5; }
-  .tt .back {
-    color: #646669; border-color: #2c2e31; background: #2c2e31;
-  }
-  .tt .back:hover { color: #d1d0c5; background: #2c2e31; }
-  .tt .status { color: #646669; }
-
-  /* dark overrides for the shared leaderboard panel (its style tag loads after
-     this one, so these are scoped to win on specificity) */
-  body .lb { background: #2c2e31; border-color: #2c2e31; color: #d1d0c5; font-family: inherit; }
-  body .lb-head { border-bottom-color: #3a3c3f; }
-  body .lb-tabs button { background: #323437; color: #646669; border-color: #323437; }
-  body .lb-tabs button.on { background: #e2b714; color: #323437; border-color: #e2b714; }
-  body .lb-list li { color: #d1d0c5; }
-  body .lb-name::before { color: #646669; }
-  body .lb-score { color: #e2b714; }
-  body .lb-when { color: #7d7f83; }
-  body .lb-msg { color: #646669; }
-  body .lb-submit { border-bottom-color: #3a3c3f; }
-  body .lb-input { background: #323437; color: #d1d0c5; border-color: #323437; }
-  body .lb-go { background: #323437; color: #646669; border-color: #323437; }
-  body .lb-go:hover { color: #d1d0c5; background: #323437; }
-  body .lb-ok { color: #e2b714; }
+  .tt #restart { margin-top: 4px; }
 </style>
 </head>
-<body class="tt">
+<body class="k-word tt">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
-  <h1>typing game</h1>
+  <h1>typing test</h1>
   <p class="sub">type the words. the caret follows you, wrong letters go red. 30 seconds.</p>
 
   <div class="diffbar" role="group" aria-label="word list">
@@ -169,6 +144,7 @@
   </div>
   <p class="sub" id="diffnote" style="margin-top:2px;">easier: the 200 most common english words</p>
 
+  <div class="screen">
   <div id="timer">30</div>
 
   <div id="wordsWrap">
@@ -192,6 +168,7 @@
       <div><div class="lbl">raw</div><div class="val" id="rRaw">0</div></div>
       <div><div class="lbl">consistency</div><div class="val" id="rCons">0%</div></div>
     </div>
+  </div>
   </div>
 
   <div class="status" id="status"></div>
@@ -715,5 +692,6 @@ diffBtns.forEach(function (b) {
 document.getElementById("restart").addEventListener("click", reset);
 reset();
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

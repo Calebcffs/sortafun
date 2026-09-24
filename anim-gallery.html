@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>animation gallery &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   .gal { max-width: 620px; }
@@ -14,7 +15,7 @@
   .sortbar button.on { background: #ffe9a8; }
 
   .card {
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     border-radius: 10px;
     margin: 12px 0;
     padding: 10px;
@@ -28,7 +29,7 @@
     flex: none;
     width: 200px;
     height: 150px;
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     background: #fff;
     border-radius: 4px;
   }
@@ -41,20 +42,20 @@
   .vote.voted { background: #eaffea; border-color: #1faf3a; cursor: default; }
   .vcount { font-weight: bold; }
 
-  .comments { margin-top: 10px; border-top: 2px dashed #000; padding-top: 8px; }
+  .comments { margin-top: 10px; border-top: 3px dashed var(--ink); padding-top: 8px; }
   .cmt { font-size: 14px; margin: 6px 0; }
-  .cmt b { color: #000; }
+  .cmt b { color: var(--ink); }
   .cmt .cmt-body { color: #333; word-break: break-word; }
   .cmt .cmt-when { color: #999; font-size: 12px; margin-left: 4px; }
   .posted { font-size: 12px; color: #999; margin: -6px 0 10px; }
   .cmt-none { font-size: 13px; color: #999; }
   .cmt-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .cmt-form input {
-    font-size: 14px; padding: 5px 7px; border: 2px solid #000; border-radius: 6px;
+    font-size: 14px; padding: 5px 7px; border: 3px solid var(--ink); border-radius: 6px;
     width: 130px; outline: none;
   }
   .cmt-form textarea {
-    font-family: inherit; font-size: 14px; padding: 5px 7px; border: 2px solid #000;
+    font-family: inherit; font-size: 14px; padding: 5px 7px; border: 3px solid var(--ink);
     border-radius: 6px; flex: 1; min-width: 160px; resize: vertical; min-height: 36px; outline: none;
   }
   .cmt-form button { font-size: 13px; padding: 5px 10px; }
@@ -65,8 +66,8 @@
   }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-art">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap gal">
   <h1>animation gallery</h1>
   <p class="sub">flipbooks people made, each looping at the speed it was drawn. vote and comment. <a href="flipbook.html">make your own</a>.</p>
@@ -365,5 +366,6 @@ if (!window.SortafunLB) {
   loadPage();
 }
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

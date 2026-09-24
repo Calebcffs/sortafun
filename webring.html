@@ -4,26 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>the webring &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   .ring { max-width: 460px; margin: 14px auto; text-align: left; }
-  .site { border: 2px solid #000; border-radius: 8px; padding: 8px 12px; margin: 8px 0; background: #fff; }
-  .site a { color: #000; font-size: 16px; text-decoration: none; font-weight: bold; }
+  .site { border: 3px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin: 8px 0; background: #fff; }
+  .site a { color: var(--ink); font-size: 16px; text-decoration: none; font-weight: bold; }
   .site a:hover { text-decoration: underline; }
   .site .d { font-size: 13px; color: #555; margin-top: 2px; }
   .site.dead { opacity: .55; }
   .site.dead .tag { color: #c0392b; }
   .tag { font-size: 11px; float: right; color: #1faf3a; }
   .nav { text-align: center; margin: 16px 0 4px; font-size: 15px; }
-  .nav a { color: #000; }
+  .nav a { color: var(--ink); }
   .badge {
-    display: block; width: 88px; margin: 10px auto; border: 2px solid #000;
+    display: block; width: 88px; margin: 10px auto; border: 3px solid var(--ink);
     text-align: center; font-size: 11px; padding: 4px; background: #ffe9a8;
   }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-hang">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>the webring</h1>
   <p class="sub">a ring of hand made sites that link to each other in a circle. remember these. click "next" and eventually you come back here, which is the whole point.</p>
@@ -82,5 +83,6 @@ document.getElementById("rand").addEventListener("click", function (e) {
   location.href = live[(Math.random() * live.length) | 0].url;
 });
 </script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

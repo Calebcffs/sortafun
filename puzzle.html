@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tile slider &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css">
 <style>
   #board {
     width: 306px;
     height: 306px;
     margin: 8px auto 0;
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     position: relative;
     background: #fff;
   }
@@ -18,7 +19,7 @@
     position: absolute;
     width: 100px;
     height: 100px;
-    border: 2px solid #000;
+    border: 3px solid var(--ink);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -35,8 +36,8 @@
   .controls { margin-top: 14px; display: flex; gap: 10px; justify-content: center; }
 </style>
 </head>
-<body>
-<div class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><a class="hb-all" href="index.html#games">&#9664; all games</a></div>
+<body class="k-puzzle">
+<header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap">
   <h1>tile slider</h1>
   <p class="sub">slide the tiles into order. same scramble for everyone today. arrow keys or click.</p>
@@ -235,5 +236,6 @@ scramble(seedFromDay(viewDay), viewDay === today);
 </script>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>
