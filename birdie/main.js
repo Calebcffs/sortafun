@@ -30,6 +30,7 @@ import { GameRules } from "./game.js";
 import { Hud } from "./hud.js";
 import { Sound } from "./audio.js";
 import { Menu } from "./menu.js";
+import { BlobShadow, Snow, Streaks } from "./effects.js";
 
 const QUALITY = {
   low: { pr: 0.75, shadows: false, shadowSize: 1024, radius: 3, fog: 0.72 },
@@ -118,6 +119,10 @@ class Game {
     this.flyer.placeOnGround(this.world, place.x, place.z, place.yaw);
     // game rules: food, people, cars, nests, lives, score
     this.rules = new GameRules(this);
+    // little effects: a shadow blob under the bird, snowfall, speed streaks
+    this.blob = new BlobShadow(this.scene);
+    this.snow = new Snow(this.scene, opts.quality === "low" ? 700 : 1800);
+    this.streaks = new Streaks(this.scene);
     this.menu.loading(1);
     this.cam.pos.copy(this.flyer.pos).add(new THREE.Vector3(-Math.sin(place.yaw) * 3, 1.5, -Math.cos(place.yaw) * 3));
     this.cam.yawOff = 0;
@@ -275,6 +280,9 @@ class Game {
     this.sky.update(dt, this.camera.position, s.w, f.pos.y, false);
     this.world.uniforms.uNight.value = this.sky.night;
     this.sky.updateSmoke(dt);
+    this.blob.update(this.world, f, Math.max(0.35, this.bird.halfSpan * this.scale * 1.1));
+    this.snow.update(dt, this.camera.position, clamp((s.w.snow - 0.4) * 1.7, 0, 1), this.sky.wind);
+    this.streaks.update(dt, this.camera, f);
     this.hud.update(dt);
     this.sound.update(dt, f, this.sky.night);
   }
