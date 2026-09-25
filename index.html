@@ -1493,10 +1493,10 @@ function openIfBasement() {
 window.addEventListener("hashchange", openIfBasement);
 openIfBasement();
 
-/* sound: the lobby tune (starts on your first click or key, see sfx.js),
+/* sound: the tune is loudest on the homepage (starts on your first click or key, see sfx.js),
  * and the basement door creaks */
 if (window.SortafunSFX) {
-  SortafunSFX.music.auto();
+  SortafunSFX.music.auto(1); // full volume here, half on every other page
   document.getElementById("late").addEventListener("toggle", function () {
     if (this.open) SortafunSFX.play("door");
   });

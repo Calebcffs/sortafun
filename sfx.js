@@ -4,8 +4,9 @@
 //   - ticks when the mouse goes over a button / link / tile and blips on click
 //   - puts a speaker button in the nav bar (.homebar, or .nav on the homepage)
 //     that turns all of it off, remembered in localStorage "sortafun-sound"
-//   - on the homepage, plays a little 8-bit loop (SortafunSFX.music), with
-//     its own button, remembered in "sortafun-music"
+//   - plays a little 8-bit loop (SortafunSFX.music) on every page, loudest on
+//     the homepage and half volume elsewhere, carrying on where it left off
+//     from page to page; its own button, remembered in "sortafun-music"
 //
 // Games call SortafunSFX.play(name) for their own moments:
 //   tick click back good great bad coin win lose done start beep go pop type
@@ -316,19 +317,38 @@
     }
   }
 
+  // the tune carries on from page to page: where it was and when is kept in
+  // sessionStorage, and the next page picks it up as if it never stopped
+  var POS_KEY = "sortafun-music-pos";
+  function savePos() {
+    if (!music.timer) return;
+    try { sessionStorage.setItem(POS_KEY, JSON.stringify({ step: music.step, loop: music.loop, at: Date.now() })); } catch (e) {}
+  }
+  function restorePos() {
+    var p = null;
+    try { p = JSON.parse(sessionStorage.getItem(POS_KEY) || "null"); } catch (e) {}
+    if (!p || !(Date.now() - p.at < 10 * 60 * 1000)) return;
+    var n = music.events.length, stepDur = 60 / SONG.bpm / 4;
+    var s = p.step + Math.floor((Date.now() - p.at) / 1000 / stepDur);
+    music.loop = p.loop + Math.floor(s / n);
+    music.step = s % n;
+  }
+
   function musicStart() {
     if (music.timer || !ac() || !unlocked) return;
     buildSong();
+    restorePos();
     if (ctx.state !== "running") ctx.resume();
     music.next = ctx.currentTime + 0.1;
     musicBus.gain.cancelScheduledValues(ctx.currentTime);
     musicBus.gain.setValueAtTime(0, ctx.currentTime);
-    musicBus.gain.linearRampToValueAtTime(MUSIC_VOL, ctx.currentTime + 1.2);
+    musicBus.gain.linearRampToValueAtTime(MUSIC_VOL * musicLevel, ctx.currentTime + 1.2);
     music.timer = setInterval(tickMusic, 30);
     tickMusic();
   }
   function musicStop() {
     if (!music.timer) return;
+    savePos();
     clearInterval(music.timer);
     music.timer = null;
     if (ctx) {
@@ -338,9 +358,17 @@
     }
   }
 
-  var wantsMusic = false; // the page asked for music (only the homepage does)
-  function musicAuto() {
+  // every page plays the tune: at half volume, except the homepage (which
+  // calls music.auto(1)) where it's loudest. <html data-nomusic> opts out.
+  var wantsMusic = false, musicLevel = 0.5;
+  function musicAuto(level) {
     wantsMusic = true;
+    if (level != null) musicLevel = level;
+    if (music.timer && ctx) {
+      musicBus.gain.cancelScheduledValues(ctx.currentTime);
+      musicBus.gain.setValueAtTime(musicBus.gain.value, ctx.currentTime);
+      musicBus.gain.linearRampToValueAtTime(MUSIC_VOL * musicLevel, ctx.currentTime + 0.5);
+    }
     if (musicOn && soundOn && unlocked && !document.hidden) musicStart();
     drawButtons();
   }
@@ -356,6 +384,7 @@
     if (!ac()) return;
     var first = !unlocked;
     unlocked = true;
+    try { sessionStorage.setItem("sortafun-audio-ok", "1"); } catch (e) {}
     if (ctx.state !== "running") ctx.resume();
     if (first) {
       var q = waiting; waiting = [];
@@ -366,6 +395,17 @@
   ["pointerdown", "keydown", "touchstart"].forEach(function (ev) {
     window.addEventListener(ev, unlock, { capture: true, passive: true });
   });
+  window.addEventListener("pagehide", savePos);
+  // clicked something on an earlier page this visit? Chrome then lets audio
+  // start straight away, so try (other browsers wait for a click as usual)
+  (function () {
+    var ok = false;
+    try { ok = sessionStorage.getItem("sortafun-audio-ok") === "1"; } catch (e) {}
+    if (!ok || !ac()) return;
+    var p = ctx.resume();
+    var check = function () { if (ctx.state === "running") unlock(); };
+    if (p && p.then) p.then(check, function () {}); else setTimeout(check, 50);
+  })();
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) musicStop();
     else if (wantsMusic && musicOn && soundOn && unlocked) musicStart();
@@ -474,8 +514,12 @@
     host.appendChild(box);
     drawButtons();
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", injectButtons);
-  else injectButtons();
+  function boot() {
+    if (!document.documentElement.hasAttribute("data-nomusic")) musicAuto();
+    injectButtons();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 
   // dev: render some of the tune (or a sound) offline and return the samples,
   // for checking levels without ears. SortafunSFX._render(seconds, soundName?)
@@ -491,7 +535,7 @@
     var comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ctx.destination);
     sfxBus = ctx.createGain(); sfxBus.gain.value = SFX_VOL; sfxBus.connect(master);
-    musicBus = ctx.createGain(); musicBus.gain.value = MUSIC_VOL; musicBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = MUSIC_VOL * musicLevel; musicBus.connect(master);
     if (name) SOUNDS[name](0.01);
     else {
       buildSong();
@@ -512,7 +556,8 @@
     whenReady: whenReady,
     enabled: function () { return soundOn; },
     setEnabled: setSound,
-    music: { auto: musicAuto, start: function () { setMusic(true); }, stop: function () { setMusic(false); }, playing: function () { return !!music.timer; } },
+    music: { auto: musicAuto, start: function () { setMusic(true); }, stop: function () { setMusic(false); }, playing: function () { return !!music.timer; },
+      position: function () { return { step: music.step, loop: music.loop, level: musicLevel }; } },
     sounds: Object.keys(SOUNDS),
   };
 })();

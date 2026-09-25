@@ -138,25 +138,33 @@ export class Flyer {
     const hClimb = fl.cruise * 0.18;
     const vClimb = Math.hypot(vUp, hClimb);
     const climbPitch = clamp(Math.atan2(vUp, hClimb), 55 * D2R, 78 * D2R);
-    // UP: powered flight, fast and nearly level, rising just a touch
+    // UP: powered flight, fast, climbing just a touch (a ~3 degree path)
     const fastSpeed = fl.cruise * 1.9;
-    const fastRise = fastSpeed * 0.035;
-    const glidePitch = -Math.asin(clamp(fl.sink / fl.cruise, 0.02, 0.5));
+    const fastRise = fastSpeed * 0.055;
+    // hands off: a diving glide, nose down, picking up speed as it goes
+    const glideSpeed = fl.cruise * 1.35;
+    const glidePitch = -14 * D2R;
     const divePitch = -72 * D2R;
     // hands-off, the bird swoops like a real glider: slow = nose down to
     // pick up speed, fast = nose up to trade speed for height
-    const slowBy = clamp((fl.cruise - speed) / fl.cruise, 0, 1);
-    const fastBy = clamp((speed - fl.cruise) / fl.cruise, 0, 1.5);
-    let target = glidePitch - slowBy * 22 * D2R + fastBy * 16 * D2R;
-    // flying fast: hold a level line (a small correction cancels any climb or sink)
-    if (fastIn > 0) target = lerp(target, Math.asin(clamp(fastRise / Math.max(speed, fl.stall), 0, 0.2)) + clamp((fastRise - this.vel.y) * 0.06, -6 * D2R, 8 * D2R), fastIn);
+    const slowBy = clamp((glideSpeed - speed) / glideSpeed, 0, 1);
+    const fastBy = clamp((speed - glideSpeed) / glideSpeed, 0, 1.5);
+    let target = glidePitch - slowBy * 16 * D2R + fastBy * 16 * D2R;
+    // ...and rounds out by itself just above the ground, so gliding in lands
+    // you rather than crashing you (holding DOWN flares properly)
+    const roundOutZone = 3 + 3 * this.scale;
+    const roundOut = this.vel.y < -0.5 ? smoothstep(roundOutZone, roundOutZone * 0.3, above) : 0;
+    target = lerp(target, 3 * D2R, roundOut);
+    // flying fast: hold a gently rising line. Coming out of a dive or a
+    // swoop the nose comes up hard (up to 30 degrees) until the sink is gone.
+    if (fastIn > 0) target = lerp(target, Math.asin(clamp(fastRise / Math.max(speed, fl.stall), 0, 0.3)) + clamp((fastRise - this.vel.y) * 0.08, -6 * D2R, 30 * D2R), fastIn);
     if (climbIn > 0) target = lerp(target, climbPitch, climbIn);
     if (diveIn > 0) target = divePitch;
     // stall: the nose drops when there isn't enough airspeed (unless flapping)
     const stall = clamp(1 - speed / fl.stall, 0, 1) * (1 - Math.max(climbIn, fastIn) * 0.85);
     target = lerp(target, -60 * D2R, stall * (1 - diveIn));
     const busy = climbIn || fastIn || diveIn;
-    this.pitch = damp(this.pitch, target, (busy ? 2.2 : 1.1) * fl.pitchRate * (0.8 + 0.2 * ag), dt);
+    this.pitch = damp(this.pitch, target, (fastIn > 0.5 ? 3.2 : busy ? 2.2 : 1.1 + roundOut * 1.5) * fl.pitchRate * (0.8 + 0.2 * ag), dt);
 
     // --- bank and turn ---
     const maxBank = 60 * D2R;
@@ -169,18 +177,18 @@ export class Flyer {
     const f = this.forward(this.fwd);
     let along = this.vel.dot(f);
     // Drag and thrust are chosen so each input settles at its own speed:
-    //   hands off -> glide at cruise speed
-    //   UP        -> fast, rising very slightly, at fastSpeed
+    //   hands off -> diving glide at glideSpeed
+    //   UP        -> fast, rising slightly, at fastSpeed
     //   DOWN      -> near-vertical climb at vClimb (wings spread wide, braking)
     //   SHIFT     -> terminal dive at maxSpeed
-    const kGlide = (G * Math.sin(-glidePitch)) / (fl.cruise * fl.cruise);
+    const kGlide = (G * Math.sin(-glidePitch)) / (glideSpeed * glideSpeed);
     const kClimb = kGlide * 3.5;
     const kDive = (G * Math.sin(-divePitch)) / (fl.maxSpeed * fl.maxSpeed);
     let k = lerp(kGlide, kClimb, climbIn) * (1 + this.flare * 1.6);
     if (diveIn) k = kDive;
     const thrustClimb = G * Math.sin(climbPitch) + kClimb * vClimb * vClimb;
     // (plus a kick while below full speed, so UP gets going quickly)
-    const thrustFast = kGlide * fastSpeed * fastSpeed + G * (fastRise / fastSpeed) + 5 * clamp(1 - along / fastSpeed, 0, 1);
+    const thrustFast = kGlide * fastSpeed * fastSpeed + G * (fastRise / fastSpeed) + 7 * clamp(1 - along / fastSpeed, 0, 1);
     const thrust = (climbIn * thrustClimb + fastIn * thrustFast * (1 - climbIn)) * (1 - diveIn);
     const accel = thrust - G * f.y - k * along * Math.abs(along);
     along += accel * dt;
@@ -199,10 +207,12 @@ export class Flyer {
     this.vel.copy(f).multiplyScalar(along).add(lat);
     if (this.vel.y < -this.maxFall && diveIn < 0.5) this.vel.y = damp(this.vel.y, -this.maxFall, 4, dt);
 
-    // visual state for the model: tucked for a dive, swept back when flying
-    // fast, wings raised forward and braking when pulling up
+    // visual state for the model: tucked for a dive, a little swept back in
+    // the hands-off swoop, full flapping when flying fast, wings raised
+    // forward and braking when pulling up
     this.flap = flapEffort;
-    this.dive = Math.max(diveIn * smoothstep(fl.cruise * 0.6, fl.cruise * 1.2, speed + 5), fastIn * 0.3);
+    const handsOff = 1 - Math.max(climbIn, fastIn, diveIn);
+    this.dive = Math.max(diveIn * smoothstep(fl.cruise * 0.6, fl.cruise * 1.2, speed + 5), handsOff * 0.3 * (1 - roundOut));
     this.pullUp = climbIn;
     // landing flare: when slow and close above a surface, the bird brakes
     const below = world.groundAt(this.pos.x, this.pos.z, this.pos.y, this.groundInfo);
