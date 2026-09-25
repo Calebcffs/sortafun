@@ -133,7 +133,7 @@ class Game {
     this.menu.hide();
     this.clock.getDelta();
     this.stage.focus();
-    this.hud.toast("welcome to the " + (opts.scapeLabel || "world") + "! hold down to flap and take off.", "good");
+    this.hud.toast("welcome to the " + (opts.scapeLabel || "world") + "! hold down to take off, up to fly fast.", "good");
   }
 
   stop() {
@@ -235,7 +235,7 @@ class Game {
   // Testing hook: run the game forward `seconds` with a fixed input and no
   // rendering, e.g. birdie.simulate(3, {pitch: 1}) = flap for 3 seconds.
   simulate(seconds, input = {}, fps = 30) {
-    const base = { pitch: 0, turn: 0, poop: false, flap: false, call: false, camera: false, pause: false, mute: false, lookX: 0, lookY: 0, dragging: false, zoom: 0 };
+    const base = { pitch: 0, turn: 0, poop: false, dive: false, call: false, camera: false, pause: false, mute: false, lookX: 0, lookY: 0, dragging: false, zoom: 0 };
     this.inputOverride = { ...base, ...input };
     const n = Math.round(seconds * fps);
     for (let i = 0; i < n && this.running; i++) {
@@ -328,6 +328,14 @@ class Game {
     cam.pos.z = damp(cam.pos.z, desired.z, rate, dt);
     // snap closer if we fell far behind (teleports, respawns)
     if (cam.pos.distanceTo(desired) > dist * 6) cam.pos.copy(desired);
+    // the damped camera can lag round a corner into a wall: pull it back in
+    // front of whatever sits between it and the bird (matters indoors)
+    for (let i = 1; i <= 6; i++) {
+      test.lerpVectors(target, cam.pos, i / 6);
+      let hit = false;
+      this.world.collideSphere(test, 0.2, (n, d, col) => { if (col && col.t !== "seg" && col.kind !== "canopy") hit = true; });
+      if (hit) { cam.pos.lerpVectors(target, cam.pos, Math.max(0.1, (i - 1) / 6)); break; }
+    }
     c.position.copy(cam.pos);
     const look = target.clone().addScaledVector(new THREE.Vector3(Math.sin(f.yaw), 0, Math.cos(f.yaw)), dist * 0.35);
     cam.look.lerp(look, 1 - Math.exp(-12 * dt));

@@ -63,7 +63,7 @@ export class Hud {
       this.touchSetup = true;
       this.g.input.attachTouch(document.getElementById("stick"), document.getElementById("knob"));
       this.g.input.bindButton(document.getElementById("t-poop"), "poop");
-      this.g.input.bindButton(document.getElementById("t-flap"), "flap");
+      this.g.input.bindButton(document.getElementById("t-flap"), "dive");
       this.g.input.bindButton(document.getElementById("t-call"), "call");
     }
   }
@@ -181,7 +181,9 @@ export class Hud {
     if (!f || this.el.hidden) return;
     const cam = this.pooCam;
     // just above the bird, looking straight down (the bird itself is hidden)
-    cam.position.set(f.pos.x, f.pos.y + 1.2 + f.radius * 2, f.pos.z);
+    // (indoors, stay under the ceiling so it doesn't film the roof)
+    const ceil = this.g.world.ceilingAt(f.pos.x, f.pos.y, f.pos.z);
+    cam.position.set(f.pos.x, Math.min(f.pos.y + 1.2 + f.radius * 2, ceil - 0.15), f.pos.z);
     cam.up.set(Math.sin(f.yaw), 0, Math.cos(f.yaw));
     cam.lookAt(f.pos.x, f.pos.y - 10, f.pos.z);
     const bird = this.g.bird.root;

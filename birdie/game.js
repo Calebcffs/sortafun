@@ -92,12 +92,9 @@ export class GameRules {
     this.lastPos.copy(f.pos);
     this.stats.maxAlt = Math.max(this.stats.maxAlt, f.pos.y);
 
-    // --- poo-o-meter drain ---
-    const m = this.sp.flight.metabolism;
-    let drain = 0.0026;
-    if (f.mode === "air") drain = 0.0045 + f.flap * 0.0075;
-    else if (f.walkSpeed > 0.1) drain = 0.0034;
-    this.food -= drain * m * dt;
+    // --- poo-o-meter drain: one slow, steady rate whatever you're doing
+    // (a full meter lasts about 13 minutes; pooing still costs a chunk) ---
+    this.food -= 0.0013 * dt;
     if (this.food <= 0) {
       this.food = 0.5;
       this.loseLife("starved", "you ran out of food!");
@@ -262,8 +259,8 @@ export class GameRules {
 
   spawnItem(kind, near) {
     let lists;
-    if (kind === "chips" || kind === "pizza") lists = ["ground", "ground", "park", "roof", "beach"];
-    else if (kind === "cherries") lists = ["park", "ground", "field", "park"];
+    if (kind === "chips" || kind === "pizza") lists = ["ground", "ground", "park", "roof", "beach", "inside", "inside"];
+    else if (kind === "cherries") lists = ["park", "ground", "field", "park", "inside"];
     else if (kind === "carcass") lists = ["ground", "ground", "field", "beach", "roof"];
     else if (kind === "twig") lists = ["park", "ground", "ground", "field"];
     else if (kind === "butterfly") lists = ["park", "field", "ground"];

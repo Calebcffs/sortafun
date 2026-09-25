@@ -91,19 +91,50 @@ export class Flyer {
     const fl = this.fl;
     const ag = fl.agility;
     this.airTime += dt;
-    const climbIn = Math.max(0, input.pitch);
-    const diveIn = Math.max(0, -input.pitch);
+    // DOWN / S: pull up. Nose high, flapping hard, slow and steep: gains
+    //           height, and near the ground it's the landing flare.
+    // UP / W:   fly fast and straight. Powerful flapping, holds its height.
+    // SHIFT:    dive. Wings tucked, nose down, trading height for speed.
+    let climbIn = Math.max(0, input.pitch);
+    const fastIn = Math.max(0, -input.pitch);
+    const diveIn = input.dive ? 1 : 0;
     const speed = this.vel.length();
+
+    // --- the landing flare ---
+    // Holding DOWN while coming down close to a surface doesn't climb away:
+    // the bird flares, braking hard and settling gently onto it. (Holding
+    // DOWN when level or already rising still climbs, so you can take off
+    // and pull up out of a street.)
+    const under = world.groundAt(this.pos.x, this.pos.z, this.pos.y, this.groundInfo);
+    const above = this.pos.y - this.standH - under.y;
+    const flareZone = 1.5 + 2.2 * this.scale;
+    if (climbIn > 0.3 && above < flareZone && this.airTime > 0.8 && (this.flaring || this.vel.y < -0.3)) this.flaring = true;
+    else if (climbIn < 0.3 || above > flareZone * 1.5) this.flaring = false;
+    if (this.flaring) {
+      // brake: bleed off forward speed, sink slowly, nose up, wings forward
+      const k2 = 1 - Math.exp(-2.5 * dt);
+      const hs = Math.hypot(this.vel.x, this.vel.z), slowTo = fl.cruise * 0.3;
+      if (hs > slowTo) { const s2 = lerp(hs, slowTo, k2) / hs; this.vel.x *= s2; this.vel.z *= s2; }
+      this.vel.y = lerp(this.vel.y, -1.1, 1 - Math.exp(-6 * dt));
+      this.pitch = damp(this.pitch, 38 * D2R, 4, dt);
+      this.roll = damp(this.roll, input.turn * 0.4, 4, dt);
+      this.yaw -= input.turn * fl.turn * 0.5 * dt;
+      this.flap = 0.5; this.dive = 0; this.pullUp = 1;
+      this.flare = damp(this.flare, 1, 6, dt);
+      this.heightAboveGround = above;
+      this.pos.addScaledVector(this.vel, dt);
+      return this.contacts(world);
+    }
 
     // how much the wings are holding us up: full above stall speed,
     // fading to nothing as we slow down (flapping props us up)
-    const flapping = climbIn > 0.05 || (input.flap ? 1 : 0);
-    const flapEffort = Math.max(climbIn, input.flap ? 1 : 0);
-    const lift = Math.max(clamp((speed / fl.stall) ** 2, 0, 1), flapEffort * 0.95);
+    const flapEffort = Math.max(climbIn, fastIn) * (1 - diveIn);
+    const lift = Math.max(clamp((speed / fl.stall) ** 2, 0, 1), climbIn * 0.97, fastIn);
 
     // --- pitch ---
-    const vClimb = 0.8 * fl.cruise;
-    const climbPitch = Math.asin(clamp(fl.climb / vClimb, 0.1, 0.85));
+    const vClimb = 0.45 * fl.cruise;                  // climbing is slow...
+    const climbPitch = clamp(Math.asin(clamp((fl.climb * 1.15) / vClimb, 0.1, 0.95)), 35 * D2R, 60 * D2R); // ...and steep
+    const fastSpeed = fl.cruise * 1.85;
     const glidePitch = -Math.asin(clamp(fl.sink / fl.cruise, 0.02, 0.5));
     const divePitch = -72 * D2R;
     // hands-off, the bird swoops like a real glider: slow = nose down to
@@ -111,17 +142,19 @@ export class Flyer {
     const slowBy = clamp((fl.cruise - speed) / fl.cruise, 0, 1);
     const fastBy = clamp((speed - fl.cruise) / fl.cruise, 0, 1.5);
     let target = glidePitch - slowBy * 22 * D2R + fastBy * 16 * D2R;
-    if (climbIn > 0) target = lerp(glidePitch, climbPitch, climbIn);
-    if (diveIn > 0) target = lerp(glidePitch, divePitch, diveIn);
-    // stall: the nose drops when there isn't enough airspeed
-    const stall = clamp(1 - speed / fl.stall, 0, 1) * (1 - flapEffort * 0.7);
-    target = lerp(target, -60 * D2R, stall);
-    // a fast bird with no input slowly pulls out of a dive (like the original)
-    this.pitch = damp(this.pitch, target, (climbIn || diveIn ? 2.2 : 1.1) * fl.pitchRate * (0.8 + 0.2 * ag), dt);
+    // flying fast: hold a level line (a small correction cancels any climb or sink)
+    if (fastIn > 0) target = lerp(target, clamp(-this.vel.y * 0.06, -6 * D2R, 8 * D2R), fastIn);
+    if (climbIn > 0) target = lerp(target, climbPitch, climbIn);
+    if (diveIn > 0) target = divePitch;
+    // stall: the nose drops when there isn't enough airspeed (unless flapping)
+    const stall = clamp(1 - speed / fl.stall, 0, 1) * (1 - Math.max(climbIn, fastIn) * 0.85);
+    target = lerp(target, -60 * D2R, stall * (1 - diveIn));
+    const busy = climbIn || fastIn || diveIn;
+    this.pitch = damp(this.pitch, target, (busy ? 2.2 : 1.1) * fl.pitchRate * (0.8 + 0.2 * ag), dt);
 
     // --- bank and turn ---
     const maxBank = 60 * D2R;
-    const tRoll = input.turn * maxBank * (1 - diveIn * 0.35);
+    const tRoll = input.turn * maxBank * (1 - diveIn * 0.35 - climbIn * 0.25);
     this.roll = damp(this.roll, tRoll, 5 * ag + 2, dt);
     const turnRate = (this.roll / maxBank) * fl.turn * (0.75 + 0.25 * clamp(speed / fl.cruise, 0, 1.6)) * (1 - stall * 0.6);
     this.yaw -= turnRate * dt;
@@ -129,12 +162,19 @@ export class Flyer {
     // --- speed along the nose ---
     const f = this.forward(this.fwd);
     let along = this.vel.dot(f);
-    // drag chosen so a glide settles at cruise speed, a full dive at maxSpeed
+    // Drag and thrust are chosen so each input settles at its own speed:
+    //   hands off -> glide at cruise speed
+    //   UP        -> level flight at fastSpeed
+    //   DOWN      -> steep climb at vClimb (wings spread wide, braking)
+    //   SHIFT     -> terminal dive at maxSpeed
     const kGlide = (G * Math.sin(-glidePitch)) / (fl.cruise * fl.cruise);
+    const kClimb = kGlide * 3.5;
     const kDive = (G * Math.sin(-divePitch)) / (fl.maxSpeed * fl.maxSpeed);
-    const k = lerp(kGlide, kDive, diveIn) * (1 + this.flare * 1.6);
-    // flapping thrust: enough to climb at `climb` m/s at 80% cruise speed
-    const thrust = flapEffort * (G * (fl.climb / vClimb) + kGlide * vClimb * vClimb) * 1.12;
+    let k = lerp(kGlide, kClimb, climbIn) * (1 + this.flare * 1.6);
+    if (diveIn) k = kDive;
+    const thrustClimb = G * Math.sin(climbPitch) + kClimb * vClimb * vClimb;
+    const thrustFast = kGlide * fastSpeed * fastSpeed;
+    const thrust = (climbIn * thrustClimb + fastIn * thrustFast * (1 - climbIn)) * (1 - diveIn);
     const accel = thrust - G * f.y - k * along * Math.abs(along);
     along += accel * dt;
     if (along < 0) along *= 0.5;
@@ -152,19 +192,25 @@ export class Flyer {
     this.vel.copy(f).multiplyScalar(along).add(lat);
     if (this.vel.y < -this.maxFall && diveIn < 0.5) this.vel.y = damp(this.vel.y, -this.maxFall, 4, dt);
 
-    // visual state for the model
+    // visual state for the model: tucked for a dive, swept back when flying
+    // fast, wings raised forward and braking when pulling up
     this.flap = flapEffort;
-    this.dive = diveIn * smoothstep(fl.cruise * 0.8, fl.cruise * 1.4, speed + diveIn * 5);
+    this.dive = Math.max(diveIn * smoothstep(fl.cruise * 0.6, fl.cruise * 1.2, speed + 5), fastIn * 0.3);
+    this.pullUp = climbIn;
     // landing flare: when slow and close above a surface, the bird brakes
     const below = world.groundAt(this.pos.x, this.pos.z, this.pos.y, this.groundInfo);
     const height = this.pos.y - this.standH - below.y;
     // only when actually coming down to land, not when skimming low along a street
-    const landing = height < 1.2 + 1.4 * this.scale && this.vel.y < -0.4 && climbIn < 0.1 && diveIn < 0.1;
+    const landing = height < 1.2 + 1.4 * this.scale && this.vel.y < -0.4 && fastIn < 0.1 && diveIn < 0.1;
     this.flare = damp(this.flare, landing ? 1 : 0, 4, dt);
     this.heightAboveGround = height;
 
     this.pos.addScaledVector(this.vel, dt);
+    this.contacts(world);
+  }
 
+  // water, landing and crashing after a flight step
+  contacts(world) {
     // --- water ---
     if (this.pos.y - this.radius * 0.6 < SEA) {
       const s = world.terrain.sample(this.pos.x, this.pos.z);
@@ -194,14 +240,16 @@ export class Flyer {
           crashed = { type: "hardLanding", kind: c ? c.kind : "ground", speed: down };
         } else landed = { c, n: { x: n.x, y: n.y, z: n.z }, depth };
       } else {
-        if (into > this.fl.crashTol * (c && c.kind === "wire" ? 0.35 : 1) && this.airTime > 0.2) {
+        if (into > this.fl.crashTol * (c && c.kind === "wire" ? 0.35 : c && c.kind === "rail" ? 0.7 : 1) && this.airTime > 0.2) {
           crashed = { type: c && c.kind === "wire" ? "wire" : "crash", kind: c ? c.kind : "ground", speed: into };
         } else {
           // glancing blow: slide along it
           this.pos.x += n.x * depth; this.pos.y += n.y * depth; this.pos.z += n.z * depth;
           if (into > 0) {
             vel.x += n.x * into; vel.y += n.y * into; vel.z += n.z * into;
-            vel.multiplyScalar(0.85);
+            // a real knock costs some speed; brushing along a wall (every
+            // frame while touching it) mustn't, or the bird sticks to it
+            if (into > 1.5) vel.multiplyScalar(0.85);
           }
           if (into > 1.5) this.events.push({ type: "bump", speed: into });
         }
@@ -227,6 +275,8 @@ export class Flyer {
     this.roll = 0;
     this.airTime = 0;
     this.flare = 0;
+    // you land by holding DOWN to flare, so don't launch again until it's let go
+    this.holdLatch = true;
     this.events.push({ type: "land", kind: g.kind, collider: g.collider });
   }
 
@@ -236,6 +286,7 @@ export class Flyer {
     this.vel.set(0, 0, 0);
     this.mode = "water";
     this.pitch = 0; this.roll = 0; this.airTime = 0;
+    this.holdLatch = true;
   }
 
   takeOff(boost = 1) {
@@ -256,8 +307,9 @@ export class Flyer {
   stepGround(dt, input, world) {
     const fl = this.fl;
     const water = this.mode === "water";
-    // take off: pull up (S / DOWN), or the flap button
-    if (input.pitch > 0.3 || input.flap) { this.takeOff(); return; }
+    // take off: pull up (S / DOWN). After a landing the key has to be let go first.
+    if (input.pitch <= 0.3) this.holdLatch = false;
+    if (input.pitch > 0.3 && !this.holdLatch) { this.takeOff(); return; }
     const fwdIn = Math.max(0, -input.pitch);
     const target = fwdIn * fl.walk * (water ? 1.4 : 1) * (input.run ? 1.8 : 1) * Math.max(1, this.scale * 0.8);
     this.walkSpeed = damp(this.walkSpeed, target, fwdIn > 0 ? 6 : 8, dt);
@@ -358,7 +410,7 @@ export class Flyer {
       mode: this.mode === "water" ? "water" : air ? "air" : "ground",
       flap: this.mode === "stunned" ? 0.6 : this.flap,
       dive: this.dive,
-      flare: this.flare,
+      flare: Math.max(this.flare, (this.pullUp || 0) * 0.55),
       bank: clamp(this.roll / (60 * D2R), -1, 1),
       walk: this.walkSpeed / Math.max(0.5, this.scale),
       turn: this.turnVis,

@@ -45,7 +45,7 @@ export class Batch {
 
   // An axis-aligned box (optionally rotated about Y around its centre).
   // opts: side (layer for walls), top (layer for roof, or null to skip),
-  //       bottom (bool), color, topColor, uOff (texture offset so neighbouring
+  //       bottom (bool), bottomLayer, bottomColor, color, topColor, uOff (texture offset so neighbouring
   //       boxes don't all line up)
   box(cx, y0, cz, sx, sy, sz, rot, opts) {
     const side = opts.side ?? L.WHITE, top = opts.top === undefined ? side : opts.top;
@@ -75,7 +75,7 @@ export class Batch {
         [0, 0, sx / ru, 0, sx / ru, sz / rv, 0, sz / rv], tc, top);
     }
     if (opts.bottom) {
-      this.quad(P(-hx, y0, -hz), P(hx, y0, -hz), P(hx, y0, hz), P(-hx, y0, hz), [0, -1, 0], [0, 0, 1, 0, 1, 1, 0, 1], c, side);
+      this.quad(P(-hx, y0, -hz), P(hx, y0, -hz), P(hx, y0, hz), P(-hx, y0, hz), [0, -1, 0], [0, 0, 1, 0, 1, 1, 0, 1], opts.bottomColor || c, opts.bottomLayer ?? side);
     }
   }
 

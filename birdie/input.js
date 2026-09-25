@@ -1,11 +1,11 @@
 // Keyboard, touch and gamepad input for Birdie, boiled down to one state
 // object the game reads every frame:
 //
-//   pitch  -1..1   +1 = climb/flap (DOWN / S), -1 = dive (UP / W)
+//   pitch  -1..1   +1 = pull up / climb / flare (DOWN / S), -1 = fly fast (UP / W)
 //                  (on the ground: -1 walks forward, +1 takes off)
 //   turn   -1..1   +1 = right
 //   poop   true on the frame SPACE was pressed (also nest / egg / feed)
-//   flap   held: extra flapping (SHIFT)
+//   dive   held: tuck the wings and dive (SHIFT)
 //   call   true on the frame C was pressed (chirp)
 //
 // "invert" swaps up/down for people who expect plane-style controls the
@@ -17,7 +17,7 @@ export class Input {
     this.pressed = new Set();
     this.invert = false;
     this.touch = { active: false, id: null, x0: 0, y0: 0, dx: 0, dy: 0 };
-    this.touchButtons = { poop: false, flap: false };
+    this.touchButtons = { poop: false, dive: false };
     this.enabled = true;
     this.drag = { active: false, x: 0, y: 0, dx: 0, dy: 0 };
     const block = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]);
@@ -101,7 +101,7 @@ export class Input {
     }
     // gamepad left stick
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    let padPoop = false, padFlap = false, padCall = false;
+    let padPoop = false, padDive = false, padCall = false;
     for (const p of pads) {
       if (!p) continue;
       const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
@@ -109,14 +109,14 @@ export class Input {
       if (Math.abs(ay) > 0.15) pitch = ay;
       if (p.buttons[0] && p.buttons[0].pressed) { if (!this._padA) padPoop = true; this._padA = true; } else this._padA = false;
       if (p.buttons[1] && p.buttons[1].pressed) { if (!this._padB) padCall = true; this._padB = true; } else this._padB = false;
-      if ((p.buttons[7] && p.buttons[7].pressed) || (p.buttons[5] && p.buttons[5].pressed)) padFlap = true;
+      if ((p.buttons[7] && p.buttons[7].pressed) || (p.buttons[5] && p.buttons[5].pressed)) padDive = true;
     }
     if (this.invert) pitch = -pitch;
     const state = {
       pitch: Math.max(-1, Math.min(1, pitch)),
       turn: Math.max(-1, Math.min(1, turn)),
       poop: this.pressed.has("Space") || this.pressed.has("TouchPoop") || padPoop,
-      flap: k.has("ShiftLeft") || k.has("ShiftRight") || this.touchButtons.flap || padFlap,
+      dive: k.has("ShiftLeft") || k.has("ShiftRight") || this.touchButtons.dive || padDive,
       call: this.pressed.has("KeyC") || this.pressed.has("TouchCall") || padCall,
       camera: this.pressed.has("KeyV"),
       pause: this.pressed.has("Escape") || this.pressed.has("KeyP"),

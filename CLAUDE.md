@@ -424,9 +424,26 @@ circular overlay), `audio.js` (all synthesised), `menu.js`, `main.js` (loop,
 camera, spawn). `birdie.simulate(seconds, {pitch, turn, poop...})` runs the
 game headless for testing.
 
-Controls match the original: UP/W dives, DOWN/S flaps and climbs, space =
-poo / nest / lay / feed. Flight tuning lives in each species' `flight` block;
-check changes by simulating (climb / glide / dive numbers), not by eye.
+Controls (changed from the original on Caleb's ask): DOWN/S pulls up and
+climbs slowly and steeply (and near a surface while coming down it's the
+landing flare: brakes, sinks at ~1 m/s, lands), UP/W flies fast and level
+(~1.85x cruise), SHIFT dives, space = poo / nest / lay / feed. After landing
+DOWN has to be let go before it takes off again (`holdLatch`). The
+poo-o-meter drains at one constant rate (`game.js`, 0.0013/s) whatever you do.
+Flight tuning lives in each species' `flight` block; check changes by
+simulating (climb / glide / dive numbers), not by eye.
+
+Everything visible is solid. Houses, cabins, huts, warehouses, the tavern
+and the barn are hollow and furnished (`interiors.js`: `hollow()` builds
+walls with open window holes, sills, a floor on a foundation that reaches
+below the slope, a ceiling and a gable or flat roof; `furnish()` fills the
+room and returns food spots, which go in `ch.spots.inside`). Sloped roofs use
+the `gable` collider (`world.addGable`), which `groundAt` and
+`collideSphere` both understand; `world.ceilingAt()` keeps the poo-cam under
+ceilings. `world.keepOut()` stops trees, fields and cabins spawning inside
+the tavern, barn and cooling towers. Parapets, awnings, lamps, fences, bushes,
+rocks, palms and the rest all have colliders too: if you add a prop, add its
+collider.
 
 ### The meta pages
 

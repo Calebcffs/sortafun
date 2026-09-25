@@ -20,6 +20,7 @@ import { Terrain, CITY_PERIOD, ROAD_W, IND_PERIOD, CITY_H, SEA, REGION } from ".
 import { Batch, treeGeometry } from "./builders.js";
 import { L, TILE, atlasMaterial, detailTexture } from "./textures.js";
 import { rngAt, hash3, clamp, lerp, smoothstep, mulberry32 } from "./noise.js";
+import { hollow, furnish, frameOf } from "./interiors.js";
 
 export const CHUNK = 128;
 const CELL = 16; // spatial hash cell size for colliders
@@ -110,7 +111,7 @@ export class World {
   load(job) {
     const ch = {
       key: job.key, ix: job.x, iz: job.z, x0: job.x * CHUNK, z0: job.z * CHUNK,
-      res: job.res, objects: [], colliders: [], spots: { ground: [], roof: [], park: [], beach: [], field: [], water: [] },
+      res: job.res, objects: [], colliders: [], spots: { ground: [], roof: [], park: [], beach: [], field: [], water: [], inside: [] },
       paths: [], bins: [], smoke: [], lanes: [], lights: [], hunters: [], tourists: [],
     };
     this.buildTerrain(ch);
@@ -332,6 +333,15 @@ export class World {
     return c;
   }
 
+  // a pitched roof: ridge along local x, eaves at y0, ridge at y0 + h
+  addGable(ctx, cx, y0, cz, hx, hz, h, rot, kind) {
+    const c = { t: "gable", cx, cz, y0, y1: y0 + h, h, hx, hz, rot, cs: Math.cos(rot), sn: Math.sin(rot), kind, land: true };
+    const r = Math.hypot(hx, hz);
+    c.x0 = cx - r; c.x1 = cx + r; c.z0 = cz - r; c.z1 = cz + r;
+    ctx.ch.colliders.push(c);
+    return c;
+  }
+
   // a rotated box collider (cabins, barns, huts)
   addOBox(ctx, cx, y0, cz, sx, sy, sz, rot, kind) {
     const c = { t: "obox", cx, cz, y0, y1: y0 + sy, hx: sx / 2, hz: sz / 2, rot, cs: Math.cos(rot), sn: Math.sin(rot), kind, land: true };
@@ -350,6 +360,7 @@ export class World {
     b.box(x + dirX * 1.5, y + 6.1, z + dirZ * 1.5, 0.7, 0.22, 0.4, Math.atan2(dirX, dirZ), { side: L.WHITE, top: L.WHITE, color: grey, bottom: false });
     b.box(x + dirX * 1.5, y + 6.02, z + dirZ * 1.5, 0.55, 0.08, 0.3, Math.atan2(dirX, dirZ), { side: L.LIGHT, top: L.LIGHT, color: [1, 0.95, 0.8], bottom: true });
     this.addCyl(ctx, x, z, 0.14, y, y + 6.35, "pole");
+    this.addOBox(ctx, x + dirX * 1.5, y + 6.02, z + dirZ * 1.5, 0.7, 0.3, 0.45, Math.atan2(dirX, dirZ), "lamp");
     ctx.ch.lights.push({ x: x + dirX * 1.5, y: y + 5.9, z: z + dirZ * 1.5 });
   }
 
@@ -518,6 +529,7 @@ export class World {
       b.cyl(x, y, z, 0.16, H, 6, L.WHITE, wood, { r1: 0.12 });
       b.box(x, y + H - 0.6, z, 0.18, 0.18, 2.2, 0, { color: wood });
       this.addCyl(ctx, x, z, 0.2, y, y + H, "pole");
+      this.addBox(ctx, x - 0.09, y + H - 0.6, z - 1.1, x + 0.09, y + H - 0.42, z + 1.1, "crossarm");
     }
     for (let i = 0; i < poles.length - 1; i++) {
       for (const off of [-0.9, 0.9]) {
@@ -573,6 +585,11 @@ export class World {
       b.box(x, py, z + td / 2 - 0.15, tw, 0.8, 0.3, 0, { side: L.CONCRETE, top: L.CONCRETE, color: pc });
       b.box(x - tw / 2 + 0.15, py, z, 0.3, 0.8, td - 0.6, 0, { side: L.CONCRETE, top: L.CONCRETE, color: pc });
       b.box(x + tw / 2 - 0.15, py, z, 0.3, 0.8, td - 0.6, 0, { side: L.CONCRETE, top: L.CONCRETE, color: pc });
+      // the parapets are solid too: perch along the edge of the roof
+      this.addBox(ctx, x - tw / 2, py, z - td / 2, x + tw / 2, py + 0.8, z - td / 2 + 0.3, "parapet");
+      this.addBox(ctx, x - tw / 2, py, z + td / 2 - 0.3, x + tw / 2, py + 0.8, z + td / 2, "parapet");
+      this.addBox(ctx, x - tw / 2, py, z - td / 2, x - tw / 2 + 0.3, py + 0.8, z + td / 2, "parapet");
+      this.addBox(ctx, x + tw / 2 - 0.3, py, z - td / 2, x + tw / 2, py + 0.8, z + td / 2, "parapet");
       if (t < tiers.length - 1) ch.spots.roof.push([x + tw / 2 - 2, py, z + (rnd() - 0.5) * td * 0.6]);
       base = py;
     }
@@ -607,6 +624,7 @@ export class World {
     if (style === L.BRICK && rnd() < 0.7) {
       const aw = [[0.8, 0.15, 0.15], [0.15, 0.4, 0.2], [0.15, 0.25, 0.6], [0.85, 0.6, 0.1]][Math.floor(rnd() * 4)];
       b.box(x, y + 3.2, z + d / 2 + 0.7, w * 0.8, 0.12, 1.4, 0, { color: aw });
+      this.addBox(ctx, x - w * 0.4, y + 3.2, z + d / 2, x + w * 0.4, y + 3.32, z + d / 2 + 1.4, "awning");
     }
   }
 
@@ -679,24 +697,35 @@ export class World {
           ch.spots.park.push([lx + 3, y + 0.1, lz + 3]);
           continue;
         }
-        const hw = 8 + rnd() * 3, hd = 7 + rnd() * 2, hh = 5 + rnd() * 1.5;
-        const rot = (Math.floor(rnd() * 2) * Math.PI) / 2;
+        const hw = 9 + rnd() * 3, hd = 7.5 + rnd() * 2;
+        // the front door faces the street side of the block
+        const rot = j === 0 ? Math.PI : j === 2 ? 0 : i === 0 ? -Math.PI / 2 : Math.PI / 2;
         const tint = 0.85 + rnd() * 0.3;
-        b.box(lx, y + 0.1, lz, hw, hh, hd, rot, { side: L.HOUSE, top: null, color: [tint, tint * 0.95, tint * 0.9] });
+        const col = [tint, tint * 0.95, tint * 0.9];
+        const wallpaper = [[0.93, 0.9, 0.82], [0.85, 0.9, 0.93], [0.93, 0.86, 0.86], [0.88, 0.92, 0.84]][Math.floor(rnd() * 4)];
         const roofH = 2.6 + rnd() * 1.2;
-        const roofCol = rnd() < 0.5 ? [1, 1, 1] : [0.55, 0.55, 0.6];
-        b.gable(lx, y + 0.1 + hh, lz, hw, hd, roofH, rot, L.ROOF_TILE, roofCol, 0.5, L.HOUSE, [tint, tint * 0.95, tint * 0.9]);
-        // chimney
-        const chx = lx + (rot ? 0 : hw * 0.3), chz = lz + (rot ? hd * 0.3 : 0);
-        b.box(chx, y + hh, chz, 0.8, roofH + 1.4, 0.8, 0, { side: L.BRICK, top: L.CONCRETE, color: [0.9, 0.7, 0.6] });
-        this.addOBox(ctx, lx, y, lz, hw, hh + roofH * 0.6, hd, rot, "house");
-        ch.spots.roof.push([lx, y + hh + roofH, lz]);
-        if (rnd() < 0.5) this.bin(ctx, lx + hw / 2 + 1.2, y + 0.1, lz + hd / 2);
-        if (rnd() < 0.6) this.tree(ctx, rnd() < 0.5 ? "oak" : "birch", lx + (rnd() < 0.5 ? -1 : 1) * (lot / 2 - 2.5), y + 0.1, lz + (rnd() < 0.5 ? -1 : 1) * (lot / 2 - 2.5), 0.7 + rnd() * 0.3, rnd);
-        ch.spots.park.push([lx + hw / 2 + 2, y + 0.1, lz]);
+        const room = hollow(this, ctx, {
+          cx: lx, cz: lz, y: y + 0.1, w: hw, d: hd, h: 3.6, rot,
+          look: { outer: L.HOUSE, outerColor: col, inner: wallpaper, trim: [0.97, 0.97, 0.95], floor: L.PLANKS, floorColor: [1, 1, 1] },
+          roof: { type: "gable", layer: L.ROOF_TILE, color: rnd() < 0.5 ? [1, 1, 1] : [0.55, 0.55, 0.6], h: roofH },
+          door: { side: 0, w: 1.3, h: 2.3, u: (rnd() - 0.5) * hw * 0.4 },
+        }, rnd);
+        const inside = furnish(this, ctx, room, "house", rnd);
+        ch.spots.inside.push(...inside);
+        // chimney through the roof
+        const [chx, chz] = room.F.at(hw * 0.3, 0);
+        b.box(chx, room.top - 0.2, chz, 0.8, roofH + 1.2, 0.8, rot, { side: L.BRICK, top: L.CONCRETE, color: [0.9, 0.7, 0.6] });
+        this.addOBox(ctx, chx, room.top - 0.2, chz, 0.8, roofH + 1.2, 0.8, rot, "chimney");
+        ch.spots.roof.push([lx, room.roofTop, lz]);
+        const [bx, bz] = room.F.at(hw / 2 + 1.2, hd / 2 - 1);
+        if (rnd() < 0.5) this.bin(ctx, bx, y + 0.1, bz);
+        if (rnd() < 0.6) this.tree(ctx, rnd() < 0.5 ? "oak" : "birch", lx + (rnd() < 0.5 ? -1 : 1) * (lot / 2 - 2.2), y + 0.1, lz + (rnd() < 0.5 ? -1 : 1) * (lot / 2 - 2.2), 0.7 + rnd() * 0.3, rnd);
+        const [gx, gz] = room.F.at(0, hd / 2 + 2);
+        ch.spots.park.push([gx, y + 0.1, gz]);
       }
     }
   }
+
 
   // ------------------------------------------------------------
   // INDUSTRY
@@ -753,6 +782,8 @@ export class World {
       for (let x = cx - inner / 2 + 4; x < cx + inner / 2 - 4; x += 12) {
         b.box(x, top, pz, 0.4, 5, 0.4, 0, { color: [0.4, 0.4, 0.42] });
         b.box(x, top + 5, pz, 0.4, 0.3, 3, 0, { color: [0.4, 0.4, 0.42] });
+        this.addBox(ctx, x - 0.2, top, pz - 0.2, x + 0.2, top + 5, pz + 0.2, "support");
+        this.addBox(ctx, x - 0.2, top + 5, pz - 1.5, x + 0.2, top + 5.3, pz + 1.5, "support");
       }
       for (const off of [-0.8, 0.8]) {
         const a = [cx - inner / 2 + 4, top + 5.8, pz + off], c = [cx + inner / 2 - 4, top + 5.8, pz + off];
@@ -766,18 +797,26 @@ export class World {
     const { b, ch } = ctx;
     const n = rnd() < 0.5 ? 1 : 2;
     for (let i = 0; i < n; i++) {
-      const w = size * (n === 1 ? 0.8 : 0.42), d = size * (0.45 + rnd() * 0.3), h = 9 + rnd() * 7;
-      const x = cx + (n === 1 ? 0 : (i === 0 ? -1 : 1) * size * 0.25), z = cz + (rnd() - 0.5) * (size - d) * 0.5;
+      const w = Math.min(60, size * (n === 1 ? 0.7 : 0.42)), d = Math.min(40, size * (0.4 + rnd() * 0.2)), h = 10 + rnd() * 5;
+      const x = cx + (n === 1 ? 0 : (i === 0 ? -1 : 1) * size * 0.25), z = cz + (rnd() - 0.5) * (size - d) * 0.4;
       const tint = 0.8 + rnd() * 0.3;
-      b.box(x, y, z, w, h, d, 0, { side: L.WAREHOUSE, top: L.CONCRETE, color: [tint * 0.95, tint, tint * 1.05], topColor: [0.62, 0.64, 0.66] });
-      this.addBox(ctx, x - w / 2, y, z - d / 2, x + w / 2, y + h, z + d / 2, "warehouse");
-      // big roller doors
-      b.box(x, y, z + d / 2 + 0.05, 7, 6, 0.1, 0, { color: [0.35, 0.37, 0.4] });
-      // roof vents
-      for (let k = 0; k < 3; k++) b.cyl(x - w / 3 + k * w / 3, y + h, z, 0.8, 1.2, 8, L.WHITE, [0.6, 0.6, 0.62], { r1: 0.5 });
-      ch.spots.roof.push([x, y + h, z + d / 4]);
+      // hollow shed: the big loading doors are open, high windows all round
+      const room = hollow(this, ctx, {
+        cx: x, cz: z, y, w, d, h, rot: 0,
+        look: { outer: L.WAREHOUSE, outerColor: [tint * 0.95, tint, tint * 1.05], inner: [0.78, 0.78, 0.76], trim: [0.45, 0.47, 0.5], floor: L.CONCRETE, floorColor: [0.85, 0.85, 0.85] },
+        roof: { type: "flat", layer: L.CONCRETE, color: [0.62, 0.64, 0.66] },
+        bigDoor: { w: 8, h: 6.5, sides: [0, 1] }, clerestory: true,
+      }, rnd);
+      ch.spots.inside.push(...furnish(this, ctx, room, "warehouse", rnd));
+      for (let k = 0; k < 3; k++) {
+        const vx = x - w / 3 + k * w / 3;
+        b.cyl(vx, room.roofTop, z, 0.8, 1.2, 8, L.WHITE, [0.6, 0.6, 0.62], { r1: 0.5 });
+        this.addCyl(ctx, vx, z, 0.8, room.roofTop, room.roofTop + 1.2, "vent");
+      }
+      ch.spots.roof.push([x, room.roofTop, z + d / 4]);
     }
   }
+
 
   containerYard(ctx, cx, cz, size, y, rnd) {
     const { b, ch } = ctx;
@@ -817,6 +856,7 @@ export class World {
     // a gantry walkway along the tops
     const wx0 = cx - (n - 1) * (r + 0.6), wx1 = cx + (n - 1) * (r + 0.6);
     b.box((wx0 + wx1) / 2, y + h + 0.5, cz - 10, wx1 - wx0, 0.3, 1.4, 0, { color: [0.35, 0.35, 0.37] });
+    this.addBox(ctx, wx0, y + h + 0.5, cz - 10.7, wx1, y + h + 0.8, cz - 9.3, "walkway");
     // a factory shed next to them
     b.box(cx, y, cz + 18, 40, 10, 18, 0, { side: L.WAREHOUSE, top: L.CONCRETE, color: [0.95, 0.92, 0.85] });
     this.addBox(ctx, cx - 20, y, cz + 9, cx + 20, y + 10, cz + 27, "warehouse");
@@ -866,16 +906,38 @@ export class World {
       this.addCyl(ctx, x, z, 2.2 * s, y + 1.6 * s, y + 6 * s, "canopy");
       this.addCyl(ctx, x, z, 1.2 * s, y + 6 * s, y + 11 * s, "canopy");
     } else if (kind === "palm") {
-      this.addCyl(ctx, x + 1.2 * s * Math.cos(0), z, 0.35 * s, y, y + 9 * s, "trunk");
+      this.addCyl(ctx, x, z, 0.35 * s, y, y + 9 * s, "trunk");
+      // the crown of fronds: a squat dome you can land in
+      this.addSph(ctx, x, y + 8.4 * s, z, 2.2 * s, "canopy");
     }
   }
   inst(ctx, kind, x, y, z, s, rnd, extra) {
     ctx.inst[kind].push({ x, y, z, s, rot: rnd() * Math.PI * 2, tint: 0.85 + rnd() * 0.3, ...extra });
+    if (kind === "bush") this.addSph(ctx, x, y + 0.55 * s, z, 0.95 * s, "bush");
+    else if (kind === "rock") this.addSph(ctx, x, y + 0.05 * s, z, 1.0 * s, "rock");
+  }
+
+  // circles round the one-off buildings near this chunk, so trees, fields and
+  // cabins don't grow through the tavern or the barn
+  keepOut(ch) {
+    const R = { tower: 40, tavern: 16, barn: 20, snowman: 3, dock: 0 };
+    const out = [];
+    const ix0 = Math.floor(ch.x0 / REGION) - 1, ix1 = Math.floor((ch.x0 + CHUNK) / REGION) + 1;
+    const iz0 = Math.floor(ch.z0 / REGION) - 1, iz1 = Math.floor((ch.z0 + CHUNK) / REGION) + 1;
+    for (let iz = iz0; iz <= iz1; iz++) for (let ix = ix0; ix <= ix1; ix++) {
+      for (const f of this.featuresFor(this.terrain.cell(ix, iz))) {
+        const r = R[f.type] || 0;
+        if (r && f.x > ch.x0 - r - 40 && f.x < ch.x0 + CHUNK + r + 40 && f.z > ch.z0 - r - 40 && f.z < ch.z0 + CHUNK + r + 40) out.push([f.x, f.z, r]);
+      }
+    }
+    return out;
   }
 
   nature(ctx) {
     const { ch, T } = ctx;
     const G = 12;
+    const keep = this.keepOut(ch);
+    const clear = (x, z, pad) => !keep.some((k) => Math.hypot(x - k[0], z - k[1]) < k[2] + pad);
     const rnd = rngAt(this.seed, ch.ix, ch.iz, 3);
     const nrm = { x: 0, y: 1, z: 0 };
     for (let gz = 0; gz < CHUNK / G; gz++) {
@@ -884,6 +946,7 @@ export class World {
         const s = T.sample(x, z);
         const w = s.w;
         if (s.built > 0.6) continue; // built-up land is handled by the block code
+        if (!clear(x, z, 3)) continue;
         if (s.h < 0.4 && !s.ice) {
           if (s.h < -0.5) ch.spots.water.push([x, SEA, z]);
           continue;
@@ -936,6 +999,7 @@ export class World {
         const x = ch.x0 + (gx + 0.5) * F, z = ch.z0 + (gz + 0.5) * F;
         const s = T.sample(x, z);
         if (s.built > 0.3 || s.h < 1) continue;
+        if (!clear(x, z, 32)) continue; // fields are up to ~50m across
         T.normal(x, z, nrm);
         if (nrm.y < 0.93) continue;
         const k = r2();
@@ -960,8 +1024,10 @@ export class World {
     b.cyl(x, y, z, 0.05, 2.4, 5, L.WHITE, [0.9, 0.9, 0.9]);
     b.lathe(x, y + 1.9, z, [[1.6, 0], [1.2, 0.3], [0.05, 0.7]], 12, L.WHITE, c, (t) => c);
     this.addCyl(ctx, x, z, 1.6, y + 1.9, y + 2.6, "umbrella");
+    this.addCyl(ctx, x, z, 0.08, y, y + 1.9, "pole");
     // a sun lounger next to it
     b.box(x + 1.5, y + 0.3, z, 0.7, 0.1, 1.9, 0, { color: [0.95, 0.95, 0.9] });
+    this.addBox(ctx, x + 1.15, y, z - 0.95, x + 1.85, y + 0.4, z + 0.95, "lounger");
     ch.tourists.push([x + 1, y, z + 1]);
   }
 
@@ -982,19 +1048,26 @@ export class World {
 
   cabin(ctx, x, y, z, rnd, snowy) {
     const { b, ch } = ctx;
-    const w = 8 + rnd() * 3, d = 6 + rnd() * 2, h = 3.4;
+    const w = 8 + rnd() * 3, d = 6.5 + rnd() * 2;
     const rot = rnd() * Math.PI * 2;
-    b.box(x, y - 0.5, z, w, h + 0.5, d, rot, { side: L.LOGS, top: null, color: [1, 1, 1] });
     const rh = 2.8;
-    b.gable(x, y + h, z, w, d, rh, rot, snowy ? L.SNOW : L.ROOF_TILE, snowy ? [1, 1, 1] : [0.6, 0.55, 0.5], 0.7, L.LOGS);
+    const room = hollow(this, ctx, {
+      cx: x, cz: z, y: y - 0.3, w, d, h: 3.4, rot,
+      look: { outer: L.LOGS, outerColor: [1, 1, 1], inner: [0.72, 0.55, 0.38], trim: [0.5, 0.35, 0.22], floor: L.PLANKS, floorColor: [0.85, 0.75, 0.65] },
+      roof: { type: "gable", layer: snowy ? L.SNOW : L.ROOF_TILE, color: snowy ? [1, 1, 1] : [0.6, 0.55, 0.5], h: rh, overhang: 0.7 },
+      door: { side: 0, w: 1.2, h: 2.2 }, winW: 1.2, winH: 1.1,
+    }, rnd);
+    ch.spots.inside.push(...furnish(this, ctx, room, "cabin", rnd));
+    const [chx, chz] = room.F.at(0, -d * 0.35);
+    b.box(chx, room.top - 0.3, chz, 0.9, rh + 1.5, 0.9, rot, { side: L.BRICK, top: L.CONCRETE, color: [0.75, 0.7, 0.65] });
+    this.addOBox(ctx, chx, room.top - 0.3, chz, 0.9, rh + 1.5, 0.9, rot, "chimney");
     const cs = Math.cos(rot), sn = Math.sin(rot);
-    b.box(x + cs * w * 0.3, y + h, z - sn * w * 0.3, 0.9, rh + 1.5, 0.9, rot, { side: L.BRICK, top: L.CONCRETE, color: [0.75, 0.7, 0.65] });
-    this.addOBox(ctx, x, y - 0.5, z, w, h + 0.5 + rh * 0.6, d, rot, "cabin");
-    this.bin(ctx, x + sn * (d / 2 + 1.2), y, z + cs * (d / 2 + 1.2));
-    ch.spots.roof.push([x, y + h + rh, z]);
+    this.bin(ctx, x + sn * (d / 2 + 1.2) + cs * 2, y, z + cs * (d / 2 + 1.2) - sn * 2);
+    ch.spots.roof.push([x, room.roofTop, z]);
     ch.spots.ground.push([x + sn * (d / 2 + 3), y, z + cs * (d / 2 + 3)]);
     ch.hunters.push([x + sn * (d / 2 + 4), y, z + cs * (d / 2 + 4)]);
   }
+
 
   fence(ctx, x, y, z, rnd) {
     const { b, T } = ctx;
@@ -1005,22 +1078,31 @@ export class World {
       const px = x + cs * i * 2.5, pz = z - sn * i * 2.5;
       const py = T.height(px, pz);
       b.box(px, py - 0.2, pz, 0.15, 1.4, 0.15, rot, { side: L.PLANKS, color: [0.7, 0.6, 0.5] });
-      if (prev) for (const hh of [0.5, 1.0]) b.rod([prev[0], prev[1] + hh, prev[2]], [px, py + hh, pz], 0.05, 4, L.WHITE, [0.55, 0.45, 0.35]);
+      this.addOBox(ctx, px, py - 0.2, pz, 0.15, 1.4, 0.15, rot, "fence");
+      if (prev) for (const hh of [0.5, 1.0]) {
+        b.rod([prev[0], prev[1] + hh, prev[2]], [px, py + hh, pz], 0.05, 4, L.WHITE, [0.55, 0.45, 0.35]);
+        this.addSeg(ctx, [prev[0], prev[1] + hh, prev[2]], [px, py + hh, pz], 0.06, "rail");
+      }
       prev = [px, py, pz];
     }
   }
 
   hut(ctx, x, y, z, rnd) {
     const { b, ch } = ctx;
-    const w = 5 + rnd() * 2, d = 4 + rnd() * 1.5, h = 2.6;
+    const w = 5.5 + rnd() * 2, d = 4.5 + rnd() * 1.5;
     const rot = rnd() * Math.PI * 2;
-    b.box(x, y - 0.3, z, w, h + 0.3, d, rot, { side: L.PLANKS, top: null, color: [1, 0.95, 0.85] });
-    b.gable(x, y + h, z, w, d, 2, rot, L.THATCH, [1, 1, 1], 0.9, L.PLANKS);
-    this.addOBox(ctx, x, y - 0.3, z, w, h + 1.5, d, rot, "hut");
-    this.bin(ctx, x + Math.sin(rot) * (d / 2 + 1), y, z + Math.cos(rot) * (d / 2 + 1));
-    ch.spots.roof.push([x, y + h + 2, z]);
+    const room = hollow(this, ctx, {
+      cx: x, cz: z, y: y - 0.2, w, d, h: 2.8, rot,
+      look: { outer: L.PLANKS, outerColor: [1, 0.95, 0.85], inner: [0.85, 0.72, 0.5], trim: [0.95, 0.9, 0.8], floor: L.PLANKS, floorColor: [0.9, 0.8, 0.65] },
+      roof: { type: "gable", layer: L.THATCH, color: [1, 1, 1], h: 2, overhang: 0.9 },
+      door: { side: 0, w: 1.3, h: 2.1 }, winW: 1.3, winH: 1.0,
+    }, rnd);
+    ch.spots.inside.push(...furnish(this, ctx, room, "hut", rnd));
+    this.bin(ctx, x + Math.sin(rot) * (d / 2 + 1.2) + Math.cos(rot) * 1.5, y, z + Math.cos(rot) * (d / 2 + 1.2) - Math.sin(rot) * 1.5);
+    ch.spots.roof.push([x, room.roofTop, z]);
     ch.tourists.push([x + 4, y, z + 4]);
   }
+
 
   // ------------------------------------------------------------
   // one-off features per region: cooling towers, tavern, barn and
@@ -1093,6 +1175,7 @@ export class World {
 
   buildFeature(ctx, f) {
     const { b, ch } = ctx;
+    const rnd = rngAt(this.seed, Math.round(f.x), Math.round(f.z), 23);
     if (f.type === "tower") {
       // hyperboloid cooling tower you can fly down into
       const H = 95, prof = [];
@@ -1109,28 +1192,42 @@ export class World {
       ch.smoke.push({ x: f.x, y: f.y + H, z: f.z, big: true });
       ch.spots.roof.push([f.x + 17, f.y + H, f.z]);
     } else if (f.type === "tavern") {
-      const w = 16, d = 11, h = 7.5;
-      b.box(f.x, f.y - 1, f.z, w, h + 1, d, f.rot, { side: L.HOUSE, top: null, color: [0.95, 0.9, 0.82] });
-      b.gable(f.x, f.y + h, f.z, w, d, 4.5, f.rot, L.ROOF_TILE, [0.75, 0.7, 0.65], 0.8, L.HOUSE, [0.95, 0.9, 0.82]);
-      const cs = Math.cos(f.rot), sn = Math.sin(f.rot);
-      for (const s of [-0.35, 0.35]) b.box(f.x + cs * w * s, f.y + h, f.z - sn * w * s, 1.1, 6.5, 1.1, f.rot, { side: L.BRICK, top: L.CONCRETE, color: [0.8, 0.7, 0.65] });
-      // hanging sign
-      b.box(f.x + sn * (d / 2 + 0.6), f.y + 3, f.z + cs * (d / 2 + 0.6), 2, 1.1, 0.12, f.rot, { side: L.PLANKS, color: [1, 1, 1] });
-      this.addOBox(ctx, f.x, f.y - 1, f.z, w, h + 1 + 2.7, d, f.rot, "tavern");
-      this.bin(ctx, f.x + sn * (d / 2 + 2), f.y, f.z + cs * (d / 2 + 2));
-      ch.spots.roof.push([f.x, f.y + h + 4.5, f.z]);
-      ch.hunters.push([f.x + sn * (d / 2 + 5), f.y, f.z + cs * (d / 2 + 5)]);
+      const w = 16, d = 11;
+      const room = hollow(this, ctx, {
+        cx: f.x, cz: f.z, y: f.y - 0.5, w, d, h: 4.6, rot: f.rot,
+        look: { outer: L.HOUSE, outerColor: [0.95, 0.9, 0.82], inner: [0.8, 0.62, 0.42], trim: [0.3, 0.2, 0.12], floor: L.PLANKS, floorColor: [0.8, 0.7, 0.6] },
+        roof: { type: "gable", layer: L.ROOF_TILE, color: [0.75, 0.7, 0.65], h: 4.5, overhang: 0.8 },
+        door: { side: 0, w: 1.6, h: 2.5 },
+      }, rnd);
+      ch.spots.inside.push(...furnish(this, ctx, room, "tavern", rnd));
+      for (const s2 of [-0.35, 0.35]) {
+        const [cx2, cz2] = room.F.at(w * s2, 0);
+        b.box(cx2, room.top - 0.3, cz2, 1.1, 6.3, 1.1, f.rot, { side: L.BRICK, top: L.CONCRETE, color: [0.8, 0.7, 0.65] });
+        this.addOBox(ctx, cx2, room.top - 0.3, cz2, 1.1, 6.3, 1.1, f.rot, "chimney");
+      }
+      // hanging sign by the door
+      const [sx, sz] = room.F.at(2.2, d / 2 + 0.6);
+      b.box(sx, f.y + 2.6, sz, 2, 1.1, 0.12, f.rot, { side: L.PLANKS, color: [1, 1, 1] });
+      const [bx, bz] = room.F.at(-4, d / 2 + 2);
+      this.bin(ctx, bx, f.y, bz);
+      ch.spots.roof.push([f.x, room.roofTop, f.z]);
+      const [hx, hz] = room.F.at(0, d / 2 + 5);
+      ch.hunters.push([hx, f.y, hz]);
     } else if (f.type === "barn") {
-      const w = 18, d = 12, h = 7;
-      b.box(f.x, f.y - 1, f.z, w, h + 1, d, f.rot, { side: L.BARN, top: null, color: [1, 1, 1] });
-      b.gable(f.x, f.y + h, f.z, w, d, 5, f.rot, L.SNOW, [1, 1, 1], 0.8, L.BARN);
+      const w = 18, d = 12;
+      const room = hollow(this, ctx, {
+        cx: f.x, cz: f.z, y: f.y - 0.5, w, d, h: 7, rot: f.rot,
+        look: { outer: L.BARN, outerColor: [1, 1, 1], inner: [0.6, 0.42, 0.28], trim: [0.95, 0.93, 0.88], floor: L.PLANKS, floorColor: [0.7, 0.6, 0.45] },
+        roof: { type: "gable", layer: L.SNOW, color: [1, 1, 1], h: 5, overhang: 0.8 },
+        bigDoor: { w: 5, h: 5, sides: [0, 1] }, winW: 1.2, winH: 1.2, sill: 3.5,
+      }, rnd);
+      ch.spots.inside.push(...furnish(this, ctx, room, "barn", rnd));
       const cs = Math.cos(f.rot), sn = Math.sin(f.rot);
       b.cyl(f.x + cs * (w / 2 + 4), f.y, f.z - sn * (w / 2 + 4), 3, 14, 14, L.CONCRETE, [0.85, 0.85, 0.88], { r1: 3 });
       b.sphere(f.x + cs * (w / 2 + 4), f.y + 14, f.z - sn * (w / 2 + 4), 3, 14, L.SNOW, [1, 1, 1], 0.5);
-      this.addOBox(ctx, f.x, f.y - 1, f.z, w, h + 1 + 3, d, f.rot, "barn");
       this.addCyl(ctx, f.x + cs * (w / 2 + 4), f.z - sn * (w / 2 + 4), 3, f.y, f.y + 15.5, "silo");
-      this.bin(ctx, f.x + sn * (d / 2 + 2), f.y, f.z + cs * (d / 2 + 2));
-      ch.spots.roof.push([f.x, f.y + h + 5, f.z]);
+      this.bin(ctx, f.x + sn * (d / 2 + 2) + cs * 4, f.y, f.z + cs * (d / 2 + 2) - sn * 4);
+      ch.spots.roof.push([f.x, room.roofTop, f.z]);
       ch.hunters.push([f.x + sn * (d / 2 + 6), f.y, f.z + cs * (d / 2 + 6)]);
       // power line heading away from the barn
       let prev = null;
@@ -1161,6 +1258,7 @@ export class World {
       this.addSph(ctx, f.x, f.y + 0.9, f.z, 1.0, "snowman");
       this.addSph(ctx, f.x, f.y + 2.45, f.z, 0.72, "snowman");
       this.addSph(ctx, f.x, f.y + 3.55, f.z, 0.5, "snowman");
+      this.addCyl(ctx, f.x, f.z, 0.4, f.y + 3.95, f.y + 4.5, "hat");
       ch.spots.ground.push([f.x + 2, f.y, f.z + 2]);
     } else if (f.type === "dock") {
       const cs = Math.cos(f.rot), sn = Math.sin(f.rot);
@@ -1174,6 +1272,7 @@ export class World {
         for (const o of [-1.4, 1.4]) {
           const px = f.x + cs * len * t - sn * o, pz = f.z + sn * len * t + cs * o;
           b.cyl(px, -4, pz, 0.15, f.y + 4.8, 6, L.WHITE, [0.4, 0.3, 0.2]);
+          this.addCyl(ctx, px, pz, 0.16, -4, f.y + 0.8, "post");
         }
       }
       this.addOBox(ctx, mx, f.y - 0.2, mz, 3, 0.45, len, rot, "dock");
@@ -1262,6 +1361,10 @@ export class World {
         const d = Math.hypot(x - c.x, z - c.z);
         const rTop = c.prof[c.prof.length - 1][0];
         if (Math.abs(d - rTop + c.thick / 2) < c.thick) top = c.y1;
+      } else if (c.t === "gable") {
+        const dx = x - c.cx, dz = z - c.cz;
+        const lx = dx * c.cs - dz * c.sn, lz = dx * c.sn + dz * c.cs;
+        if (Math.abs(lx) <= c.hx && Math.abs(lz) <= c.hz) top = c.y0 + c.h * (1 - Math.abs(lz) / c.hz);
       }
       if (top > out.y && top <= yMax + 0.05) { out.y = top; out.kind = c.kind; out.water = false; out.collider = c; }
     }
@@ -1340,6 +1443,29 @@ export class World {
         const d = Math.hypot(dx, dy, dz);
         if (d >= c.r + r || d < 1e-6) continue;
         nn.x = dx / d; nn.y = dy / d; nn.z = dz / d; depth = c.r + r - d;
+      } else if (c.t === "gable") {
+        // a roof prism: two slopes meeting at a ridge along local x
+        if (p.y > c.y1 + r || p.y < c.y0 - r) continue;
+        const dx = p.x - c.cx, dz = p.z - c.cz;
+        const lx = dx * c.cs - dz * c.sn, lz = dx * c.sn + dz * c.cs;
+        if (Math.abs(lx) > c.hx + r || Math.abs(lz) > c.hz + r) continue;
+        const slope = c.h / c.hz;
+        const ys = c.y0 + c.h * (1 - Math.min(1, Math.abs(lz) / c.hz));
+        const nl = Math.hypot(slope, 1);
+        // distance above the sloped surface (measured along its normal)
+        const above = (p.y - ys) / nl;
+        if (above >= r) continue;
+        const endPen = c.hx + r - Math.abs(lx); // pushing out through a gable end
+        const slopePen = r - above;
+        if (Math.abs(lx) > c.hx - 0.01 && endPen < slopePen) {
+          const sx = lx >= 0 ? 1 : -1;
+          nn.x = sx * c.cs; nn.y = 0; nn.z = -sx * c.sn; depth = endPen;
+        } else {
+          const sz = lz >= 0 ? 1 : -1;
+          // local normal (0, 1, sz * slope) / nl, back to world
+          const ly = 1 / nl, lzn = (sz * slope) / nl;
+          nn.x = lzn * c.sn; nn.y = ly; nn.z = lzn * c.cs; depth = slopePen;
+        }
       } else if (c.t === "lathe") {
         if (p.y < c.y0 || p.y > c.y1 + r) continue;
         const dx = p.x - c.x, dz = p.z - c.z;
@@ -1360,6 +1486,22 @@ export class World {
       n++;
     }
     return n;
+  }
+
+  // the lowest solid thing directly above (x, y, z), e.g. a ceiling
+  ceilingAt(x, y, z) {
+    let best = Infinity;
+    for (const c of this.nearby(x, z, 1, this._tmpList3 || (this._tmpList3 = []))) {
+      let bottom = Infinity;
+      if (c.t === "box") { if (x >= c.x0 && x <= c.x1 && z >= c.z0 && z <= c.z1) bottom = c.y0; }
+      else if (c.t === "obox" || c.t === "gable") {
+        const dx = x - c.cx, dz = z - c.cz;
+        const lx = dx * c.cs - dz * c.sn, lz = dx * c.sn + dz * c.cs;
+        if (Math.abs(lx) <= c.hx && Math.abs(lz) <= c.hz) bottom = c.y0;
+      } else if (c.t === "cyl") { if ((x - c.x) ** 2 + (z - c.z) ** 2 <= c.r * c.r) bottom = c.y0; }
+      if (bottom > y && bottom < best) best = bottom;
+    }
+    return best;
   }
 
   // all loaded chunks' contents of one kind, e.g. world.each("spots", ...)
