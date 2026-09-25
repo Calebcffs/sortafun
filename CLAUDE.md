@@ -418,83 +418,99 @@ every daily puzzle (they index into it), including today's.
 All daily seeds use `mulberry32` + the Singapore `SortafunLB.dayStr()`, each
 game with its own offset so they don't line up.
 
-### Birdie (`birdie.html` + `birdie/`)
+### City Sandbox (`city.html` + `city/`, was Birdie)
 
-A 3D bird game modelled on Fly Like a Bird 3 (Gamevial, 2009), online or solo,
-three.js 0.160 from jsdelivr via an importmap, ES modules, no build step. The
-homepage features it in the `#featured` banner (screenshots in
-`birdie/birdie-*.jpg`) and in `GAMES` (key `birdie`, high score). Files (each
-has a header comment explaining it): `noise.js` (seeded rng/simplex),
-`terrain.js` (regions: city / hills / snow / island / industry on a jittered
-820m grid, heights, colours), `textures.js` (procedural canvas textures; the
-building atlas is a DataArrayTexture, one layer per surface, alpha marks
-windows that glow at night), `builders.js` (Batch geometry merger, trees with
-high/low LOD), `world.js` (128m chunks streamed round the bird, everything in a
-chunk merged into ~2-8 draw calls, colliders in a 16m spatial hash,
-`groundAt` / `collideSphere`), `sky.js` (Sky shader, day/night, fog tint per
-region, instanced billboard clouds and smoke, water, PMREM reflections),
-`species.js` (the ten birds: shape, paint, flight stats, diet, nest, egg),
-`model.js` (procedural rigged bird: body/neck/head, 3-bone wings with every
-feather, tail fan, legs and toes; all parts merged per material each frame by
-`syncMerged()` so a bird is ~8 draw calls), `flight.js` (the flight model),
-`game.js` (poo-o-meter, food, bins, poo and scoring, people, cars, nests, eggs,
-chicks, lives), `people.js`, `items.js`, `hud.js` (poo-cam = render target +
-circular overlay), `audio.js` (all synthesised), `menu.js`, `main.js` (loop,
-camera, spawn), `net.js` (online play, below). `birdie.simulate(seconds, {pitch, turn, poop...})` runs the
-game headless for testing.
+On 2026-09-25 Caleb asked for Birdie to grow into **City Sandbox**: a GTA /
+PUBG-without-the-circle open world where you mainly play as a person (loot,
+guns, a shop, cars, a motorbike, a plane in a secret hangar, wardens = police),
+birds kept as a quirk, everyone online in one world (max 50 total). He gave
+free rein and said to use downloaded models where they help. `birdie.html` is
+now just a redirect to `city.html`. three.js 0.160 from jsdelivr via an
+importmap, ES modules, no build step. Leaderboard keys: `city` (most cash,
+posted with "end & post score") and `birdie` (the bird game's points).
 
-Controls (changed from the original on Caleb's ask): DOWN/S flaps nearly
-straight up (60-72 deg, forward speed drops to ~0.18x cruise, height comes
-fast; near a surface while coming down it's the landing flare instead: brakes,
-sinks at ~1 m/s, lands), UP/W is powered fast flight (~1.9x cruise, full
-flapping, rising ~3 deg; heading down, it pulls the nose up hard first),
-hands off is a diving glide (-14 deg, ~1.35x cruise, wings a bit swept) that
-rounds out by itself just above the ground so gliding in still lands you,
-SHIFT is the steep dive, space = poo / nest / lay / feed. After landing
-DOWN has to be let go before it takes off again (`holdLatch`). The
-poo-o-meter drains at one constant rate (`game.js`, 0.0013/s) whatever you do.
-Flight tuning lives in each species' `flight` block; check changes by
-simulating (climb / glide / dive numbers), not by eye.
+**Models** are Kenney's CC0 packs (`city/assets/LICENSE-kenney.txt`):
+mini-characters (the 12 people, 723 tris, 30+ shared animations), car-kit (14
+cars), blaster-kit (the guns + gun cases), survival-kit (chests, boxes, axe).
+`tools/pack-assets.mjs` shrinks them with meshopt (header says how to rerun);
+the loader needs the meshopt decoder (`assets.js`). The motorbike and plane
+are built from boxes in `vehicles.js`. The world itself is still the
+procedural one. Style is chunky and toy-like on purpose (it matches the birds).
+Gotchas found the hard way: Kenney blasters point down **-z** (turn them round);
+the character's arm bones turn sideways in the holding poses, so the gun sits
+at a fixed spot in front of the chest rather than on the bone; three r160
+BufferAttribute has no `getComponent`.
 
-Everything visible is solid. Houses, cabins, huts, warehouses, the tavern
-and the barn are hollow and furnished (`interiors.js`: `hollow()` builds
-walls with open window holes, sills, a floor on a foundation that reaches
-below the slope, a ceiling and a gable or flat roof; `furnish()` fills the
-room and returns food spots, which go in `ch.spots.inside`). Sloped roofs use
-the `gable` collider (`world.addGable`), which `groundAt` and
-`collideSphere` both understand; `world.ceilingAt()` keeps the poo-cam under
-ceilings. `world.keepOut()` stops trees, fields and cabins spawning inside
-the tavern, barn and cooling towers. Parapets, awnings, lamps, fences, bushes,
-rocks, palms and the rest all have colliders too: if you add a prop, add its
-collider.
+Files (each has a header comment): the old bird ones (`noise.js`,
+`terrain.js`, `textures.js`, `builders.js`, `world.js`, `sky.js`, `species.js`,
+`model.js`, `flight.js`, `game.js` (the bird rules), `people.js`, `items.js`,
+`ambient.js` (wild birds), `effects.js`, `interiors.js`) plus:
+`assets.js` (GLB loading, `model()` copies, `mergedModel()` one-mesh copies for
+parked cars), `avatar.js` (a person: outfit + animations split into legs/arms
+layers so you can run and shoot at once; `OUTFITS` = the wardrobe, `male-c` is
+the warden), `human.js` (you on foot: walking physics, camera, guns; `pos` is
+the feet), `weapons.js` (`WEAPONS`, `AMMO`, `Gunfire`: hitscan against
+`world.raycast` + targets, rockets, grenades, explosions, effects),
+`vehicles.js` (`VEHICLES`, `Vehicle` physics for car / bike / plane,
+`VehicleManager`: parked, traffic, police cars), `npcs.js` (townsfolk and
+wardens), `loot.js` (containers + drops, `VALUABLES`), `shop.js` (save in
+localStorage `city-save-v1` + the shop UI), `cityhud.js`, `sandbox.js` (the
+human-side rules object tying it together: interact, hijack, wanted level,
+death), `net.js` (online), `menu.js`, `main.js` (`startHuman` / `tickHuman`).
 
-**Online (`birdie/net.js`, 2026-09-25).** Caleb asked for live multiplayer,
-max 50, one server, names over heads. The title screen has online / solo
-(`birdie-mode` in localStorage) and a name box (shares `sortafun-name` with the
-leaderboards, required online, 16 chars). Online everyone uses `SHARED_SEED`
-(the endless world is a pure function of the seed, so no looping map is
-needed) and spawns near the same spot with 30m of jitter. Backend is the
-Firebase **Realtime Database** (`databaseURL` in `firebase-config.js`,
-Singapore region) with **anonymous sign-in**; no server of our own. Firestore
-would be the wrong tool (per-write billing, 20k writes/day free).
-`birdie/players/<uid>` = `{n, s, st, pc, cc, sc, t}`, `st` a `|`-joined
-position/pose string sent 5x a second while moving, every 3s when still,
-removed by `onDisconnect`. Remote birds are drawn 0.25s in the past and
-interpolated; low-LOD `Bird`s within 450m (built one per 0.1s), at most 3
-re-posed per frame (2 on low graphics), name tag sprites (depthTest off,
-constant screen size, distance label) out to 3km. Poo / call counters (`pc`,
-`cc`) going up make their poos fall and calls play on everyone's screen. A
-poo of yours hitting another player = +10 and a `birdie/hits/<their uid>`
-record they see as "SPLATTED BY X". The 50 cap is checked on join (51st
-flies solo); a missing database or failed sign-in also falls back to solo.
-Rules in `database.rules.json` (players write only their own record, fields
-validated, hits readable only by the victim), uploaded by
-`.github/workflows/rtdb-deploy.yml` (`tools/rtdb-setup.mjs`, also switches on
-anonymous sign-in if it can). Test locally with the emulators:
-`npx firebase-tools@13 emulators:start --only auth,database --project sortafun-ba7cb`
-then `birdie.html?emu` on localhost; write fake players straight to the
-emulator with `Authorization: Bearer owner`. Measured with 49 fake birds:
-~2.5ms/frame for all of net.js.
+How it plays (human): WASD + mouse look (pointer lock: click the game), shift
+sprint, space jump, C crouch, left click fire, right click aim (sniper = scope),
+R reload, 1-9 / wheel / Q weapons, G grenade, E open / get in / get out /
+hijack, B shop, H medkit (horn in a car), V camera distance, P pause. Phones:
+stick + drag to look + FIRE / JUMP / USE / AIM. Start with fists and $150.
+- **Loot** sits on the spots the world already lists per chunk (sidewalks,
+  yards, parks, beaches, tables indoors); which spots, what kind, and what's
+  inside come from a hash of the position and the 8-minute refill window, so
+  it's the same for everyone. Cases always hold a gun.
+- **Shop** (bottom-right button or B): guns, ammo, medkits, armour, grenades,
+  vehicles (delivered next to you, then in your garage to call in free),
+  outfits, and selling valuables. Card pictures are rendered from the real
+  models with the game's own renderer into a render target (a second WebGL
+  renderer was slow and blank), in the background 6s after starting.
+- **World additions** (`world.js`): `raycast()` (bullets and the camera),
+  `ch.parking` (kerbside spots every city block, trucks in industry yards) and
+  `isHangarBlock()` / `hangar()`: one industry block per industrial region,
+  nearest its middle, skipping blocks near the cooling towers (they share the
+  middle), becomes a closed hangar with the plane, its big door facing the
+  long east-west road that is the runway.
+- **Vehicles**: arcade physics, the car rests on the ground under its four
+  wheels, car-vs-car uses a separating-axis rectangle test (a circle test made
+  traffic grind against every parked car). Damage starts over ~20 km/h.
+  Plane: W/S throttle, down arrow climbs, up arrow dives, A/D bank; it turns on
+  the spot when taxiing. A plane with nobody in it cuts its engine and glides
+  down; bailing out at height opens a parachute.
+- **Wardens**: witnessed crimes (a warden within ~55m, or 45% of bad ones get
+  called in) give stars. Cops chase, shoot (worse with distance and your
+  speed), police cars join at 2+ stars. Stars fade after 14s + 5s per star out
+  of sight. Death: WASTED, respawn at the start, hospital keeps 10% (max $500).
+
+**Online (`city/net.js`)**: Firebase Realtime Database + anonymous sign-in,
+everything under `city/` (players, hits, cars, loot, feed; shapes in the
+net.js header, rules in `database.rules.json`, auto-deployed with the rtdb
+workflow). People and birds are one list, 50 max, checked on join. Position
+strings 5x a second, drawn 0.25s in the past; people pack their vehicle's pose
+while driving. The shooter decides hits and writes `city/hits/<victim>`;
+the victim applies damage (people) or loses a life (birds), and a kill goes
+in the feed with a $100 bounty for the killer. Taking a car writes
+`city/cars/<id>` so it vanishes from its spot for everyone and reappears where
+it's left. Opening loot writes `city/loot/<id>`. Gunfire is a `fx` string
+(latest shot) the others replay as tracers, flashes and sound.
+
+**Testing** (all headless Chrome, see earlier notes): `birdie.simulate(sec,
+{keys: ["KeyW"], hits: ["KeyE"], fire, aim, mdx, mdy})` drives the person
+(`hits` = pressed this frame; semi-auto guns need `hits: ["Mouse0"]`).
+Multiplayer: `npx firebase-tools@13 emulators:start --only auth,database
+--project sortafun-ba7cb`, then `city.html?emu` on localhost; `Bearer owner`
+writes bypass the rules for fake players. A hidden headless tab pauses the
+game (the bird's start invulnerability then never runs out). Software
+rendering is slow; judge speed by the logic tick (~1-2.5ms), not frames.
+Always run `tools/stamp.py` before testing a change or the browser keeps the
+old module.
 
 ### Sound (`sfx.js`)
 
@@ -603,6 +619,6 @@ file.** sortafun.org is behind Cloudflare, which tells browsers to keep .js and
 .css for 4 hours (HTML only 10 minutes), so without it people get new pages
 running old scripts (this bit us: Caleb kept flying an hours-old Birdie). The
 script stamps every local `src`/`href` with `?v=<content hash>` and keeps an
-import map entry per Birdie module in `birdie.html`, since the modules import
-each other by plain relative paths. New pages and new birdie modules are
+import map entry per City Sandbox module in `city.html`, since the modules
+import each other by plain relative paths. New pages and new birdie modules are
 picked up automatically.

@@ -1,0 +1,533 @@
+// City Sandbox: playing as a person. This is the "rules" object for the
+// human side (the bird side's is game.js), and it ties everything together:
+//
+//   human.js     you on foot: walking, camera, guns
+//   vehicles.js  cars, bikes, the plane, traffic, police cars
+//   npcs.js      townsfolk and wardens (the police)
+//   loot.js      gun cases, chests, boxes, dropped wallets
+//   weapons.js   shooting, rockets, grenades, explosions
+//   shop.js      your stuff, saving, the shop
+//   cityhud.js   money, health, crosshair, prompts
+//
+// Plus the bits in between: getting in and out of vehicles (and hijacking),
+// opening loot, the wanted level, dying and respawning, the radar markers,
+// and the hooks net.js uses to show you to other players.
+
+import * as THREE from "three";
+import { HumanPlayer } from "./human.js";
+import { Npcs } from "./npcs.js";
+import { VehicleManager, VEHICLES } from "./vehicles.js";
+import { Loot, VALUABLES } from "./loot.js";
+import { Gunfire, WEAPONS, AMMO } from "./weapons.js";
+import { Shop, loadSave, writeSave, money } from "./shop.js";
+import { CityHud } from "./cityhud.js";
+import { WildBirds } from "./ambient.js";
+import { itemGeometry } from "./items.js";
+import { modelNow } from "./assets.js";
+import { clamp } from "./noise.js";
+import { SEA } from "./terrain.js";
+
+export class Sandbox {
+  constructor(game, opts) {
+    this.g = game;
+    game.sandbox = this;
+    this.scene = game.scene;
+    this.world = game.world;
+    this.inv = loadSave(opts.outfit);
+    if (opts.outfit && this.inv.outfits.includes(opts.outfit)) this.inv.outfit = opts.outfit;
+    this.time = 0;
+    this.wanted = 0;
+    this.unseenT = 0;
+    this.copCarT = 0;
+    this.menuOpen = false;
+    this.godT = 3;
+    this.deadT = 0;
+    this.bubbles = [];
+    this.player = new HumanPlayer(game, this, this.inv.outfit);
+    game.gunfire = new Gunfire(game);
+    game.gunfire.targets = () => this.targets();
+    this.hud = new CityHud(game, this);
+    this.npcs = new Npcs(game, this);
+    this.vehicles = new VehicleManager(game, this);
+    this.loot = new Loot(game, this);
+    this.shop = new Shop(game, this);
+    this.wild = new WildBirds(game, { low: 3, med: 6, high: 8 }[game.quality] || 5);
+    // what net.js needs to draw other players' poo (the birds online)
+    this.geos = { poo: itemGeometry("poo"), splat: itemGeometry("splat") };
+    this.mat = game.world.atlasMat;
+    this.splats = [];
+    this.score = 0;
+    // a parachute for bailing out of the plane
+    this.chute = makeChute();
+    this.chute.visible = false;
+    this.player.avatar.root.add(this.chute);
+    // your last weapon, straight back in your hands
+    const start = this.inv.lastWeapon && (this.inv.weapons[this.inv.lastWeapon] || this.inv.lastWeapon === "fists") ? this.inv.lastWeapon : "fists";
+    if (start !== "fists") this.player.select(start);
+    this.hud.weapon();
+    // draw the shop's pictures in the background once things have settled
+    this.thumbTimer = setTimeout(() => { if (this.g.sandbox === this) this.shop.makeThumbs(); }, 6000);
+  }
+
+  now() { return this.g.net && this.g.net.c ? this.g.net.c.now() : Date.now(); }
+  save() { this.inv.lastWeapon = this.player.weapon; writeSave(this.inv); }
+
+  // ------------------------------------------------------------
+  // who can be shot
+  // ------------------------------------------------------------
+  targets() {
+    const out = [];
+    const me = this.player;
+    for (const n of this.npcs.list) if (!n.dead) out.push(this.npcs.target(n));
+    if (!me.dead) {
+      if (me.vehicle && !me.vehicle.showRider) {
+        // inside a car: the car takes the hits (you get a bit of it)
+      } else {
+        out.push({ id: "me", kind: "me", x: me.pos.x, y: me.pos.y, z: me.pos.z, r: 0.36, h: me.crouch ? 1.2 : 1.72, hit: (dmg, info) => me.hurt(dmg, info) });
+      }
+    }
+    for (const v of this.vehicles.all()) {
+      if (v.dead) continue;
+      const mine = v === me.vehicle;
+      out.push({
+        id: mine ? "me" : v.id, kind: "vehicle", obox: v.obox,
+        hit: (dmg, info) => {
+          v.damage(dmg * (info.blast ? 1 : 0.45), info.by && info.by.isPlayer ? "me" : null);
+          if (mine) me.hurt(dmg * (info.blast ? 0.6 : 0.15), info);
+          if (info.by && info.by.isPlayer && v.driver && v.driver.cop) this.addWanted(1, v.pos);
+        },
+      });
+      // cops shoot at the car you're in, which the line above covers; the
+      // shooter id "me" keeps your own bullets off it
+    }
+    if (this.g.net) for (const t of this.g.net.targets()) out.push(t);
+    for (const w of this.wild.birds) {
+      out.push({ id: "wild", kind: "bird", x: w.pos.x, y: w.pos.y - 0.3, z: w.pos.z, r: 0.35 * Math.max(1, w.scale), h: 0.6, hit: (dmg, info) => this.shootBird(w, info) });
+    }
+    return out;
+  }
+
+  shootBird(w, info) {
+    const i = this.wild.birds.indexOf(w);
+    if (i < 0) return;
+    this.g.gunfire.sprite(this.g.gunfire.dustMat, w.pos, 1.2, 0.8, { grow: 2, rise: -1 });
+    this.wild.remove(i);
+    if (info.by && info.by.isPlayer) this.hud.toast("you shot a bird out of the sky. harsh.", "");
+  }
+
+  // ------------------------------------------------------------
+  // crime and punishment
+  // ------------------------------------------------------------
+  addWanted(n, pos) {
+    const before = this.wanted;
+    this.wanted = clamp(this.wanted + n, 0, 5);
+    this.unseenT = 0;
+    if (this.wanted > before) { this.hud.wanted(); if (before === 0) this.hud.toast("the wardens are after you!", "bad"); }
+  }
+  seenByCops() { this.unseenT = 0; }
+  // something bad happened at p: if a warden's close, or someone calls it in
+  crimeSeen(p, severity) {
+    const cop = this.npcs.list.some((n) => n.cop && !n.dead && n.pos.distanceTo(p) < 55);
+    if (cop) this.addWanted(severity, p);
+    else if (severity >= 2 && Math.random() < 0.45) this.addWanted(1, p);
+  }
+  onShot(key, muzzle, hits, o, d) {
+    if (key === "fists" || key === "axe") return;
+    this.npcs.alarm(this.player.pos, 32);
+    // shooting with a warden watching is enough
+    if (this.npcs.list.some((n) => n.cop && !n.dead && n.pos.distanceTo(this.player.pos) < 30)) this.addWanted(this.wanted ? 0 : 1, this.player.pos);
+    if (this.g.net) {
+      const end = hits.length ? hits[0].point : o.clone().addScaledVector(d, Math.min(WEAPONS[key].range || 80, 120));
+      this.g.net.shot(key, muzzle, end);
+    }
+  }
+  onThrow(from, d) { if (this.g.net) this.g.net.shot("grenade", from, from.clone().add(d)); }
+  onKill(n, info) {
+    this.inv.stats.kills++;
+    if (n.cop) this.hud.toast("you took down a warden. they won't like that.", "bad");
+  }
+
+  // ------------------------------------------------------------
+  // money and stuff
+  // ------------------------------------------------------------
+  earn(n, msg) {
+    if (!n) return;
+    this.inv.money += n;
+    this.inv.stats.earned += n;
+    this.hud.money(n);
+    this.g.sound.cash();
+    if (msg) this.hud.toast(msg + " +" + money(n), "good");
+    this.save();
+  }
+
+  giveWeapon(k, select) {
+    const W = WEAPONS[k];
+    const had = !!this.inv.weapons[k];
+    this.inv.weapons[k] = true;
+    if (W.ammo && !had) this.inv.mag[k] = W.mag;
+    if (select || !had) this.player.select(k);
+    this.hud.weapon();
+    this.save();
+  }
+
+  // items from a container or off the ground
+  give(items, verb) {
+    const got = [];
+    for (const it of items) {
+      if (it.kind === "cash") { this.inv.money += it.n; this.inv.stats.earned += it.n; this.hud.money(it.n); got.push(money(it.n)); }
+      else if (it.kind === "ammo") { const A = AMMO[it.ammo]; this.inv.ammo[it.ammo] += A.pack * it.packs; got.push(A.name + " x" + A.pack * it.packs); }
+      else if (it.kind === "weapon") {
+        if (this.inv.weapons[it.w] && WEAPONS[it.w].ammo) { const A = AMMO[WEAPONS[it.w].ammo]; this.inv.ammo[WEAPONS[it.w].ammo] += A.pack * 2; got.push(A.name + " x" + A.pack * 2); }
+        else { this.giveWeapon(it.w, false); got.push("a " + WEAPONS[it.w].name + "!"); }
+      } else if (it.kind === "valuable") { this.inv.valuables[it.v] = (this.inv.valuables[it.v] || 0) + 1; got.push("a " + VALUABLES[it.v].name); }
+      else if (it.kind === "medkit") { this.inv.medkits++; got.push("a medkit"); }
+      else if (it.kind === "armor") { this.player.armor = Math.min(100, this.player.armor + 50); got.push("body armour"); }
+      else if (it.kind === "grenade") { this.inv.grenades += it.n; this.inv.weapons.grenade = true; got.push(it.n + (it.n === 1 ? " grenade" : " grenades")); }
+    }
+    this.g.sound.pickup();
+    if (items.some((i) => i.kind === "cash")) this.g.sound.cash();
+    this.hud.toast((verb || "found") + ": " + (got.join(", ") || "nothing"), "good");
+    if (items.some((i) => i.kind === "valuable")) this.hud.toast("sell valuables in the shop (B)", "");
+    this.hud.health(); this.hud.weapon();
+    this.save();
+  }
+
+  wear(k) {
+    this.inv.outfit = k;
+    const w = this.player.weapon;
+    this.player.avatar.setOutfit(k).then(() => { this.player.avatar.setWeapon(w === "fists" ? null : w); this.player.avatar.root.add(this.chute); });
+    this.save();
+  }
+
+  useMedkit() {
+    const p = this.player;
+    if (this.inv.medkits <= 0) return this.hud.toast("no medkits. the shop has them (B).", "warn");
+    if (p.health >= 100) return this.hud.toast("you're fine", "");
+    this.inv.medkits--;
+    p.heal(60);
+    this.g.sound.pickup();
+    this.hud.health();
+    this.save();
+  }
+
+  onLootOpened(c) {
+    this.inv.stats.opened++;
+    if (this.g.net) this.g.net.lootOpened(c.id);
+  }
+
+  // ------------------------------------------------------------
+  // vehicles: in and out
+  // ------------------------------------------------------------
+  interact() {
+    const me = this.player;
+    if (me.dead) return;
+    if (me.vehicle) return this.exitVehicle();
+    // loot first (it's usually what you're looking at), then vehicles
+    const c = this.loot.nearest(me.pos, 2.2);
+    if (c) { this.give(this.loot.open(c), this.loot.label(c)); return; }
+    const v = this.vehicles.nearest(me.pos, 2.6);
+    if (v) return this.enterVehicle(v);
+  }
+
+  enterVehicle(v) {
+    const me = this.player;
+    if (this.g.net && this.g.net.isTaken(v.id)) return this.hud.toast("someone else is driving that", "warn");
+    if (v.ai || (v.driver && v.driver.npc)) {
+      // hijack: the driver gets thrown out and legs it
+      const wasCop = this.vehicles.takeFromTraffic(v);
+      const p = v.exitPoint();
+      const n = this.npcs.make(wasCop ? "male-c" : ["male-a", "male-d", "female-b", "female-d", "male-f"][Math.floor(Math.random() * 5)], p.x, v.pos.y, p.z);
+      n.panic = 10; n.fleeFrom = me.pos.clone(); n.cop = wasCop;
+      if (wasCop) { n.weapon = "pistol"; n.chase = true; this.addWanted(2, v.pos); }
+      else this.crimeSeen(v.pos, 1);
+      this.shout(n, wasCop ? "HEY! THAT'S A POLICE CAR!" : "MY CAR!");
+    }
+    me.vehicle = v;
+    v.driver = "me";
+    v.upgrade();
+    v.speed = v.speed || 0;
+    me.crouch = false;
+    this.g.sound.door();
+    this.chute.visible = false; me.parachute = false;
+    const hint = v.plane ? "W/S throttle, down arrow to climb, up arrow to dive, A/D to bank. get fast on a long road, then pull up." : v.bike ? "W/S go and brake, A/D lean. space is the handbrake." : "W/S drive, A/D steer, space handbrake, H horn. E gets you out.";
+    if (!this.hinted || !this.hinted[v.type]) { this.hinted = this.hinted || {}; this.hinted[v.type] = true; this.hud.toast(hint, ""); }
+    if (v.plane && !this.inv.garage.includes("plane") && !this.planeFound) { this.planeFound = true; this.hud.big("YOU FOUND THE SECRET PLANE!", "good"); }
+    if (this.g.net) this.g.net.enteredVehicle(v);
+  }
+
+  exitVehicle(forced) {
+    const me = this.player, v = me.vehicle;
+    if (!v) return;
+    const air = v.plane && !v.onGround;
+    if (!forced && !air && Math.abs(v.speed) > 12 && !v.bike) return this.hud.toast("slow down first (or jump out on a bike)", "warn");
+    const p = air ? v.pos.clone().add(new THREE.Vector3(0, -3, 0)) : v.exitPoint();
+    this.justLeft = v; this.justLeftT = 1.5; // it can't run you over as you climb out
+    const g = this.world.groundAt(p.x, p.z, v.pos.y + 2, {});
+    me.vehicle = null;
+    v.driver = null;
+    me.place(p.x, air ? p.y : Math.max(g.y, v.pos.y - 0.5), p.z, v.yaw);
+    me.camYaw = v.yaw;
+    if (air) {
+      me.parachute = true;
+      this.chute.visible = true;
+      me.vel.copy(v.forward().multiplyScalar(v.speed * 0.3));
+      this.hud.toast("bailed out! the parachute's got you.", "good");
+    } else if (Math.abs(v.speed) > 8) {
+      me.vel.copy(v.forward().multiplyScalar(v.speed * 0.4)); me.vel.y = 3;
+      me.hurt(Math.abs(v.speed) * 1.5, { fall: true });
+    }
+    this.vehicles.leave(v);
+    this.g.sound.door();
+    if (this.g.net) this.g.net.leftVehicle(v);
+  }
+
+  onVehicleExploded(v) {
+    const me = this.player;
+    if (v === me.vehicle) { this.exitVehicle(true); me.hurt(250, { blast: true }); }
+    this.npcs.alarm(v.pos, 40);
+    if (v.lastBy === "me" && v.driver && v.driver.cop) this.addWanted(2, v.pos);
+  }
+
+  // ------------------------------------------------------------
+  // death
+  // ------------------------------------------------------------
+  onDeath(info) {
+    const me = this.player;
+    this.inv.stats.deaths++;
+    if (me.vehicle) this.exitVehicle(true);
+    this.hud.wasted(true);
+    this.g.sound.crash();
+    this.deadT = 4;
+    this.g.input.unlock();
+    if (this.g.net && info && info.remote) this.g.net.died(info);
+  }
+
+  respawn() {
+    const me = this.player;
+    const fee = Math.min(500, Math.floor(this.inv.money * 0.1));
+    this.inv.money -= fee;
+    me.dead = false; me.health = 100; me.armor = 0;
+    this.wanted = 0; this.hud.wanted();
+    this.hud.wasted(false);
+    const s = this.g.spawnPoint;
+    me.place(s.x, s.y, s.z, s.yaw);
+    me.vel.set(0, 0, 0);
+    this.godT = 4;
+    this.hud.money(fee ? -fee : 0);
+    this.hud.health();
+    this.hud.toast(fee ? "the hospital patched you up and charged " + money(fee) + "." : "back on your feet.", "");
+    this.save();
+  }
+
+  // ------------------------------------------------------------
+  // speech bubbles (like the bird game's "OI!")
+  // ------------------------------------------------------------
+  shout(n, text) {
+    const c = document.createElement("canvas");
+    c.width = 320; c.height = 128;
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.strokeStyle = "#1d1b2e"; g.lineWidth = 8;
+    g.beginPath(); g.ellipse(160, 56, 150, 46, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(130, 98); g.lineTo(120, 124); g.lineTo(160, 100); g.fill();
+    g.fillStyle = n.cop ? "#1d4fd8" : "#e0226c"; g.font = "bold " + (text.length > 12 ? 30 : 42) + "px 'Lilita One', 'Arial Black', sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(text, 160, 58);
+    const tex = new THREE.CanvasTexture(c);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    s.scale.set(2.2, 0.88, 1);
+    s.renderOrder = 50;
+    this.scene.add(s);
+    this.bubbles.push({ s, n, t: 2 });
+  }
+
+  grenadeModel() {
+    const m = modelNow("guns/grenade.glb");
+    if (!m) return new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshStandardMaterial({ color: 0x445533 }));
+    m.obj.scale.setScalar(0.18 / Math.max(m.size.x, m.size.y, m.size.z));
+    return m.obj;
+  }
+
+  // solid things people bump into and can stand on (parked cars)
+  solids() { return this.vehicles.solids(); }
+  standOn(x, z, yMax) { return this.vehicles.solidTopAt(x, z, yMax, this.player.vehicle); }
+
+  // ------------------------------------------------------------
+  // the radar (the poo-cam, from higher up): arrows to loot and trouble
+  // ------------------------------------------------------------
+  radarTargets() {
+    const me = this.player.pos, out = [];
+    for (const c of this.loot.containers.values()) {
+      if (this.loot.isOpen(c.id)) continue;
+      const d = Math.hypot(c.pos.x - me.x, c.pos.z - me.z);
+      if (d < 90) out.push({ x: c.pos.x, z: c.pos.z, d, color: c.type === "case" ? "#ff9a3c" : "#ffd21f" });
+    }
+    for (const d0 of this.loot.drops) { const d = Math.hypot(d0.pos.x - me.x, d0.pos.z - me.z); out.push({ x: d0.pos.x, z: d0.pos.z, d, color: "#5cf08e" }); }
+    for (const n of this.npcs.list) if (n.cop && !n.dead && n.chase && this.wanted) out.push({ x: n.pos.x, z: n.pos.z, d: n.pos.distanceTo(me), color: "#3b6bff" });
+    for (const v of this.vehicles.police) out.push({ x: v.pos.x, z: v.pos.z, d: v.pos.distanceTo(me), color: "#ff3b3b" });
+    for (const ch of this.world.chunks.values()) if (ch.hangar) {
+      const d = Math.hypot(ch.hangar.x - me.x, ch.hangar.z - me.z);
+      if (d < 320) out.push({ x: ch.hangar.x, z: ch.hangar.z, d, color: "#b27bff", label: "?" });
+    }
+    if (this.g.net) for (const t of this.g.net.radar()) out.push(t);
+    return out.sort((a, b) => a.d - b.d).slice(0, 14);
+  }
+  targetsForHud() { return this.radarTargets(); }
+
+  // ------------------------------------------------------------
+  // every frame
+  // ------------------------------------------------------------
+  update(dt, input) {
+    this.time += dt;
+    this.godT -= dt;
+    const me = this.player;
+    // keys
+    if (input.hit("KeyB") || input.hit("Touch:shop")) this.shop.toggle();
+    if (input.hit("KeyH") && !me.vehicle) this.useMedkit();
+    if (!this.menuOpen && (input.hit("KeyE") || input.hit("KeyF") || input.hit("Touch:use"))) this.interact();
+    // you
+    me.update(dt, input);
+    if (me.vehicle) {
+      const v = me.vehicle;
+      const up = input.down("KeyW") || input.down("ArrowUp") && !v.plane, dn = input.down("KeyS") || input.down("ArrowDown") && !v.plane;
+      let steer = (input.down("KeyD") || (!v.plane && input.down("ArrowRight")) ? 1 : 0) - (input.down("KeyA") || (!v.plane && input.down("ArrowLeft")) ? 1 : 0);
+      let thr = (up ? 1 : 0) - (dn ? 1 : 0);
+      if (input.stick) { steer = input.stick.x; thr = -input.stick.y; }
+      let pitch = 0;
+      if (v.plane) {
+        pitch = (input.down("ArrowUp") ? 1 : 0) - (input.down("ArrowDown") ? 1 : 0);
+        if (input.down("ArrowLeft")) steer = -1;
+        if (input.down("ArrowRight")) steer = 1;
+        if (input.stick) { pitch = input.stick.y * -1 * 0; }
+      }
+      if (this.menuOpen) { thr = 0; steer = 0; }
+      if (input.hit("KeyH") && !v.plane) this.g.sound.horn();
+      v.drive(dt, { throttle: thr, steer, handbrake: input.down("Space") ? 1 : 0, pitch });
+      v.update(dt);
+      this.npcs.runOver(v);
+      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : "car", clamp(v.plane ? v.plThrottle : Math.abs(v.speed) / v.def.top, 0, 1));
+      if (v.sunk && !v.plane) { this.exitVehicle(true); this.hud.toast("your car sank!", "bad"); }
+    } else this.g.sound.engine(null);
+    // the parachute
+    if (me.parachute) {
+      if (me.vel.y < -5) me.vel.y = -5;
+      if (me.onGround || me.swim) { me.parachute = false; this.chute.visible = false; }
+    }
+    // everything else
+    this.vehicles.update(dt);
+    for (const v of this.vehicles.traffic) this.npcs.runOver(v);
+    for (const v of this.vehicles.police) this.npcs.runOver(v);
+    this.hitByCars(dt);
+    this.npcs.update(dt);
+    this.loot.update(dt);
+    this.g.gunfire.update(dt);
+    this.wild.update(dt);
+    this.updateBubbles(dt);
+    // wanted: stars go when no warden has seen you for a while; police cars join in at 2+
+    if (this.wanted > 0) {
+      this.unseenT += dt;
+      if (this.unseenT > 14 + this.wanted * 5) { this.wanted--; this.unseenT = 0; this.hud.wanted(); if (!this.wanted) this.hud.toast("you lost the wardens", "good"); }
+      this.copCarT -= dt;
+      if (this.wanted >= 2 && this.copCarT <= 0 && this.vehicles.police.filter((v) => !v.dead).length < this.wanted - 1) { this.copCarT = 6; this.vehicles.spawnPolice(); }
+    }
+    // health creeps back up to half when you keep out of trouble
+    if (!me.dead && me.health < 50 && this.time - me.lastHurt > 8) { me.health = Math.min(50, me.health + dt * 2); this.hud.health(); }
+    // dead: wait, then back to the start
+    if (me.dead) { this.deadT -= dt; if (this.deadT <= 0) this.respawn(); }
+    // what E would do right now
+    let prompt = "";
+    if (!me.dead && !this.menuOpen) {
+      if (me.vehicle) prompt = Math.abs(me.vehicle.speed) > 12 && !me.vehicle.bike && !(me.vehicle.plane && !me.vehicle.onGround) ? "" : me.vehicle.plane && !me.vehicle.onGround ? "[E] bail out" : "[E] get out";
+      else {
+        const c = this.loot.nearest(me.pos, 2.2);
+        if (c) prompt = "[E] open " + this.loot.label(c);
+        else {
+          const v = this.vehicles.nearest(me.pos, 2.6);
+          if (v) prompt = (v.ai || (v.driver && v.driver.npc) ? "[E] hijack the " : "[E] get in the ") + VEHICLES[v.type].name;
+        }
+      }
+    }
+    this.hud.prompt(matchMedia("(pointer: coarse)").matches ? prompt.replace("[E] ", "") : prompt);
+    this.hud.update(dt);
+    this.score = this.inv.money;
+  }
+
+  // traffic and police cars knock you over if you stand in the road
+  hitByCars(dt) {
+    const me = this.player;
+    if (me.vehicle || me.dead || this.godT > 0) return;
+    this.justLeftT = (this.justLeftT || 0) - dt;
+    for (const v of this.vehicles.all()) {
+      const sp = Math.abs(v.speed);
+      if (sp < 5 || v === me.vehicle || (v === this.justLeft && this.justLeftT > 0) || (v.plane && !v.onGround)) continue;
+      const o = v.obox;
+      const dx = me.pos.x - o.x, dz = me.pos.z - o.z;
+      if (Math.abs(dx) > o.hz + 1 || Math.abs(dz) > o.hz + 1) continue;
+      const cs = Math.cos(o.yaw), sn = Math.sin(o.yaw);
+      const lx = dx * cs - dz * sn, lz = dx * sn + dz * cs;
+      if (Math.abs(lx) < o.hx + 0.35 && Math.abs(lz) < o.hz + 0.35 && Math.abs(me.pos.y - v.pos.y) < 1.5) {
+        const f = new THREE.Vector3(Math.sin(v.yaw), 0, Math.cos(v.yaw)).multiplyScalar(Math.sign(v.speed));
+        me.vel.copy(f).multiplyScalar(sp * 0.7); me.vel.y = 4 + sp * 0.15;
+        me.pos.addScaledVector(f, 0.5);
+        me.hurt(sp * 2.5, { car: true });
+        this.godT = 0.6;
+        this.g.sound.punch();
+        if (v.ai) v.ai.stuck = 2;
+      }
+    }
+  }
+
+  updateBubbles(dt) {
+    for (let i = this.bubbles.length - 1; i >= 0; i--) {
+      const b = this.bubbles[i];
+      b.t -= dt;
+      b.s.position.set(b.n.pos.x, b.n.pos.y + 2.5 + (2 - b.t) * 0.2, b.n.pos.z);
+      if (b.t <= 0) { b.s.removeFromParent(); b.s.material.map.dispose(); b.s.material.dispose(); this.bubbles.splice(i, 1); }
+    }
+  }
+
+  // the bird game's bits other code asks the rules for
+  splat(pos, n) {
+    const m = new THREE.Mesh(this.geos.splat, this.mat);
+    m.position.copy(pos).addScaledVector(new THREE.Vector3(n.x, n.y, n.z), 0.02);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(n.x, n.y, n.z).normalize());
+    this.scene.add(m);
+    this.splats.push(m);
+    if (this.splats.length > 40) this.splats.shift().removeFromParent();
+  }
+  targetsLegacy() { return []; }
+  summary() {
+    const s = this.inv.stats;
+    return { human: true, score: this.inv.money, money: this.inv.money, kills: s.kills, opened: s.opened, earned: s.earned, deaths: s.deaths, garage: this.inv.garage.length };
+  }
+
+  dispose() {
+    clearTimeout(this.thumbTimer);
+    this.save();
+    this.g.sound.engine(null);
+    this.player.dispose();
+    this.npcs.dispose();
+    this.vehicles.dispose();
+    this.loot.dispose();
+    this.wild.dispose();
+    this.g.gunfire.dispose();
+    this.hud.dispose();
+    this.shop.close();
+    for (const b of this.bubbles) b.s.removeFromParent();
+    for (const s of this.splats) s.removeFromParent();
+    this.g.gunfire = null;
+    this.g.sandbox = null;
+  }
+}
+
+function makeChute() {
+  const g = new THREE.Group();
+  const canopy = new THREE.Mesh(new THREE.SphereGeometry(2.2, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.6), new THREE.MeshStandardMaterial({ color: 0xff5a3c, side: THREE.DoubleSide, roughness: 0.8 }));
+  canopy.scale.set(1, 0.55, 0.8);
+  canopy.position.y = 4.4;
+  g.add(canopy);
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x222222 });
+  for (const [x, z] of [[1.9, 0], [-1.9, 0], [0, 1.4], [0, -1.4]]) {
+    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 1.4, 0), new THREE.Vector3(x, 4.5, z)]);
+    g.add(new THREE.Line(geo, lineMat));
+  }
+  return g;
+}

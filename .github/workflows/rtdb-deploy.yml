@@ -1,6 +1,6 @@
-name: Realtime Database (Birdie multiplayer)
+name: Realtime Database (City Sandbox online)
 
-# Birdie's online play (birdie/net.js) keeps every flying player's position in
+# City Sandbox online (city/net.js) keeps every player's position in
 # the Firebase Realtime Database. This switches on anonymous sign-in, checks the
 # database exists and uploads database.rules.json to it. Also runnable by hand
 # from the Actions tab ("Run workflow").

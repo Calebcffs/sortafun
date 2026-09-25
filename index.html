@@ -698,21 +698,21 @@
   <!-- ================= FEATURED ================= -->
   <section class="panel feature" id="featured">
     <div class="panel-head"><h2>&#9733; Featured Game</h2><p>our biggest one yet. a whole 3D world in your browser.</p></div>
-    <a class="feature-body" href="birdie.html">
+    <a class="feature-body" href="city.html">
       <span class="feature-shot">
-        <img src="birdie/birdie-feature.jpg" alt="a pigeon gliding over the city in birdie" width="960" height="540">
-        <img class="off" src="birdie/birdie-island.jpg" alt="a seagull over the islands in birdie" width="960" height="540" loading="lazy">
+        <img src="city/city-feature.jpg" alt="a player with an assault rifle on a city street in city sandbox" width="960" height="540">
+        <img class="off" src="city/city-plane.jpg" alt="the secret prop plane flying over the city in city sandbox" width="960" height="540" loading="lazy">
         <span class="ribbon">NEW!</span>
       </span>
       <span class="feature-text">
-        <h3>Birdie</h3>
-        <p>be a bird. glide, dive and flap your way round an endless world, and poo on everyone below.</p>
+        <h3>City Sandbox</h3>
+        <p>a whole open world city, online with up to 50 people. loot it, drive it, fly over it. or be a bird.</p>
         <ul>
-          <li>ten birds, from a tiny robin to a huge swan</li>
-          <li>cities, hills, snow, islands and factories that never end</li>
-          <li>eat, nest, raise a chick, dodge cars and power lines</li>
+          <li>gun cases, chests and boxes full of cash, guns and loot</li>
+          <li>hijack cars, ride bikes, find the plane in the secret hangar</li>
+          <li>a shop for guns, rides and outfits. the wardens are watching</li>
         </ul>
-        <span class="play-big">FLY NOW! &#9654;</span>
+        <span class="play-big">PLAY NOW! &#9654;</span>
       </span>
     </a>
   </section>
@@ -783,11 +783,11 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-25</span> birdie grew up: it's CITY SANDBOX now. walk, loot, drive, fly and shoot round the city with up to 50 people. you can still be a bird.</li>
         <li><span class="when">09-25</span> birdie is online! fly in one shared world with up to 50 other birds, names over their heads. poo on your friends.</li>
         <li><span class="when">09-25</span> word hive has a rank meter now, with bee ranks from wannabee to queen bee. harder letters, easier ranks.</li>
         <li><span class="when">09-25</span> the site makes noise now! clicks, dings, fanfares and a little 8-bit tune on this page. the speaker button turns it off.</li>
         <li><span class="when">09-25</span> birdie update: fly in through the windows, land on any roof, new controls (up = go fast) and a slower poo-o-meter.</li>
-        <li><span class="when">09-25</span> birdie! fly as one of ten birds round an endless 3D world. it's on the top of the page.</li>
         <li><span class="when">09-24</span> three new daily word games: five letters, four sides and word grab.</li>
       </ul>
     </section>
@@ -816,7 +816,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=23697025"></script>
+<script src="leaderboard.js?v=0c8ecaf4"></script>
 <script>
 "use strict";
 
@@ -830,7 +830,7 @@
  * ------------------------------------------------------------------ */
 
 var GAMES = [
-  { id: "birdie",    name: "Birdie",         url: "birdie.html",    cat: "skill",  key: "birdie",   badge: "new",   blurb: "be a bird in an endless 3D world. glide, dive, nest, and poo on people for points." },
+  { id: "city",      name: "City Sandbox",   url: "city.html",      cat: "skill",  key: "city",     badge: "new",   blurb: "an online open world city. loot, drive, fly, shop, dodge the wardens. or be a bird." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
   { id: "sides",     name: "Four Sides",     url: "sides.html",     cat: "word",   key: "sides",    badge: "new",   blurb: "twelve letters round a box. chain words together until you've used them all." },
@@ -955,24 +955,27 @@ var THUMB = {
     return bg("#3bc9db") + '<circle cx="10" cy="110" r="34" fill="#22b8cf"/><circle cx="150" cy="10" r="30" fill="#66d9e8"/>' + g +
       stick(138, 108, .7, "wave");
   },
-  birdie: function () {
+  city: function () {
+    // a chunky little person with a blaster on a city street, a car, and the plane overhead
     var towers = "";
-    [[6, 40, 22, "#8fb7d6"], [30, 60, 18, "#c8c0b0"], [50, 34, 20, "#6fa0c9"], [72, 70, 16, "#b9b6ad"], [90, 46, 22, "#8fb7d6"], [114, 58, 18, "#c9c2b5"], [134, 38, 22, "#6fa0c9"]].forEach(function (t) {
-      towers += '<rect x="' + t[0] + '" y="' + (120 - t[1]) + '" width="' + t[2] + '" height="' + t[1] + '" fill="' + t[3] + '" stroke="' + K + '" stroke-width="2"/>';
-      for (var wy = 120 - t[1] + 5; wy < 116; wy += 7) towers += '<path d="M' + (t[0] + 4) + ' ' + wy + 'h' + (t[2] - 8) + '" stroke="#e8f2fa" stroke-width="2" stroke-dasharray="3 2"/>';
+    [[4, 58, 24, "#8fb7d6"], [30, 76, 20, "#c8c0b0"], [98, 70, 22, "#6fa0c9"], [124, 52, 32, "#b9b6ad"]].forEach(function (t) {
+      towers += '<rect x="' + t[0] + '" y="' + (100 - t[1]) + '" width="' + t[2] + '" height="' + t[1] + '" fill="' + t[3] + '" stroke="' + K + '" stroke-width="2"/>';
+      for (var wy = 100 - t[1] + 5; wy < 96; wy += 7) towers += '<path d="M' + (t[0] + 4) + ' ' + wy + 'h' + (t[2] - 8) + '" stroke="#e8f2fa" stroke-width="2" stroke-dasharray="3 2"/>';
     });
-    return bg("#7fc3f5") + '<circle cx="130" cy="22" r="13" fill="#ffe066"/>' +
-      '<ellipse cx="40" cy="26" rx="20" ry="7" fill="#fff" opacity=".85"/><ellipse cx="100" cy="16" rx="16" ry="5" fill="#fff" opacity=".7"/>' + towers +
-      '<g transform="translate(78 50) rotate(-8)">' +
-      '<path d="M-2 0 C-18 -14 -34 -16 -48 -10 C-36 -6 -24 -2 -8 4Z" fill="#b7bcc6" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/>' +
-      '<path d="M2 0 C18 -18 36 -20 50 -14 C38 -8 26 -2 8 4Z" fill="#b7bcc6" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/>' +
-      '<path d="M-20 -8 L-44 -9 M20 -10 L46 -13" stroke="#5d6270" stroke-width="3"/>' +
-      '<ellipse cx="0" cy="3" rx="9" ry="7" fill="#8e939f" stroke="' + K + '" stroke-width="2.5"/>' +
-      '<path d="M-5 9 L0 18 L5 9Z" fill="#8e939f" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/>' +
-      '<circle cx="0" cy="-5" r="5.5" fill="#6c7a74" stroke="' + K + '" stroke-width="2.5"/>' +
-      '<path d="M-1.5 -10 L0 -14 L1.5 -10Z" fill="#2a2528"/></g>' +
-      '<g transform="translate(60 92)"><ellipse rx="5" ry="3" fill="#fff" stroke="' + K + '" stroke-width="1.5"/></g>' +
-      '<path d="M60 76 v10" stroke="#fff" stroke-width="2" stroke-dasharray="2 3"/>';
+    return bg("#7fc3f5") + '<circle cx="80" cy="18" r="10" fill="#ffe066"/>' + towers +
+      '<rect x="0" y="98" width="160" height="22" fill="#5b6270"/><path d="M0 108 h160" stroke="#f3d24a" stroke-width="2" stroke-dasharray="8 6"/>' +
+      '<g transform="translate(58 30) rotate(-8)"><rect x="-16" y="-3" width="32" height="6" rx="3" fill="#f2f2ee" stroke="' + K + '" stroke-width="2"/>' +
+      '<rect x="-4" y="-12" width="7" height="24" rx="2" fill="#f2f2ee" stroke="' + K + '" stroke-width="2"/><rect x="-18" y="-7" width="4" height="8" fill="#d8342c" stroke="' + K + '" stroke-width="1.5"/>' +
+      '<path d="M16 -6 v12" stroke="' + K + '" stroke-width="2"/></g>' +
+      '<g transform="translate(112 92)"><rect x="-20" y="-8" width="40" height="11" rx="3" fill="#e2502f" stroke="' + K + '" stroke-width="2"/>' +
+      '<path d="M-11 -8 l4 -8 h14 l4 8" fill="#cfe6f5" stroke="' + K + '" stroke-width="2"/>' +
+      '<circle cx="-11" cy="4" r="4.5" fill="#2a2a30" stroke="' + K + '" stroke-width="1.5"/><circle cx="11" cy="4" r="4.5" fill="#2a2a30" stroke="' + K + '" stroke-width="1.5"/></g>' +
+      '<g transform="translate(58 72)"><rect x="-9" y="-2" width="18" height="16" rx="3" fill="#35b36b" stroke="' + K + '" stroke-width="2"/>' +
+      '<rect x="-8" y="14" width="7" height="9" fill="#3e62c9" stroke="' + K + '" stroke-width="2"/><rect x="1" y="14" width="7" height="9" fill="#3e62c9" stroke="' + K + '" stroke-width="2"/>' +
+      '<rect x="-12" y="-24" width="24" height="22" rx="4" fill="#9a5a38" stroke="' + K + '" stroke-width="2"/><rect x="-12" y="-26" width="24" height="9" rx="3" fill="#2a2528" stroke="' + K + '" stroke-width="2"/>' +
+      '<circle cx="-4" cy="-12" r="1.8" fill="' + K + '"/><circle cx="4" cy="-12" r="1.8" fill="' + K + '"/>' +
+      '<rect x="4" y="2" width="20" height="6" rx="2" fill="#ff9a3c" stroke="' + K + '" stroke-width="2"/><rect x="8" y="7" width="4" height="6" fill="#555" stroke="' + K + '" stroke-width="1.5"/></g>' +
+      '<g transform="translate(22 104)"><rect x="-10" y="-9" width="20" height="12" rx="2" fill="#c47a3a" stroke="' + K + '" stroke-width="2"/><path d="M-10 -4 h20" stroke="' + K + '" stroke-width="2"/><rect x="-2" y="-6" width="4" height="4" fill="#ffd43b" stroke="' + K + '" stroke-width="1"/></g>';
   },
   five: function () {
     var rows = [["c", "r", "a", "n", "e"], ["s", "l", "i", "m", "e"], ["g", "r", "e", "a", "t"]];
@@ -1441,6 +1444,7 @@ document.getElementById("q").addEventListener("keydown", function (e) {
   var byKey = {};
   GAMES.concat(BASEMENT).forEach(function (g) { if (g.key) byKey[g.key] = g; });
   byKey.typing1000 = byKey.typing;
+  byKey.birdie = byKey.city; // birdie grew up into city sandbox
 
   function quiet() { list.innerHTML = '<li class="empty">no scores yet today. be the first!</li>'; }
   if (!window.SortafunLB || !SortafunLB.recent) { quiet(); return; }

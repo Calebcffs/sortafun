@@ -1,11 +1,14 @@
-// Birdie's menus: title screen (bird picker with a turning 3D preview,
-// start region, seed, graphics), loading, pause and game over (with the
-// leaderboard). Choices are remembered in localStorage.
+// City Sandbox's menus: title screen (person or bird, outfit / bird picker
+// with a turning 3D preview, start region, online or solo, graphics),
+// loading, pause and game over (with the leaderboard). Choices are
+// remembered in localStorage.
 
 import * as THREE from "three";
 import { Bird } from "./model.js";
 import { SPECIES, SPECIES_ORDER, FOOD, gameScale } from "./species.js";
 import { countOnline, cleanName, MAX_PLAYERS } from "./net.js";
+import { Avatar, OUTFITS } from "./avatar.js";
+import { loadSave, money } from "./shop.js";
 
 const SCAPES = [
   { key: "city", label: "City", color: "linear-gradient(#8fb9e8, #9aa3ad 60%, #50555c)" },
@@ -36,6 +39,9 @@ export class Menu {
     // online or solo; online needs a name to put over your bird
     this.mode = load("birdie-mode", "online");
     for (const b of document.querySelectorAll(".m-modes button")) b.addEventListener("click", () => { this.mode = b.dataset.mode; save("birdie-mode", this.mode); this.markMode(); });
+    // person or bird
+    this.kind = load("city-kind", "human");
+    for (const b of document.querySelectorAll(".m-kinds button")) b.addEventListener("click", () => { this.kind = b.dataset.kind; save("city-kind", this.kind); this.markKind(); });
     this.nameEl = document.getElementById("pname");
     this.nameEl.value = load("sortafun-name", "");
     this.markMode();
@@ -55,7 +61,7 @@ export class Menu {
 
     document.getElementById("play").addEventListener("click", () => this.play());
     document.getElementById("resume").addEventListener("click", () => this.g.setPaused(false));
-    document.getElementById("endflight").addEventListener("click", () => { this.g.paused = false; this.g.gameOver("you ended the flight."); });
+    document.getElementById("endflight").addEventListener("click", () => { this.g.paused = false; this.g.gameOver(this.g.sandbox ? "you called it a day. post your cash to the board?" : "you ended the flight."); });
     const toTitle = () => { this.g.stop(); this.g.hud.hide(); this.showTitle(); };
     document.getElementById("newbird").addEventListener("click", toTitle);
     document.getElementById("again2").addEventListener("click", toTitle);
@@ -63,6 +69,73 @@ export class Menu {
 
     this.buildScapes();
     this.previewRenderer = null;
+  }
+
+  markKind() {
+    const human = this.kind === "human";
+    for (const b of document.querySelectorAll(".m-kinds button")) b.classList.toggle("on", b.dataset.kind === this.kind);
+    document.getElementById("outfitbox").hidden = !human;
+    document.getElementById("birdbox").hidden = human;
+    document.getElementById("keys-human").hidden = !human;
+    document.getElementById("keys-bird").hidden = human;
+    document.getElementById("play").innerHTML = human ? "PLAY! &#9654;" : "FLY! &#9654;";
+    if (human) { this.buildOutfitList(); this.selectOutfit(this.outfit); }
+    else if (this.previewRenderer) { this.buildBirdList(); this.selectBird(this.species); }
+  }
+
+  // the outfits you own (the save in shop.js), each with a little picture
+  async buildOutfitList() {
+    const inv = loadSave();
+    this.outfit = this.outfit || inv.outfit;
+    if (!inv.outfits.includes(this.outfit)) this.outfit = inv.outfit;
+    const list = document.getElementById("outfitlist");
+    const have = [...list.children].map((b) => b.dataset.key).join();
+    if (have === inv.outfits.join()) { this.markOutfit(); return; }
+    list.innerHTML = "";
+    for (const key of inv.outfits) {
+      const btn = document.createElement("button");
+      btn.dataset.key = key;
+      const c = document.createElement("canvas");
+      c.width = c.height = 96;
+      btn.appendChild(c);
+      const label = document.createElement("span");
+      label.textContent = OUTFITS[key] ? OUTFITS[key].name : key;
+      btn.appendChild(label);
+      btn.addEventListener("click", () => this.selectOutfit(key));
+      list.appendChild(btn);
+    }
+    this.markOutfit();
+    const r = this.previewRenderer;
+    for (const btn of [...list.children]) {
+      const a = new Avatar(btn.dataset.key);
+      await a.ready;
+      a.update(0.5, {});
+      this.pScene.add(a.root);
+      this.perch.visible = false;
+      a.root.rotation.y = 0.5;
+      this.pCam.position.set(0, 1.0, 3.1); this.pCam.lookAt(0, 0.85, 0);
+      r.setSize(96, 96, false);
+      r.setClearColor(0x000000, 0);
+      r.render(this.pScene, this.pCam);
+      btn.querySelector("canvas").getContext("2d").drawImage(r.domElement, 0, 0, 96, 96);
+      this.pScene.remove(a.root);
+    }
+    this.perch.visible = true;
+    r.setSize(420, 300, false);
+  }
+
+  markOutfit() { for (const b of document.querySelectorAll("#outfitlist button")) b.classList.toggle("on", b.dataset.key === this.outfit); }
+
+  selectOutfit(key) {
+    this.outfit = key;
+    this.markOutfit();
+    if (this.pBird) { this.pScene.remove(this.pBird.root); this.pBird.dispose(); this.pBird = null; }
+    if (this.pAvatar) { this.pScene.remove(this.pAvatar.root); }
+    this.pAvatar = new Avatar(key);
+    this.pScene.add(this.pAvatar.root);
+    const inv = loadSave();
+    document.getElementById("birdinfo").innerHTML = `<b>${OUTFITS[key] ? OUTFITS[key].name : key}</b><div>you have ${money(inv.money)}, ${Object.keys(inv.weapons).filter((k) => inv.weapons[k]).length} weapons and ${inv.garage.length} vehicles saved in this browser.</div>` +
+      `<div class="diet">start with your fists and ${money(150)} the first time. loot the city, then hit the shop.</div>`;
   }
 
   markMode() {
@@ -77,7 +150,7 @@ export class Menu {
     const el = document.getElementById("headcount");
     try {
       const n = await countOnline();
-      el.textContent = n >= MAX_PLAYERS ? "full right now (" + n + ")" : n ? n + (n === 1 ? " bird" : " birds") + " flying now" : "nobody flying yet, be first";
+      el.textContent = n >= MAX_PLAYERS ? "full right now (" + n + ")" : n ? n + " playing now" : "nobody on yet, be first";
     } catch (e) {
       el.textContent = "everyone in one world";
     }
@@ -89,7 +162,8 @@ export class Menu {
     this.headCount();
     this.ensurePreview();
     this.buildBirdList();
-    this.selectBird(this.species);
+    if (this.kind === "bird") this.selectBird(this.species);
+    this.markKind();
   }
 
   ensurePreview() {
@@ -168,6 +242,7 @@ export class Menu {
   }
 
   selectBird(key) {
+    if (this.pAvatar) { this.pScene.remove(this.pAvatar.root); this.pAvatar = null; }
     this.species = key;
     save("birdie-species", key);
     this.markBird();
@@ -201,7 +276,19 @@ export class Menu {
 
   // spin the preview bird; it takes off and lands every few seconds
   renderPreview(dt) {
-    if (!this.visible || this.screens.title.hidden || !this.pBird) return;
+    if (!this.visible || this.screens.title.hidden) return;
+    if (this.pAvatar) {
+      // a person: idles on the perch, turning to show off the outfit
+      this.pT = (this.pT || 0) + dt;
+      this.pAvatar.root.rotation.y = 0.4 + Math.sin(this.pT * 0.5) * 0.8;
+      this.pAvatar.update(dt, { speed: Math.sin(this.pT * 0.3) > 0.6 ? 2.4 : 0 });
+      this.perch.scale.setScalar(0.9);
+      this.pCam.position.set(0, 1.25, 4.4); this.pCam.lookAt(0, 0.85, 0);
+      this.previewRenderer.setClearColor(0x000000, 0);
+      this.previewRenderer.render(this.pScene, this.pCam);
+      return;
+    }
+    if (!this.pBird) return;
     this.pModeT += dt;
     if (this.pModeT > 5) { this.pModeT = 0; this.pMode = this.pMode === "ground" ? "air" : "ground"; }
     // swing back and forth round the front of the bird rather than showing its back
@@ -236,7 +323,7 @@ export class Menu {
     this.g.hud.hide();
     this.show("loading");
     // give the loading screen a frame to appear before the heavy work
-    setTimeout(() => this.g.start({ species: this.species, scape: this.scape, scapeLabel: SCAPE_LABEL[this.scape], seed, quality: this.quality, invert: this.invert, online, name }), 30);
+    setTimeout(() => this.g.start({ species: this.species, scape: this.scape, scapeLabel: SCAPE_LABEL[this.scape], seed, quality: this.quality, invert: this.invert, online, name, kind: this.kind, outfit: this.outfit }), 30);
   }
 
   loading(p, msg) {
@@ -247,7 +334,7 @@ export class Menu {
   showPause() {
     this.show("pause");
     const s = this.g.rules.summary();
-    document.getElementById("pausestats").innerHTML = statsHtml(s);
+    document.getElementById("pausestats").innerHTML = s.human ? humanStats(s) : statsHtml(s);
     document.getElementById("daylock").checked = this.g.sky.frozen;
   }
 
@@ -255,10 +342,12 @@ export class Menu {
     this.show("over");
     this.g.hud.hide();
     document.getElementById("overwhy").textContent = why;
-    document.getElementById("overstats").innerHTML = statsHtml(s);
+    document.querySelector("#m-over .m-logo").textContent = s.human ? "see you later" : "flown away";
+    document.getElementById("again").textContent = s.human ? "play again" : "fly again";
+    document.getElementById("overstats").innerHTML = s.human ? humanStats(s) : statsHtml(s);
     const lb = document.getElementById("lb");
     lb.innerHTML = "";
-    if (window.SortafunLB) window.SortafunLB.mountPanel(lb, "birdie", { score: s.score });
+    if (window.SortafunLB) window.SortafunLB.mountPanel(lb, s.human ? "city" : "birdie", { score: Math.min(1000000, Math.floor(s.score)) });
   }
 
   show(name) {
@@ -278,4 +367,9 @@ function statsHtml(s) {
   const mins = Math.floor(s.time / 60), secs = Math.floor(s.time % 60);
   return `<b>${s.score}</b> points as a ${s.species.toLowerCase()} &middot; flew ${(s.distance / 1000).toFixed(1)} km in ${mins}:${String(secs).padStart(2, "0")}<br>` +
     `${s.hits} splats (${s.heads} on the head) from ${s.poos} poos &middot; ate ${s.eaten} things &middot; raised ${s.chicks} ${s.chicks === 1 ? "chick" : "chicks"} &middot; highest ${Math.round(s.maxAlt)} m`;
+}
+
+function humanStats(s) {
+  return `<b>${money(s.money)}</b> in your pocket &middot; earned ${money(s.earned)} all told &middot; opened ${s.opened} ${s.opened === 1 ? "container" : "containers"}<br>` +
+    `${s.kills} takedowns &middot; ${s.deaths} trips to the hospital &middot; ${s.garage} ${s.garage === 1 ? "vehicle" : "vehicles"} in the garage`;
 }

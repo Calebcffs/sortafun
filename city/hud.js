@@ -53,6 +53,8 @@ export class Hud {
 
   start() {
     this.el.hidden = false;
+    const lbl = this.el.querySelector(".poocam-label");
+    if (lbl) lbl.textContent = this.g.sandbox ? "radar" : "poo-cam";
     this.feedEl.innerHTML = "";
     this.setScore(0);
     this.setCarry(0);
@@ -65,6 +67,8 @@ export class Hud {
       this.g.input.bindButton(document.getElementById("t-poop"), "poop");
       this.g.input.bindButton(document.getElementById("t-flap"), "dive");
       this.g.input.bindButton(document.getElementById("t-call"), "call");
+      for (const k of ["fire", "jump", "use", "aim"]) this.g.input.bindButton(document.getElementById("t-" + k), k);
+      this.g.input.attachTouchLook(this.g.canvas);
     }
   }
 
@@ -100,6 +104,20 @@ export class Hud {
   update(dt) {
     const r = this.g.rules, f = this.g.flyer;
     if (!r || !f) return;
+    if (this.g.sandbox) {
+      // as a person: just the compass and the radar (the rest is cityhud.js)
+      if (this.bigT > 0) { this.bigT -= dt; if (this.bigT <= 0) this.bigEl.className = "big"; }
+      this.infoT -= dt;
+      if (this.infoT <= 0) {
+        this.infoT = 0.2;
+        const yaw = f.vehicle ? f.vehicle.yaw : f.camYaw;
+        const deg = ((((-yaw * 180) / Math.PI) % 360) + 360) % 360;
+        const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+        this.compassEl.textContent = dirs[Math.round(deg / 45) % 8] + " " + Math.round(deg) + "°";
+      }
+      this.drawArrows();
+      return;
+    }
     this.fill.style.width = Math.round(clamp(r.food, 0, 1) * 100) + "%";
     this.fill.classList.toggle("low", r.food < 0.2);
     if (this.bigT > 0) { this.bigT -= dt; if (this.bigT <= 0) this.bigEl.className = "big"; }
@@ -133,8 +151,9 @@ export class Hud {
     // forward tick
     c.fillStyle = "rgba(255,255,255,0.8)";
     c.beginPath(); c.moveTo(0, -R + 2); c.lineTo(-5, -R + 11); c.lineTo(5, -R + 11); c.fill();
-    for (const t of r.targets()) {
-      const ang = Math.atan2(t.x - f.pos.x, t.z - f.pos.z) - f.yaw;
+    const heading = this.g.sandbox ? (f.vehicle ? f.vehicle.yaw : f.camYaw) : f.yaw;
+    for (const t of r.radarTargets ? r.radarTargets() : r.targets()) {
+      const ang = Math.atan2(t.x - f.pos.x, t.z - f.pos.z) - heading;
       const x = -Math.sin(ang), y = -Math.cos(ang);
       // brighter and bigger the closer it is
       const near = clamp(1 - t.d / 250, 0.15, 1);
@@ -151,7 +170,7 @@ export class Hud {
       c.fill(); c.stroke();
       c.restore();
       // the nest gets a distance label when it's off screen-ish
-      if (t.nest && t.d > 15) {
+      if ((t.nest || t.label) && t.d > 15) {
         c.globalAlpha = 1;
         c.fillStyle = "#fff"; c.font = "bold 11px Verdana"; c.textAlign = "center";
         c.fillText(Math.round(t.d) + "m", x * (R - 30), y * (R - 30) + 4);
@@ -162,7 +181,7 @@ export class Hud {
     c.fillStyle = "#ffd43b"; c.strokeStyle = "#1d1b2e"; c.lineWidth = 2;
     c.beginPath(); c.moveTo(0, -7); c.lineTo(6, 5); c.lineTo(0, 2); c.lineTo(-6, 5); c.closePath(); c.fill(); c.stroke();
     // status icon: egg ready to lay, hungry chick, carrying a twig
-    const icon = r.pooCamIcon();
+    const icon = r.pooCamIcon ? r.pooCamIcon() : null;
     if (icon) {
       c.font = "22px serif"; c.textAlign = "center";
       const pulse = 1 + Math.sin(performance.now() / 200) * 0.1;
@@ -183,10 +202,14 @@ export class Hud {
     // just above the bird, looking straight down (the bird itself is hidden)
     // (indoors, stay under the ceiling so it doesn't film the roof)
     const ceil = this.g.world.ceilingAt(f.pos.x, f.pos.y, f.pos.z);
-    cam.position.set(f.pos.x, Math.min(f.pos.y + 1.2 + f.radius * 2, ceil - 0.15), f.pos.z);
-    cam.up.set(Math.sin(f.yaw), 0, Math.cos(f.yaw));
+    // as a person it's a radar: high above, turning with the camera
+    const up = this.g.sandbox ? (f.vehicle && f.vehicle.plane ? 160 : 70) : 1.2 + f.radius * 2;
+    const heading = this.g.sandbox ? (f.vehicle ? f.vehicle.yaw : f.camYaw) : f.yaw;
+    cam.position.set(f.pos.x, Math.min(f.pos.y + up, ceil - 0.15), f.pos.z);
+    cam.far = this.g.sandbox ? 400 : 350;
+    cam.up.set(Math.sin(heading), 0, Math.cos(heading));
     cam.lookAt(f.pos.x, f.pos.y - 10, f.pos.z);
-    const bird = this.g.bird.root;
+    const bird = this.g.bird ? this.g.bird.root : this.g.sandbox.player.avatar.root;
     bird.visible = false;
     const shadows = renderer.shadowMap.autoUpdate;
     renderer.shadowMap.autoUpdate = false;

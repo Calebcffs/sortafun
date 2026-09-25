@@ -26,7 +26,7 @@ service cloud.firestore {
         && d.game in ['typing', 'typing1000', 'driving', 'puzzle', 'circuit',
                       'reaction', 'maze', 'aim', 'stopbar', 'ladder', 'anagram',
                       'mines', 'fermi', 'minute', 'callit', 'watch', 'hive',
-                      'five', 'sides', 'grab', 'birdie']
+                      'five', 'sides', 'grab', 'birdie', 'city']
         && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
         && d.score is int && d.score >= 0 && d.score <= 1000000
         && d.rankValue is int

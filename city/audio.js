@@ -68,6 +68,7 @@ export class Sound {
     this.wind = null;
   }
   stopAll() {
+    this.stopEngine();
     this.stopWind();
     try { if (this.amb) this.amb.stop(); } catch (e) {}
     this.amb = null;
@@ -82,6 +83,7 @@ export class Sound {
 
   update(dt, flyer, night) {
     if (!this.ctx || !this.wind) return;
+    if (!flyer || !isFinite(flyer.pos.x + flyer.pos.y + flyer.pos.z + flyer.vel.x + flyer.vel.y + flyer.vel.z + (night || 0))) return;
     const t = this.ctx.currentTime;
     const sp = flyer.vel.length();
     const air = flyer.mode === "air";
@@ -119,6 +121,7 @@ export class Sound {
 
   // ---------- building blocks ----------
   env(g, t, a, d, peak = 1) {
+    peak = Math.max(0.0002, peak || 0); // exponential ramps can't reach 0
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(peak, t + a);
     g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
@@ -268,4 +271,74 @@ export class Sound {
       this.tone("sine", 900, 1000, 0.1, 0.1, 0.1);
     }
   }
+
+  // ---------- City Sandbox ----------
+  // a volume for things happening at distance d metres away
+  near(d, range = 120) { return Math.max(0, 1 - d / range); }
+
+  gun(kind, vol = 1) {
+    if (!this.ensure() || vol <= 0.01) return;
+    const v = vol;
+    const heavy = { shotgun: 1.3, sniper: 1.4, revolver: 1.1, rocket: 0.8, minigun: 0.7 }[kind] || 0.9;
+    // the crack: a short bright noise burst, then the body: a low thump
+    this.noiseBurst(0.05 * heavy, "highpass", kind === "smg" || kind === "minigun" ? 2600 : 1800, 0.7, 0.32 * v);
+    this.noiseBurst(0.16 * heavy, "lowpass", 900, 0.8, 0.28 * v * heavy);
+    this.tone("sine", 140 * (2 - heavy * 0.6), 45, 0.12 * heavy, 0.3 * v);
+    if (kind === "sniper" || kind === "shotgun") this.noiseBurst(0.5, "lowpass", 400, 0.5, 0.08 * v, 0.05);
+  }
+  explosion(vol = 1) {
+    if (!this.ensure() || vol <= 0.01) return;
+    this.noiseBurst(1.2, "lowpass", 380, 0.6, 0.55 * vol);
+    this.noiseBurst(0.25, "bandpass", 1500, 0.8, 0.25 * vol);
+    this.tone("sine", 90, 28, 0.9, 0.45 * vol);
+  }
+  click() { if (this.ensure()) this.tone("square", 1600, 1500, 0.02, 0.06); }
+  reload() {
+    if (!this.ensure()) return;
+    this.noiseBurst(0.03, "bandpass", 3000, 3, 0.12);
+    this.noiseBurst(0.03, "bandpass", 2200, 3, 0.12, 0.35);
+    this.tone("square", 900, 700, 0.03, 0.05, 0.36);
+  }
+  hitmark() { if (this.ensure()) this.tone("square", 2200, 1900, 0.04, 0.07); }
+  hurt() { if (this.ensure()) { this.noiseBurst(0.12, "lowpass", 600, 1, 0.25); this.tone("sawtooth", 220, 120, 0.15, 0.08); } }
+  punch() { if (this.ensure()) { this.noiseBurst(0.08, "lowpass", 500, 1.2, 0.35); this.tone("sine", 120, 60, 0.08, 0.2); } }
+  whoosh() { if (this.ensure()) this.noiseBurst(0.18, "bandpass", 900, 1.5, 0.12); }
+  cash() { if (this.ensure()) { this.tone("square", 1318, 1318, 0.06, 0.08); this.tone("square", 1760, 1760, 0.12, 0.08, 0.07); } }
+  pickup() { if (this.ensure()) { this.tone("triangle", 660, 990, 0.12, 0.18); } }
+  openBox() { if (this.ensure()) { this.noiseBurst(0.15, "bandpass", 700, 2, 0.25); this.tone("sine", 300, 500, 0.15, 0.1, 0.05); } }
+  horn() { if (this.ensure()) { this.tone("sawtooth", 415, 415, 0.45, 0.12, 0, [900, 1]); this.tone("sawtooth", 523, 523, 0.45, 0.1, 0, [1000, 1]); } }
+  door() { if (this.ensure()) { this.noiseBurst(0.08, "lowpass", 700, 1, 0.3); this.tone("sine", 180, 90, 0.08, 0.15, 0.02); } }
+  crashCar(vol = 1) { if (this.ensure()) { this.noiseBurst(0.4, "lowpass", 1200, 0.7, 0.5 * vol); this.noiseBurst(0.3, "bandpass", 3000, 1, 0.2 * vol, 0.05); } }
+  splashBig() { if (this.ensure()) this.noiseBurst(0.6, "lowpass", 1400, 0.7, 0.35); }
+
+  // a steady engine note for whatever you're driving (null to stop)
+  engine(kind, rpm) {
+    if (!this.ctx || this.muted) { this.stopEngine(); return; }
+    if (!kind) { this.stopEngine(); return; }
+    const c = this.ctx;
+    if (!this.eng || this.eng.kind !== kind) {
+      this.stopEngine();
+      const o = c.createOscillator(), o2 = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+      o.type = "sawtooth"; o2.type = "square";
+      f.type = "lowpass"; f.frequency.value = kind === "plane" ? 1400 : 700; f.Q.value = 2;
+      g.gain.value = 0;
+      o.connect(f); o2.connect(f); f.connect(g); g.connect(this.master);
+      o.start(); o2.start();
+      this.eng = { kind, o, o2, f, g };
+    }
+    if (!isFinite(rpm)) rpm = 0;
+    const base = kind === "bike" ? 70 : kind === "plane" ? 55 : 42;
+    const hz = base * (1 + rpm * (kind === "bike" ? 2.6 : 1.8));
+    const t = c.currentTime;
+    this.eng.o.frequency.setTargetAtTime(hz, t, 0.05);
+    this.eng.o2.frequency.setTargetAtTime(hz * (kind === "plane" ? 2.01 : 0.5), t, 0.05);
+    this.eng.f.frequency.setTargetAtTime(500 + rpm * 1500, t, 0.08);
+    this.eng.g.gain.setTargetAtTime(0.045 + rpm * 0.05, t, 0.1);
+  }
+  stopEngine() {
+    if (!this.eng) return;
+    const e = this.eng; this.eng = null;
+    try { e.g.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05); e.o.stop(this.ctx.currentTime + 0.3); e.o2.stop(this.ctx.currentTime + 0.3); } catch (err) {}
+  }
+
 }

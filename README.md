@@ -13,7 +13,7 @@ the homepage) with WebAudio, no audio files, behind a speaker button.
 
 ### games
 
-- birdie - a 3D bird game in the spirit of Fly Like a Bird 3: ten birds, an endless procedural world (city, hills, snow, islands, industry), poo-o-meter, poo-cam, nests and chicks. `birdie.html` + `birdie/`.
+- city sandbox (was birdie) - an online open world city for up to 50 players: play as a person (loot gun cases and chests, a shop, guns, cars, a motorbike, a plane in a secret hangar, wardens who chase you) or as a bird (the original poo game). Kenney CC0 models. `city.html` + `city/` (`birdie.html` redirects).
 
 - crossword - a 15x15 themeless ("SNACKY BUT THEMELESS", from `Crosswords/*.ipuz`); across/down nav, click-a-clue, check/reveal, progress saved per browser
 - tile slider - sliding 8-puzzle, seeded by the Singapore-time date, with an archive of past days

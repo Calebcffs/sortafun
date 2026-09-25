@@ -20,7 +20,7 @@ export class Input {
     this.touchButtons = { poop: false, dive: false };
     this.enabled = true;
     this.drag = { active: false, x: 0, y: 0, dx: 0, dy: 0 };
-    const block = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]);
+    const block = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Tab"]);
     this.onKeyDown = (e) => {
       if (!this.enabled) return;
       if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
@@ -34,14 +34,30 @@ export class Input {
     window.addEventListener("keyup", this.onKeyUp);
     window.addEventListener("blur", this.onBlur);
 
+    // City Sandbox on foot: the mouse is captured (pointer lock) and moves the
+    // camera; left button fires, right button aims
+    this.mouse = { dx: 0, dy: 0, left: false, right: false };
+    this.wantLock = false;
+    this.locked = false;
+    document.addEventListener("pointerlockchange", () => { this.locked = document.pointerLockElement === target; if (!this.locked) { this.mouse.left = this.mouse.right = false; } });
+    target.addEventListener("contextmenu", (e) => { if (this.wantLock) e.preventDefault(); });
     // mouse drag on the game canvas looks around
-    this.onDown = (e) => { if (e.button === 0) { this.drag.active = true; this.drag.x = e.clientX; this.drag.y = e.clientY; } };
+    this.onDown = (e) => {
+      if (this.wantLock) {
+        if (!this.locked) { try { const r = target.requestPointerLock({ unadjustedMovement: true }); if (r && r.catch) r.catch(() => target.requestPointerLock()); } catch (err) { target.requestPointerLock(); } return; }
+        if (e.button === 0) { this.mouse.left = true; this.pressed.add("Mouse0"); }
+        if (e.button === 2) { this.mouse.right = true; this.pressed.add("Mouse2"); }
+        return;
+      }
+      if (e.button === 0) { this.drag.active = true; this.drag.x = e.clientX; this.drag.y = e.clientY; }
+    };
     this.onMove = (e) => {
+      if (this.locked) { this.mouse.dx += e.movementX || 0; this.mouse.dy += e.movementY || 0; return; }
       if (!this.drag.active) return;
       this.drag.dx += e.clientX - this.drag.x; this.drag.dy += e.clientY - this.drag.y;
       this.drag.x = e.clientX; this.drag.y = e.clientY;
     };
-    this.onUp = () => { this.drag.active = false; };
+    this.onUp = (e) => { this.drag.active = false; if (e && e.button === 0) this.mouse.left = false; if (e && e.button === 2) this.mouse.right = false; };
     target.addEventListener("mousedown", this.onDown);
     window.addEventListener("mousemove", this.onMove);
     window.addEventListener("mouseup", this.onUp);
@@ -75,8 +91,26 @@ export class Input {
     stickZone.addEventListener("touchcancel", end);
   }
 
+  // a finger dragged on the game (not on the stick or buttons) turns the camera
+  attachTouchLook(el) {
+    let id = null, x = 0, y = 0;
+    el.addEventListener("touchstart", (e) => {
+      if (id !== null) return;
+      const t = e.changedTouches[0];
+      id = t.identifier; x = t.clientX; y = t.clientY;
+      this.drag.active = true;
+    }, { passive: true });
+    el.addEventListener("touchmove", (e) => {
+      for (const t of e.changedTouches) if (t.identifier === id) { this.drag.dx += (t.clientX - x) * 1.6; this.drag.dy += (t.clientY - y) * 1.6; x = t.clientX; y = t.clientY; }
+      e.preventDefault();
+    }, { passive: false });
+    const end = (e) => { for (const t of e.changedTouches) if (t.identifier === id) { id = null; this.drag.active = false; } };
+    el.addEventListener("touchend", end);
+    el.addEventListener("touchcancel", end);
+  }
+
   bindButton(el, name) {
-    const on = (e) => { this.touchButtons[name] = true; if (name === "poop") this.pressed.add("TouchPoop"); if (name === "call") this.pressed.add("TouchCall"); e.preventDefault(); };
+    const on = (e) => { this.touchButtons[name] = true; this.pressed.add("Touch:" + name); if (name === "poop") this.pressed.add("TouchPoop"); if (name === "call") this.pressed.add("TouchCall"); e.preventDefault(); };
     const off = (e) => { this.touchButtons[name] = false; e.preventDefault(); };
     el.addEventListener("touchstart", on, { passive: false });
     el.addEventListener("touchend", off, { passive: false });
@@ -125,10 +159,21 @@ export class Input {
       lookX: this.drag.dx, lookY: this.drag.dy, dragging: this.drag.active,
       zoom: this.wheel,
     };
+    // everything City Sandbox's human side needs: raw keys, this frame's
+    // presses, the mouse, and touch buttons
+    const pressed = new Set(this.pressed);
+    state.down = (c) => k.has(c) || !!this.touchButtons[c];
+    state.hit = (c) => pressed.has(c);
+    state.mouse = { dx: this.mouse.dx, dy: this.mouse.dy, left: this.mouse.left || !!this.touchButtons.fire, right: this.mouse.right || !!this.touchButtons.aim };
+    state.stick = this.touch.active ? { x: this.touch.dx, y: this.touch.dy } : null;
+    state.locked = this.locked;
+    this.mouse.dx = 0; this.mouse.dy = 0;
     this.drag.dx = 0; this.drag.dy = 0; this.wheel = 0;
     this.pressed.clear();
     return state;
   }
+
+  unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 
   dispose() {
     window.removeEventListener("keydown", this.onKeyDown);

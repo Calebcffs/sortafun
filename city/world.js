@@ -29,6 +29,16 @@ const IP = IND_PERIOD, IND_ROAD = 16;
 
 const TREE_KINDS = ["oak", "birch", "pine", "snowpine", "palm", "corn", "bush", "rock"];
 
+// what gets parked on a city street (City Sandbox)
+const KERB_CARS = [["sedan", 28], ["hatchback-sports", 10], ["taxi", 9], ["suv", 12], ["van", 9], ["truck", 6], ["bike", 14], ["suv-luxury", 5], ["sedan-sports", 3], ["delivery", 3], ["race", 1]];
+function pickCar(rnd) {
+  let total = 0;
+  for (const [, w] of KERB_CARS) total += w;
+  let r = rnd() * total;
+  for (const [k, w] of KERB_CARS) { r -= w; if (r <= 0) return k; }
+  return "sedan";
+}
+
 export class World {
   constructor(scene, seed, opts = {}) {
     this.scene = scene;
@@ -113,6 +123,7 @@ export class World {
       key: job.key, ix: job.x, iz: job.z, x0: job.x * CHUNK, z0: job.z * CHUNK,
       res: job.res, objects: [], colliders: [], spots: { ground: [], roof: [], park: [], beach: [], field: [], water: [], inside: [] },
       paths: [], bins: [], smoke: [], lanes: [], lights: [], hunters: [], tourists: [],
+      parking: [], // parked vehicles (City Sandbox): {id, type, x, y, z, yaw}
     };
     this.buildTerrain(ch);
     this.populate(ch);
@@ -458,6 +469,7 @@ export class World {
 
     // power lines along the south side of some blocks
     if (hash3(bz, 11, this.seed) % 3 === 0) this.powerLine(ctx, cx - inner / 2 + 3, cx + inner / 2 - 3, cz - edge + 0.2, top);
+    this.kerbParking(ctx, bx, bz, cx, cz, inner);
 
     const r = rnd();
     const lotY = top;
@@ -487,6 +499,24 @@ export class World {
           continue;
         }
         this.building(ctx, lx, lotY, lz, fw, fd, tall, rnd);
+      }
+    }
+  }
+
+  // parked cars and bikes along the kerb, in the lane next to it (the
+  // traffic keeps to 3.3m off the road's centre line, well clear)
+  kerbParking(ctx, bx, bz, cx, cz, inner) {
+    const rnd = rngAt(this.seed, bx, bz, 31);
+    const off = inner / 2 + 1.5;
+    let k = 0;
+    for (const [sx, sz] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      for (const t of [-20, 0, 20]) {
+        const r = rnd();
+        if (r > 0.2) continue;
+        const along = t + (rnd() - 0.5) * 6;
+        const x = sx ? cx + sx * off : cx + along, z = sz ? cz + sz * off : cz + along;
+        const yaw = sx ? (rnd() < 0.5 ? 0 : Math.PI) : (rnd() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
+        ctx.ch.parking.push({ id: "k" + bx + "_" + bz + "_" + k++, type: pickCar(rnd), x, y: CITY_H, z, yaw });
       }
     }
   }
@@ -770,6 +800,15 @@ export class World {
     this.lamp(ctx, cx - inner / 2 + 2, top, cz, -1, 0);
     this.lamp(ctx, cx + inner / 2 - 2, top, cz, 1, 0);
 
+    const hangarHere = this.isHangarBlock(bx, bz, cx, cz);
+    // trucks and vans parked along the front of the yard (not in front of the hangar door)
+    for (let k = 0; k < 3 && !hangarHere; k++) {
+      if (rnd() < 0.45) continue;
+      const types = ["truck", "van", "delivery", "delivery", "garbage-truck", "truck-flat"];
+      const type = types[Math.floor(rnd() * 5)];
+      ctx.ch.parking.push({ id: "y" + bx + "_" + bz + "_" + k, type, x: cx - inner / 2 + 14 + k * 9, y: top, z: cz - inner / 2 + 5, yaw: Math.PI / 2 });
+    }
+    if (hangarHere) return this.hangar(ctx, bx, bz, cx, cz, top, inner);
     const kind = rnd();
     if (kind < 0.32) this.warehouses(ctx, cx, cz, inner - 8, top, rnd);
     else if (kind < 0.55) this.containerYard(ctx, cx, cz, inner - 8, top, rnd);
@@ -791,6 +830,61 @@ export class World {
         this.addBox(ctx, a[0], a[1] - 0.45, a[2] - 0.45, c[0], a[1] + 0.45, a[2] + 0.45, "pipe");
       }
     }
+  }
+
+  // One industry block per industrial region hides the plane: the block
+  // nearest the region's middle. Pure function of the seed like everything else.
+  isHangarBlock(bx, bz, cx, cz) {
+    const r = this.terrain.sample(cx, cz).region;
+    if (!r || r.biome !== "industry") return false;
+    const key = "h" + Math.round(r.cx) + "," + Math.round(r.cz);
+    if (!this.regionExtras.has(key)) {
+      const hx = Math.floor(r.cx / IP), hz = Math.floor(r.cz / IP);
+      let found = null;
+      for (let ring = 0; ring < 4 && !found; ring++) {
+        for (let dz = -ring; dz <= ring && !found; dz++) for (let dx = -ring; dx <= ring && !found; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== ring) continue;
+          const bxx = hx + dx, bzz = hz + dz;
+          // the road south of it has to be industry for a good way both sides (the runway)
+          if (!this.isIndustry(bxx * IP + IP / 2, bzz * IP + IP / 2)) continue;
+          if (!this.isIndustry(bxx * IP + IP / 2 - IP, bzz * IP + IP / 2) || !this.isIndustry(bxx * IP + IP / 2 + IP, bzz * IP + IP / 2)) continue;
+          // and no cooling tower on the block or anywhere near that stretch of road
+          const roadZ = bzz * IP, x0 = (bxx - 1) * IP, x1 = (bxx + 2) * IP;
+          const towers = this.featuresFor(r).filter((f) => f.type === "tower");
+          if (towers.some((t) => t.x > x0 - 50 && t.x < x1 + 50 && t.z > roadZ - 55 && t.z < roadZ + IP + 50)) continue;
+          found = [bxx, bzz];
+        }
+      }
+      this.regionExtras.set(key, found);
+    }
+    const f = this.regionExtras.get(key);
+    return !!f && f[0] === bx && f[1] === bz;
+  }
+
+  // the secret hangar: a big closed shed, door facing the long road south of
+  // the block (the runway), a little plane waiting inside
+  hangar(ctx, bx, bz, cx, cz, top, inner) {
+    const { b, ch } = ctx;
+    const rnd = rngAt(this.seed, bx, bz, 41);
+    const w = 46, d = 34, h = 11;
+    const z = cz - inner / 2 + d / 2 + 6;
+    const room = hollow(this, ctx, {
+      cx, cz: z, y: top, w, d, h, rot: 0,
+      look: { outer: L.WAREHOUSE, outerColor: [0.55, 0.6, 0.55], inner: [0.72, 0.74, 0.7], trim: [0.3, 0.32, 0.3], floor: L.CONCRETE, floorColor: [0.7, 0.7, 0.72] },
+      roof: { type: "flat", layer: L.CONCRETE, color: [0.45, 0.48, 0.45] },
+      bigDoor: { w: 28, h: 8.5, sides: [1] }, clerestory: true,
+    }, rnd);
+    // yellow stripes on the floor leading out of the door
+    const y = room.fy + 0.02, yel = [0.95, 0.78, 0.2];
+    for (let k = 0; k < 12; k++) b.quad([cx - 0.2, y, z - d / 2 - 14 + k * 3.4], [cx + 0.2, y, z - d / 2 - 14 + k * 3.4], [cx + 0.2, y, z - d / 2 - 12.4 + k * 3.4], [cx - 0.2, y, z - d / 2 - 12.4 + k * 3.4], [0, 1, 0], [0, 0, 1, 0, 1, 1, 0, 1], yel, L.WHITE);
+    // workbenches and crates round the walls
+    for (const sx of [-1, 1]) {
+      b.box(cx + sx * (w / 2 - 2), room.fy, z + 6, 1.2, 0.95, 5, 0, { side: L.PLANKS, top: L.PLANKS, color: [0.5, 0.35, 0.2] });
+      this.addBox(ctx, cx + sx * (w / 2 - 2) - 0.6, room.fy, z + 3.5, cx + sx * (w / 2 - 2) + 0.6, room.fy + 0.95, z + 8.5, "furniture");
+      ch.spots.inside.push([cx + sx * (w / 2 - 2), room.fy + 0.95, z + 6]);
+    }
+    ch.parking.push({ id: "plane" + bx + "_" + bz, type: "plane", x: cx, y: room.fy, z: z + 2, yaw: Math.PI, hangar: true });
+    ch.hangar = { x: cx, z, y: room.fy };
   }
 
   warehouses(ctx, cx, cz, size, y, rnd) {
@@ -1488,6 +1582,62 @@ export class World {
     return n;
   }
 
+  // A ray (origin o, unit direction d) against the ground, the water and
+  // every solid collider (not wires or tree canopies). Returns
+  // {t, x, y, z, nx, ny, nz, collider, water} for the first hit, or null.
+  raycast(o, d, maxT, out) {
+    out = out || {};
+    let bestT = maxT, bestC = null, water = false;
+    const nrm = this._rn || (this._rn = { x: 0, y: 1, z: 0 });
+    let nx = 0, ny = 1, nz = 0;
+    const T = this.terrain;
+    // ground and water: march, then home in
+    const surf = (x, z) => Math.max(T.height(x, z), SEA);
+    let prevT = 0;
+    for (let t = 1.5; t <= bestT + 1.5; t += t < 60 ? 1.5 : 4) {
+      const tt = Math.min(t, bestT);
+      const y = o.y + d.y * tt;
+      if (y < surf(o.x + d.x * tt, o.z + d.z * tt)) {
+        let a = prevT, b = tt;
+        for (let i = 0; i < 12; i++) {
+          const m = (a + b) / 2;
+          if (o.y + d.y * m < surf(o.x + d.x * m, o.z + d.z * m)) b = m; else a = m;
+        }
+        bestT = b;
+        const hx = o.x + d.x * b, hz = o.z + d.z * b;
+        water = T.height(hx, hz) < SEA;
+        if (water) { nx = 0; ny = 1; nz = 0; } else { T.normal(hx, hz, nrm); nx = nrm.x; ny = nrm.y; nz = nrm.z; }
+        break;
+      }
+      prevT = tt;
+      if (tt >= bestT) break;
+    }
+    // colliders, cell by cell along the ray
+    const stamp = (this._stamp = (this._stamp || 0) + 1);
+    let lastKey = null;
+    for (let t = 0; t <= bestT + CELL; t += 4) {
+      const x = o.x + d.x * t, z = o.z + d.z * t;
+      for (const [ox, oz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) {
+        const key = this.cellKey(Math.floor((x + ox) / CELL), Math.floor((z + oz) / CELL));
+        if (key === lastKey) continue;
+        const arr = this.grid.get(key);
+        if (!arr) continue;
+        for (const c of arr) {
+          if (c._stamp === stamp) continue;
+          c._stamp = stamp;
+          if (c.t === "seg" || c.kind === "canopy") continue;
+          const h = rayCollider(o, d, c, bestT);
+          if (h && h.t < bestT) { bestT = h.t; bestC = c; nx = h.nx; ny = h.ny; nz = h.nz; water = false; }
+        }
+      }
+      lastKey = null;
+    }
+    if (bestT >= maxT) return null;
+    out.t = bestT; out.x = o.x + d.x * bestT; out.y = o.y + d.y * bestT; out.z = o.z + d.z * bestT;
+    out.nx = nx; out.ny = ny; out.nz = nz; out.collider = bestC; out.water = water && !bestC;
+    return out;
+  }
+
   // the lowest solid thing directly above (x, y, z), e.g. a ceiling
   ceilingAt(x, y, z) {
     let best = Infinity;
@@ -1513,4 +1663,73 @@ export class World {
     this.terrainMat.dispose();
     this.atlasMat.dispose();
   }
+}
+
+// ------------------------------------------------------------------
+// ray vs one collider. Returns {t, nx, ny, nz} or null.
+// ------------------------------------------------------------------
+const _h = { t: 0, nx: 0, ny: 0, nz: 0 };
+function slab(ox, oy, oz, dx, dy, dz, x0, y0, z0, x1, y1, z1, maxT) {
+  let tmin = 0, tmax = maxT, ax = 0, sgn = 0;
+  const o = [ox, oy, oz], d = [dx, dy, dz], lo = [x0, y0, z0], hi = [x1, y1, z1];
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(d[i]) < 1e-9) { if (o[i] < lo[i] || o[i] > hi[i]) return null; continue; }
+    let t1 = (lo[i] - o[i]) / d[i], t2 = (hi[i] - o[i]) / d[i], s = -1;
+    if (t1 > t2) { const k = t1; t1 = t2; t2 = k; s = 1; }
+    if (t1 > tmin) { tmin = t1; ax = i; sgn = s; }
+    if (t2 < tmax) tmax = t2;
+    if (tmin > tmax) return null;
+  }
+  if (tmin <= 0) return null; // starting inside: ignore
+  _h.t = tmin; _h.nx = ax === 0 ? sgn : 0; _h.ny = ax === 1 ? sgn : 0; _h.nz = ax === 2 ? sgn : 0;
+  return _h;
+}
+function rayCollider(o, d, c, maxT) {
+  if (c.t === "box") return slab(o.x, o.y, o.z, d.x, d.y, d.z, c.x0, c.y0, c.z0, c.x1, c.y1, c.z1, maxT);
+  if (c.t === "obox" || c.t === "gable") {
+    // into the box's own frame (gable roofs: treated as a box two thirds high)
+    const lx = (o.x - c.cx) * c.cs - (o.z - c.cz) * c.sn, lz = (o.x - c.cx) * c.sn + (o.z - c.cz) * c.cs;
+    const dx = d.x * c.cs - d.z * c.sn, dz = d.x * c.sn + d.z * c.cs;
+    const top = c.t === "gable" ? c.y0 + c.h * 0.66 : c.y1;
+    const h = slab(lx, o.y, lz, dx, d.y, dz, -c.hx, c.y0, -c.hz, c.hx, top, c.hz, maxT);
+    if (!h) return null;
+    const wx = h.nx * c.cs + h.nz * c.sn, wz = -h.nx * c.sn + h.nz * c.cs;
+    h.nx = wx; h.nz = wz;
+    return h;
+  }
+  if (c.t === "cyl" || c.t === "lathe") {
+    const r = c.t === "cyl" ? c.r : c.prof[Math.floor(c.prof.length / 2)][0];
+    const y0 = c.y0, y1 = c.y1;
+    const ox = o.x - c.x, oz = o.z - c.z;
+    const a = d.x * d.x + d.z * d.z;
+    let best = null;
+    if (a > 1e-9) {
+      const b = ox * d.x + oz * d.z, cc = ox * ox + oz * oz - r * r;
+      const disc = b * b - a * cc;
+      if (disc >= 0) {
+        const t = (-b - Math.sqrt(disc)) / a;
+        const y = o.y + d.y * t;
+        if (t > 0 && t < maxT && y >= y0 && y <= y1) { _h.t = t; _h.nx = (ox + d.x * t) / r; _h.ny = 0; _h.nz = (oz + d.z * t) / r; best = _h; }
+      }
+    }
+    if (!best && Math.abs(d.y) > 1e-9 && c.t === "cyl") {
+      const t = (y1 - o.y) / d.y;
+      if (t > 0 && t < maxT) {
+        const x = ox + d.x * t, z = oz + d.z * t;
+        if (x * x + z * z <= r * r) { _h.t = t; _h.nx = 0; _h.ny = 1; _h.nz = 0; best = _h; }
+      }
+    }
+    return best;
+  }
+  if (c.t === "sph") {
+    const ox = o.x - c.x, oy = o.y - c.y, oz = o.z - c.z;
+    const b = ox * d.x + oy * d.y + oz * d.z, cc = ox * ox + oy * oy + oz * oz - c.r * c.r;
+    const disc = b * b - cc;
+    if (disc < 0) return null;
+    const t = -b - Math.sqrt(disc);
+    if (t <= 0 || t > maxT) return null;
+    _h.t = t; _h.nx = (ox + d.x * t) / c.r; _h.ny = (oy + d.y * t) / c.r; _h.nz = (oz + d.z * t) / c.r;
+    return _h;
+  }
+  return null;
 }

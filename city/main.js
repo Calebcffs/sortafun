@@ -1,5 +1,7 @@
-// Birdie: the game. Wires the world, sky, bird, flight model, people, food,
-// nesting, HUD and sound together and runs the loop.
+// City Sandbox (was Birdie): the game. Wires the world, sky, HUD and sound
+// together and runs the loop. You play as a person (sandbox.js and friends,
+// the main mode) or as a bird (the original poo game: flight.js + game.js),
+// in the same world, online together.
 //
 // Files:
 //   noise.js     seeded random + simplex noise
@@ -16,7 +18,9 @@
 //   hud.js       poo-cam, poo-o-meter, lives, messages
 //   audio.js     synthesised sound
 //   menu.js      title screen, bird picker, pause / game over
-//   net.js       online play: everyone's birds in one shared world
+//   net.js       online play: everyone, birds and people, in one shared world
+//   sandbox.js   playing as a person: human.js (you), vehicles.js, npcs.js,
+//                loot.js, weapons.js, shop.js, cityhud.js, avatar.js, assets.js
 
 import * as THREE from "three";
 import { World } from "./world.js";
@@ -33,6 +37,8 @@ import { Sound } from "./audio.js";
 import { Menu } from "./menu.js";
 import { BlobShadow, Snow, Streaks } from "./effects.js";
 import { Net, SHARED_SEED } from "./net.js";
+import { Sandbox } from "./sandbox.js";
+import { preload } from "./assets.js";
 
 const QUALITY = {
   low: { pr: 0.75, shadows: false, shadowSize: 1024, radius: 3, fog: 0.72 },
@@ -93,7 +99,7 @@ class Game {
   // starting a flight
   // ------------------------------------------------------------
   async start(opts) {
-    // opts: {species, scape, seed, quality, invert, online, name}
+    // opts: {kind: "human"|"bird", species, outfit, scape, seed, quality, invert, online, name}
     this.stop();
     this.quality = opts.quality;
     const q = QUALITY[opts.quality];
@@ -110,7 +116,10 @@ class Game {
     // pick a spawn: the nearest region of the chosen type
     const spawn = this.findSpawn(opts.scape);
     this.menu.loading(0, "building the " + (opts.scapeLabel || "world") + "...");
-    await this.world.preload(spawn.x, spawn.z, (p) => this.menu.loading(p * 0.9));
+    this.human = opts.kind === "human";
+    await this.world.preload(spawn.x, spawn.z, (p) => this.menu.loading(p * (this.human ? 0.75 : 0.9)));
+    if (this.human) return this.startHuman(opts, spawn, q);
+    this.input.wantLock = false;
     // the bird
     this.speciesKey = opts.species;
     const sp = SPECIES[opts.species];
@@ -143,24 +152,57 @@ class Game {
     if (this.online) this.goOnline(opts.name);
   }
 
+  // playing as a person
+  async startHuman(opts, spawn, q) {
+    this.menu.loading(0.75, "unpacking the city...");
+    const out = opts.outfit || "male-a";
+    await preload(["people/anims.glb", "people/" + out + ".glb", "people/male-c.glb", "people/male-a.glb", "people/female-b.glb", "people/male-d.glb",
+      "cars/sedan.glb", "cars/taxi.glb", "cars/suv.glb", "cars/van.glb", "cars/police.glb", "props/box-large.glb", "props/chest.glb", "guns/case.glb", "guns/pistol.glb", "guns/grenade.glb"],
+      (p) => this.menu.loading(0.75 + p * 0.22));
+    this.speciesKey = null;
+    this.bird = null;
+    this.scale = 1;
+    this.sandbox = new Sandbox(this, opts);
+    this.rules = this.sandbox;
+    this.flyer = this.sandbox.player;
+    // online, don't all appear in the same spot
+    const jit = opts.online ? 20 : 0;
+    const place = this.findPerch(spawn.x + (Math.random() - 0.5) * jit, spawn.z + (Math.random() - 0.5) * jit);
+    const g = this.world.groundAt(place.x, place.z, 1e9, {});
+    this.spawnPoint = { x: place.x, y: g.y, z: place.z, yaw: place.yaw };
+    this.flyer.place(place.x, g.y, place.z, place.yaw);
+    this.snow = new Snow(this.scene, opts.quality === "low" ? 700 : 1800);
+    this.menu.loading(1);
+    this.input.wantLock = true;
+    this.hud.start();
+    this.sound.start(null);
+    this.running = true;
+    this.paused = false;
+    this.menu.hide();
+    this.clock.getDelta();
+    this.stage.focus();
+    this.hud.toast("welcome to the " + (opts.scapeLabel || "city") + "! click the game to use the mouse. loot chests and cases, B opens the shop.", "good");
+    if (opts.online) this.goOnline(opts.name);
+  }
+
   // join the shared sky; if it's full or unreachable, carry on solo
   goOnline(name) {
     const net = (this.net = new Net(this, name));
     net.renderList();
     net.join().then((r) => {
       if (r === "full") {
-        net.offlineMsg = "the sky is full (50 birds). flying solo";
-        this.hud.toast("the online sky is full right now (50 birds). you're flying solo in the same world.", "warn");
+        net.offlineMsg = "the city is full (50 players). playing solo";
+        this.hud.toast("the online city is full right now (50 players). you're on your own in the same world.", "warn");
       } else if (r === "ok") {
         const n = net.players.size;
-        this.hud.toast(n ? "you're online with " + n + (n === 1 ? " other bird" : " other birds") + "!" : "you're online. nobody else is flying yet.", "good");
+        this.hud.toast(n ? "you're online with " + n + (n === 1 ? " other player" : " other players") + "!" : "you're online. nobody else is here yet.", "good");
       }
       net.renderList();
     }).catch((e) => {
       console.warn("birdie online:", e);
-      net.offlineMsg = "offline. flying solo";
+      net.offlineMsg = "offline. playing solo";
       net.renderList();
-      this.hud.toast("couldn't reach the online sky, so you're flying solo.", "warn");
+      this.hud.toast("couldn't get online, so you're playing solo.", "warn");
     });
   }
 
@@ -170,7 +212,10 @@ class Game {
     if (this.rules) this.rules.dispose();
     if (this.world) this.world.dispose();
     if (this.bird) this.bird.dispose();
-    this.rules = this.world = this.bird = this.flyer = null;
+    this.rules = this.world = this.bird = this.flyer = this.sandbox = null;
+    this.snow = this.blob = this.streaks = null;
+    this.input.wantLock = false;
+    this.input.unlock();
     if (this.scene) this.scene.traverse((o) => { if (o.material && o.material.dispose && !o.userData.keepMat) o.material.dispose(); });
     this.scene = null;
     this.sound.stopAll();
@@ -235,12 +280,14 @@ class Game {
   setPaused(p) {
     if (!this.running) return;
     this.paused = p;
+    if (p) this.input.unlock();
     if (p) { this.menu.showPause(); this.sound.suspend(); }
     else { this.menu.hide(); this.sound.resume(); this.clock.getDelta(); this.stage.focus(); }
   }
 
   gameOver(why) {
     this.running = false;
+    this.input.unlock();
     if (this.net) { this.net.close(); this.net = null; }
     this.sound.stopWind();
     this.menu.showGameOver(why, this.rules.summary());
@@ -265,18 +312,28 @@ class Game {
   // Testing hook: run the game forward `seconds` with a fixed input and no
   // rendering, e.g. birdie.simulate(3, {pitch: 1}) = flap for 3 seconds.
   simulate(seconds, input = {}, fps = 30) {
+    // (as a person: {keys: ["KeyW"], hits: ["KeyE"], fire, aim, mdx, mdy})
     const base = { pitch: 0, turn: 0, poop: false, dive: false, call: false, camera: false, pause: false, mute: false, lookX: 0, lookY: 0, dragging: false, zoom: 0 };
-    this.inputOverride = { ...base, ...input };
+    const keys = new Set(input.keys || []);
+    let hits = new Set(input.hits || []);
+    base.down = (c) => keys.has(c);
+    base.hit = (c) => hits.has(c);
+    base.mouse = { dx: input.mdx || 0, dy: input.mdy || 0, left: !!input.fire, right: !!input.aim };
+    base.stick = null; base.locked = true;
+    this.inputOverride = { ...base, ...input, down: base.down, hit: base.hit, mouse: base.mouse };
     const n = Math.round(seconds * fps);
     for (let i = 0; i < n && this.running; i++) {
       this.tick(1 / fps);
       if (input.poop) this.inputOverride.poop = false; // a single press
+      hits = new Set(); this.inputOverride.mouse.dx = 0; this.inputOverride.mouse.dy = 0;
+      if (input.render) this.render();
     }
     this.inputOverride = null;
   }
 
   tick(dt) {
     const input = this.inputOverride || this.input.read();
+    if (this.sandbox) return this.tickHuman(dt, input);
     if (input.pause) { this.setPaused(true); return; }
     if (input.mute) this.sound.toggleMute();
     if (input.camera) this.cam.mode = (this.cam.mode + 1) % 3;
@@ -316,6 +373,30 @@ class Game {
     this.streaks.update(dt, this.camera, f);
     this.hud.update(dt);
     this.sound.update(dt, f, this.sky.night);
+  }
+
+  tickHuman(dt, input) {
+    const sb = this.sandbox;
+    if (input.pause) {
+      if (sb.menuOpen) sb.shop.close(); else this.setPaused(true);
+      return;
+    }
+    if (input.mute) this.sound.toggleMute();
+    sb.update(dt, input);
+    if (!this.running) return;
+    if (this.net) this.net.update(dt);
+    const f = sb.player;
+    f.updateCamera(dt);
+    const v = f.vehicle;
+    const vel = v ? f.vehicle.forward().multiplyScalar(v.speed) : f.vel;
+    this.world.update(f.pos.x + vel.x * 1.5, f.pos.z + vel.z * 1.5, 4);
+    const s = this.world.terrain.sample(this.camera.position.x, this.camera.position.z);
+    this.sky.update(dt, this.camera.position, s.w, f.pos.y, false);
+    this.world.uniforms.uNight.value = this.sky.night;
+    this.sky.updateSmoke(dt);
+    this.snow.update(dt, this.camera.position, clamp((s.w.snow - 0.4) * 1.7, 0, 1), this.sky.wind);
+    this.hud.update(dt);
+    this.sound.update(dt, v ? { vel, mode: v.plane && !v.onGround ? "air" : "ground", pos: f.pos } : f, this.sky.night);
   }
 
   updateCamera(dt, input) {

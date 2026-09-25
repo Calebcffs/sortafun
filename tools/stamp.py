@@ -7,9 +7,9 @@ minutes. So after a push people would get the new page but the OLD scripts.
 Stamping each link with a hash of the file's content gives a changed file a
 new URL, which both Cloudflare and the browser fetch fresh.
 
-Birdie's ES modules import each other ("./flight.js"), which can't carry a
-stamp, so birdie.html gets an import map entry per module that points the
-plain URL at the stamped one.
+City Sandbox's ES modules (city/, once called Birdie) import each other
+("./flight.js"), which can't carry a stamp, so city.html gets an import map
+entry per module that points the plain URL at the stamped one.
 
 Run before every commit that changes a .js or .css file:
 
@@ -54,8 +54,8 @@ def stamp_birdie_modules(html):
     if not m:
         return html
     data = json.loads(m.group(2))
-    imports = {k: v for k, v in data["imports"].items() if not k.startswith("./birdie/")}
-    for path in sorted(glob.glob("birdie/*.js")):
+    imports = {k: v for k, v in data["imports"].items() if not k.startswith("./birdie/") and not k.startswith("./city/")}
+    for path in sorted(glob.glob("city/*.js")):
         imports["./" + path] = "./" + path + "?v=" + digest(path)
     data["imports"] = imports
     body = "{ \"imports\": {\n" + ",\n".join("  %s: %s" % (json.dumps(k), json.dumps(v)) for k, v in imports.items()) + "\n} }"
@@ -67,7 +67,7 @@ for page in sorted(glob.glob("*.html")):
     with open(page, "rb") as f:
         old = f.read()
     new = stamp_refs(old)
-    if page == "birdie.html":
+    if page == "city.html":
         new = stamp_birdie_modules(new)
     if new != old:
         with open(page, "wb") as f:
