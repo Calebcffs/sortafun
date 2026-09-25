@@ -550,3 +550,12 @@ found with `SortafunLB.lastPlace` (fail-soft: no glow if the query errors).
 
 CNAME points the repo's GitHub Pages at **sortafun.org**, so a push to `main` is
 a deploy. Don't push unless asked.
+
+**Run `python3 tools/stamp.py` before every commit that touches a .js or .css
+file.** sortafun.org is behind Cloudflare, which tells browsers to keep .js and
+.css for 4 hours (HTML only 10 minutes), so without it people get new pages
+running old scripts (this bit us: Caleb kept flying an hours-old Birdie). The
+script stamps every local `src`/`href` with `?v=<content hash>` and keeps an
+import map entry per Birdie module in `birdie.html`, since the modules import
+each other by plain relative paths. New pages and new birdie modules are
+picked up automatically.
