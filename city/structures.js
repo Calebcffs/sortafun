@@ -344,3 +344,80 @@ function stationHall(world, ctx, sx, sz, open, cA, cB, rnd) {
   ctx.ch.paths.push({ kind: "loop", y: U, pts: [[sx - 11, sz - 9], [sx + 11, sz - 9], [sx + 9, sz + 5], [sx - 11, sz + 9]], who: "under", under: true });
   void hash3;
 }
+
+// ------------------------------------------------------------------
+// BROADCAST PLAZA (evac.js, ROADMAP.md section 4): one city block near the
+// middle of the city (world.mastSite()) with the radio mast, the generator
+// you fuel, the console you hold, and the helipad the chopper lands on.
+// ------------------------------------------------------------------
+export const MAST_H = 72;
+// where everything is, from the block's centre (evac.js uses the same)
+export function plazaLayout(cx, cz, y) {
+  return {
+    mast: { x: cx, y, z: cz - 14 },
+    gen: { x: cx - 22, y, z: cz - 16 },    // stand here with fuel
+    console: { x: cx + 12, y, z: cz - 10 }, // hold the signal here
+    pad: { x: cx, y: y + 0.12, z: cz + 14, r: 9 },
+  };
+}
+
+export function broadcastPlaza(world, ctx, cx, cz, y) {
+  const b = ctx.b;
+  const L0 = plazaLayout(cx, cz, y);
+  const steel = [0.75, 0.2, 0.18], white = [0.92, 0.92, 0.9];
+  // the mast: four legs leaning in, cross braces, red lights
+  const m = L0.mast, base = 4.5, topW = 0.8;
+  const leg = (sx, sz, t) => [m.x + sx * (base + (topW - base) * t), y + MAST_H * t, m.z + sz * (base + (topW - base) * t)];
+  const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  for (const [sx, sz] of corners) {
+    b.rod(leg(sx, sz, 0), leg(sx, sz, 1), 0.22, 5, L.WHITE, steel);
+    const [lx, , lz] = leg(sx, sz, 0.04);
+    world.addCyl(ctx, lx, lz, 0.4, y, y + 6, "mast");
+  }
+  for (let t = 0.06; t < 1; t += 0.085) {
+    const col = Math.round(t * 12) % 2 ? steel : white;
+    for (let i = 0; i < 4; i++) { const [ax, az] = corners[i], [bx2, bz2] = corners[(i + 1) % 4]; b.rod(leg(ax, az, t), leg(bx2, bz2, t), 0.09, 4, L.WHITE, col); b.rod(leg(ax, az, t), leg(bx2, bz2, t + 0.085), 0.06, 4, L.WHITE, col); }
+  }
+  b.cyl(m.x, y + MAST_H, m.z, 0.15, 8, 6, L.WHITE, white);
+  for (const hh of [MAST_H + 8, MAST_H * 0.66, MAST_H * 0.33]) b.sphere(m.x, y + hh, m.z, hh > MAST_H ? 0.7 : 0.5, 8, L.LIGHT, [1, 0.15, 0.1]);
+  // dishes
+  for (const [dx, dh] of [[1, 0.55], [-1, 0.72]]) b.cyl(m.x + dx * 2.2, y + MAST_H * dh, m.z, 1.2, 0.3, 12, L.WHITE, white, { r1: 0.4 });
+  // the generator shed, with a big fuel tank on its side
+  const g = L0.gen;
+  b.box(g.x, y, g.z - 2.4, 6, 3.2, 3.6, 0, { side: L.WAREHOUSE, top: L.ROOF_FLAT, color: [0.55, 0.6, 0.5] });
+  world.addBox(ctx, g.x - 3, y, g.z - 4.2, g.x + 3, y + 3.2, g.z - 0.6, "shed");
+  b.cyl(g.x + 4.2, y, g.z - 2.4, 1.1, 2.4, 14, L.WHITE, [0.8, 0.15, 0.12]);
+  world.addCyl(ctx, g.x + 4.2, g.z - 2.4, 1.1, y, y + 2.4, "tank");
+  b.box(g.x, y + 0.9, g.z - 0.55, 1.2, 0.8, 0.1, 0, { side: L.LIGHT, top: L.LIGHT, color: [1, 0.75, 0.2] }); // the intake
+  // the console: a desk with screens under a little canopy
+  const c = L0.console;
+  b.box(c.x, y, c.z - 0.6, 3.2, 1, 1.1, 0, { color: [0.3, 0.32, 0.36] });
+  world.addBox(ctx, c.x - 1.6, y, c.z - 1.15, c.x + 1.6, y + 1, c.z - 0.05, "desk");
+  for (const dx of [-0.9, 0, 0.9]) b.box(c.x + dx, y + 1, c.z - 0.95, 0.75, 0.55, 0.08, 0, { side: L.LIGHT, top: L.LIGHT, color: [0.3, 0.9, 1] });
+  for (const dx of [-1.8, 1.8]) b.box(c.x + dx, y, c.z - 0.6, 0.12, 3, 0.12, 0, { color: [0.2, 0.2, 0.22] });
+  b.box(c.x, y + 3, c.z - 0.6, 4, 0.12, 2.2, 0, { color: [0.85, 0.2, 0.15] });
+  // the helipad: a dark disc, a yellow H, lights round the edge
+  const p = L0.pad;
+  b.cyl(p.x, y, p.z, p.r, 0.12, 32, L.CONCRETE, [0.3, 0.3, 0.32]);
+  b.box(p.x - 2.2, y + 0.12, p.z, 0.8, 0.02, 5.5, 0, { color: [1, 0.8, 0.1] });
+  b.box(p.x + 2.2, y + 0.12, p.z, 0.8, 0.02, 5.5, 0, { color: [1, 0.8, 0.1] });
+  b.box(p.x, y + 0.12, p.z, 3.6, 0.02, 0.8, 0, { color: [1, 0.8, 0.1] });
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; b.box(p.x + Math.cos(a) * (p.r - 0.4), y + 0.12, p.z + Math.sin(a) * (p.r - 0.4), 0.35, 0.1, 0.35, 0, { side: L.LIGHT, top: L.LIGHT, color: [0.3, 1, 0.4] }); }
+  // sandbags round the edge, with gaps to get in
+  const R = 30;
+  for (let a = 0; a < Math.PI * 2; a += 0.12) {
+    if (Math.abs(Math.sin(a * 2)) < 0.12) continue; // the gaps
+    const x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R;
+    b.box(x, y, z, 2.6, 0.9, 0.8, -a + Math.PI / 2, { color: [0.62, 0.55, 0.38] });
+    world.addOBox(ctx, x, y, z, 2.6, 0.9, 0.8, -a + Math.PI / 2, "sandbags");
+  }
+  // floodlights
+  for (const [fx, fz] of [[-26, -26], [26, -26], [26, 26], [-26, 26]]) {
+    b.cyl(cx + fx, y, cz + fz, 0.15, 8, 6, L.WHITE, [0.25, 0.25, 0.27]);
+    b.box(cx + fx, y + 8, cz + fz, 1.4, 0.6, 0.5, Math.atan2(-fx, -fz), { side: L.LIGHT, top: L.WHITE, color: [1, 0.95, 0.8] });
+    world.addCyl(ctx, cx + fx, cz + fz, 0.2, y, y + 8.3, "pole");
+  }
+  // crates of supplies about the place (loot, indoors-good)
+  ctx.ch.spots.inside.push([cx - 14, y, cz + 22], [cx + 20, y, cz + 20], [g.x + 4, y, g.z + 2]);
+  ctx.ch.mast = L0;
+}

@@ -21,7 +21,7 @@ import { Batch, treeGeometry } from "./builders.js";
 import { L, TILE, atlasMaterial, detailTexture } from "./textures.js";
 import { rngAt, hash3, clamp, lerp, smoothstep, mulberry32 } from "./noise.js";
 import { hollow, furnish, frameOf } from "./interiors.js";
-import { towerLobby, penthouse, roofLift, addLift, ladder, metro, UNDER_LINE } from "./structures.js";
+import { towerLobby, penthouse, roofLift, addLift, ladder, metro, broadcastPlaza, METRO_EVERY, UNDER_LINE } from "./structures.js";
 
 export const CHUNK = 128;
 const CELL = 16; // spatial hash cell size for colliders
@@ -413,6 +413,38 @@ export class World {
     }
   }
 
+  // the one city block that's Broadcast Plaza: near the middle of the city
+  // region closest to the world's centre, not a metro corner, city all
+  // round. The same on every screen (it's all maths on the seed)
+  mastSite() {
+    if (this._mast !== undefined) return this._mast;
+    const T = this.terrain;
+    let region = null;
+    for (let ring = 0; ring < 12 && !region; ring++) {
+      for (let iz = -ring; iz <= ring; iz++) for (let ix = -ring; ix <= ring; ix++) {
+        if (Math.max(Math.abs(ix), Math.abs(iz)) !== ring) continue;
+        const c = T.cell(ix, iz);
+        if (c.biome !== "city" || T.sample(c.cx, c.cz).biome !== "city") continue;
+        const d = Math.hypot(c.cx, c.cz);
+        if (!region || d < region.d) region = { x: c.cx, z: c.cz, d };
+      }
+    }
+    this._mast = null;
+    if (!region) return null;
+    const b0x = Math.floor(region.x / P), b0z = Math.floor(region.z / P);
+    for (let r = 0; r < 8; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+      const bx = b0x + dx, bz = b0z + dz;
+      const M = METRO_EVERY, mod = (a) => ((a % M) + M) % M;
+      if (mod(bx) === 0 || mod(bz) === 0) continue; // (no tunnels or kiosks under it)
+      const ok = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].every(([ox, oz]) => this.isCity((bx + ox) * P + P / 2, (bz + oz) * P + P / 2));
+      if (!ok) continue;
+      this._mast = { bx, bz, cx: bx * P + P / 2, cz: bz * P + P / 2, y: CITY_H + 0.18 };
+      return this._mast;
+    }
+    return null;
+  }
+
   isCity(cx, cz, pad = P / 2) {
     const T = this.terrain;
     for (const [dx, dz] of [[0, 0], [-pad, -pad], [pad, -pad], [-pad, pad], [pad, pad]]) {
@@ -474,6 +506,9 @@ export class World {
     this.kerbParking(ctx, bx, bz, cx, cz, inner);
     // the metro under every third road (structures.js)
     metro(this, ctx, bx, bz);
+    // Broadcast Plaza: the radio mast and the helipad (evac.js)
+    const site = this.mastSite();
+    if (site && site.bx === bx && site.bz === bz) return broadcastPlaza(this, ctx, cx, cz, top);
 
     const r = rnd();
     const lotY = top;

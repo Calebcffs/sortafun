@@ -40,6 +40,7 @@ const KIND = {
   chest: { path: "props/chest.glb", size: 0.85, label: "chest" },
   case: { path: "guns/case.glb", size: 1.0, label: "gun case" },
   vault: { path: "props/chest.glb", size: 1.15, label: "strongbox" },
+  fuel: { path: "props/barrel.glb", size: 0.8, label: "fuel drum" },
 };
 
 function pick(rnd, table) {
@@ -64,9 +65,14 @@ export function contents(id, type, cycle, tier = "out") {
     if (w === "grenade") out.push({ kind: "grenade", n: 3 });
     else { out.push({ kind: "weapon", w }); if (WEAPONS[w].ammo) out.push({ kind: "ammo", ammo: WEAPONS[w].ammo, packs: w === "rocket" ? Math.max(1, packs - 1) : packs }); }
   };
-  if (type === "vault") {
+  if (type === "fuel") {
+    // the evac runs on these (evac.js)
+    out.push({ kind: "fuel", n: 1 + (rnd() < 0.3 ? 1 : 0) });
+    if (rnd() < 0.3) cash(20, 120);
+  } else if (type === "vault") {
     // jackpot
     cash(20000, 80000, 1.6);
+    out.push({ kind: "fuel", n: 1 });
     val([["diamond", 1]]); val([["goldbar", 2], ["diamond", 1]]); val([["goldbar", 3], ["laptop", 1]]);
     if (rnd() < 0.5) gun([["minigun", 1], ["rocket", 1], ["sniper", 1]], 3);
     out.push({ kind: "armor" });
@@ -78,6 +84,7 @@ export function contents(id, type, cycle, tier = "out") {
       if (rnd() < 0.35) out.push({ kind: "armor" });
       if (rnd() < 0.35) out.push({ kind: "grenade", n: 3 });
       if (rnd() < 0.5) val([["camera", 3], ["laptop", 3], ["goldbar", 1]]);
+      if (rnd() < 0.15) out.push({ kind: "fuel", n: 1 });
     } else if (type === "chest") {
       // a ton of money
       cash(3000, 25000, 1.8);
@@ -102,6 +109,7 @@ export function contents(id, type, cycle, tier = "out") {
       if (rnd() < 0.35) out.push(ammo(1));
       if (rnd() < 0.1) out.push({ kind: "medkit" });
       if (rnd() < 0.12) val([["phone", 5], ["watch", 3]]);
+      if (rnd() < 0.04) out.push({ kind: "fuel", n: 1 });
     } else if (type === "chest") {
       cash(15, 80);
       if (rnd() < 0.4) val([["phone", 5], ["watch", 4], ["necklace", 2]]);
@@ -145,7 +153,12 @@ export class Loot {
         out.push({ id, type, tier, x: s[0], y: s[1], z: s[2], yaw: ((h >>> 4) % 628) / 100 });
       }
     };
-    add(ch.spots.ground, 0.12, ["box", "box", "box", "chest", "case"], "out");
+    // (industrial yards: fuel drums for the evac)
+    const T = this.g.world.terrain;
+    const yard = ch.spots.ground.filter((s) => T.sample(s[0], s[2]).w.industry > 0.8);
+    const street = ch.spots.ground.filter((s) => !yard.includes(s));
+    add(yard, 0.2, ["fuel", "fuel", "box"], "out");
+    add(street, 0.12, ["box", "box", "box", "chest", "case"], "out");
     add(ch.spots.inside, 0.45, ["chest", "chest", "case", "box"], "in");
     add(ch.spots.vault || [], 1, ["vault"], "in");
     add(ch.spots.roof, 0.22, ["box", "chest", "case"], "roof");
@@ -187,6 +200,7 @@ export class Loot {
     g.add(m.obj);
     g.position.copy(c.pos);
     g.rotation.y = s.yaw;
+    if (s.type === "fuel") m.obj.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.multiply(new THREE.Color(1.6, 0.35, 0.3)); } });
     if (s.type === "vault") {
       // strongboxes: gold, and they shine
       m.obj.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.multiply(new THREE.Color(1.3, 1.05, 0.35)); o.material.metalness = 0.6; o.material.roughness = 0.35; } });

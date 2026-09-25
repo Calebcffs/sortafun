@@ -3,11 +3,16 @@
 // up). Cash and wanted stars top right, health and armour under the radar,
 // crosshair and prompts in the middle (a red dot instead when you're down
 // the sights), weapon + ammo and the MENU button bottom right, speedometer
-// when driving, red flash when hurt, sniper scope, HEADSHOT.
+// when driving, red flash when hurt, sniper scope, HEADSHOT. And the
+// purposeful bits: the clock and the evac objective under the compass, XP
+// and level under your health, the hold-F progress, being down (bleed-out
+// bar), the night's death choice, being turned, and a "!" on MENU when
+// there's a perk to pick.
 
 import { WEAPONS, AMMO } from "./weapons.js";
 import { money } from "./shop.js";
 import { clamp } from "./noise.js";
+import { xpFor } from "./progress.js";
 
 export class CityHud {
   constructor(game, sandbox) {
@@ -21,12 +26,17 @@ export class CityHud {
       el.id = "ch";
       el.innerHTML = `
         <div class="ch-tr"><div class="ch-money"></div><div class="ch-stars"></div></div>
-        <div class="ch-bars"><div class="ch-hp"><i></i></div><div class="ch-ar"><i></i></div><div class="ch-kits"></div></div>
+        <div class="ch-bars"><div class="ch-hp"><i></i></div><div class="ch-ar"><i></i></div><div class="ch-xp"><i></i><span></span></div><div class="ch-kits"></div></div>
+        <div class="ch-top"><div class="ch-clock"></div><div class="ch-obj"></div></div>
+        <div class="ch-hold"><i></i><span></span></div>
+        <div class="ch-down"><b>YOU'RE DOWN</b><div class="ch-bleed"><i></i></div><span></span></div>
+        <div class="ch-choice"><b>YOU DIDN'T MAKE IT</b><div><kbd>1</kbd> rise as one of them till dawn</div><div><kbd>2</kbd> <span></span></div></div>
+        <div class="ch-turnvig"></div>
         <div class="ch-cross"><i></i><i></i><i></i><i></i><b></b></div>
         <div class="ch-hit">&#x2715;</div>
         <div class="ch-prompt"></div>
         <div class="ch-weapon"><b></b><span></span><em></em></div>
-        <button class="ch-shopbtn" title="inventory, shop and map (E)">MENU <small>E</small></button>
+        <button class="ch-shopbtn" title="inventory, shop and map (E)">MENU <small>E</small><em class="ch-badge">!</em></button>
         <div class="ch-dot"></div>
         <div class="ch-hs">HEADSHOT</div>
         <div class="ch-speedo"></div>
@@ -42,8 +52,38 @@ export class CityHud {
     this.moneyShown = sandbox.inv.money;
     this.hitT = 0; this.vigT = 0;
     el.hidden = false;
-    this.money(); this.health(); this.weapon(); this.wanted();
+    this.money(); this.health(); this.weapon(); this.wanted(); this.xp();
+    this.badge(sandbox.progress.pendingPerks() > 0);
+    this.hold(0); this.turned(false); this.deathChoice(false);
   }
+
+  // XP and level, under the health bar
+  xp() {
+    const P = this.sb.progress, xp = this.sb.inv.xp;
+    const a = xpFor(P.level), b = xpFor(P.level + 1);
+    this.q(".ch-xp i").style.width = clamp((xp - a) / (b - a) * 100, 0, 100) + "%";
+    this.q(".ch-xp span").textContent = "lv " + P.level;
+  }
+  xpPop(n) {
+    const f = document.createElement("div");
+    f.className = "ch-xppop";
+    f.textContent = "+" + Math.round(n) + " xp";
+    this.q(".ch-bars").appendChild(f);
+    setTimeout(() => f.remove(), 1300);
+  }
+  badge(on) { this.q(".ch-badge").hidden = !on; }
+
+  // keep-F-held progress (-1 = an open-ended hold, like the signal)
+  hold(frac, label) {
+    const h = this.q(".ch-hold");
+    h.hidden = !frac;
+    if (!frac) return;
+    h.classList.toggle("open", frac < 0);
+    h.querySelector("i").style.width = (frac < 0 ? 100 : clamp(frac, 0, 1) * 100) + "%";
+    h.querySelector("span").textContent = label || "";
+  }
+  deathChoice(on) { this.q(".ch-choice").hidden = !on; }
+  turned(on) { this.q(".ch-turnvig").hidden = !on; this.el.classList.toggle("turned", on); }
 
   toast(t, c) { this.g.hud.toast(t, c); }
   big(t, c) { this.g.hud.big(t, c); }
@@ -63,7 +103,7 @@ export class CityHud {
 
   health() {
     const p = this.sb.player;
-    this.q(".ch-hp i").style.width = clamp(p.health, 0, 100) + "%";
+    this.q(".ch-hp i").style.width = clamp(p.health / this.sb.maxHealth() * 100, 0, 100) + "%";
     this.q(".ch-hp").classList.toggle("low", p.health < 30);
     this.q(".ch-ar i").style.width = clamp(p.armor, 0, 100) + "%";
     this.q(".ch-ar").style.visibility = p.armor > 0 ? "visible" : "hidden";
@@ -141,6 +181,29 @@ export class CityHud {
       sp.hidden = false;
     } else sp.hidden = true;
     this.q(".ch-lock").hidden = this.g.input.locked || this.sb.menuOpen || matchMedia("(pointer: coarse)").matches;
+    // down: the bleed-out bar
+    const dn = this.q(".ch-down");
+    dn.hidden = !p.downed;
+    if (p.downed) {
+      dn.querySelector(".ch-bleed i").style.width = clamp(p.bleedT / (p.bleedMax || 30) * 100, 0, 100) + "%";
+      const t = this.sb.inv.medkits > 0 ? "hold F to use a medkit" : "wait for someone to pick you up";
+      if (dn.querySelector("span").textContent !== t) dn.querySelector("span").textContent = t;
+    }
+    if (this.sb.choosing) this.q(".ch-choice span").textContent = "respawn (" + Math.max(0, Math.ceil(this.sb.deadT)) + ")";
+    // the clock (and the evac line, set by evac.js)
+    this.clockT = (this.clockT || 0) - dt;
+    if (this.clockT <= 0) {
+      this.clockT = 0.25;
+      const c = this.sb.clock;
+      const t = p.turned ? "turned: " + c.label() : c.label();
+      const el = this.q(".ch-clock");
+      if (el.textContent !== t) el.textContent = t;
+      el.className = "ch-clock " + c.phase;
+      const o = this.sb.evac ? this.sb.evac.line() : "";
+      const oe = this.q(".ch-obj");
+      if (oe.textContent !== o) oe.textContent = o;
+      oe.hidden = !o;
+    }
     this.wantedT = (this.wantedT || 0) - dt;
     if (this.wantedT <= 0) { this.wantedT = 0.5; this.wanted(); }
   }

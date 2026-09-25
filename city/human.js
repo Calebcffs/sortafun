@@ -15,6 +15,12 @@
 // a red dot in the middle, and shots go exactly where the dot is. From the
 // hip there's normal spread. Ladders (ch.ladders, structures.js): walk into
 // one or press F by it, W / S to climb, space to let go.
+//
+// At 0 health you go down (ROADMAP.md section 1): sitting, crawling, still
+// shooting from the hip, bleeding out unless someone picks you up (sandbox.js
+// does the picking up). Turned (section 2): a zombie until dawn, claws not
+// guns, faster, 150 hp. The torch (L) is a spotlight off the camera, on by
+// itself when it gets dark.
 
 import * as THREE from "three";
 import { Avatar, HEIGHT } from "./avatar.js";
@@ -69,6 +75,14 @@ export class HumanPlayer {
     this.view.visible = false;
     game.scene.add(this.view);
     this.viewGun = null; this.viewKey = null;
+    this.downed = false; this.bleedT = 0;
+    this.turned = false;
+    // the torch
+    this.torch = new THREE.SpotLight(0xfff0d8, 0, 55, 0.42, 0.55, 1.4);
+    this.torch.castShadow = false;
+    game.scene.add(this.torch);
+    game.scene.add(this.torch.target);
+    this.torchOn = false; this.torchAuto = true;
   }
 
   place(x, y, z, yaw) {
@@ -112,7 +126,7 @@ export class HumanPlayer {
     const W = this.W;
     if (!W.ammo || this.reloadT > 0) return;
     if (this.mag() >= W.mag || (this.inv.ammo[W.ammo] || 0) <= 0) return;
-    this.reloadT = W.reload;
+    this.reloadT = W.reload * (this.sb.perk("quick hands") ? 0.6 : 1);
     this.g.sound.reload();
     this.avatar.pulseUpper("interact-right", 0.5);
   }
@@ -168,15 +182,17 @@ export class HumanPlayer {
     if (W.melee) {
       this.avatar.pulseUpper(Math.random() < 0.5 ? "attack-melee-right" : "attack-melee-left", 0.35);
       const from = this.pos.clone(); from.y += 1.1;
-      this.g.gunfire.fire(this, this.weapon, from, new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)), from);
+      const brawl = this.sb.perk("brawler") && !this.turned;
+      // (claws: zombies don't mind a turned player, so they're not a target)
+      this.g.gunfire.fire(this, this.weapon, from, new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)), from, { dmgMul: brawl ? 2.5 : 1, brawl, skip: this.turned ? (t) => t.kind === "zombie" : null });
       return;
     }
     this.inv.mag[this.weapon] = this.mag() - 1;
     this.avatar.pulseUpper(W.slot >= 3 ? "holding-both-shoot" : "holding-right-shoot", 0.12);
     const muzzle = this.muzzle(d);
     // down the sights: dead on. From the hip: normal spread, more on the move
-    const spreadMul = this.ads > 0.6 ? 0 : 1.2 * (this.speed > 4 ? 1.8 : 1) * (this.onGround ? 1 : 1.6);
-    const hits = this.g.gunfire.fire(this, this.weapon, o, d, this.ads > 0.6 ? this.viewMuzzle(d) : muzzle, { spreadMul });
+    const spreadMul = this.ads > 0.6 ? 0 : 1.2 * (this.speed > 4 ? 1.8 : 1) * (this.onGround ? 1 : 1.6) * (this.downed ? 1.5 : 1);
+    const hits = this.g.gunfire.fire(this, this.weapon, o, d, this.ads > 0.6 ? this.viewMuzzle(d) : muzzle, { spreadMul, dmgMul: this.sb.perk("deadeye") ? 1.25 : 1 });
     if (hits.length) this.sb.hud.hitMarker(hits.some((h) => h.head));
     this.sb.onShot(this.weapon, muzzle, hits, o, d);
     // kick the view up a little
@@ -206,21 +222,67 @@ export class HumanPlayer {
   // damage
   // ------------------------------------------------------------
   hurt(dmg, info = {}) {
-    if (this.dead || this.sb.godT > 0) return;
+    if (this.dead || this.sb.godT > 0 || this.g.relocating) return;
+    if (info.remote) this.lastHitBy = info.remote;
+    this.lastHurt = this.sb.time;
+    this.g.sound.hurt();
+    this.sb.hud.hurt(info);
+    if (this.turned) {
+      // a turned player just takes it
+      this.health -= dmg;
+      if (this.health <= 0) { this.health = 0; this.sb.onTurnedDown(info); }
+      this.sb.hud.health();
+      return;
+    }
+    if (this.downed) {
+      // already down: every hit brings the end closer
+      this.bleedT -= info.zombie ? 4 : Math.max(1, dmg / 6);
+      if (this.bleedT <= 0) this.die(info);
+      this.sb.hud.health();
+      return;
+    }
     if (this.armor > 0) {
       const soak = Math.min(this.armor, dmg * 0.65);
       this.armor -= soak;
       dmg -= soak;
     }
     this.health -= dmg;
-    this.lastHurt = this.sb.time;
-    this.g.sound.hurt();
-    this.sb.hud.hurt(info);
-    if (this.health <= 0) { this.health = 0; this.dead = true; this.sb.onDeath(info); }
+    if (this.health <= 0) {
+      // one huge hit (a rocket, a long fall, a player's headshot) is the end;
+      // anything else puts you down
+      if (this.health < -60) this.die(info);
+      else this.goDown(info);
+    }
     this.sb.hud.health();
   }
 
-  heal(n) { this.health = Math.min(100, this.health + n); this.sb.hud.health(); }
+  goDown(info) {
+    this.health = 0;
+    this.downed = true;
+    this.bleedT = this.sb.perk("second wind") ? 60 : 30;
+    this.bleedMax = this.bleedT;
+    this.ladder = null; this.crouch = false; this.aiming = false; this.ads = 0;
+    this.sb.onDowned(info);
+  }
+
+  die(info) {
+    if (this.dead) return;
+    this.health = 0;
+    this.downed = false;
+    this.dead = true;
+    this.sb.onDeath(info && info.remote ? info : this.lastHitBy ? { remote: this.lastHitBy } : info);
+  }
+
+  // picked up (by someone, or yourself)
+  getUp(hp) {
+    if (!this.downed) return;
+    this.downed = false;
+    this.health = hp;
+    this.lastHurt = this.sb.time;
+    this.sb.hud.health();
+  }
+
+  heal(n) { this.health = Math.min(this.sb.maxHealth(), this.health + n); this.sb.hud.health(); }
 
   // ------------------------------------------------------------
   // per frame
@@ -238,30 +300,36 @@ export class HumanPlayer {
     // V: camera near / middle / far
     if (input.camera) this.camDist = this.camDist < 3.5 ? 4.6 : this.camDist < 6 ? 7.5 : 3;
 
+    this.updateTorch(input);
     if (this.vehicle || this.dead) { this.ladder = null; this.aiming = false; this.scoped = false; this.ads = 0; }
+    // down: bleeding out
+    if (this.downed && !this.dead) {
+      this.bleedT -= dt;
+      if (this.bleedT <= 0) { this.die({ bled: true }); return; }
+    }
     if (this.vehicle) { this.mode = "drive"; this.avatarUpdate(dt); return; }
     if (this.dead) { this.avatar.update(dt, { dead: true }); this.avatar.root.position.copy(this.pos); return; }
 
     // weapons (guns only aim down the sights; not fists, the axe or a grenade)
     const W = this.W;
     const building = !!this.sb.defences.placing;
-    this.aiming = input.mouse.right && !!W.ammo && !this.ladder && !this.sb.menuOpen && !building;
+    this.aiming = input.mouse.right && !!W.ammo && !this.ladder && !this.sb.menuOpen && !building && !this.downed;
     this.scoped = this.aiming && !!W.scope && this.ads > 0.9;
     this.ads = clamp(this.ads + (this.aiming ? dt / 0.14 : -dt / 0.12), 0, 1);
-    if (!this.sb.menuOpen) {
+    if (!this.sb.menuOpen && !this.turned) {
       for (let i = 1; i <= 9; i++) if (input.hit("Digit" + i)) { const list = this.owned(); if (list[i - 1]) this.select(list[i - 1]); }
       if (input.hit("Digit0")) this.select("fists");
       if (input.zoom) this.cycle(input.zoom > 0 ? 1 : -1); // mouse wheel
       if (input.hit("KeyQ")) this.select(this.prevWeapon);
       if (input.hit("KeyR") && !building) this.startReload();
       if (input.hit("KeyG") && this.inv.grenades > 0) { const w = this.weapon; this.weapon = "grenade"; this.cool = 0; this.throwGrenade(); if (this.weapon === "grenade") this.weapon = w; }
-      if (input.hit("KeyC")) this.crouch = !this.crouch;
+      if (input.hit("KeyC") && !this.downed) this.crouch = !this.crouch;
     }
     if (!this.sb.menuOpen && !this.ladder && !building) this.tryFire(input, dt);
     else if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.finishReload(); }
 
     // on a ladder: that's all we do
-    if (this.ladder || this.grabLadder(input)) { this.climb(dt, input); return; }
+    if (!this.downed && !this.turned && (this.ladder || this.grabLadder(input))) { this.climb(dt, input); return; }
 
     // moving
     let fx = 0, fz = 0;
@@ -276,14 +344,16 @@ export class HumanPlayer {
     const cy = Math.cos(this.camYaw), sy = Math.sin(this.camYaw);
     // camera-relative: forward (sin, cos), right (-cos, sin)
     const mx = sy * fz - cy * fx, mz = cy * fz + sy * fx;
-    this.sprint = (input.down("ShiftLeft") || input.down("ShiftRight") || (input.stick && len > 0.95)) && !this.aiming && !this.crouch;
+    this.sprint = (input.down("ShiftLeft") || input.down("ShiftRight") || (input.stick && len > 0.95)) && !this.aiming && !this.crouch && !this.downed;
     if (this.sprint) this.crouch = false;
-    const top = this.swim ? SWIM : this.crouch ? CROUCH : this.sprint ? RUN : this.aiming ? WALK * 0.75 : WALK;
+    let top = this.swim ? SWIM : this.crouch ? CROUCH : this.sprint ? RUN * (this.sb.perk("iron lungs") ? 1.15 : 1) : this.aiming ? WALK * 0.75 : WALK;
+    if (this.turned) top = this.sprint ? 8.2 : 3.8;
+    if (this.downed) top = 0.9;
     const tvx = mx * top, tvz = mz * top;
     const acc = this.onGround || this.swim ? 28 : 5;
     this.vel.x = damp(this.vel.x, tvx, acc * 0.35, dt);
     this.vel.z = damp(this.vel.z, tvz, acc * 0.35, dt);
-    if ((input.hit("Space") || input.hit("Touch:jump")) && this.onGround && !this.sb.menuOpen) { this.vel.y = JUMP; this.onGround = false; this.crouch = false; }
+    if ((input.hit("Space") || input.hit("Touch:jump")) && this.onGround && !this.sb.menuOpen && !this.downed) { this.vel.y = this.turned ? 9.5 : JUMP; this.onGround = false; this.crouch = false; }
 
     // physics in a few small steps so falls don't go through floors
     const n = Math.ceil(dt / (1 / 90));
@@ -390,7 +460,7 @@ export class HumanPlayer {
     if (this.swim) a.root.position.y += 0.5;
     a.root.rotation.set(0, this.yaw, 0);
     if (this.ladder) { a.update(dt, { speed: this.speed ? 1.2 : 0 }); return; }
-    a.update(dt, { speed: this.speed, air: !this.onGround && !this.swim, vy: this.vel.y, crouch: this.crouch, swim: this.swim, aimPitch: this.aiming || this.W.ammo ? this.camPitch : 0 });
+    a.update(dt, { speed: this.downed ? 0 : this.speed, down: this.downed, air: !this.onGround && !this.swim, vy: this.vel.y, crouch: this.crouch, swim: this.swim, aimPitch: this.aiming || this.W.ammo ? this.camPitch : 0 });
   }
 
   step(dt) {
@@ -483,7 +553,7 @@ export class HumanPlayer {
     } else {
       // over the right shoulder, high enough that the (big) head stays clear
       // of the crosshair
-      target = this.camTarget.copy(this.pos); target.y += this.crouch ? 1.35 : 1.95;
+      target = this.camTarget.copy(this.pos); target.y += this.downed ? 1.0 : this.crouch ? 1.35 : 1.95;
       dist = this.camDist;
       side = 0.55;
       if (this.ads > 0) fovWant = 62 + ((this.W.zoom || 50) - 62) * this.ads;
@@ -532,6 +602,32 @@ export class HumanPlayer {
   }
 
   // ------------------------------------------------------------
+  // the torch: L, or on by itself when it gets dark (and off at dawn)
+  // ------------------------------------------------------------
+  updateTorch(input) {
+    const dark = this.pos.y < -100 ? 1 : this.sb.clock.dark;
+    if (input.hit("KeyL")) { this.torchOn = !this.torchOn; this.torchAuto = false; this.g.sound.click(); }
+    if (this.torchAuto) this.torchOn = dark > 0.5;
+    if (dark < 0.05 && !this.torchAuto && this.pos.y > -100) this.torchAuto = true;
+    const on = this.torchOn && !this.dead && !this.turned && !this.vehicle;
+    this.torch.intensity = on ? 70 : 0;
+    const c = this.g.camera;
+    this.torch.position.copy(c.position);
+    const f = this.tmp.set(0, 0, -1).applyQuaternion(c.quaternion);
+    this.torch.position.addScaledVector(f, 0.6);
+    this.torch.target.position.copy(this.torch.position).addScaledVector(f, 10);
+  }
+
+  // turned: a zombie until dawn (sandbox.js starts and ends it)
+  setTurned(on) {
+    this.turned = on;
+    this.downed = false;
+    if (on) { this.select("fists"); this.weapon = "claw"; this.avatar.setWeapon(null); this.avatar.zombie = true; this.avatar.zombify(); }
+    else { this.weapon = "fists"; this.avatar.unzombify(); }
+    this.sb.hud.weapon();
+  }
+
+  // ------------------------------------------------------------
   // the viewmodel: the gun in front of your eyes when aiming
   // ------------------------------------------------------------
   async loadViewGun(key) {
@@ -577,5 +673,5 @@ export class HumanPlayer {
     return c.position.clone().addScaledVector(d, len + 0.1).add(new THREE.Vector3(0, -0.05, 0).applyQuaternion(c.quaternion));
   }
 
-  dispose() { this.avatar.dispose(); this.view.removeFromParent(); }
+  dispose() { this.avatar.dispose(); this.view.removeFromParent(); this.torch.removeFromParent(); this.torch.target.removeFromParent(); }
 }

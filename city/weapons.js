@@ -40,6 +40,7 @@ export const WEAPONS = {
   rocket: { name: "rocket launcher", ammo: "rocket", dmg: 170, rate: 0.7, mag: 1, spread: 0, range: 400, slot: 8, rocket: true, blast: 7, reload: 2.4, price: 16000, zoom: 50 },
   grenade: { name: "grenade", thrown: true, dmg: 150, blast: 6.5, rate: 1.1, slot: 9, price: 200 },
   mine: { name: "landmine", dmg: 260, blast: 5, slot: -1, price: 0 }, // (defences.js; never in your hands)
+  claw: { name: "claws", melee: true, dmg: 30, rate: 1.5, range: 1.9, slot: -1, price: 0 }, // (turned players)
 };
 export const HEADSHOT = 10000;
 export const WEAPON_ORDER = ["fists", "axe", "pistol", "revolver", "smg", "shotgun", "rifle", "sniper", "minigun", "rocket", "grenade"];
@@ -231,7 +232,7 @@ export class Gunfire {
     const hits = [];
     let best = null, bestD = W.range;
     for (const t of this.targets()) {
-      if (t.id === shooter.id || t.dead || t.obox) continue;
+      if (t.id === shooter.id || t.dead || t.obox || (opts.skip && opts.skip(t))) continue;
       const dx = t.x - from.x, dz = t.z - from.z;
       const dist = Math.hypot(dx, dz) - t.r;
       if (dist > bestD) continue;
@@ -247,7 +248,7 @@ export class Gunfire {
       this.g.sound.punch();
       const p = new THREE.Vector3(best.x, best.y + best.h * 0.7, best.z);
       this.sprite(this.popMat, p, 0.5, 0.15, { grow: 2 });
-      best.hit(dmg, { by: shooter, key, melee: true, point: p, dir: dir.clone() });
+      best.hit(dmg, { by: shooter, key, melee: true, point: p, dir: dir.clone(), brawl: !!opts.brawl });
       hits.push({ target: best, dmg });
     }
     return hits;

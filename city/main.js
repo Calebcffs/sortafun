@@ -223,6 +223,18 @@ class Game {
 
   respawnSomewhere() { const p = this.randomSpot(); return this.relocate(p.x, p.z); }
 
+  // somewhere between min and max metres from p, on dry land
+  relocateNear(p, min, max) {
+    const T = this.world.terrain;
+    for (let i = 0; i < 60; i++) {
+      const a = Math.random() * Math.PI * 2, r = min + Math.random() * (max - min);
+      const x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+      const s = T.sample(x, z);
+      if (s.h > 0.8 && !s.ice) return this.relocate(x, z);
+    }
+    return this.respawnSomewhere();
+  }
+
   teleportWait() {
     let at = this.lastTp || 0;
     try { at = Math.max(at, Number(localStorage.getItem("city-tp-at")) || 0); } catch (e) {}
@@ -243,7 +255,7 @@ class Game {
   }
 
   // build the world round (x, z) behind a curtain, then put you there
-  async relocate(x, z, warp) {
+  async relocate(x, z, warp, exact) {
     const sb = this.sandbox;
     if (!sb || this.relocating) return;
     this.relocating = true;
@@ -256,8 +268,9 @@ class Game {
     await new Promise((r) => setTimeout(r, 200));
     await this.world.preload(x, z);
     if (this.sandbox !== sb) return;
-    const place = this.findPerch(x, z);
-    const g = this.world.groundAt(place.x, place.z, 1e9, {});
+    // (exact: a known safe spot, like a safehouse beacon, used as it is)
+    const place = exact ? { x: exact.x, z: exact.z, yaw: exact.yaw || 0 } : this.findPerch(x, z);
+    const g = exact ? { y: exact.y } : this.world.groundAt(place.x, place.z, 1e9, {});
     sb.player.place(place.x, g.y, place.z, place.yaw);
     sb.player.camYaw = place.yaw;
     this.spawnPoint = { x: place.x, y: g.y, z: place.z, yaw: place.yaw };
@@ -285,7 +298,7 @@ class Game {
         net.offlineMsg = "the city is full (50 players). playing solo";
         this.hud.toast("the online city is full right now (50 players). you're on your own in the same world.", "warn");
       } else if (r === "ok") {
-        if (this.sandbox) this.sandbox.defences.goneOnline();
+        if (this.sandbox) { this.sandbox.defences.goneOnline(); this.sandbox.evac.goneOnline(net); this.sandbox.crew.stashFor = null; }
         const n = net.players.size;
         this.hud.toast(n ? "you're online with " + n + (n === 1 ? " other player" : " other players") + "!" : "you're online. nobody else is here yet.", "good");
       }
@@ -492,7 +505,15 @@ class Game {
     const s = this.world.terrain.sample(this.camera.position.x, this.camera.position.z);
     const under = this.camera.position.y < UNDER_LINE;
     this.sky.underground = under;
+    this.sky.time = sb.clock.skyTime; // (the shared day and night, clock.js)
     this.sky.update(dt, this.camera.position, s.w, f.pos.y, false);
+    // at night the dark closes right in (a night owl sees a bit further)
+    const dark = sb.clock.dark;
+    if (dark > 0 && !under) {
+      const owl = sb.perk("night owl");
+      this.scene.fog.near *= 1 - dark * (owl ? 0.7 : 0.85);
+      this.scene.fog.far *= 1 - dark * (owl ? 0.65 : 0.8);
+    }
     // windows and lamps: warm at golden hour, all lit down in the metro
     this.world.uniforms.uNight.value = under ? 1 : Math.max(this.sky.night, 0.35);
     this.sky.updateSmoke(dt);

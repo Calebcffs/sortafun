@@ -17,6 +17,9 @@
 //   city/cars/<id>  = {ty, x, y, z, yaw, by: uid driving or "", t, wr: wrecked}
 //   city/loot/<id>  = server time it was opened
 //   city/feed/<id>  = {k: killer, v: victim, w: weapon, by: killer uid, vu: victim uid, t}
+//   people also carry: z (their zombies, horde.js), tn (turned 1/0), lv
+//     (level), cr / cn (crew id / name), pg (a ping), qc (quick chat)
+//   city/zhits/<owner>/<id> = {by, n, z: zombie id, d: damage, h: headshot, t}
 //   city/builds/<id> = {ty: barricade|wall|spikes|mine|turret, x, y, z, r: yaw, by: uid, t}
 //                      (defences.js; anyone can remove one: it broke or went off)
 //
@@ -110,7 +113,7 @@ function packBird(f, drive) {
 function packHuman(h) {
   const v = h.vehicle;
   if (v) return [r1(v.pos.x), r1(v.pos.y), r1(v.pos.z), r2(v.yaw), 0, 0, "v", 0, 0, r2(v.steer), r2(v.pitch), r2(v.roll), 0, r1(v.speed)].join("|");
-  const mode = h.dead ? "x" : h.swim ? "w" : h.onGround ? "g" : "a";
+  const mode = h.dead ? "x" : h.downed ? "o" : h.swim ? "w" : h.onGround ? "g" : "a";
   return [r1(h.pos.x), r1(h.pos.y), r1(h.pos.z), r2(h.yaw), r2(h.aiming || h.W.ammo ? h.camPitch : 0), 0, mode, h.crouch ? 1 : 0, h.aiming ? 1 : 0, 0, 0, 0, 0, r1(h.speed)].join("|");
 }
 function unpack(st) {
@@ -146,8 +149,8 @@ function makeTag() {
   sprite.userData.keepMat = true; // disposed here, not by Game.stop()
   return { sprite, canvas, tex, mat, text: "" };
 }
-function drawTag(tag, name, sub, hp) {
-  const text = name + "|" + sub + "|" + hp;
+function drawTag(tag, name, sub, hp, color = "#fff", subColor = "#ffd43b") {
+  const text = name + "|" + sub + "|" + hp + "|" + color + subColor;
   if (tag.text === text) return;
   tag.text = text;
   const c = tag.canvas.getContext("2d");
@@ -155,11 +158,11 @@ function drawTag(tag, name, sub, hp) {
   c.textAlign = "center";
   c.lineJoin = "round";
   c.font = "bold 26px Verdana, sans-serif";
-  c.lineWidth = 6; c.strokeStyle = "#1d1b2e"; c.fillStyle = "#fff";
+  c.lineWidth = 6; c.strokeStyle = "#1d1b2e"; c.fillStyle = color;
   c.strokeText(name, 128, 28); c.fillText(name, 128, 28);
   if (sub) {
     c.font = "bold 17px Verdana, sans-serif";
-    c.lineWidth = 5; c.fillStyle = "#ffd43b";
+    c.lineWidth = 5; c.fillStyle = subColor;
     c.strokeText(sub, 128, 54); c.fillText(sub, 128, 54);
   } else if (hp != null && hp < 100) {
     // a little health bar under close players who are hurt
@@ -213,7 +216,7 @@ export class Net {
     this.lastBeat = performance.now();
     this.sentPc = 0; this.sentCc = 0;
     const rec = { n: this.name, k: this.human ? "h" : "b", s: this.human ? this.g.sandbox.inv.outfit : this.g.speciesKey, st: this.lastSent, pc: 0, cc: 0, sc: 0, t: db.serverTimestamp() };
-    if (this.human) { rec.w = this.g.sandbox.player.weapon; rec.v = ""; rec.vi = ""; rec.hp = 100; }
+    if (this.human) { const sb = this.g.sandbox; rec.w = sb.player.weapon; rec.v = ""; rec.vi = ""; rec.hp = 100; rec.lv = sb.progress.level; rec.tn = 0; rec.z = ""; rec.cr = sb.crew ? sb.crew.id : ""; rec.cn = sb.crew ? sb.crew.name : ""; }
     await db.set(this.me, rec);
     if (this.closed) { db.remove(this.me); return "closed"; }
     this.live = true;
@@ -225,6 +228,9 @@ export class Net {
     // hits on us: shots, and poo from birds
     const hits = c.ref("hits/" + uid);
     this.unsubs.push(db.onChildAdded(hits, (s) => { const v = s.val() || {}; db.remove(s.ref); this.onHit(v); }));
+    // other players' shots on our zombies
+    const zh = c.ref("zhits/" + uid);
+    this.unsubs.push(db.onChildAdded(zh, (s) => { const v = s.val() || {}; db.remove(s.ref); if (this.g.sandbox) this.g.sandbox.npcs.applyRemoteHit(v); }));
     if (this.human) {
       // cars people have moved, opened loot, the kill feed
       const cars = c.ref("cars");
@@ -234,6 +240,9 @@ export class Net {
       const loot = c.ref("loot");
       this.unsubs.push(db.onChildAdded(loot, (s) => this.onLoot(s.key, s.val(), s.ref)));
       this.unsubs.push(db.onChildChanged(loot, (s) => this.onLoot(s.key, s.val(), s.ref)));
+      const inv = c.ref("invites/" + uid);
+      this.unsubs.push(db.onChildAdded(inv, (s) => { if (this.g.sandbox && this.g.sandbox.crew) this.g.sandbox.crew.onInvite(s.key, s.val()); }));
+      this.unsubs.push(db.onChildRemoved(inv, (s) => { if (this.g.sandbox && this.g.sandbox.crew) this.g.sandbox.crew.onInvite(s.key, null); }));
       const builds = c.ref("builds");
       this.unsubs.push(db.onChildAdded(builds, (s) => this.onBuild(s.key, s.val(), s.ref)));
       this.unsubs.push(db.onChildRemoved(builds, (s) => this.onBuild(s.key, null)));
@@ -274,6 +283,15 @@ export class Net {
     p.vtype = v.v || "";
     p.vid = v.vi || "";
     p.hp = v.hp == null ? 100 : v.hp;
+    p.lv = v.lv || 1;
+    p.cr = v.cr || ""; p.cn = cleanName(v.cn || "");
+    const turned = !!v.tn;
+    if (turned !== !!p.turned) { p.turned = turned; if (p.model && p.model.zombify) { if (turned) { p.model.zombie = true; p.model.zombify(); } else p.model.unzombify(); } p.tag.text = ""; }
+    if (v.z !== p.zraw) { p.zraw = v.z; if (this.g.sandbox) this.g.sandbox.horde.onString(uid, v.z || ""); }
+    // (pings and quick chat that were already there when we arrived are old news)
+    if (added) { p.pg = v.pg || ""; p.qc = v.qc || ""; }
+    if (v.pg && v.pg !== p.pg) { p.pg = v.pg; if (this.g.sandbox && this.g.sandbox.crew) this.g.sandbox.crew.onPing(p, v.pg); }
+    if (v.qc && v.qc !== p.qc) { p.qc = v.qc; if (this.g.sandbox && this.g.sandbox.crew) this.g.sandbox.crew.onChat(p, v.qc); }
     const last = p.snaps[p.snaps.length - 1];
     if (!last || last.raw !== v.st) {
       p.snaps.push({ at: now, s: st, raw: v.st });
@@ -281,6 +299,9 @@ export class Net {
     }
     p.heard = now;
     p.dead = st.mode === "x";
+    const down = st.mode === "o";
+    if (down && !p.down && !added && this.g.sandbox && p.pos.distanceTo(this.g.flyer.pos) < 150) this.g.hud.toast(p.name + " is down! get to them and hold F", "bad");
+    p.down = down;
     // birds: poos and calls since we last heard
     if ((v.pc || 0) > p.pc) { const k = Math.min(3, v.pc - p.pc); for (let i = 0; i < k; i++) this.remotePoo(p, i * 0.08); }
     if ((v.cc || 0) > p.cc && kind === "b") {
@@ -301,6 +322,7 @@ export class Net {
   removePlayer(uid) {
     const p = this.players.get(uid);
     if (!p) return;
+    if (this.g.sandbox) this.g.sandbox.horde.dropOwner(uid);
     this.dropModel(p);
     p.tag.sprite.removeFromParent();
     p.tag.tex.dispose(); p.tag.mat.dispose();
@@ -334,13 +356,25 @@ export class Net {
     const vt = veh ? veh.type : "", vi = veh ? veh.id : "";
     const outfit = sb ? sb.inv.outfit : null;
     const fx = this.fxPending;
-    const hp = sb ? Math.round(clamp(sb.player.health, 0, 100) / 10) * 10 : null;
-    if (!beat && !fx && st === this.lastSent && this.pc === this.sentPc && this.cc === this.sentCc && w === this.sentW && vt === this.sentV && outfit === this.sentS && hp === this.sentHp) return;
+    const hp = sb ? Math.round(clamp(sb.player.health / sb.maxHealth() * 100, 0, 100) / 10) * 10 : null;
+    // (our zombies go out 4-5 times a second, but only while someone's near)
+    const extra = {};
+    if (sb) {
+      extra.z = sb.npcs.packMine();
+      extra.tn = sb.player.turned ? 1 : 0;
+      extra.lv = sb.progress.level;
+      extra.cr = sb.crew ? sb.crew.id : ""; extra.cn = sb.crew ? sb.crew.name : "";
+      if (sb.crew) { extra.pg = sb.crew.pingOut; extra.qc = sb.crew.chatOut; }
+    }
+    this.sentX = this.sentX || {};
+    const xch = Object.keys(extra).filter((k) => extra[k] !== undefined && extra[k] !== this.sentX[k]);
+    if (!beat && !fx && !xch.length && st === this.lastSent && this.pc === this.sentPc && this.cc === this.sentCc && w === this.sentW && vt === this.sentV && outfit === this.sentS && hp === this.sentHp) return;
     // only what changed; the timestamp and score ride along with the heartbeat
     const up = {};
     if (st !== this.lastSent) up.st = st;
     if (this.pc !== this.sentPc) up.pc = this.pc;
     if (this.cc !== this.sentCc) up.cc = this.cc;
+    for (const k of xch) { up[k] = extra[k]; this.sentX[k] = extra[k]; }
     if (sb) {
       if (w !== this.sentW) up.w = w;
       if (vt !== this.sentV) { up.v = vt; up.vi = vi; }
@@ -364,10 +398,24 @@ export class Net {
     db.push(this.c.ref("hits/" + p.uid), { by: this.uid, n: this.name, t: db.serverTimestamp(), d: Math.round(clamp(dmg, 0, 400)), w: key }).catch(() => {});
   }
 
+  // a zombie hit from someone else's game, and picking people up
+  hitZombie(owner, zid, d, h) {
+    if (!this.live) return;
+    const { db } = this.c;
+    db.push(this.c.ref("zhits/" + owner), { by: this.uid, n: this.name, z: String(zid).slice(0, 12), d: Math.round(clamp(d, 0, 20000)), h: !!h, t: db.serverTimestamp() }).catch(() => {});
+  }
+  revive(p) {
+    if (!this.live) return;
+    const { db } = this.c;
+    db.push(this.c.ref("hits/" + p.uid), { by: this.uid, n: this.name, t: db.serverTimestamp(), d: 0, w: "revive" }).catch(() => {});
+  }
+
   onHit(v) {
     if (!this.g.running) return;
     const who = cleanName(v.n) || "someone";
     const key = v.w || "poo";
+    if (key === "revive") { if (this.g.sandbox) this.g.sandbox.revived(who); return; }
+    if (key === "zombie") { if (this.g.sandbox) this.g.sandbox.player.hurt(Number(v.d) || 0, { zombie: true }); return; }
     if (key === "poo") {
       this.g.hud.big("SPLATTED BY " + who.toUpperCase() + "!", "bad");
       this.g.hud.toast(who + " pooed on you!", "bad");
@@ -385,7 +433,7 @@ export class Net {
 
   // we died to someone: everyone sees it in the feed
   died(info) {
-    if (!this.live || !info || !info.remote) return;
+    if (!this.live || !info || !info.remote || info.remote.w === "zombie") return;
     const { db } = this.c;
     db.push(this.c.ref("feed"), { k: info.remote.n, v: this.name, w: info.remote.w || "?", by: info.remote.by || "", vu: this.uid, t: db.serverTimestamp() }).catch(() => {});
   }
@@ -445,7 +493,9 @@ export class Net {
   addBuild(id, rec) {
     if (!this.live) return;
     const { db } = this.c;
-    db.set(this.c.ref("builds/" + id), { ty: rec.ty, x: rec.x, y: rec.y, z: rec.z, r: rec.r, by: this.uid, t: db.serverTimestamp() }).catch(() => {});
+    const out = { ty: rec.ty, x: rec.x, y: rec.y, z: rec.z, r: rec.r, by: this.uid, t: db.serverTimestamp() };
+    if (rec.cr) out.cr = rec.cr;
+    db.set(this.c.ref("builds/" + id), out).catch(() => {});
   }
   removeBuild(id) {
     if (!this.live) return;
@@ -482,11 +532,12 @@ export class Net {
       if (p.dead || !p.model || (performance.now() - p.heard) / 1000 > STALE) continue;
       const hit = (dmg, info) => {
         if (!info.by || !info.by.isPlayer) return;
+        if (info.key === "claw" && this.g.sandbox) this.g.sandbox.onClaw();
         this.hitPlayer(p, p.car ? dmg * 0.3 : dmg, info.key || (this.g.sandbox ? this.g.sandbox.player.weapon : "?"));
         this.g.gunfire.sprite(this.g.gunfire.popMat, info.point || p.pos, 0.5, 0.15, { grow: 2 });
       };
       if (p.car) out.push({ id: "p:" + p.uid, kind: "player", obox: p.car.obox, hit });
-      else if (p.kind === "h") out.push({ id: "p:" + p.uid, kind: "player", x: p.pos.x, y: p.pos.y, z: p.pos.z, r: 0.36, h: HEIGHT, hit });
+      else if (p.kind === "h") out.push({ id: "p:" + p.uid, kind: p.turned ? "zombie-player" : "player", x: p.pos.x, y: p.pos.y, z: p.pos.z, r: 0.36, h: p.down ? 0.9 : HEIGHT, hit });
       else {
         const s = gameScale(SPECIES[p.look]);
         out.push({ id: "p:" + p.uid, kind: "bird", x: p.pos.x, y: p.pos.y - 0.3 * s, z: p.pos.z, r: Math.max(0.35, 0.3 * s), h: 0.6 * s, hit });
@@ -515,7 +566,8 @@ export class Net {
     for (const p of this.players.values()) {
       if ((performance.now() - p.heard) / 1000 > STALE) continue;
       const d = p.pos.distanceTo(me);
-      if (d < 600) out.push({ x: p.pos.x, z: p.pos.z, d, color: "#ffffff" });
+      const sb = this.g.sandbox, mate = sb && sb.crew && sb.crew.isMate(p);
+      if (d < 600 || mate) out.push({ x: p.pos.x, z: p.pos.z, d, pri: mate || p.down, label: mate || p.down ? "p" : undefined, color: p.down ? "#ff4040" : p.turned ? "#a00000" : mate ? "#5cf08e" : "#ffffff" });
     }
     return out;
   }
@@ -557,7 +609,13 @@ export class Net {
         if (p.kind === "h") lift = inCar ? (p.car ? p.car.h + 0.6 : 2.2) : HEIGHT + 0.35;
         else if (p.model) lift = (p.model.standHeight + 0.15) * gameScale(SPECIES[p.look]) + 0.25;
         tag.position.set(p.pos.x, p.pos.y + lift, p.pos.z);
-        if (relabel || !p.tag.text) drawTag(p.tag, p.name, d > 40 ? distLabel(d) : p.dead ? "down" : "", p.kind === "h" ? p.hp : null);
+        if (relabel || !p.tag.text) {
+          const sb = this.g.sandbox;
+          const mate = sb && sb.crew && sb.crew.isMate(p);
+          const name = p.kind === "h" ? (p.turned ? p.name + " (turned)" : p.name + (p.lv > 1 ? " lv" + p.lv : "")) : p.name;
+          const sub = p.down ? "DOWN! hold F by them" : d > 40 ? distLabel(d) : p.dead ? "dead" : "";
+          drawTag(p.tag, name, sub, p.kind === "h" ? p.hp : null, p.turned ? "#ff6b6b" : mate ? "#5cf08e" : "#fff", p.down ? "#ff6b6b" : "#ffd43b");
+        }
         const k = clamp(1.15 - cam.distanceTo(p.pos) / 1500, 0.7, 1.1);
         tag.scale.set(0.34 * k, 0.085 * k, 1);
       }
@@ -566,7 +624,7 @@ export class Net {
     const budget = this.g.quality === "low" ? ANIM_BUDGET - 1 : ANIM_BUDGET;
     for (const { p } of this.due.slice(0, budget)) {
       const s = p.s;
-      if (p.kind === "h") p.model.update(p.animT, { speed: s.speed, air: s.mode === "a", vy: 0, crouch: s.flap > 0.5, swim: s.mode === "w", dead: s.mode === "x", drive: s.mode === "v", aimPitch: s.pitch });
+      if (p.kind === "h") p.model.update(p.animT, { speed: s.mode === "o" ? 0 : s.speed, down: s.mode === "o", air: s.mode === "a", vy: 0, crouch: s.flap > 0.5, swim: s.mode === "w", dead: s.mode === "x", drive: s.mode === "v", aimPitch: s.pitch });
       else p.model.update(p.animT, { mode: BIRD_MODE[s.mode] || "air", flap: s.flap, dive: s.dive, flare: s.flare, bank: s.bank, walk: s.walk, turn: s.turn, speed: s.speed, call: false });
       p.animT = 0;
     }
@@ -578,6 +636,7 @@ export class Net {
   buildModel(p) {
     if (p.kind === "h") {
       p.model = new Avatar(p.look);
+      if (p.turned) { p.model.zombie = true; p.model.zombify(); }
       this.g.scene.add(p.model.root);
       p.shownWeapon = null;
     } else {
@@ -615,7 +674,7 @@ export class Net {
       a.root.position.set(s.x, s.y, s.z);
       a.root.rotation.set(0, s.yaw, 0);
     }
-    if (p.shownWeapon !== p.weapon && a.bones) { p.shownWeapon = p.weapon; a.setWeapon(p.weapon === "fists" || p.weapon === "grenade" ? null : p.weapon); }
+    if (p.shownWeapon !== p.weapon && a.bones) { p.shownWeapon = p.weapon; a.setWeapon(p.weapon === "fists" || p.weapon === "grenade" || p.weapon === "claw" ? null : p.weapon); }
     if (!near) return;
     p.animT += dt;
     const d = p.pos.distanceTo(this.g.flyer.pos);

@@ -9,6 +9,8 @@
 //   mine       goes off under the first zombie or warden to step on it.
 //              Never hurts you or other players
 //   turret     shoots zombies within 22m by itself for 10 minutes
+//   beacon     the crew's safehouse (crew.js): heals, respawns, the stash,
+//              and it draws raids at night. One per crew
 //
 // Barricades and walls are solid (a collider in the world's grid, so
 // people, zombies and bullets all stop at them). Zombies trying to walk
@@ -29,8 +31,9 @@ export const DEFENCES = {
   spikes: { name: "spike trap", price: 100, uses: 6, blurb: "zombies that walk over it get hurt and slowed. yours never hurt you" },
   mine: { name: "landmine", price: 160, blurb: "blows up the first zombie or warden to step on it. never hurts you" },
   turret: { name: "sentry turret", price: 3000, life: 600, blurb: "shoots zombies within 22m on its own for 10 minutes" },
+  beacon: { name: "safehouse beacon", price: 1500, hp: 1200, w: 0.9, h: 1.7, d: 0.9, blurb: "your crew's home: heal near it, respawn at it, share a stash. zombies raid it at night" },
 };
-export const DEFENCE_ORDER = ["barricade", "wall", "spikes", "mine", "turret"];
+export const DEFENCE_ORDER = ["barricade", "wall", "spikes", "mine", "turret", "beacon"];
 const LIFE = 3 * 3600e3;   // ms before anything built gets tidied away
 const SAVE_KEY = "city-builds-v1";
 const MAX_MINE = 40;       // things one player can have out at once
@@ -43,6 +46,8 @@ function mat(key) {
       steel: { color: 0x8a9098, roughness: 0.4, metalness: 0.7 }, dark: { color: 0x2a2c30, roughness: 0.6, metalness: 0.4 },
       spike: { color: 0xc8ccd0, roughness: 0.3, metalness: 0.8 }, olive: { color: 0x4d5a2c, roughness: 0.7 },
       red: { color: 0xff2a1a, emissive: 0xff2a1a, emissiveIntensity: 1.5 }, hazard: { color: 0xf2c417, roughness: 0.6 },
+      green: { color: 0x5cf08e, emissive: 0x5cf08e, emissiveIntensity: 2 },
+      beam: { color: 0x5cf08e, emissive: 0x5cf08e, emissiveIntensity: 1, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide },
     }[key];
     MATS[key] = new THREE.MeshStandardMaterial(def);
     MATS[key].userData.keepMat = true;
@@ -84,6 +89,18 @@ function buildMesh(type) {
     const l = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), mat("red"));
     l.position.set(0.16, 0.12, 0); g.add(l);
     g.userData.light = l;
+  } else if (type === "beacon") {
+    box(g, 0.9, 0.5, 0.9, 0, 0.25, 0, "dark");
+    box(g, 0.7, 0.9, 0.7, 0, 0.95, 0, "steel");
+    box(g, 0.74, 0.12, 0.74, 0, 0.7, 0, "hazard");
+    const pole = box(g, 0.06, 1.2, 0.06, 0.2, 2, 0.2, "dark");
+    pole.castShadow = false;
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), mat("green"));
+    lamp.position.set(0, 1.55, 0); g.add(lamp);
+    // a tall faint beam so the crew can find home from across town
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.6, 60, 10, 1, true), mat("beam"));
+    beam.position.y = 31; beam.castShadow = false; g.add(beam);
+    g.userData.lamp = lamp; g.userData.beam = beam;
   } else if (type === "turret") {
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2;
@@ -189,6 +206,13 @@ export class Defences {
       const type = this.placing;
       this.inv.builds[type]--;
       const rec = { ty: type, x: r2(s.x), y: r2(s.y), z: r2(s.z), r: r2(s.yaw), by: this.g.net && this.g.net.uid ? this.g.net.uid : "me", t: this.sb.now() };
+      if (type === "beacon") {
+        // one safehouse per crew: the old one goes
+        rec.cr = this.sb.crew ? this.sb.crew.home() : "u:me";
+        for (const d of [...this.list.values()]) if (d.type === "beacon" && d.cr === rec.cr) this.remove(d.id, true);
+        this.sb.hud.big("SAFEHOUSE SET UP", "good");
+        this.sb.hud.toast("you'll heal here and come back here. F on it opens the stash. at night they'll come for it: fortify!", "good");
+      }
       const id = "d" + Date.now().toString(36) + (SEQ++).toString(36) + Math.floor(Math.random() * 1296).toString(36);
       this.add(id, rec, true);
       this.g.sound.build();
@@ -205,7 +229,9 @@ export class Defences {
   add(id, rec, mine) {
     if (this.list.has(id) || !DEFENCES[rec.ty]) return;
     const D = DEFENCES[rec.ty];
-    const d = { id, type: rec.ty, x: rec.x, y: rec.y, z: rec.z, yaw: rec.r || 0, t: rec.t || this.sb.now(), by: rec.by, mine: !!mine || (this.g.net && rec.by === this.g.net.uid), hp: D.hp || 1, uses: D.uses || 1 };
+    const d = { id, type: rec.ty, x: rec.x, y: rec.y, z: rec.z, yaw: rec.r || 0, t: rec.t || this.sb.now(), by: rec.by, mine: !!mine || (this.g.net && rec.by === this.g.net.uid), hp: (D.hp || 1) * (this.sb.perk("engineer") && (mine || (this.g.net && rec.by === this.g.net.uid)) ? 2 : 1), uses: D.uses || 1, cr: rec.cr || "" };
+    d.pos = new THREE.Vector3(d.x, d.y, d.z);
+    d.maxHp = d.hp;
     d.obj = buildMesh(d.type);
     d.obj.position.set(d.x, d.y, d.z);
     d.obj.rotation.y = d.yaw;
@@ -243,7 +269,8 @@ export class Defences {
     if (d.hp <= 0) {
       this.g.gunfire.sprite(this.g.gunfire.dustMat, new THREE.Vector3(d.x, d.y + 1, d.z), 2.2, 0.9, { grow: 1.5, rise: 0.5 });
       this.g.sound.crashCar(this.g.sound.near(d.obj.position.distanceTo(this.sb.player.pos), 60));
-      if (d.mine) this.sb.hud.toast("the zombies broke through your " + DEFENCES[d.type].name + "!", "bad");
+      if (d.type === "beacon" && this.sb.crew && d.cr === this.sb.crew.home()) this.sb.hud.big("THE SAFEHOUSE FELL", "bad");
+      else if (d.mine) this.sb.hud.toast("the zombies broke through your " + DEFENCES[d.type].name + "!", "bad");
       this.remove(d.id, true);
     }
   }
@@ -273,7 +300,13 @@ export class Defences {
     const now = this.sb.now();
     const me = this.sb.player.pos;
     for (const d of [...this.list.values()]) {
-      if (now - d.t > (d.type === "turret" ? DEFENCES.turret.life * 1000 : LIFE)) { this.remove(d.id, d.mine); continue; }
+      const life = d.type === "turret" ? DEFENCES.turret.life * 1000 * (d.mine && this.sb.perk("engineer") ? 2 : 1) : d.type === "beacon" ? 24 * 3600e3 : LIFE;
+      if (now - d.t > life) { this.remove(d.id, d.mine); continue; }
+      if (d.type === "beacon") {
+        const u = d.obj.userData;
+        if (u.lamp) u.lamp.scale.setScalar(1 + Math.sin(now / 300) * 0.25);
+        if (this.sb.clock.phase === "dawn" && d.hp < d.maxHp) d.hp = d.maxHp;
+      }
       if (d.shake > 0) { d.shake -= dt; d.obj.position.x = d.x + (Math.random() - 0.5) * 0.06 * (d.shake > 0 ? 1 : 0); }
       if (d.type === "mine" && d.obj.userData.light) d.obj.userData.light.visible = Math.floor(now / 600) % 2 === 0;
       if (d.type === "turret" && Math.abs(d.x - me.x) < 120 && Math.abs(d.z - me.z) < 120) this.turret(d, dt);
@@ -325,7 +358,8 @@ export class Defences {
     const net = this.g.net;
     for (const [id, d] of this.list) if (d.by === "me") {
       d.by = net.uid;
-      net.addBuild(id, { ty: d.type, x: d.x, y: d.y, z: d.z, r: d.yaw, by: net.uid, t: d.t });
+      if (d.cr === "u:me") d.cr = this.sb.crew ? this.sb.crew.home() : "u:" + net.uid;
+      net.addBuild(id, { ty: d.type, x: d.x, y: d.y, z: d.z, r: d.yaw, by: net.uid, t: d.t, cr: d.cr });
     }
     try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
   }
@@ -336,7 +370,7 @@ export class Defences {
   saveLocal() {
     if (this.g.net && this.g.net.live) return;
     const out = [];
-    for (const [id, d] of this.list) if (d.mine) out.push({ id, ty: d.type, x: d.x, y: d.y, z: d.z, r: d.yaw, by: "me", t: d.t });
+    for (const [id, d] of this.list) if (d.mine) out.push({ id, ty: d.type, x: d.x, y: d.y, z: d.z, r: d.yaw, by: "me", t: d.t, cr: d.cr });
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(out)); } catch (e) {}
   }
   loadLocal() {

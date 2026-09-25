@@ -222,7 +222,12 @@ export class SkySystem {
     // orange sunset, while the light keeps its angle so the streets get some)
     const skySun = this._skySun || (this._skySun = new THREE.Vector3());
     skySun.copy(this.sunDir);
-    if (this.skyLow) { skySun.y = Math.max(0.035, skySun.y - 0.2); skySun.normalize(); }
+    if (this.skyLow) {
+      // (eased off as the sun really sets, or the sky would glow all night)
+      const y = skySun.y, k = smoothstep(0.02, 0.12, y);
+      skySun.y = y - k * (y - Math.max(0.035, y - 0.2));
+      skySun.normalize();
+    }
     u.sunPosition.value.copy(skySun).multiplyScalar(1000);
     // hazier near sunrise/sunset, with a big glow round the sun
     const low = 1 - smoothstep(0.05, 0.4, Math.abs(elev));

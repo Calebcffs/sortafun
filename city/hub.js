@@ -5,17 +5,23 @@
 //   inventory  your cash, health, guns (equip / sell), defences (place /
 //              sell), valuables (sell), the garage (call in / sell), outfits
 //   shop       buy (and sell), shop.js
+//   crew       your crew, invites, players near you to invite, and the
+//              safehouse stash (crew.js)
 //   map        the world map, map.js: click to teleport, once a minute
 //
-// B opens it on the shop, M on the map.
+// B opens it on the shop, M on the map, F on your safehouse beacon on the
+// crew tab (the stash).
 
 import { WEAPONS, AMMO, WEAPON_ORDER } from "./weapons.js";
 import { VEHICLES } from "./vehicles.js";
 import { OUTFITS } from "./avatar.js";
 import { VALUABLES } from "./loot.js";
 import { DEFENCES, DEFENCE_ORDER } from "./defences.js";
+const distLabel = (d) => d < 1000 ? Math.round(d / 10) * 10 + "m" : (d / 1000).toFixed(1) + "km";
 import { Shop, SELL, money } from "./shop.js";
 import { WorldMap } from "./map.js";
+import { PERKS, xpFor } from "./progress.js";
+import { MAX_CREW } from "./crew.js";
 
 export class Hub {
   constructor(game, sandbox) {
@@ -25,6 +31,7 @@ export class Hub {
     this.tab = "inv";
     this.moneyEl = this.el.querySelector(".hub-money");
     this.inv = this.el.querySelector('[data-pane="inv"]');
+    this.crewEl = this.el.querySelector('[data-pane="crew"]');
     this.shop = new Shop(game, sandbox, this.el.querySelector('[data-pane="shop"]'));
     this.map = new WorldMap(game, sandbox, this.el.querySelector('[data-pane="map"]'));
     for (const b of this.el.querySelectorAll(".hub-tabs button")) b.onclick = () => this.show(b.dataset.tab);
@@ -76,6 +83,7 @@ export class Hub {
     this.moneyEl.textContent = money(this.sb.inv.money);
     if (this.tab === "inv") this.renderInv();
     else if (this.tab === "shop") this.shop.render();
+    else if (this.tab === "crew") this.renderCrew();
   }
 
   update() { if (this.isOpen && this.tab === "map") this.map.update(); }
@@ -91,6 +99,12 @@ export class Hub {
     top.className = "inv-top";
     top.innerHTML = `<div class="inv-cash"></div><div class="inv-stat"><span>health</span><i class="hp"><b></b></i></div><div class="inv-stat"><span>armour</span><i class="ar"><b></b></i></div>`;
     top.querySelector(".inv-cash").textContent = money(inv.money);
+    const P = sb.progress;
+    const lvl = document.createElement("div");
+    lvl.className = "inv-level";
+    lvl.innerHTML = "<b>level " + P.level + "</b><i><u style='width:" + Math.round((inv.xp - xpFor(P.level)) / (xpFor(P.level + 1) - xpFor(P.level)) * 100) + "%'></u></i><small>" + (xpFor(P.level + 1) - inv.xp) + " xp to the next</small>";
+    top.appendChild(lvl);
+    if (inv.fuel) { const f = document.createElement("div"); f.className = "inv-fuel"; f.textContent = "fuel: " + inv.fuel + "/" + sb.fuelCap(); top.appendChild(f); }
     top.querySelector(".hp b").style.width = Math.round(Math.max(0, me.health)) + "%";
     top.querySelector(".ar b").style.width = Math.round(me.armor) + "%";
     el.appendChild(top);
@@ -99,6 +113,33 @@ export class Hub {
       const g = document.createElement("div"); g.className = "shop-grid inv-grid"; el.appendChild(g);
       return g;
     };
+    // a perk to pick
+    const offer = P.offer();
+    if (offer.length) {
+      const g = section("pick a perk!");
+      g.classList.add("perks");
+      for (const k of offer) {
+        const d = document.createElement("div");
+        d.className = "shop-card perk";
+        d.innerHTML = "<b></b><small></small><div class='shop-btns'><button>pick</button></div>";
+        d.querySelector("b").textContent = PERKS[k].name;
+        d.querySelector("small").textContent = PERKS[k].blurb;
+        d.querySelector("button").onclick = () => P.pick(k);
+        g.appendChild(d);
+      }
+    }
+    // jobs
+    const jobs = document.createElement("div");
+    jobs.className = "inv-jobs";
+    jobs.innerHTML = "<h4>jobs</h4>" + inv.contracts.map((c) => "<div><span></span><i><u style='width:" + Math.round(c.n / c.goal * 100) + "%'></u></i><em>" + c.n + "/" + c.goal + "  " + money(c.cash) + " + " + c.xp + " xp</em></div>").join("");
+    [...jobs.querySelectorAll("span")].forEach((s, i) => { s.textContent = inv.contracts[i].text; });
+    el.appendChild(jobs);
+    if (inv.perks.length) {
+      const pk = document.createElement("p");
+      pk.className = "inv-foot";
+      pk.textContent = "your perks: " + inv.perks.map((k) => PERKS[k] ? PERKS[k].name : k).join(", ");
+      el.appendChild(pk);
+    }
     // guns
     const guns = section("weapons");
     for (const k of WEAPON_ORDER) {
@@ -155,6 +196,74 @@ export class Hub {
     foot.className = "inv-foot";
     foot.textContent = (s.zombies || 0) + " zombies down, " + s.opened + " things looted, " + money(s.earned) + " earned all told.";
     el.appendChild(foot);
+  }
+
+  // ------------------------------------------------------------
+  // crew
+  // ------------------------------------------------------------
+  renderCrew() {
+    const sb = this.sb, crew = sb.crew, net = this.g.net, el = this.crewEl;
+    el.innerHTML = "";
+    const add = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; el.appendChild(e); return e; };
+    const btn = (parent, label, fn, cls) => { const b = document.createElement("button"); b.textContent = label; if (cls) b.className = cls; b.onclick = () => { fn(); this.render(); }; parent.appendChild(b); return b; };
+    const me = sb.player.pos;
+    // your crew
+    if (crew.id) {
+      const h = add("h4", "", crew.name);
+      const mates = crew.mates();
+      const box = add("div", "crew-list");
+      const row = (name, sub) => { const r = document.createElement("div"); r.innerHTML = "<b></b><em></em>"; r.querySelector("b").textContent = name; r.querySelector("em").textContent = sub; box.appendChild(r); return r; };
+      row(net ? net.name + " (you)" : "you", "lv " + sb.progress.level);
+      for (const p of mates) row(p.name, "lv " + (p.lv || 1) + ", " + distLabel(p.pos.distanceTo(me)) + (p.down ? ", DOWN" : p.turned ? ", turned" : p.dead ? ", dead" : ""));
+      void h;
+      btn(el, "leave the crew", () => crew.leave(), "small");
+    } else add("p", "crew-note", "you're not in a crew. invite someone below and you'll start one (up to " + MAX_CREW + "). crewmates show up green, see your pings and quick chat anywhere, and get a bigger payout at dawn.");
+    // invites to you
+    if (crew.invites.size) {
+      add("h4", "", "invites");
+      const box = add("div", "crew-list");
+      for (const [from, v] of crew.invites) { const r = document.createElement("div"); r.innerHTML = "<b></b><em></em>"; r.querySelector("b").textContent = v.n; r.querySelector("em").textContent = "wants you in " + v.cn; btn(r, "join", () => crew.acceptInvite(from)); box.appendChild(r); }
+    }
+    // players about
+    add("h4", "", "players online");
+    const box = add("div", "crew-list");
+    const others = net ? [...net.players.values()].filter((p) => p.kind === "h" && !crew.isMate(p)).sort((a, b) => a.pos.distanceTo(me) - b.pos.distanceTo(me)).slice(0, 10) : [];
+    if (!others.length) add("p", "crew-note", net && net.live ? "nobody else is on right now." : "you're offline, so it's just you.");
+    for (const p of others) {
+      const r = document.createElement("div"); r.innerHTML = "<b></b><em></em>";
+      r.querySelector("b").textContent = p.name;
+      r.querySelector("em").textContent = "lv " + (p.lv || 1) + ", " + distLabel(p.pos.distanceTo(me)) + (p.cn ? ", in " + p.cn : "");
+      btn(r, "invite", () => crew.invite(p));
+      box.appendChild(r);
+    }
+    // the safehouse and its stash
+    add("h4", "", "safehouse");
+    const b = crew.beacon();
+    if (!b) { add("p", "crew-note", "no safehouse yet. buy a safehouse beacon in the shop (defences) and put it down somewhere you can defend."); return; }
+    add("p", "crew-note", "your beacon is " + distLabel(b.pos.distanceTo(me)) + " away" + (b.hp < b.maxHp ? " (" + Math.round(b.hp / b.maxHp * 100) + "% left)" : "") + ". you heal near it and come back to it.");
+    const nearB = b.pos.distanceTo(me) < 4;
+    if (!nearB) { add("p", "crew-note", "stand by it (and press F) to use the stash."); return; }
+    crew.loadStash();
+    const st = crew.stash;
+    const cash = add("div", "stash-row");
+    cash.innerHTML = "<b>" + money(st.cash) + "</b> in the stash ";
+    btn(cash, "put in $1,000", () => crew.putCash(1000));
+    btn(cash, "put in all", () => crew.putCash(sb.inv.money));
+    btn(cash, "take $1,000", () => crew.takeCash(1000));
+    btn(cash, "take all", () => crew.takeCash(st.cash));
+    const vals = add("div", "stash-row");
+    const vn = Object.values(st.v).reduce((a, n) => a + n, 0);
+    vals.innerHTML = "<b>" + vn + "</b> valuables ";
+    btn(vals, "put yours in", () => crew.putValuables());
+    btn(vals, "take them", () => crew.takeValuables());
+    for (const k in DEFENCES) {
+      const have = sb.inv.builds[k] || 0, inStash = st.b[k] || 0;
+      if (!have && !inStash) continue;
+      const r = add("div", "stash-row");
+      r.innerHTML = "<b>" + inStash + "</b> " + DEFENCES[k].name + " ";
+      if (have) btn(r, "put one in", () => crew.putBuild(k));
+      if (inStash) btn(r, "take one", () => crew.takeBuild(k));
+    }
   }
 
   dispose() { this.el.hidden = true; this.map.hide(); }

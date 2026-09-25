@@ -534,6 +534,41 @@ and one barricade.
 - **Vehicles**: arcade physics as before; traffic is thin now (survivors).
   Plane: W/S throttle, down arrow climbs, up arrow dives, A/D bank.
 
+**2026-09-26 purpose update (read `city/ROADMAP.md`):** Caleb asked for the
+sandbox to have a point: co-op against zombies, horror at night, a goal. Five
+systems, all in ROADMAP.md with how they work over the network:
+1. **Shared horde:** each game runs the zombies it spawned (`npcs.js`) and
+   publishes them in its player record (`z`); everyone else draws them
+   (`horde.js RemoteHorde`) and shoots them through `city/zhits/<owner>`.
+   Kinds: walker, runner, brute (headshots only do 150), screamer. Sleepers
+   lie like corpses. At 0 hp you go **down** (`human.downed`, st mode `o`):
+   crawl, bleed out in 30s, someone holds F by you to pick you up (`hits`
+   w "revive"), or hold F with a medkit.
+2. **Nightfall:** `clock.js` from server time, 20-minute cycle (11 min golden
+   day, 2 dusk, 5.5 night, 1.5 dawn). `sky.time` follows it. Night = close dark
+   fog, a torch (L), 2.5x zombies, nastier kinds, drift towards players, a
+   drone and a heartbeat. Dawn pays anyone still up. Bleed out at night and
+   you can rise **turned** (`tn`) till dawn, clawing the living.
+3. **Crews** (`crew.js`): `cr`/`cn` in player records, invites at
+   `city/invites`, Z pings (`pg`), X quick chat (`qc`, 8 set lines, no free
+   text on purpose). The **safehouse beacon** (a defences.js type with `cr`):
+   heal, respawn, shared stash (`city/stash/<crew>`, transactions, rules check
+   the writer's `cr`), and night raids on it.
+4. **Evac** (`evac.js`): Broadcast Plaza (`world.mastSite()`,
+   `structures.js broadcastPlaza`) with the mast, generator, console and
+   helipad. `city/world` = {ph, fuel, sig, evac, rnd} in transactions: 12 fuel
+   -> hold the signal to 100% -> chopper lands 150s later, waits 40s, whoever's
+   on the pad escapes ($20k). Supply drops every 240s at a junction worked out
+   from the time; cracking one writes `city/drops/<slot>`, everyone takes their
+   own share.
+5. **Progress** (`progress.js`): XP via `sandbox.event(kind, data)`, levels
+   (75·L·(L+1)), a perk to pick at set levels (`sandbox.perk(name)`), three
+   jobs. Saved in `city-save-v1`.
+Testing: two players = two `browser.createBrowserContext()`s against the
+emulators. A background tab is throttled to about 1 fps, so judge network
+effects from the foreground page or pump `city.simulate` yourself.
+Evac/escape timings run on real server time, not simulated time.
+
 **Online (`city/net.js`)**: Firebase Realtime Database + anonymous sign-in,
 everything under `city/` (players, hits, cars, loot, feed, builds; shapes in the
 net.js header, rules in `database.rules.json`, auto-deployed with the rtdb

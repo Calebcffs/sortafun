@@ -49,14 +49,18 @@ function clips() {
 // zombies: the same people, gone green and grey (one tinted copy of each
 // material, shared by every zombie)
 const ZOMBIE_MATS = new Map();
-function zombieMat(m) {
-  let z = ZOMBIE_MATS.get(m);
+function zombieMat(m, tint) {
+  const key = tint ? tint.join() : "";
+  let byTint = ZOMBIE_MATS.get(m);
+  if (!byTint) ZOMBIE_MATS.set(m, (byTint = new Map()));
+  let z = byTint.get(key);
   if (!z) {
     z = m.clone();
     z.color.multiply(new THREE.Color(0.5, 0.78, 0.46));
+    if (tint) z.color.multiply(new THREE.Color(tint[0], tint[1], tint[2]));
     if (z.emissive) z.emissive.setRGB(0.02, 0.05, 0.01);
     z.userData.keepMat = true;
-    ZOMBIE_MATS.set(m, z);
+    byTint.set(key, z);
   }
   return z;
 }
@@ -103,9 +107,18 @@ export class Avatar {
   zombify() {
     this.zombie = true;
     if (!this.body) return;
-    this.body.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(zombieMat) : zombieMat(o.material); });
+    // (the original materials are kept so a turned player can turn back)
+    const t = this.ztint;
+    this.body.traverse((o) => { if (o.isMesh) { if (!o.userData.human) o.userData.human = o.material; o.material = Array.isArray(o.userData.human) ? o.userData.human.map((m) => zombieMat(m, t)) : zombieMat(o.userData.human, t); } });
     // a bit hunched
     this.body.rotation.x = 0.12;
+  }
+
+  unzombify() {
+    this.zombie = false;
+    if (!this.body) return;
+    this.body.traverse((o) => { if (o.isMesh && o.userData.human) o.material = o.userData.human; });
+    this.body.rotation.x = 0;
   }
 
   action(layer, name) {
@@ -168,6 +181,7 @@ export class Avatar {
     if (!this.mixer) return;
     let lower = "idle", lspeed = 1;
     if (s.dead) lower = "die";
+    else if (s.down) { lower = "sit"; lspeed = 1; }
     else if (s.drive) lower = "drive";
     else if (s.air) lower = s.vy > 0 ? "jump" : "fall";
     else if (s.swim) { lower = "walk"; lspeed = 0.6; }
@@ -181,6 +195,7 @@ export class Avatar {
     if (s.dead) upper = "die";
     else if (this.pulseT > 0 && this.pulse) upper = this.pulse;
     else if (s.drive) upper = "drive";
+    else if (s.down && !this.weapon) upper = "sit";
     else if (this.zombie) upper = "holding-both"; // arms out in front
     else if (this.weapon && this.weapon !== "fists" && this.weapon !== "grenade") upper = TWO_HANDED.has(this.weapon) ? "holding-both" : "holding-right";
     else upper = lower;

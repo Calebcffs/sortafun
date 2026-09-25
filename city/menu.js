@@ -328,5 +328,6 @@ function statsHtml(s) {
 
 function humanStats(s) {
   return `<b>${money(s.money)}</b> in your pocket &middot; earned ${money(s.earned)} all told &middot; opened ${s.opened} ${s.opened === 1 ? "container" : "containers"}<br>` +
+    `level ${s.level} &middot; ${s.nights} ${s.nights === 1 ? "night" : "nights"} survived &middot; ${s.escapes} ${s.escapes === 1 ? "escape" : "escapes"}<br>` +
     `${s.zombies} ${s.zombies === 1 ? "zombie" : "zombies"} down &middot; ${s.kills} wardens &middot; ${s.deaths} trips to the hospital &middot; ${s.garage} ${s.garage === 1 ? "vehicle" : "vehicles"} in the garage`;
 }

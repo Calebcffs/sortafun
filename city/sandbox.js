@@ -19,6 +19,13 @@
 // Wanted stars only come from trouble with the wardens themselves now
 // (shooting one, taking a police car, hijacking in front of one): shooting
 // zombies is just surviving.
+//
+// The purposeful bits (ROADMAP.md): the shared clock and what night and dawn
+// do (clock.js), going down / being picked up / turning, holds (keep F down:
+// picking someone up, cracking a drop, holding the signal), other players'
+// zombies (horde.js), crews and safehouses (crew.js), the evacuation and
+// supply drops (evac.js), XP / perks / contracts (progress.js). Everything
+// worth something goes through event().
 
 import * as THREE from "three";
 import { HumanPlayer } from "./human.js";
@@ -30,6 +37,11 @@ import { loadSave, writeSave, money } from "./shop.js";
 import { Hub } from "./hub.js";
 import { Defences } from "./defences.js";
 import { UNDER_LINE } from "./structures.js";
+import { WorldClock } from "./clock.js";
+import { Progress, PERK_NAMES } from "./progress.js";
+import { RemoteHorde } from "./horde.js";
+import { Crew } from "./crew.js";
+import { Evac } from "./evac.js";
 import { CityHud } from "./cityhud.js";
 import { WildBirds } from "./ambient.js";
 import { itemGeometry } from "./items.js";
@@ -53,6 +65,10 @@ export class Sandbox {
     this.godT = 3;
     this.deadT = 0;
     this.bubbles = [];
+    this.clock = new WorldClock(() => this.now());
+    this.phase = this.clock.phase;
+    this.crew = null; this.evac = null; // (set up below once the rest exists)
+    this.progress = new Progress(game, this);
     this.player = new HumanPlayer(game, this, this.inv.outfit);
     game.gunfire = new Gunfire(game);
     game.gunfire.targets = () => this.targets();
@@ -64,6 +80,10 @@ export class Sandbox {
     this.hub = new Hub(game, this);
     this.shop = this.hub.shop;
     this.liftEl = document.getElementById("lift");
+    this.horde = new RemoteHorde(game, this);
+    this.crew = new Crew(game, this);
+    this.evac = new Evac(game, this);
+    this.hold = null; this.holdT = 0;
     this.wild = new WildBirds(game, { low: 3, med: 6, high: 8 }[game.quality] || 5);
     // what net.js needs to draw other players' poo (the birds online)
     this.geos = { poo: itemGeometry("poo"), splat: itemGeometry("splat") };
@@ -83,6 +103,9 @@ export class Sandbox {
   }
 
   now() { return this.g.net && this.g.net.c ? this.g.net.c.now() : Date.now(); }
+  perk(name) { return this.progress.has(PERK_NAMES[name] || name); }
+  maxHealth() { return this.player.turned ? 150 : 100 + (this.perk("tough") ? 30 : 0); }
+  event(kind, d) { this.progress.event(kind, d); }
   save() { this.inv.lastWeapon = this.player.weapon; writeSave(this.inv); }
 
   // ------------------------------------------------------------
@@ -96,7 +119,7 @@ export class Sandbox {
       if (me.vehicle && !me.vehicle.showRider) {
         // inside a car: the car takes the hits (you get a bit of it)
       } else {
-        out.push({ id: "me", kind: "me", x: me.pos.x, y: me.pos.y, z: me.pos.z, r: 0.36, h: me.crouch ? 1.2 : 1.72, hit: (dmg, info) => me.hurt(dmg, info) });
+        out.push({ id: "me", kind: "me", x: me.pos.x, y: me.pos.y, z: me.pos.z, r: 0.36, h: me.downed ? 0.9 : me.crouch ? 1.2 : 1.72, hit: (dmg, info) => me.hurt(dmg, info) });
       }
     }
     for (const v of this.vehicles.all()) {
@@ -114,6 +137,7 @@ export class Sandbox {
       // shooter id "me" keeps your own bullets off it
     }
     if (this.g.net) for (const t of this.g.net.targets()) out.push(t);
+    this.horde.targets(out);
     for (const w of this.wild.birds) {
       out.push({ id: "wild", kind: "bird", x: w.pos.x, y: w.pos.y - 0.3, z: w.pos.z, r: 0.35 * Math.max(1, w.scale), h: 0.6, hit: (dmg, info) => this.shootBird(w, info) });
     }
@@ -156,7 +180,13 @@ export class Sandbox {
   }
   onThrow(from, d) { if (this.g.net) this.g.net.shot("grenade", from, from.clone().add(d)); }
   onKill(n, info) {
-    if (n.zombie) { this.inv.stats.zombies = (this.inv.stats.zombies || 0) + 1; if (info.head && !info.melee) this.hud.headshot(); return; }
+    if (n.zombie) {
+      this.inv.stats.zombies = (this.inv.stats.zombies || 0) + 1;
+      const head = !!info.head && !info.melee;
+      if (head) this.hud.headshot();
+      this.event("zombie", { type: n.type || "walker", head });
+      return;
+    }
     this.inv.stats.kills++;
     if (n.cop) this.hud.toast("you took down a warden. they won't like that.", "bad");
   }
@@ -164,8 +194,10 @@ export class Sandbox {
   // ------------------------------------------------------------
   // money and stuff
   // ------------------------------------------------------------
+  onDefenceKill(n) { this.event("defence-kill", { type: n.type }); }
   earn(n, msg) {
     if (!n) return;
+    this.event("earn", { n });
     this.inv.money += n;
     this.inv.stats.earned += n;
     this.hud.money(n);
@@ -188,8 +220,9 @@ export class Sandbox {
   give(items, verb) {
     const got = [];
     for (const it of items) {
-      if (it.kind === "cash") { this.inv.money += it.n; this.inv.stats.earned += it.n; this.hud.money(it.n); got.push(money(it.n)); }
-      else if (it.kind === "ammo") { const A = AMMO[it.ammo]; this.inv.ammo[it.ammo] += A.pack * it.packs; got.push(A.name + " x" + A.pack * it.packs); }
+      if (it.kind === "cash") { const n = Math.round(it.n * (this.perk("scavenger") && verb !== "picked up" ? 1.6 : 1)); this.inv.money += n; this.inv.stats.earned += n; this.hud.money(n); got.push(money(n)); this.event("earn", { n }); }
+      else if (it.kind === "ammo") { const A = AMMO[it.ammo]; const n = Math.round(A.pack * it.packs * (this.perk("pack mule") ? 1.5 : 1)); this.inv.ammo[it.ammo] += n; got.push(A.name + " x" + n); }
+      else if (it.kind === "fuel") { const cap = this.fuelCap(); const n = Math.min(it.n, cap - (this.inv.fuel || 0)); if (n > 0) { this.inv.fuel = (this.inv.fuel || 0) + n; got.push(n + " fuel " + (n === 1 ? "can" : "cans")); } else got.push("fuel (you can't carry more)"); }
       else if (it.kind === "weapon") {
         if (this.inv.weapons[it.w] && WEAPONS[it.w].ammo) { const A = AMMO[WEAPONS[it.w].ammo]; this.inv.ammo[WEAPONS[it.w].ammo] += A.pack * 2; got.push(A.name + " x" + A.pack * 2); }
         else { this.giveWeapon(it.w, false); got.push("a " + WEAPONS[it.w].name + "!"); }
@@ -233,9 +266,23 @@ export class Sandbox {
   // vehicles: in and out
   // ------------------------------------------------------------
   // what F would do right now: {label, go}
+  // what F does right now: {label, go} (a press) or {label, hold: seconds,
+  // go} (keep F down), or {label, hold: Infinity, tick(dt)} (for as long as
+  // you hold it)
   action() {
     const me = this.player;
-    if (me.dead || this.menuOpen) return null;
+    if (me.dead || this.menuOpen || me.turned) return null;
+    if (me.downed) {
+      const free = this.perk("second wind") && this.inv.windUsed !== this.clock.nightNo;
+      if (this.inv.medkits > 0 || free) return { label: free ? "get yourself up (second wind)" : "use a medkit to get up", hold: 4, go: () => this.selfRevive(free) };
+      return null;
+    }
+    // someone down near you
+    if (this.g.net) for (const p of this.g.net.players.values()) {
+      if (p.kind === "h" && p.s && p.s.mode === "o" && p.pos.distanceTo(me.pos) < 1.9) return { label: "pick up " + p.name, hold: this.perk("medic") ? 1.5 : 3, go: () => this.revive(p) };
+    }
+    if (this.evac) { const a = this.evac.action(me.pos); if (a) return a; }
+    if (this.crew) { const a = this.crew.action(me.pos); if (a) return a; }
     if (me.vehicle) {
       const v = me.vehicle;
       if (Math.abs(v.speed) > 12 && !v.bike && !(v.plane && !v.onGround)) return null;
@@ -245,7 +292,7 @@ export class Sandbox {
     // loot first (it's usually what you're looking at), then lifts, stairs,
     // ladders, vehicles
     const c = this.loot.nearest(me.pos, 2.2);
-    if (c) return { label: "open " + this.loot.label(c), go: () => this.give(this.loot.open(c), this.loot.label(c)) };
+    if (c) return { label: "open " + this.loot.label(c), go: () => { this.give(this.loot.open(c), this.loot.label(c)); this.event("loot", { tier: c.tier, type: c.type }); if (c.type === "vault") this.event("vault"); } };
     const p = this.portalAt(me.pos);
     if (p) return { label: p.label, go: () => this.usePortal(p) };
     const l = me.nearLadder();
@@ -255,7 +302,115 @@ export class Sandbox {
     return null;
   }
 
-  interact() { const a = this.action(); if (a) a.go(); }
+  interact() { const a = this.action(); if (a && !a.hold) a.go(); }
+
+  // keep F down: the progress runs while you hold it on the same thing
+  updateHold(dt, input) {
+    const held = !this.menuOpen && (input.down("KeyF") || input.down("use"));
+    const a = held ? this.action() : null;
+    if (!a || !a.hold) { if (this.hold) this.hud.hold(0); this.hold = null; this.holdT = 0; return; }
+    if (!this.hold || this.hold.label !== a.label) { this.hold = a; this.holdT = 0; }
+    this.holdT += dt;
+    if (a.hold === Infinity) { a.tick(dt); this.hud.hold(-1, a.label); return; }
+    this.hud.hold(this.holdT / a.hold, a.label);
+    if (this.holdT >= a.hold) { this.hold = null; this.holdT = 0; this.hud.hold(0); a.go(); }
+  }
+
+  // ------------------------------------------------------------
+  // down, picked up, dead, turned
+  // ------------------------------------------------------------
+  onDowned(info) {
+    const me = this.player;
+    if (me.vehicle) this.exitVehicle(true);
+    this.hub.close(); this.closeLift(); this.defences.stopPlacing();
+    this.g.sound.crash();
+    const help = this.g.net && [...this.g.net.players.values()].some((p) => p.kind === "h" && p.pos.distanceTo(me.pos) < 200);
+    this.hud.toast(this.inv.medkits > 0 ? "hold F to patch yourself up with a medkit" + (help ? ", or wait for someone to pick you up" : "") : help ? "hang on, someone can pick you up (they hold F by you)" : "no medkits. crawl somewhere safe and hope.", "bad");
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+
+  selfRevive(free) {
+    const me = this.player;
+    if (!me.downed) return;
+    if (free) this.inv.windUsed = this.clock.nightNo;
+    else if (this.inv.medkits > 0) this.inv.medkits--;
+    else return;
+    me.getUp(free ? 40 : this.perk("medic") ? 100 : 50);
+    this.g.sound.pickup();
+    this.hud.toast("back on your feet", "good");
+    this.save();
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+
+  // we picked someone else up
+  revive(p) {
+    if (!this.g.net) return;
+    this.g.net.revive(p);
+    this.g.sound.pickup();
+    this.hud.toast("you picked up " + p.name, "good");
+    this.event("revive");
+  }
+  // someone picked us up
+  revived(who) {
+    const me = this.player;
+    if (!me.downed) return;
+    me.getUp(35);
+    this.g.sound.pickup();
+    this.hud.big("PICKED UP BY " + who.toUpperCase(), "good");
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+
+  // turned: a zombie until dawn
+  becomeTurned() {
+    const me = this.player;
+    this.hud.wasted(false); this.hud.deathChoice(false);
+    me.dead = false; me.downed = false;
+    me.setTurned(true);
+    me.health = 150;
+    this.infected = 0;
+    this.godT = 3;
+    this.hud.turned(true);
+    this.hud.big("YOU'VE TURNED", "bad");
+    this.hud.toast("you're one of them till dawn. hunt the living (left click to claw). the zombies leave you alone.", "bad");
+    this.g.relocateNear(me.pos, 60, 140);
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+  onTurnedDown(info) {
+    // shot down as a zombie: back up somewhere nearby in a bit
+    const me = this.player;
+    me.dead = true;
+    this.turnedBackT = 30;
+    this.hud.wasted(true);
+    this.hud.toast("they got you. you'll rise again in 30 seconds.", "bad");
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+  endTurned() {
+    const me = this.player;
+    me.setTurned(false);
+    me.dead = false; me.health = this.maxHealth();
+    this.hud.turned(false); this.hud.wasted(false);
+    const pay = (this.infected || 0) * 25;
+    this.hud.big("HUMAN AGAIN", "good");
+    if (pay) this.earn(pay, "infection bounty for " + this.infected + " claws");
+    this.g.respawnSomewhere();
+    this.godT = 4;
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+  onClaw() { this.infected = (this.infected || 0) + 1; }
+
+  // on the pad when the chopper lifted off
+  escape() {
+    const s = this.inv.stats;
+    s.escapes = (s.escapes || 0) + 1;
+    this.hud.big("YOU GOT OUT!", "good");
+    this.earn(20000, "evacuated (" + s.escapes + (s.escapes === 1 ? " escape" : " escapes") + ")");
+    this.event("escape");
+    this.g.sound.ding && this.g.sound.ding(3);
+    this.hud.toast("a new day in the city. the mast needs fuel again for the next chopper.", "good");
+    setTimeout(() => { if (this.g.sandbox === this) this.g.respawnSomewhere(); }, 4000);
+  }
+
+  fuelCap() { return this.perk("pack mule") ? 8 : 4; }
 
   // ------------------------------------------------------------
   // lifts and the metro stairs (structures.js portals)
@@ -280,6 +435,7 @@ export class Sandbox {
       this.player.place(t.x, t.y, t.z, t.yaw);
       this.player.camYaw = t.yaw;
       this.g.sound.door();
+      if (t.y < UNDER_LINE) this.event("station");
       if (t.y < UNDER_LINE && !this.toldMetro) { this.toldMetro = true; this.hud.toast("the metro. tunnels run under every third road, with a station where two lines cross. the stairs take you back up.", ""); }
     });
   }
@@ -317,6 +473,7 @@ export class Sandbox {
       this.player.place(s.x, s.y, s.z, s.yaw);
       this.player.camYaw = s.yaw;
       this.g.sound.lift();
+      if (s.name === "roof") this.event("lift");
       if (s.name === "penthouse" && !this.toldPent) { this.toldPent = true; this.hud.toast("the penthouse. rich people keep strongboxes up here.", "good"); }
     }, 0.5);
   }
@@ -385,24 +542,32 @@ export class Sandbox {
   onDeath(info) {
     const me = this.player;
     this.inv.stats.deaths++;
+    this.inv.nightStreak = 0;
     if (me.vehicle) this.exitVehicle(true);
     this.hud.wasted(true);
     this.g.sound.crash();
     this.deadT = 4;
     this.hub.close(); this.closeLift(); this.defences.stopPlacing();
     this.g.input.unlock();
+    // at night you can come back as one of them
+    this.choosing = this.clock.night;
+    if (this.choosing) { this.deadT = 10; this.hud.deathChoice(true); }
     if (this.g.net && info && info.remote) this.g.net.died(info);
+    if (this.g.net) this.g.net.sendT = 99;
   }
 
   respawn() {
     const me = this.player;
     const fee = Math.min(500, Math.floor(this.inv.money * 0.1));
     this.inv.money -= fee;
-    me.dead = false; me.health = 100; me.armor = 0;
+    me.dead = false; me.downed = false; me.health = this.maxHealth(); me.armor = 0;
+    this.choosing = false;
     this.wanted = 0; this.hud.wanted();
-    this.hud.wasted(false);
-    // somewhere new, anywhere in the world
-    this.g.respawnSomewhere();
+    this.hud.wasted(false); this.hud.deathChoice(false);
+    // your crew's safehouse if it has one, otherwise anywhere in the world
+    const home = this.crew && this.crew.respawnSpot();
+    if (home) this.g.relocate(home.x, home.z, false, home);
+    else this.g.respawnSomewhere();
     this.godT = 4;
     this.hud.money(fee ? -fee : 0);
     this.hud.health();
@@ -466,7 +631,9 @@ export class Sandbox {
       if (d < 320) out.push({ x: ch.hangar.x, z: ch.hangar.z, d, color: "#b27bff", label: "?" });
     }
     if (this.g.net) for (const t of this.g.net.radar()) out.push(t);
-    return out.sort((a, b) => a.d - b.d).slice(0, 14);
+    // (crewmates, anyone down, the mast and drops first, then the nearest)
+    if (this.evac) for (const t of this.evac.radar(me)) out.push(t);
+    return out.sort((a, b) => (b.pri ? 1 : 0) - (a.pri ? 1 : 0) || a.d - b.d).slice(0, 16);
   }
   targetsForHud() { return this.radarTargets(); }
 
@@ -487,9 +654,15 @@ export class Sandbox {
       if (input.hit("KeyB")) this.hub.toggle("shop");
       if (input.hit("KeyM")) this.hub.toggle("map");
     }
-    if (input.hit("KeyH") && !me.vehicle && !this.menuOpen) this.useMedkit();
+    if (input.hit("KeyH") && !me.vehicle && !this.menuOpen && !me.downed && !me.turned) this.useMedkit();
     if (!this.menuOpen && (input.hit("KeyF") || input.hit("Touch:use"))) this.interact();
-    if (!this.menuOpen && input.hit("KeyT") && !this.defences.placing) {
+    this.updateHold(dt, input);
+    if (this.choosing) {
+      if (input.hit("Digit1")) this.becomeTurned();
+      else if (input.hit("Digit2")) this.deadT = 0;
+    }
+    if (me.turned || me.downed) { /* no building */ }
+    else if (!this.menuOpen && input.hit("KeyT") && !this.defences.placing) {
       const k = this.inv.lastBuild && this.inv.builds[this.inv.lastBuild] > 0 ? this.inv.lastBuild : Object.keys(this.inv.builds).find((k) => this.inv.builds[k] > 0);
       if (k) this.defences.startPlacing(k); else this.hud.toast("nothing to build. the shop has barricades, traps and turrets (E).", "warn");
     } else if (!this.menuOpen) this.defences.updatePlacing(input);
@@ -529,6 +702,10 @@ export class Sandbox {
     this.npcs.update(dt);
     this.loot.update(dt);
     this.defences.update(dt);
+    this.horde.update(dt);
+    if (this.crew) this.crew.update(dt, input);
+    if (this.evac) this.evac.update(dt);
+    this.updateClock(dt);
     this.hub.update();
     this.g.gunfire.update(dt);
     this.wild.update(dt);
@@ -542,14 +719,15 @@ export class Sandbox {
       if (this.wanted >= 3 && this.copCarT <= 0 && me.pos.y > UNDER_LINE && this.vehicles.police.filter((v) => !v.dead).length < Math.floor((this.wanted - 1) / 2)) { this.copCarT = 12; this.vehicles.spawnPolice(); }
     }
     // health creeps back up to half when you keep out of trouble
-    if (!me.dead && me.health < 50 && this.time - me.lastHurt > 8) { me.health = Math.min(50, me.health + dt * 2); this.hud.health(); }
-    // dead: wait, then back to the start
-    if (me.dead) { this.deadT -= dt; if (this.deadT <= 0) this.respawn(); }
+    if (!me.dead && !me.downed && !me.turned && me.health < 50 && this.time - me.lastHurt > 8) { me.health = Math.min(50, me.health + dt * 2); this.hud.health(); }
+    // dead: wait, then back up (or rise again, turned)
+    if (me.dead && me.turned) { this.turnedBackT -= dt; if (this.turnedBackT <= 0) { me.dead = false; me.health = 150; this.hud.wasted(false); this.g.relocateNear(me.pos, 60, 160); } }
+    else if (me.dead && !this.g.relocating) { this.deadT -= dt; if (this.deadT <= 0) this.respawn(); }
     // what F would do right now
     let prompt = "";
     if (this.defences.placing) prompt = "[click] put it down  [R] turn  [right click] cancel";
     else if (me.ladder) prompt = "[W/S] climb  [space] let go";
-    else { const a = this.action(); if (a) prompt = "[F] " + a.label; }
+    else { const a = this.action(); if (a) prompt = (a.hold ? "[hold F] " : "[F] ") + a.label; }
     this.hud.prompt(matchMedia("(pointer: coarse)").matches ? prompt.replace(/\[[^\]]*\] ?/g, "") : prompt);
     this.hud.update(dt);
     this.score = this.inv.money;
@@ -599,9 +777,49 @@ export class Sandbox {
     if (this.splats.length > 40) this.splats.shift().removeFromParent();
   }
   targetsLegacy() { return []; }
+  // ------------------------------------------------------------
+  // the clock: dusk warning, night, and paying out at dawn
+  // ------------------------------------------------------------
+  updateClock(dt) {
+    const c = this.clock.update();
+    const me = this.player;
+    if (c.phase !== this.phase) {
+      const was = this.phase;
+      this.phase = c.phase;
+      if (c.phase === "dusk") { this.g.sound.siren(0.8); this.hud.big("THE SUN'S GOING DOWN", "bad"); this.hud.toast("night in 2 minutes. get somewhere safe: somewhere with a door, or your safehouse.", "bad"); }
+      else if (c.phase === "night") { this.hud.big("NIGHTFALL", "bad"); this.hud.toast("they're faster at night, and there are more of them. keep your torch on (L) and stick together.", "bad"); }
+      else if (c.phase === "dawn" && was === "night") this.dawn();
+    }
+    this.g.sound.drone(c.dark > 0.5 && !me.dead);
+    // a heartbeat when one's right on you in the dark
+    this.beatT = (this.beatT || 0) - dt;
+    if (this.beatT <= 0 && !me.turned && !me.dead) {
+      let close = 1e9;
+      for (const n of this.npcs.list) if (n.zombie && !n.dead && !n.sleep) close = Math.min(close, n.pos.distanceTo(me.pos));
+      for (const z of this.horde.list.values()) if (!z.deadLocal) close = Math.min(close, z.pos.distanceTo(me.pos));
+      if (close < 12) { this.g.sound.heartbeat(c.dark > 0.3 ? 1 : 0.5); this.beatT = 0.5 + close / 12 * 0.6; } else this.beatT = 0.5;
+    }
+  }
+
+  dawn() {
+    const me = this.player;
+    if (me.turned) { this.endTurned(); return; }
+    if (me.dead) return;
+    const no = this.clock.nightNo;
+    if (this.inv.lastNight === no) return;
+    this.inv.lastNight = no;
+    this.inv.nightStreak = (this.inv.nightStreak || 0) + 1;
+    this.inv.stats.nights = (this.inv.stats.nights || 0) + 1;
+    const crewUp = this.crew && this.crew.mates().some((p) => !p.dead && !p.turned);
+    const pay = Math.round((500 + 250 * (this.inv.nightStreak - 1)) * (crewUp ? 1.5 : 1));
+    this.hud.big("YOU SURVIVED THE NIGHT", "good");
+    this.earn(pay, "made it to morning (" + this.inv.nightStreak + (this.inv.nightStreak === 1 ? " night" : " nights") + " in a row" + (crewUp ? ", with your crew" : "") + ")");
+    this.event("night");
+  }
+
   summary() {
     const s = this.inv.stats;
-    return { human: true, score: this.inv.money, money: this.inv.money, kills: s.kills, zombies: s.zombies || 0, opened: s.opened, earned: s.earned, deaths: s.deaths, garage: this.inv.garage.length };
+    return { human: true, level: this.progress.level, nights: s.nights || 0, escapes: s.escapes || 0, score: this.inv.money, money: this.inv.money, kills: s.kills, zombies: s.zombies || 0, opened: s.opened, earned: s.earned, deaths: s.deaths, garage: this.inv.garage.length };
   }
 
   dispose() {
@@ -618,6 +836,10 @@ export class Sandbox {
     this.wild.dispose();
     this.g.gunfire.dispose();
     this.hud.dispose();
+    this.horde.dispose();
+    if (this.crew) this.crew.dispose();
+    if (this.evac) this.evac.dispose();
+    this.g.sound.drone(false);
     for (const b of this.bubbles) b.s.removeFromParent();
     for (const s of this.splats) s.removeFromParent();
     this.g.gunfire = null;

@@ -253,14 +253,25 @@ export class WorldMap {
       const s = dot(ch.hangar.x, ch.hangar.z, 7, "#b27bff");
       if (s) { ctx.fillStyle = "#fff"; ctx.fillText("?", s.x, s.y + 0.5); }
     }
+    // the evac: the mast, the helipad, supply drops
+    for (const e of this.sb.evac.mapMarkers()) {
+      if (e.kind === "mast") { const s = dot(e.x, e.z, 9, "#ff4a3c", "#fff"); if (s) { ctx.fillStyle = "#fff"; ctx.fillText("R", s.x, s.y + 0.5); if (m <= 8) { ctx.strokeStyle = "#1d1b2e"; ctx.lineWidth = 3; ctx.strokeText("radio mast", s.x, s.y - 16); ctx.fillText("radio mast", s.x, s.y - 16); } } }
+      else if (e.kind === "pad" && m <= 2) { const s = dot(e.x, e.z, 6, "#ffd43b"); if (s) { ctx.fillStyle = "#1d1b2e"; ctx.fillText("H", s.x, s.y + 0.5); } }
+      else if (e.kind === "drop") { const s = dot(e.x, e.z, 7, e.open ? "#8a8a8a" : "#ffb300"); if (s) { ctx.fillStyle = "#1d1b2e"; ctx.fillText("D", s.x, s.y + 0.5); } }
+    }
+    // pings
+    for (const p of this.sb.crew.mapMarkers()) dot(p.x, p.z, 5, p.kind === "zombie" ? "#ff5050" : p.kind === "loot" ? "#ffd43b" : "#5cf08e");
+    // your crew's safehouse
+    const home = this.sb.crew.beacon();
+    if (home) { const s = dot(home.x, home.z, 7, "#5cf08e", "#fff"); if (s) { ctx.fillStyle = "#1d1b2e"; ctx.fillText("S", s.x, s.y + 0.5); } }
     // your defences
     for (const d of this.sb.defences.markers()) if (d.mine) {
       const s = this.toScreen(d.x, d.z);
       ctx.fillStyle = "#ff9a3c"; ctx.fillRect(s.x - 3, s.y - 3, 6, 6);
     }
-    // other players
+    // other players (your crew in green, anyone down in red)
     if (this.g.net) for (const p of this.g.net.players.values()) {
-      const s = dot(p.pos.x, p.pos.z, 5, "#fff");
+      const s = dot(p.pos.x, p.pos.z, 5, p.down ? "#ff4040" : p.turned ? "#8a0000" : this.sb.crew.isMate(p) ? "#5cf08e" : "#fff");
       if (s && m <= 4 && p.name) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#1d1b2e"; ctx.lineWidth = 3; ctx.strokeText(p.name, s.x, s.y - 12); ctx.fillText(p.name, s.x, s.y - 12); }
     }
     // you: an arrow

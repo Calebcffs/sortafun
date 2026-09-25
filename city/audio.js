@@ -68,6 +68,7 @@ export class Sound {
     this.wind = null;
   }
   stopAll() {
+    if (this.droneNode) this.droneNode.gain.value = 0;
     this.stopEngine();
     this.stopWind();
     try { if (this.amb) this.amb.stop(); } catch (e) {}
@@ -315,6 +316,28 @@ export class Sound {
     const f = 85 + Math.random() * 40;
     this.tone("sawtooth", f, f * 0.7, 0.7 + Math.random() * 0.4, 0.09 * vol, 0, [420, 3]);
     this.tone("sawtooth", f * 1.5, f * 1.1, 0.6, 0.04 * vol, 0.08, [600, 2]);
+  }
+  scream(vol = 1) {
+    if (!this.ensure() || vol <= 0.02) return;
+    this.tone("sawtooth", 900, 1500, 0.25, 0.08 * vol, 0, [2400, 1]);
+    this.tone("sawtooth", 1500, 700, 1.1, 0.1 * vol, 0.2, [2600, 1]);
+    this.noiseBurst(1.2, "bandpass", 1800, 2, 0.12 * vol, 0.1);
+  }
+  chop(vol = 1) { if (this.ensure() && vol > 0.02) this.noiseBurst(0.07, "lowpass", 260, 1.4, 0.35 * vol); }
+  heartbeat(vol = 1) { if (this.ensure()) { this.tone("sine", 62, 45, 0.12, 0.3 * vol); this.tone("sine", 58, 42, 0.14, 0.24 * vol, 0.22); } }
+  siren(vol = 1) { if (this.ensure()) { for (let i = 0; i < 3; i++) this.tone("sawtooth", 420, 780, 1.1, 0.045 * vol, i * 1.2, [1200, 1]); } }
+  // a long low drone for the night, faded in and out by update()
+  drone(on) {
+    if (!this.ensure()) return;
+    const c = this.ctx;
+    if (!this.droneNode) {
+      const g = c.createGain(); g.gain.value = 0; g.connect(this.master || c.destination);
+      const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 260; f.connect(g);
+      for (const hz of [43.6, 55, 65.4, 87.3]) { const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz * (1 + (Math.random() - 0.5) * 0.01); const og = c.createGain(); og.gain.value = 0.25; o.connect(og); og.connect(f); o.start(); }
+      const lfo = c.createOscillator(); lfo.frequency.value = 0.07; const lg = c.createGain(); lg.gain.value = 120; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
+      this.droneNode = g;
+    }
+    this.droneNode.gain.setTargetAtTime(on ? 0.05 : 0, c.currentTime, 2.5);
   }
   build() { if (this.ensure()) { for (let i = 0; i < 3; i++) { this.noiseBurst(0.05, "bandpass", 1800, 2, 0.25, i * 0.12); this.tone("sine", 240, 160, 0.05, 0.12, i * 0.12); } } }
   lift() { if (this.ensure()) { this.tone("sine", 1046, 1046, 0.25, 0.1); this.tone("sine", 784, 784, 0.4, 0.1, 0.18); } }
