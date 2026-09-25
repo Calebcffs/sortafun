@@ -167,3 +167,31 @@ never even prompts for a name on an animation that won't fit.
 Spark plan gives 50k reads + 20k writes per day. Each leaderboard view is ~10
 reads. A gallery page load is ~24 reads plus comments on demand. You'd need
 thousands of daily visitors to get close.
+
+## Birdie online (Realtime Database)
+
+Birdie's online mode keeps every flying player's position in the Firebase
+**Realtime Database** (a different product from Firestore, same project).
+Two one-time clicks in the Firebase console, then it runs by itself:
+
+1. **Build > Realtime Database > Create database.** Location: **Singapore
+   (asia-southeast1)**, the URL in `firebase-config.js` expects it. Start in
+   **locked mode** (the real rules get uploaded next).
+2. **Build > Authentication > Get started > Sign-in method > Anonymous >
+   Enable.** Players get an invisible id this way, no account.
+3. GitHub > Actions > "Realtime Database (Birdie multiplayer)" > Run workflow.
+   It uploads `database.rules.json` (and reruns on every push that changes
+   it). It tries to do step 2 by itself too, the log says if it managed.
+
+Until then Birdie still works, online mode just says "offline, flying solo".
+
+Free (Spark) plan limits that matter: 100 simultaneous connections (fine,
+the game stops at 50) and **10 GB a month downloaded**. Each player receives
+everyone else's updates, so bandwidth goes up with the square of the crowd:
+5 people flying together use about 70 MB an hour, 20 about 1.3 GB, a full 50
+about 8.5 GB an hour (so a full sky for an hour would eat most of a month).
+A few friends at a time is nowhere near the cap. If it ever gets hit the
+database stops until the next month (Birdie falls back to solo); switching the
+project to the Blaze plan (pay as you go, about US$1 per GB over the free 10)
+with a budget alert set is the fix. Usage is on the Realtime Database >
+Usage tab.

@@ -16,6 +16,7 @@
 //   hud.js       poo-cam, poo-o-meter, lives, messages
 //   audio.js     synthesised sound
 //   menu.js      title screen, bird picker, pause / game over
+//   net.js       online play: everyone's birds in one shared world
 
 import * as THREE from "three";
 import { World } from "./world.js";
@@ -31,6 +32,7 @@ import { Hud } from "./hud.js";
 import { Sound } from "./audio.js";
 import { Menu } from "./menu.js";
 import { BlobShadow, Snow, Streaks } from "./effects.js";
+import { Net, SHARED_SEED } from "./net.js";
 
 const QUALITY = {
   low: { pr: 0.75, shadows: false, shadowSize: 1024, radius: 3, fog: 0.72 },
@@ -91,7 +93,7 @@ class Game {
   // starting a flight
   // ------------------------------------------------------------
   async start(opts) {
-    // opts: {species, scape, seed, quality, invert}
+    // opts: {species, scape, seed, quality, invert, online, name}
     this.stop();
     this.quality = opts.quality;
     const q = QUALITY[opts.quality];
@@ -102,7 +104,9 @@ class Game {
     this.sky = new SkySystem(this.renderer, this.scene, { shadows: q.shadows, shadowSize: q.shadowSize, startTime: 0.29 });
     this.sky.fogScale = q.fog;
     this.sky.shadowsWanted = q.shadows;
-    this.world = new World(this.scene, opts.seed, { radius: q.radius, shadows: q.shadows });
+    // online, everyone flies in the same world
+    this.online = !!opts.online;
+    this.world = new World(this.scene, this.online ? SHARED_SEED : opts.seed, { radius: q.radius, shadows: q.shadows });
     // pick a spawn: the nearest region of the chosen type
     const spawn = this.findSpawn(opts.scape);
     this.menu.loading(0, "building the " + (opts.scapeLabel || "world") + "...");
@@ -115,7 +119,9 @@ class Game {
     this.bird.root.scale.setScalar(this.scale);
     this.scene.add(this.bird.root);
     this.flyer = new Flyer(sp, this.scale, this.bird);
-    const place = this.findPerch(spawn.x, spawn.z);
+    // online, spread people out a bit so they don't all start in one spot
+    const jit = this.online ? 30 : 0;
+    const place = this.findPerch(spawn.x + (Math.random() - 0.5) * jit, spawn.z + (Math.random() - 0.5) * jit);
     this.flyer.placeOnGround(this.world, place.x, place.z, place.yaw);
     // game rules: food, people, cars, nests, lives, score
     this.rules = new GameRules(this);
@@ -134,10 +140,33 @@ class Game {
     this.clock.getDelta();
     this.stage.focus();
     this.hud.toast("welcome to the " + (opts.scapeLabel || "world") + "! hold down to take off, up to fly fast.", "good");
+    if (this.online) this.goOnline(opts.name);
+  }
+
+  // join the shared sky; if it's full or unreachable, carry on solo
+  goOnline(name) {
+    const net = (this.net = new Net(this, name));
+    net.renderList();
+    net.join().then((r) => {
+      if (r === "full") {
+        net.offlineMsg = "the sky is full (50 birds). flying solo";
+        this.hud.toast("the online sky is full right now (50 birds). you're flying solo in the same world.", "warn");
+      } else if (r === "ok") {
+        const n = net.players.size;
+        this.hud.toast(n ? "you're online with " + n + (n === 1 ? " other bird" : " other birds") + "!" : "you're online. nobody else is flying yet.", "good");
+      }
+      net.renderList();
+    }).catch((e) => {
+      console.warn("birdie online:", e);
+      net.offlineMsg = "offline. flying solo";
+      net.renderList();
+      this.hud.toast("couldn't reach the online sky, so you're flying solo.", "warn");
+    });
   }
 
   stop() {
     this.running = false;
+    if (this.net) { this.net.close(); this.net = null; }
     if (this.rules) this.rules.dispose();
     if (this.world) this.world.dispose();
     if (this.bird) this.bird.dispose();
@@ -212,6 +241,7 @@ class Game {
 
   gameOver(why) {
     this.running = false;
+    if (this.net) { this.net.close(); this.net = null; }
     this.sound.stopWind();
     this.menu.showGameOver(why, this.rules.summary());
   }
@@ -263,6 +293,7 @@ class Game {
     }
     this.rules.update(dt, input);
     if (!this.running) return;
+    if (this.net) this.net.update(dt);
 
     // bird model follows the physics
     const b = this.bird;

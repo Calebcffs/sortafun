@@ -35,7 +35,65 @@
   #found li { border: 3px solid var(--ink); border-radius: 8px; padding: 3px 8px; font-size: 13px; background: #fff; }
   #found li.pan { background: #ffe9a8; }
 
-  #tier { font-size: 13px; color: #666; }
+
+  /* board on the left, rank meter on the right (on top on phones) */
+  .play { display: flex; gap: 22px; justify-content: center; align-items: flex-start; }
+  .board { flex: 0 1 340px; min-width: 0; }
+  .meter {
+    flex: 0 0 190px; margin-top: 10px; padding: 10px 12px 12px;
+    border: 3px solid var(--ink); border-radius: 12px; background: #fffbea; text-align: left;
+  }
+  .m-head { font-family: var(--chunky); font-size: 20px; line-height: 1; }
+  .m-diff { font-size: 11px; color: #666; margin: 3px 0 8px; }
+  .m-diff b { color: var(--ink); }
+  .m-tiers { position: relative; list-style: none; margin: 0; padding: 0; }
+  /* the track runs between the centres of the top and bottom dots */
+  .m-tiers::before, .m-fill {
+    content: ""; position: absolute; left: 9px; width: 6px; border-radius: 3px;
+  }
+  .m-tiers::before { top: 12px; bottom: 12px; background: #e6dcb8; }
+  .m-fill { bottom: 12px; height: 0; background: #f5b800; transition: height .5s ease; }
+  .m-tiers li {
+    position: relative; display: flex; align-items: center; gap: 8px;
+    height: 24px; font-size: 12px; color: #999;
+  }
+  .m-dot {
+    flex: 0 0 auto; width: 24px; height: 21px; position: relative; z-index: 1;
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+    background: var(--ink); display: flex; align-items: center; justify-content: center;
+  }
+  .m-dot::after {
+    content: ""; width: 18px; height: 15px; background: #fff;
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  }
+  .m-name { flex: 1; white-space: nowrap; }
+  .m-pts { font-size: 11px; }
+  .m-tiers li.got { color: var(--ink); }
+  .m-tiers li.got .m-dot::after { background: #f5b800; }
+  .m-tiers li.cur { font-weight: bold; font-size: 13px; }
+  .m-tiers li.cur .m-dot { transform: scale(1.25); }
+  .m-tiers li.cur .m-name::after { content: " \1F41D"; }
+  .m-tiers li.cur.pop .m-dot { animation: pop .6s ease; }
+  @keyframes pop { 40% { transform: scale(1.8); } }
+  .m-next { margin-top: 8px; font-size: 12px; line-height: 1.35; }
+  .m-now { display: none; }
+
+  @media (max-width: 560px) {
+    .play { flex-direction: column-reverse; align-items: stretch; gap: 0; }
+    .board { flex: none; }
+    .meter { flex: none; margin: 8px 0 0; padding: 8px 10px 10px; }
+    .m-head { display: none; }
+    .m-now { display: block; font-size: 14px; }
+    .m-diff { margin: 2px 0 6px; }
+    /* one row of dots, wannabee on the left */
+    .m-tiers { display: flex; flex-direction: row-reverse; justify-content: space-between; }
+    .m-tiers::before, .m-fill { top: 9px; bottom: auto; height: 6px; width: auto; }
+    .m-tiers::before { left: 12px; right: 12px; }
+    .m-fill { left: 12px; width: 0; transition: width .5s ease; }
+    .m-tiers li { height: 24px; }
+    .m-name, .m-pts { display: none; }
+    .m-next { margin-top: 6px; }
+  }
 </style>
 <script src="sfx.js?v=fb4567ef"></script>
 </head>
@@ -45,12 +103,14 @@
   <h1>word hive</h1>
   <p class="sub">seven letters, one of them mandatory (gold). find every word you can, 4+ letters,
     reuse letters as often as you like. any real word counts, no names.
-    no clock, stop whenever and submit your score. same seven letters for everyone today.</p>
+    no clock, stop whenever and submit your score. same seven letters for everyone today.
+    the ranks on the meter scale with the day's letters: a hard hive gets you to the top with fewer points.</p>
 
+  <div class="play">
+  <div class="board">
   <div class="hud">
     <span>score <b id="score">0</b></span>
     <span>found <b id="foundCount">0</b></span>
-    <span id="tier">beginner</span>
   </div>
 
   <div id="cur">- - - - -</div>
@@ -65,6 +125,16 @@
 
   <div class="status" id="status">type or click letters. the gold one is required in every word.</div>
   <div><button id="finish">i'm done, submit score</button></div>
+  </div>
+
+  <aside class="meter" id="meter" aria-label="rank">
+    <div class="m-head">rank</div>
+    <div class="m-now" id="mnow"></div>
+    <div class="m-diff" id="mdiff"></div>
+    <ol class="m-tiers" id="mtiers"><div class="m-fill" id="mfill"></div></ol>
+    <div class="m-next" id="mnext"></div>
+  </aside>
+  </div>
 
   <ul id="found"></ul>
 
@@ -74,7 +144,8 @@
 </div>
 
 <script src="dict.js?v=8295ff80"></script>
-<script src="firebase-config.js?v=d4b18782"></script>
+<script src="freq.js?v=8508f925"></script>
+<script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=23697025"></script>
 <script>
 "use strict";
@@ -166,19 +237,72 @@ function makePuzzleFrom(letters, center, inHive) {
   return { letters: letters, center: center, answers: answers, common: common, maxScore: maxScore };
 }
 
+// Ranks. The share of the max score each one needs is scaled by how hard the
+// day's letters are: on a hard hive "hive mind" might need half the points, on
+// an easy one (lots of -ing and -ed words) over 80%. Queen bee is always every
+// common word.
 var TIERS = [
-  [0, "beginner"], [0.02, "good start"], [0.05, "moving up"], [0.08, "good"],
-  [0.15, "solid"], [0.25, "nice"], [0.4, "great"], [0.5, "amazing"],
-  [0.7, "genius"], [1.0, "queen bee"]
+  [0, "wannabee"], [0.02, "bee-ginner"], [0.05, "buzzy bee"], [0.08, "busy bee"],
+  [0.15, "worker bee"], [0.25, "bee-dazzling"], [0.4, "the bee's knees"],
+  [0.5, "unbee-lievable"], [0.7, "hive mind"], [1.0, "queen bee"]
 ];
-function tierFor(score, maxScore) {
-  var frac = maxScore > 0 ? score / maxScore : 0;
-  var label = TIERS[0][1];
-  for (var i = 0; i < TIERS.length; i++) if (frac >= TIERS[i][0]) label = TIERS[i][1];
-  return label;
+
+// How findable a word is for a typical player: its frequency (freq.js), but an
+// -ing / -ed / -er / -ly word is about as easy as its stem, since once you have
+// "tilt" you get "tilting" for free. Returns a zipf number (3 rare to 7 "the").
+function stemsOf(w) {
+  var out = [];
+  ["ing", "ed", "er", "ly"].forEach(function (suf) {
+    if (w.length < suf.length + 3 || w.slice(-suf.length) !== suf) return;
+    var b = w.slice(0, -suf.length);
+    out.push(b, b + "e");
+    if (b.length > 2 && b[b.length - 1] === b[b.length - 2]) out.push(b.slice(0, -1)); // tagging -> tag
+    if (suf === "ed" || suf === "er") out.push(w.slice(0, -1)); // baked -> bake
+  });
+  return out;
+}
+function findability(w) {
+  var F = window.SortafunFreq;
+  if (!F) return 4;
+  var z = F.zipf(w);
+  stemsOf(w).forEach(function (st) { var zs = F.zipf(st) - 0.3; if (zs > z) z = zs; });
+  return z;
 }
 
+// ease = the share of the max score a typical player would get: each common
+// answer's points times the chance they think of it. Over a year of puzzles it
+// runs about 0.32 (hard) to 0.64 (easy), middle 0.49. That middle day gets the
+// NYT's usual 70% for hive mind; harder days less, easier days more.
+function rankTable(p) {
+  var exp = 0;
+  Object.keys(p.common).forEach(function (w) {
+    var chance = 1 / (1 + Math.exp(-(findability(w) - 4) * 2));
+    if (uniqueLetters(w).length === 7) chance = Math.max(chance, 0.6); // pangrams jump out
+    exp += p.common[w] * chance;
+  });
+  var ease = p.maxScore ? exp / p.maxScore : 0.49;
+  var top = Math.max(0.5, Math.min(0.85, 0.7 + (ease - 0.49) * 1.25));
+  var ranks = [], last = -1;
+  TIERS.forEach(function (t, i) {
+    var pts = i === TIERS.length - 1 ? p.maxScore : Math.round(t[0] / 0.7 * top * p.maxScore);
+    if (i > 0 && pts <= last) pts = last + 1; // tiny hives: keep every rank a step up
+    ranks.push({ name: t[1], pts: pts });
+    last = pts;
+  });
+  var label = ease < 0.42 ? "hard" : ease < 0.47 ? "tricky" : ease < 0.53 ? "normal" : "easy";
+  return { ranks: ranks, ease: ease, label: label };
+}
+
+// index into RANKS of the rank this score has reached
+function rankIndex(score) {
+  var r = 0;
+  for (var i = 0; i < RANKS.length; i++) if (score >= RANKS[i].pts) r = i;
+  return r;
+}
+function tierFor(score) { return RANKS[rankIndex(score)].name; }
+
 var puzzle = buildPuzzle();
+var RT = rankTable(puzzle), RANKS = RT.ranks;
 var allowed = {};
 puzzle.letters.forEach(function (l) { allowed[l] = true; });
 
@@ -191,7 +315,6 @@ var hiveEl = document.getElementById("hive");
 var curEl = document.getElementById("cur");
 var scoreEl = document.getElementById("score");
 var foundCountEl = document.getElementById("foundCount");
-var tierEl = document.getElementById("tier");
 var statusEl = document.getElementById("status");
 var foundEl = document.getElementById("found");
 var lbEl = document.getElementById("lb");
@@ -276,7 +399,7 @@ function submitWord() {
   if (!(w in puzzle.answers)) { flash("bad", "not in the dictionary"); return; }
 
   var pts = puzzle.answers[w];
-  var tierBefore = tierFor(score, puzzle.maxScore);
+  var rankBefore = rankIndex(score);
   foundWords[w] = pts;
   score += pts;
   typed = "";
@@ -285,9 +408,12 @@ function submitWord() {
   addFoundChip(w, pts);
   var isPan = uniqueLetters(w).length === 7;
   var deep = !(w in puzzle.common);
-  flash("good", (isPan ? "pangram! +" : deep ? "ooh, deep cut. +" : "nice, +") + pts);
+  var up = rankIndex(score) > rankBefore;
+  flash("good", (isPan ? "pangram! +" : deep ? "ooh, deep cut. +" : "nice, +") + pts +
+    (up ? ". you're " + aOrAn(tierFor(score)) + " now!" : ""));
+  if (up) popRank();
   // new rank beats a pangram beats a plain word
-  sfx(tierFor(score, puzzle.maxScore) !== tierBefore ? "levelup" : isPan ? "great" : "good");
+  sfx(up ? "levelup" : isPan ? "great" : "good");
 }
 
 function addFoundChip(w, pts) {
@@ -301,14 +427,62 @@ function addFoundChip(w, pts) {
 function updateHud() {
   scoreEl.textContent = score;
   foundCountEl.textContent = Object.keys(foundWords).length;
-  tierEl.textContent = tierFor(score, puzzle.maxScore);
+  renderMeter();
 }
+
+// "a busy bee", "an unbee-lievable", "the bee's knees"
+function aOrAn(name) {
+  if (/^the /.test(name)) return name;
+  return (/^[aeiou]/.test(name) ? "an " : "a ") + name;
+}
+
+// the rank meter: every rank top (queen bee) to bottom, a gold track filled
+// up to the score, and how far it is to the next one
+var meterTiers = document.getElementById("mtiers");
+var meterFill = document.getElementById("mfill");
+var mobile = window.matchMedia("(max-width: 560px)");
+function buildMeter() {
+  for (var i = RANKS.length - 1; i >= 0; i--) {
+    var li = document.createElement("li");
+    li.innerHTML = '<span class="m-dot"></span><span class="m-name"></span><span class="m-pts"></span>';
+    li.querySelector(".m-name").textContent = RANKS[i].name;
+    li.querySelector(".m-pts").textContent = RANKS[i].pts;
+    li.title = RANKS[i].name + ": " + RANKS[i].pts + " points";
+    meterTiers.appendChild(li);
+  }
+  document.getElementById("mdiff").innerHTML = "today's hive: <b>" + RT.label +
+    "</b>. queen bee is every common word (" + puzzle.maxScore + " pts).";
+}
+function renderMeter() {
+  var r = rankIndex(score), n = RANKS.length;
+  meterTiers.querySelectorAll("li").forEach(function (li, k) {
+    var i = n - 1 - k;
+    li.classList.toggle("got", i <= r);
+    li.classList.toggle("cur", i === r);
+  });
+  // position on the track: whole steps for each rank, plus the way to the next
+  var part = r < n - 1 ? (score - RANKS[r].pts) / (RANKS[r + 1].pts - RANKS[r].pts) : 0;
+  var f = (r + part) / (n - 1);
+  if (mobile.matches) { meterFill.style.height = ""; meterFill.style.width = "calc((100% - 24px) * " + f + ")"; }
+  else { meterFill.style.width = ""; meterFill.style.height = "calc((100% - 24px) * " + f + ")"; }
+  document.getElementById("mnow").innerHTML = "rank: <b>" + RANKS[r].name + "</b>";
+  document.getElementById("mnext").innerHTML = r < n - 1
+    ? "<b>" + (RANKS[r + 1].pts - score) + "</b> more " + (RANKS[r + 1].pts - score === 1 ? "point" : "points") +
+      " to <b>" + RANKS[r + 1].name + "</b>"
+    : "<b>queen bee!</b> you found every common word. take a bow.";
+}
+function popRank() {
+  var li = meterTiers.querySelector("li.cur");
+  if (!li) return;
+  li.classList.remove("pop"); void li.offsetWidth; li.classList.add("pop");
+}
+if (mobile.addEventListener) mobile.addEventListener("change", renderMeter);
 
 function finish() {
   if (done) return;
   done = true;
   if (window.SortafunSFX) SortafunSFX.result("win");
-  statusEl.textContent = "final score " + score + " (" + tierFor(score, puzzle.maxScore) +
+  statusEl.textContent = "final score " + score + " (" + tierFor(score) +
     "), " + Object.keys(foundWords).length + " words found";
   document.getElementById("finish").disabled = true;
   document.getElementById("enter").disabled = true;
@@ -334,6 +508,7 @@ document.getElementById("finish").addEventListener("click", finish);
 
 renderHive();
 renderCur();
+buildMeter();
 updateHud();
 </script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>

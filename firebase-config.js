@@ -19,4 +19,7 @@ window.SORTAFUN_FIREBASE = {
   storageBucket: "sortafun-ba7cb.firebasestorage.app",
   messagingSenderId: "674389696205",
   appId: "1:674389696205:web:8467bad3f828aac7605384",
+  // Realtime Database, used by Birdie's online mode (birdie/net.js). Must match
+  // the database made in the Firebase console (Singapore region), see SETUP.md.
+  databaseURL: "https://sortafun-ba7cb-default-rtdb.asia-southeast1.firebasedatabase.app",
 };

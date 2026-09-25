@@ -216,9 +216,20 @@ export class Sound {
   }
 
   // each species' call
-  call() {
-    if (!this.ensure() || !this.species) return;
-    const k = this.species.life.call;
+  // your call, or (online) another player's: their species, quieter with distance
+  call(species = this.species, vol = 1) {
+    if (!this.ensure() || !species) return;
+    const master = this.master;
+    if (vol !== 1) {
+      // route this one call through its own volume knob
+      const g = this.ctx.createGain();
+      g.gain.value = vol;
+      g.connect(master);
+      this.master = g;
+    }
+    try { this.callNotes(species.life.call); } finally { this.master = master; }
+  }
+  callNotes(k) {
     const r = () => Math.random();
     if (k === "coo") {
       // pigeon: a soft throaty "hoo-roo-coo" with a wobble

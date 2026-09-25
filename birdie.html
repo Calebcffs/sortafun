@@ -6,24 +6,25 @@
 <title>birdie &middot; SORTAFUN.ORG</title>
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css?v=078c46a8">
-<link rel="stylesheet" href="birdie/birdie.css?v=32477200">
+<link rel="stylesheet" href="birdie/birdie.css?v=f6f5cc2f">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./birdie/ambient.js": "./birdie/ambient.js?v=5c3282d0",
-  "./birdie/audio.js": "./birdie/audio.js?v=b016f1f8",
+  "./birdie/audio.js": "./birdie/audio.js?v=b3af305a",
   "./birdie/builders.js": "./birdie/builders.js?v=9442795c",
   "./birdie/effects.js": "./birdie/effects.js?v=3d83c8d2",
   "./birdie/flight.js": "./birdie/flight.js?v=b1193206",
-  "./birdie/game.js": "./birdie/game.js?v=dcc6644b",
+  "./birdie/game.js": "./birdie/game.js?v=1673834d",
   "./birdie/hud.js": "./birdie/hud.js?v=a4512a17",
   "./birdie/input.js": "./birdie/input.js?v=96bfcf9c",
   "./birdie/interiors.js": "./birdie/interiors.js?v=743c91ef",
   "./birdie/items.js": "./birdie/items.js?v=3d33fe6d",
-  "./birdie/main.js": "./birdie/main.js?v=88d43299",
-  "./birdie/menu.js": "./birdie/menu.js?v=2f2b6ef9",
+  "./birdie/main.js": "./birdie/main.js?v=dd154a7c",
+  "./birdie/menu.js": "./birdie/menu.js?v=17191afd",
   "./birdie/model.js": "./birdie/model.js?v=e063d2e0",
+  "./birdie/net.js": "./birdie/net.js?v=f1bff868",
   "./birdie/noise.js": "./birdie/noise.js?v=eb132f6e",
   "./birdie/people.js": "./birdie/people.js?v=d3359f9c",
   "./birdie/sky.js": "./birdie/sky.js?v=0aa93995",
@@ -39,7 +40,8 @@
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap birdie-wrap">
   <h1>birdie</h1>
-  <p class="sub">be a bird. fly anywhere in an endless world of cities, hills, snow, islands and factories.
+  <p class="sub">be a bird. fly anywhere in an endless world of cities, hills, snow, islands and factories,
+    online with up to 50 other birds (their names float over their heads) or on your own.
     eat to fill your poo-o-meter, poo on people for points, build a nest and raise a chick for an extra life.
     don't fly into walls, cars, power lines or people, and don't land too hard.</p>
 
@@ -68,6 +70,7 @@
         <div id="info" class="info"></div>
       </div>
       <div id="compass" class="compass"></div>
+      <div id="online" class="online" hidden></div>
       <div id="touch" class="touch" hidden>
         <div id="stick" class="stick"><div id="knob" class="knob"></div></div>
         <div class="tbtns">
@@ -90,9 +93,17 @@
             <div id="birdlist" class="birdlist"></div>
             <h3>2. pick where to start</h3>
             <div id="scapes" class="scapes"></div>
+            <h3>3. fly with everyone, or on your own</h3>
+            <div class="m-row online-row">
+              <div class="m-modes">
+                <button id="mode-online" data-mode="online">online <small id="headcount">everyone in one world</small></button>
+                <button id="mode-solo" data-mode="solo">solo <small>your own world</small></button>
+              </div>
+              <label class="m-opt" id="namebox">your name <input id="pname" type="text" maxlength="16" size="12" placeholder="shown over your bird" autocomplete="off" spellcheck="false"></label>
+            </div>
             <div class="m-row">
-              <label class="m-opt">world <input id="seed" type="text" maxlength="12" size="8"></label>
-              <button id="randseed" class="m-small">new world</button>
+              <span id="seedbox" class="m-opt"><label class="m-opt">world <input id="seed" type="text" maxlength="12" size="8"></label>
+              <button id="randseed" class="m-small">new world</button></span>
               <label class="m-opt">graphics <select id="quality"><option value="low">low</option><option value="med">medium</option><option value="high">high</option></select></label>
               <label class="m-opt"><input id="invert" type="checkbox"> invert up/down</label>
             </div>
@@ -153,9 +164,9 @@
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
-<script src="firebase-config.js?v=d4b18782"></script>
+<script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=23697025"></script>
-<script type="module" src="birdie/main.js?v=88d43299"></script>
+<script type="module" src="birdie/main.js?v=dd154a7c"></script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { Bird } from "./model.js";
 import { SPECIES, SPECIES_ORDER, FOOD, gameScale } from "./species.js";
+import { countOnline, cleanName, MAX_PLAYERS } from "./net.js";
 
 const SCAPES = [
   { key: "city", label: "City", color: "linear-gradient(#8fb9e8, #9aa3ad 60%, #50555c)" },
@@ -32,6 +33,12 @@ export class Menu {
     const seedEl = document.getElementById("seed");
     seedEl.value = load("birdie-seed", String(Math.floor(Math.random() * 999999)));
     document.getElementById("randseed").addEventListener("click", () => { seedEl.value = String(Math.floor(Math.random() * 999999)); });
+    // online or solo; online needs a name to put over your bird
+    this.mode = load("birdie-mode", "online");
+    for (const b of document.querySelectorAll(".m-modes button")) b.addEventListener("click", () => { this.mode = b.dataset.mode; save("birdie-mode", this.mode); this.markMode(); });
+    this.nameEl = document.getElementById("pname");
+    this.nameEl.value = load("sortafun-name", "");
+    this.markMode();
     const q = document.getElementById("quality");
     q.value = this.quality;
     q.addEventListener("change", () => { this.quality = q.value; save("birdie-quality", q.value); });
@@ -58,9 +65,28 @@ export class Menu {
     this.previewRenderer = null;
   }
 
+  markMode() {
+    for (const b of document.querySelectorAll(".m-modes button")) b.classList.toggle("on", b.dataset.mode === this.mode);
+    // online everyone shares one world, so the world picker only matters solo
+    document.getElementById("seedbox").hidden = this.mode === "online";
+    document.getElementById("namebox").hidden = this.mode !== "online";
+  }
+
+  // "4 birds flying now" on the online button
+  async headCount() {
+    const el = document.getElementById("headcount");
+    try {
+      const n = await countOnline();
+      el.textContent = n >= MAX_PLAYERS ? "full right now (" + n + ")" : n ? n + (n === 1 ? " bird" : " birds") + " flying now" : "nobody flying yet, be first";
+    } catch (e) {
+      el.textContent = "everyone in one world";
+    }
+  }
+
   // ---------------- title ----------------
   showTitle() {
     this.show("title");
+    this.headCount();
     this.ensurePreview();
     this.buildBirdList();
     this.selectBird(this.species);
@@ -193,6 +219,16 @@ export class Menu {
 
   play() {
     this.g.sound.ensure();
+    const online = this.mode === "online";
+    const name = cleanName(this.nameEl.value);
+    if (online && !name) {
+      // back to the title if we came from game over, then ask for a name
+      if (this.screens.title.hidden) this.showTitle();
+      this.nameEl.focus();
+      this.nameEl.classList.remove("want"); void this.nameEl.offsetWidth; this.nameEl.classList.add("want");
+      return;
+    }
+    if (name) save("sortafun-name", name);
     const seedStr = document.getElementById("seed").value.trim() || "1";
     save("birdie-seed", seedStr);
     let seed = 0;
@@ -200,7 +236,7 @@ export class Menu {
     this.g.hud.hide();
     this.show("loading");
     // give the loading screen a frame to appear before the heavy work
-    setTimeout(() => this.g.start({ species: this.species, scape: this.scape, scapeLabel: SCAPE_LABEL[this.scape], seed, quality: this.quality, invert: this.invert }), 30);
+    setTimeout(() => this.g.start({ species: this.species, scape: this.scape, scapeLabel: SCAPE_LABEL[this.scape], seed, quality: this.quality, invert: this.invert, online, name }), 30);
   }
 
   loading(p, msg) {

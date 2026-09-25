@@ -105,7 +105,7 @@ export class GameRules {
     }
 
     // --- actions ---
-    if (input.call) { this.calling = 0.5; this.g.sound.call(); }
+    if (input.call) { this.calling = 0.5; this.g.sound.call(); if (this.g.net) this.g.net.call(); }
     if (input.poop) this.action();
 
     this.spawnT -= dt;
@@ -622,6 +622,7 @@ export class GameRules {
     this.scene.add(mesh);
     this.poos.push({ mesh, pos, vel, t: 0 });
     this.g.sound.plop();
+    if (this.g.net) this.g.net.poo();
   }
 
   updatePoos(dt) {
@@ -672,6 +673,17 @@ export class GameRules {
           this.addScore(5, "splat! you got a " + w.sp.name.toLowerCase());
           this.g.hud.big("BIRD! +5", "good");
           this.g.sound.splat(0.6);
+          hit = true;
+        }
+      }
+      // another player's bird (online)
+      if (!hit && this.g.net) {
+        const o = this.g.net.hit(p.pos);
+        if (o) {
+          this.stats.hits++;
+          this.addScore(10, "splat! you got " + o.name);
+          this.g.hud.big(o.name.toUpperCase() + "! +10", "good");
+          this.g.sound.splat(0.7);
           hit = true;
         }
       }

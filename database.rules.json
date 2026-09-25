@@ -1,0 +1,35 @@
+{
+  "rules": {
+    "birdie": {
+      "players": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['n', 's', 'st', 't'])",
+          "n": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16" },
+          "s": { ".validate": "newData.isString() && newData.val().matches(/^[a-z]{2,12}$/)" },
+          "st": { ".validate": "newData.isString() && newData.val().length <= 140" },
+          "pc": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          "cc": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          "sc": { ".validate": "newData.isNumber()" },
+          "t": { ".validate": "newData.isNumber() && newData.val() <= now" },
+          "$other": { ".validate": false }
+        }
+      },
+      "hits": {
+        "$victim": {
+          ".read": "auth != null && auth.uid === $victim",
+          ".write": "auth != null && auth.uid === $victim",
+          "$hit": {
+            ".write": "auth != null && !data.exists() && root.child('birdie/players/' + auth.uid).exists()",
+            ".validate": "newData.hasChildren(['by', 'n', 't']) && newData.child('by').val() === auth.uid && newData.child('n').isString() && newData.child('n').val().length <= 16 && newData.child('t').val() === now",
+            "by": { ".validate": true },
+            "n": { ".validate": true },
+            "t": { ".validate": true },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}
