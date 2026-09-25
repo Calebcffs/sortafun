@@ -35,6 +35,18 @@ console.log("service account:", sa.client_email, "project:", project);
 
 let res = await fetch(api + "-/instances", { headers: H });
 let body = await res.json();
+if (res.status === 403 && JSON.stringify(body).includes("SERVICE_DISABLED")) {
+  // switch the Realtime Database management API on, then wait for it
+  const en = await fetch("https://serviceusage.googleapis.com/v1/projects/" + project + "/services/firebasedatabase.googleapis.com:enable", { method: "POST", headers: H, body: "{}" });
+  console.log("enable api:", en.status, JSON.stringify(await en.json()).slice(0, 400));
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 15000));
+    res = await fetch(api + "-/instances", { headers: H });
+    body = await res.json();
+    console.log("retry list:", res.status, JSON.stringify(body).slice(0, 200));
+    if (res.status !== 403) break;
+  }
+}
 console.log("list:", res.status, JSON.stringify(body));
 let inst = (body.instances || []).find((i) => i.type === "DEFAULT_DATABASE");
 if (!inst) {
