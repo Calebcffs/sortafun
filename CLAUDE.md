@@ -424,10 +424,11 @@ circular overlay), `audio.js` (all synthesised), `menu.js`, `main.js` (loop,
 camera, spawn). `birdie.simulate(seconds, {pitch, turn, poop...})` runs the
 game headless for testing.
 
-Controls (changed from the original on Caleb's ask): DOWN/S pulls up and
-climbs slowly and steeply (and near a surface while coming down it's the
-landing flare: brakes, sinks at ~1 m/s, lands), UP/W flies fast and level
-(~1.85x cruise), SHIFT dives, space = poo / nest / lay / feed. After landing
+Controls (changed from the original on Caleb's ask): DOWN/S flaps nearly
+straight up (60-72 deg, forward speed drops to ~0.18x cruise, height comes
+fast; near a surface while coming down it's the landing flare instead: brakes,
+sinks at ~1 m/s, lands), UP/W is powered fast flight (~1.9x cruise, rising a
+touch, ~0.035x its speed), SHIFT dives, space = poo / nest / lay / feed. After landing
 DOWN has to be let go before it takes off again (`holdLatch`). The
 poo-o-meter drains at one constant rate (`game.js`, 0.0013/s) whatever you do.
 Flight tuning lives in each species' `flight` block; check changes by
@@ -444,6 +445,30 @@ ceilings. `world.keepOut()` stops trees, fields and cabins spawning inside
 the tavern, barn and cooling towers. Parapets, awnings, lamps, fences, bushes,
 rocks, palms and the rest all have colliders too: if you add a prop, add its
 collider.
+
+### Sound (`sfx.js`)
+
+Every page loads `sfx.js` in its `<head>` (`/sfx.js` on the 404). Everything
+is synthesised with WebAudio, no audio files. It ticks when the mouse goes
+over anything clickable and blips on click (`data-nosfx` on an element or
+container turns that off, `data-sfx="coin"` swaps the click for another
+sound), and adds a speaker button to `.homebar` / the homepage `.nav`
+(localStorage `sortafun-sound`). The homepage also calls
+`SortafunSFX.music.auto()`: a 16-bar chiptune loop (the `SONG` table in
+`sfx.js`) with its own button (`sortafun-music`). Browsers block audio until
+the first click or key, so nothing plays before that (`whenReady(fn)` queues
+something for then, the passport uses it for stamp thumps).
+
+Games call `SortafunSFX.play(name)` (names at the top of `sfx.js`) and
+`SortafunSFX.result("win" | "lose" | ...)` at the end of a round. If a game
+mounts a leaderboard panel with a score without calling `result` first,
+`leaderboard.js` plays a "done" jingle; submitting plays a coin, and making
+today's board plays "great" (or "highscore" for first place). Birdie and the
+circuit racer have their own synth audio but follow the speaker button (the
+`sortafun-sound` window event). Don't put a sound on the reaction test's
+green light or anything in the minute game while it counts: a cue would help
+you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
+checks (keep sfx peaks under ~0.35).
 
 ### The meta pages
 

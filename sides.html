@@ -27,6 +27,7 @@
   .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .meta { font-size: 14px; color: #444; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-word">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -195,8 +196,10 @@ function draw() {
   wordsEl.innerHTML = words.map(function (w) { return "<span>" + w + "</span>"; }).join(" ");
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 function nope(msg) {
   statusEl.textContent = msg;
+  sfx("bad");
   curEl.classList.remove("bad");
   void curEl.offsetWidth;
   curEl.classList.add("bad");
@@ -209,6 +212,7 @@ function addLetter(l) {
   var prev = cur[cur.length - 1];
   if (prev && sideOf[prev] === sideOf[l]) { nope("same side as " + prev.toUpperCase() + ", pick another side"); return; }
   cur += l;
+  sfx("type");
   statusEl.textContent = "";
   draw();
 }
@@ -221,6 +225,7 @@ function backspace() {
   } else {
     cur = cur.slice(0, -1);
   }
+  sfx("type");
   statusEl.textContent = "";
   draw();
 }
@@ -236,12 +241,14 @@ function enter() {
   var used = usedSet();
   var left = Object.keys(sideOf).filter(function (l) { return !used[l]; }).length;
   if (!left) return win();
+  sfx("good");
   statusEl.textContent = left + " letter" + (left === 1 ? "" : "s") + " to go";
   draw();
 }
 
 function win() {
   over = true;
+  if (window.SortafunSFX) SortafunSFX.result("win");
   cur = "";
   draw();
   var n = words.length;
@@ -262,6 +269,7 @@ boxEl.addEventListener("click", function (e) {
   var l = e.target.getAttribute && e.target.getAttribute("data-l");
   if (l) addLetter(l);
 });
+["del", "enter"].forEach(function (id) { document.getElementById(id).setAttribute("data-nosfx", ""); });
 document.getElementById("del").addEventListener("click", backspace);
 document.getElementById("enter").addEventListener("click", enter);
 document.getElementById("restart").addEventListener("click", restart);

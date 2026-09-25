@@ -91,6 +91,7 @@
     .cluelist { font-size: 12px; max-height: none; }
   }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-word">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -400,6 +401,7 @@ for (const k in inputAt) {
   inp.addEventListener("input", () => {
     const raw = inp.value.replace(/[^a-zA-Z]/g, "").toUpperCase();
     inp.value = raw.slice(-1);
+    if (window.SortafunSFX) SortafunSFX.play("type");
     tdAt[k].classList.remove("good", "bad");
     save();
     if (inp.value) advance(1);
@@ -511,6 +513,7 @@ document.getElementById("check").addEventListener("click", () => {
     if (inp.value === PUZZLE.rows[r][c]) td.classList.add("good");
     else { td.classList.add("bad"); wrong++; }
   }
+  if (window.SortafunSFX && filled) SortafunSFX.play(wrong ? "bad" : "good");
   if (!filled) status.textContent = "type some letters first";
   else if (!wrong && filled === total) status.textContent = "🟩 all correct — solved it!";
   else if (!wrong) status.textContent = "no mistakes so far — " + filled + "/" + total + " filled";
@@ -549,12 +552,15 @@ document.getElementById("clearBtn").addEventListener("click", () => {
   focusCell(cur[0], cur[1]);
 });
 
+let solvedCheer = false;
 function checkSolved() {
   for (const k in inputAt) {
     const [r, c] = k.split(",").map(Number);
     if (inputAt[k].value !== PUZZLE.rows[r][c]) return;
   }
   status.textContent = "🟩 solved it. nice one.";
+  if (!solvedCheer && window.SortafunSFX) SortafunSFX.result("highscore");
+  solvedCheer = true;
   for (const k in tdAt) { tdAt[k].classList.remove("bad"); tdAt[k].classList.add("good"); }
 }
 

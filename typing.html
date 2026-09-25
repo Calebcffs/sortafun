@@ -131,6 +131,7 @@
 
   .tt #restart { margin-top: 4px; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-word tt">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -426,6 +427,7 @@ field.addEventListener("keydown", function (e) {
   if (e.key === " ") {
     e.preventDefault();
     if (typed.length === 0) return;          // ignore a leading space
+    if (window.SortafunSFX) SortafunSFX.play("type");
     submitWord();
     return;
   }
@@ -452,6 +454,7 @@ field.addEventListener("input", function () {
   field.value = "";
   if (!v) return;
   if (!running) start();
+  if (window.SortafunSFX) SortafunSFX.play("type");
 
   for (var i = 0; i < v.length; i++) {
     var ch = v[i];
@@ -497,6 +500,7 @@ function submitWord() {
 function finish() {
   if (ended) return;
   ended = true;
+  if (window.SortafunSFX) SortafunSFX.result("win");
   running = false;
   clearInterval(timer);
   clearTimeout(idleT);

@@ -45,6 +45,7 @@
   #missed li { background: #f1f3f5; color: #555; border-color: #adb5bd; }
   #missedWrap h3 { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-weight: 400; margin: 14px 0 0; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-word">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -179,7 +180,7 @@ var cubes = BOARD.map(function (f, i) {
   return b;
 });
 
-var running = false, over = false, endAt = 0, timer = null;
+var running = false, over = false, endAt = 0, timer = null, lastTock = 0;
 var cur = "", tapPath = null;
 var found = {}, score = 0;
 
@@ -200,7 +201,10 @@ function refresh() {
   if (cur && !path) curEl.classList.add("bad");
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
+gridEl.setAttribute("data-nosfx", "");
 function flash(cls, msg) {
+  sfx(cls === "bad" ? "bad" : "good");
   statusEl.textContent = msg;
   curEl.classList.remove("bad", "good");
   void curEl.offsetWidth;
@@ -225,6 +229,7 @@ function submit() {
   li.textContent = w + " +" + pts;
   foundEl.insertBefore(li, foundEl.firstChild);
   flash("good", pts >= 5 ? "whoa! +" + pts : "+" + pts);
+  if (pts >= 5) sfx("great");
   cur = ""; tapPath = null;
   setTimeout(refresh, 250);
 }
@@ -242,6 +247,7 @@ function tap(i) {
     return;
   }
   tapPath.push(i);
+  sfx("type");
   cur += BOARD[i];
   statusEl.textContent = "";
   refresh();
@@ -256,6 +262,7 @@ function start() {
   timer = setInterval(tick, 200);
   tick();
   statusEl.textContent = "go go go";
+  sfx("start");
 }
 
 function tick() {
@@ -263,12 +270,14 @@ function tick() {
   var s = Math.ceil(left / 1000);
   clockEl.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
   clockEl.classList.toggle("low", s <= 15);
+  if (s <= 10 && s > 0 && s !== lastTock) { lastTock = s; sfx("tock"); }
   if (left <= 0) end();
 }
 
 function end() {
   clearInterval(timer);
   running = false; over = true;
+  if (window.SortafunSFX) SortafunSFX.result(score > 0 ? "win" : "lose");
   cur = ""; tapPath = null; refresh();
   var n = Object.keys(found).length;
   statusEl.textContent = "time! " + score + " point" + (score === 1 ? "" : "s") + " from " + n + " word" + (n === 1 ? "" : "s") +
@@ -307,6 +316,7 @@ document.addEventListener("keydown", function (e) {
   } else if (/^[a-zA-Z]$/.test(e.key)) {
     tapPath = null;
     cur += e.key.toLowerCase();
+    sfx("type");
     statusEl.textContent = "";
     refresh();
   }

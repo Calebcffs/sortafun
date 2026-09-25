@@ -20,6 +20,7 @@
   #word.bad { background: #f7d6d6; }
   .meta { font-size: 14px; color: #444; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-word">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -152,6 +153,9 @@ function render() {
   if (last === endW) win();
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
+document.getElementById("add").setAttribute("data-nosfx", "");
+wordEl.addEventListener("input", function () { sfx("type"); });
 function add() {
   var w = wordEl.value.trim().toLowerCase();
   wordEl.classList.remove("bad");
@@ -166,9 +170,10 @@ function add() {
     for (var i = 0; i < 4; i++) if (w[i] !== last[i]) diff++;
     if (diff !== 1) why = "change exactly one letter from " + last.toUpperCase();
   }
-  if (why) { wordEl.classList.add("bad"); statusEl.textContent = why; return; }
+  if (why) { wordEl.classList.add("bad"); statusEl.textContent = why; sfx("bad"); return; }
   statusEl.textContent = "";
   chain.push(w);
+  if (w !== endW) sfx("good");
   wordEl.value = "";
   wordEl.focus();
   render();
@@ -176,6 +181,7 @@ function add() {
 
 function win() {
   var rungs = chain.length - 1;
+  if (window.SortafunSFX) SortafunSFX.result(rungs <= par ? "highscore" : "win");
   statusEl.textContent = "solved in " + rungs + " rung" + (rungs === 1 ? "" : "s") +
     (rungs === par ? ", that is par" : rungs < par ? ", under par!" : "");
   wordEl.disabled = true;

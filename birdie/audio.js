@@ -8,7 +8,10 @@ import { clamp, lerp } from "./noise.js";
 export class Sound {
   constructor() {
     this.ctx = null;
-    this.muted = false;
+    // start muted if the site-wide speaker button (sfx.js) is off, and follow it
+    const site = window.SortafunSFX;
+    this.muted = !!(site && !site.enabled());
+    window.addEventListener("sortafun-sound", (e) => this.setMuted(!e.detail.on));
     this.lastPhase = 0;
     this.ambT = 0;
   }

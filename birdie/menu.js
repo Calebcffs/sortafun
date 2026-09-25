@@ -41,7 +41,9 @@ export class Menu {
     inv.addEventListener("change", () => setInv(inv.checked));
     inv2.addEventListener("change", () => setInv(inv2.checked));
     const sound = document.getElementById("sound");
+    sound.checked = !this.g.sound.muted;
     sound.addEventListener("change", () => this.g.sound.setMuted(!sound.checked));
+    window.addEventListener("sortafun-sound", (e) => { sound.checked = e.detail.on; });
     document.getElementById("daylock").addEventListener("change", (e) => { if (this.g.sky) this.g.sky.frozen = e.target.checked; });
 
     document.getElementById("play").addEventListener("click", () => this.play());

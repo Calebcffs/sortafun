@@ -23,6 +23,7 @@
   #streak b { font-size: 30px; }
   .hint2 { font-size: 13px; color: #777; max-width: 360px; margin: 8px auto 0; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-base">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -78,16 +79,19 @@ function call(guess) {
   void coin.offsetWidth;
   coin.classList.add("spin");
   coin.textContent = "";
+  if (window.SortafunSFX) SortafunSFX.play("whoosh");
   setTimeout(function () {
     var flip = Math.random() < 0.5 ? "heads" : "tails";
     coin.textContent = flip === "heads" ? "H" : "T";
     if (flip === guess) {
       streak++;
+      if (window.SortafunSFX) SortafunSFX.play(streak % 5 === 0 ? "levelup" : "coin");
       nEl.textContent = streak;
       statusEl.textContent = flip + ". still in.";
       busy = false;
     } else {
       over = true;
+      if (window.SortafunSFX) SortafunSFX.result("lose");
       heads.disabled = true;
       tails.disabled = true;
       statusEl.textContent = flip + ". run over at " + streak + ".";

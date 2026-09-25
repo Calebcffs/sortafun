@@ -34,6 +34,7 @@
   #bigmsg { font-size: 20px; min-height: 26px; margin: 6px 0; }
   .rounds { font-size: 15px; color: #333; letter-spacing: 2px; min-height: 20px; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-skill">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -84,8 +85,11 @@ function reset() {
   lbEl.innerHTML = "";
 }
 
+// (no sound when it goes green: that would be a second cue to react to)
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 function arm() {
   phase = "wait";
+  sfx("beep");
   light.className = "wait";
   bigmsg.textContent = "wait for it...";
   var delay = 1200 + Math.random() * 3200;
@@ -109,6 +113,7 @@ function hit() {
   if (phase === "wait") {
     clearTimeout(armTimer);
     phase = "early";
+    sfx("bad");
     light.className = "idle";
     bigmsg.textContent = "too soon. click to retry round " + round;
     return;
@@ -117,6 +122,7 @@ function hit() {
   if (phase === "go") {
     var ms = Math.round(performance.now() - greenAt);
     times.push(ms);
+    if (round < ROUNDS) sfx(ms < 250 ? "great" : "pop");
     drawRounds();
     light.className = "idle";
     if (round >= ROUNDS) { finish(); return; }
@@ -136,6 +142,7 @@ function drawRounds() {
 
 function finish() {
   phase = "done";
+  if (window.SortafunSFX) SortafunSFX.result("win");
   var avg = Math.round(times.reduce(function (a, b) { return a + b; }, 0) / times.length);
   bigmsg.textContent = "average " + avg + " ms";
   statusEl.textContent = "best round " + Math.min.apply(null, times) + " ms";

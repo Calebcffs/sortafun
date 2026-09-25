@@ -37,6 +37,7 @@
 
   #tier { font-size: 13px; color: #666; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-word">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -235,8 +236,12 @@ function renderCur() {
   curEl.textContent = typed ? typed.toUpperCase() : "- - - - -";
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
+hiveEl.setAttribute("data-nosfx", "");
+["enter", "del"].forEach(function (id) { document.getElementById(id).setAttribute("data-nosfx", ""); });
 function flash(cls, msg) {
   if (msg != null) statusEl.textContent = msg;
+  if (cls === "bad") sfx("bad");
   curEl.classList.remove("good", "bad");
   void curEl.offsetWidth;
   curEl.classList.add(cls);
@@ -247,11 +252,13 @@ function flash(cls, msg) {
 function appendLetter(l) {
   if (done) return;
   typed += l;
+  sfx("type");
   renderCur();
 }
 
 function backspace() {
   if (done) return;
+  if (typed) sfx("type");
   typed = typed.slice(0, -1);
   renderCur();
 }
@@ -269,6 +276,7 @@ function submitWord() {
   if (!(w in puzzle.answers)) { flash("bad", "not in the dictionary"); return; }
 
   var pts = puzzle.answers[w];
+  var tierBefore = tierFor(score, puzzle.maxScore);
   foundWords[w] = pts;
   score += pts;
   typed = "";
@@ -278,6 +286,8 @@ function submitWord() {
   var isPan = uniqueLetters(w).length === 7;
   var deep = !(w in puzzle.common);
   flash("good", (isPan ? "pangram! +" : deep ? "ooh, deep cut. +" : "nice, +") + pts);
+  // new rank beats a pangram beats a plain word
+  sfx(tierFor(score, puzzle.maxScore) !== tierBefore ? "levelup" : isPan ? "great" : "good");
 }
 
 function addFoundChip(w, pts) {
@@ -297,6 +307,7 @@ function updateHud() {
 function finish() {
   if (done) return;
   done = true;
+  if (window.SortafunSFX) SortafunSFX.result("win");
   statusEl.textContent = "final score " + score + " (" + tierFor(score, puzzle.maxScore) +
     "), " + Object.keys(foundWords).length + " words found";
   document.getElementById("finish").disabled = true;

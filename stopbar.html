@@ -10,6 +10,7 @@
   #bar { border: 3px solid var(--ink); background: #fff; margin: 12px auto 4px; display: block; touch-action: manipulation; cursor: pointer; }
   #big { font-size: 20px; min-height: 26px; margin: 6px 0; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-skill">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -100,10 +101,12 @@ function render() {
   ctx.stroke();
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 function act() {
   if (phase === "over") return;
   if (phase === "idle" || phase === "between") {
     phase = "run";
+    sfx("whoosh");
     big.textContent = "stop it!";
     cancelAnimationFrame(raf);
     loop();
@@ -113,12 +116,15 @@ function act() {
   cancelAnimationFrame(raf);
   if (marker >= zoneX && marker <= zoneX + zoneW) {
     pts++;
+    // every fifth point gets a little flourish
+    sfx(pts % 5 === 0 ? "levelup" : "good");
     newZone();
     phase = "between";
     big.textContent = pts + " point" + (pts === 1 ? "" : "s") + ". go again";
     render();
   } else {
     phase = "over";
+    if (window.SortafunSFX) SortafunSFX.result(pts >= 5 ? "win" : "lose");
     big.textContent = "missed. final score " + pts;
     render();
     lbEl.innerHTML = "";

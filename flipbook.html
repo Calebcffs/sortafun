@@ -100,6 +100,7 @@
   .post-msg { flex-basis: 100%; font-size: 13px; color: #1faf3a; min-height: 16px; }
   .post-msg.err { color: #d64545; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-art">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -656,6 +657,7 @@ var postMsg = document.getElementById("postMsg");
 var postTitle = document.getElementById("postTitle");
 
 function setMsg(text, isErr) {
+  if (isErr && window.SortafunSFX) SortafunSFX.play("bad");
   postMsg.textContent = text;
   postMsg.classList.toggle("err", !!isErr);
 }
@@ -706,6 +708,7 @@ postBtn.addEventListener("click", function () {
     frames: frameUrls,
   }).then(function (id) {
     setMsg("posted! it's in the gallery now.");
+    if (window.SortafunSFX) SortafunSFX.result("win");
     postTitle.value = "";
     var a = document.createElement("a");
     a.href = "anim-gallery.html#" + id;

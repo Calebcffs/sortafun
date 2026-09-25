@@ -37,6 +37,7 @@
   .hud b { font-size: 20px; }
   #startbtn { font-size: 16px; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-skill">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -105,8 +106,10 @@ function tick() {
   timeEl.textContent = Math.ceil(left);
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 function finish() {
   ended = true; running = false;
+  if (window.SortafunSFX) SortafunSFX.result("win");
   clearInterval(timer);
   target.style.display = "none";
   statusEl.textContent = "time! " + hits + " hits";
@@ -125,6 +128,7 @@ target.addEventListener("pointerdown", function (e) {
     statusEl.textContent = "";
   }
   hits++; clicks++;
+  sfx("pop");
   hitsEl.textContent = hits;
   accEl.textContent = Math.round(hits / clicks * 100) + "%";
   place();
@@ -133,6 +137,7 @@ target.addEventListener("pointerdown", function (e) {
 arena.addEventListener("pointerdown", function () {
   if (!running || ended) return;
   clicks++;
+  sfx("tock");
   accEl.textContent = Math.round(hits / clicks * 100) + "%";
 });
 

@@ -71,6 +71,7 @@
   }
   .below { text-align: center; margin-top: 10px; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-skill">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -750,6 +751,7 @@ function updatePhysics(dt) {
 }
 
 function finishLap(ms) {
+  if (window.SortafunSFX) SortafunSFX.result("win");
   const lb = document.getElementById("lb");
   lb.innerHTML = "";
   if (window.SortafunLB) SortafunLB.mountPanel(lb, "circuit", { score: ms });
@@ -924,7 +926,18 @@ let audioCtx = null;
 let engineOsc = null, engineFilter = null, engineGain = null;
 let driftSource = null, driftGain = null, driftBuffer = null;
 
+// the site-wide speaker button (sfx.js) mutes the engine too
+const siteMuted = () => window.SortafunSFX && !SortafunSFX.enabled();
+window.addEventListener("sortafun-sound", (e) => {
+  if (!audioCtx) return;
+  if (e.detail.on) audioCtx.resume().catch(() => {}); else audioCtx.suspend().catch(() => {});
+});
+
 function ensureAudio() {
+  if (siteMuted()) {
+    if (audioCtx && audioCtx.state === "running") audioCtx.suspend().catch(() => {});
+    return audioCtx;
+  }
   if (audioCtx) {
     if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
     return audioCtx;

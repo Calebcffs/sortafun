@@ -491,6 +491,8 @@
   }
 
   // opts: { score?: number, onSubmitted?: fn }  — pass score to show the submit row
+  function sfx(name) { if (window.SortafunSFX) window.SortafunSFX.play(name); }
+
   function mountPanel(target, game, opts) {
     opts = opts || {};
     var g = GAMES[game];
@@ -512,9 +514,17 @@
     var msgEl = root.querySelector(".lb-msg");
     var tabs = root.querySelectorAll(".lb-tabs button");
     var period = "day";
+    var justSent = null;
 
     function render(rows, worst) {
       listEl.innerHTML = "";
+      // just sent a score? cheer if it made the board (louder for the top spot)
+      if (justSent && rows.length) {
+        var at = -1;
+        rows.forEach(function (r, i) { if (at < 0 && r.name === justSent.name && r.score === justSent.score) at = i; });
+        if (at === 0) sfx("highscore"); else if (at > 0) sfx("great");
+        justSent = null;
+      }
       if (!rows.length) {
         msgEl.textContent = "nobody yet. be the first.";
         return;
@@ -564,6 +574,9 @@
     });
 
     if (opts.score != null && isFinite(opts.score)) {
+      // end of a round: a little "done" jingle, unless the game played its own
+      var S = window.SortafunSFX;
+      if (S && Date.now() - S.lastResultAt() > 2500) S.result("done");
       var form = el("div", "lb-submit");
       form.innerHTML =
         '<input class="lb-input" maxlength="20" placeholder="your name" autocomplete="off" spellcheck="false">' +
@@ -580,6 +593,9 @@
         go.textContent = "sending...";
         try { localStorage.setItem("sortafun-name", name); } catch (e) {}
         submit(game, name, opts.score).then(function () {
+          sfx("coin");
+          justSent = { name: name, score: Math.round(Number(opts.score)) };
+          if (period !== "day") { tabs.forEach(function (x) { x.classList.toggle("on", x.dataset.p === "day"); }); period = "day"; }
           form.innerHTML = '<span class="lb-ok">saved! ' + name + " · " + fmtScore(g, opts.score) + "</span>";
           if (opts.onSubmitted) opts.onSubmitted();
           load();

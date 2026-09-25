@@ -25,6 +25,7 @@
   .who { font-size: 14px; color: #444; margin: 6px 0; }
   #namebox { font-family: var(--body); font-size: 15px; border: 3px solid var(--ink); border-radius: 6px; padding: 4px 8px; width: 180px; text-align: center; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-hang">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -100,6 +101,15 @@ function render() {
     div.innerHTML = '<div class="ico">' + s.ico + '</div><b>' + s.t + '</b><span>' + s.d + '</span>';
     stampsEl.appendChild(div);
   });
+  // a thump for each stamp you've earned since you last opened the passport
+  var seen = 0;
+  try { seen = +localStorage.getItem("sortafun-passport-seen") || 0; localStorage.setItem("sortafun-passport-seen", n); } catch (e) {}
+  if (n > seen && window.SortafunSFX) {
+    var fresh = Math.min(n - seen, 6);
+    SortafunSFX.whenReady(function () {
+      for (var i = 0; i < fresh; i++) setTimeout(function () { SortafunSFX.play("stamp"); }, 250 + i * 280);
+    });
+  }
   tallyEl.textContent = n + " of " + STAMPS.length + " stamps" +
     (GAME_KEYS.length ? "  ·  scored on " + scored + " / " + GAME_KEYS.length + " games" : "");
 }

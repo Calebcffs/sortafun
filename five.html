@@ -40,6 +40,7 @@
   .legend { font-size: 13px; color: #555; }
   .legend b { display: inline-block; width: 14px; height: 14px; border: 2px solid #1d1b2e; border-radius: 3px; vertical-align: -2px; margin: 0 3px 0 8px; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-word">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -127,6 +128,8 @@ KEYROWS.forEach(function (line) {
   });
   keysEl.appendChild(kr);
 });
+keysEl.setAttribute("data-nosfx", ""); // the keys make their own typing sound
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 keysEl.addEventListener("click", function (e) {
   var b = e.target.closest(".key");
   if (b) press(b.dataset.k);
@@ -178,7 +181,7 @@ function reveal(i, guess, animate) {
     t.textContent = guess[j];
     function paint() { t.classList.add(cls); paintKey(guess[j], cls); }
     if (animate) {
-      setTimeout(function () { t.classList.add("flip"); setTimeout(paint, 170); }, j * 220);
+      setTimeout(function () { t.classList.add("flip"); sfx("flip"); setTimeout(paint, 170); }, j * 220);
     } else paint();
   });
   return res;
@@ -194,6 +197,7 @@ function finish(won, animate) {
   over = true;
   var delay = animate ? 1300 : 0;
   setTimeout(function () {
+    if (animate && window.SortafunSFX) SortafunSFX.result(won ? "win" : "lose");
     if (won) {
       var n = guesses.length;
       statusEl.textContent = PRAISE[n - 1] + " got it in " + n + ".";
@@ -221,6 +225,7 @@ function submit() {
 
 function shake(msg) {
   statusEl.textContent = msg;
+  sfx("bad");
   var row = rowEl(guesses.length);
   row.classList.remove("shake");
   void row.offsetWidth;
@@ -230,8 +235,8 @@ function shake(msg) {
 function press(k) {
   if (over) return;
   if (k === "Enter") submit();
-  else if (k === "Backspace") { cur = cur.slice(0, -1); drawCurrent(); }
-  else if (/^[a-z]$/.test(k) && cur.length < 5) { cur += k; drawCurrent(); }
+  else if (k === "Backspace") { if (cur) sfx("type"); cur = cur.slice(0, -1); drawCurrent(); }
+  else if (/^[a-z]$/.test(k) && cur.length < 5) { cur += k; sfx("type"); drawCurrent(); }
 }
 
 document.addEventListener("keydown", function (e) {

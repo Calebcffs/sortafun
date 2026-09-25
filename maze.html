@@ -12,6 +12,7 @@
   #big { font-size: 19px; min-height: 24px; margin: 6px 0; }
   .hint2 { font-size: 13px; color: #777; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-puzzle">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -141,18 +142,20 @@ function pos(e) {
   ];
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 function onMove(e) {
   if (phase === "done") return;
   var p = pos(e), px = p[0], py = p[1];
 
   if (phase === "idle") {
-    if (inStart(px, py)) { phase = "armed"; big.textContent = "go!"; }
+    if (inStart(px, py)) { phase = "armed"; big.textContent = "go!"; sfx("beep"); }
     return;
   }
   if (phase === "armed") {
     if (!inStart(px, py) && !isWall(px, py)) {
       phase = "run";
       startT = performance.now();
+      sfx("go");
     }
     return;
   }
@@ -161,6 +164,7 @@ function onMove(e) {
     if (isWall(px, py)) {
       phase = "idle";
       startT = null;
+      sfx("bad");
       big.textContent = "wall! back to the green box";
       return;
     }
@@ -170,6 +174,7 @@ function onMove(e) {
 
 function win() {
   phase = "done";
+  if (window.SortafunSFX) SortafunSFX.result("win");
   var ms = Math.round(performance.now() - startT);
   big.textContent = "out in " + (ms / 1000).toFixed(2) + " s";
   statusEl.textContent = "";

@@ -23,6 +23,7 @@
   #result { font-size: 20px; min-height: 30px; margin-top: 6px; }
   .hint2 { font-size: 13px; color: #777; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-base">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -80,6 +81,8 @@ btn.addEventListener("click", function () {
     btn.textContent = "try again";
     btn.classList.remove("counting");
     var off = elapsed - TARGET;
+    // (nothing plays while counting: a tick would be a clock)
+    if (window.SortafunSFX) SortafunSFX.result(Math.abs(off) < 1000 ? "win" : "done");
     var sign = off > 0 ? "over" : "under";
     result.textContent = (elapsed / 1000).toFixed(2) + " s  —  " +
       Math.abs(off / 1000).toFixed(2) + " s " + sign;

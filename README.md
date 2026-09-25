@@ -7,7 +7,9 @@ directory: every game gets its own hand-drawn thumbnail, sorted into **Games**
 meta pages) and **the Basement** (the joke games, behind a door you click
 open). There's a search box, a Game of the Day, a live "just played" feed and
 a hit counter. Every game page shares the same sky background and SORTAFUN bar
-via `game.css`.
+via `game.css`. Every page also loads `sfx.js`, which makes all the
+sound (hover ticks, click blips, game dings and fanfares, and an 8-bit tune on
+the homepage) with WebAudio, no audio files, behind a speaker button.
 
 ### games
 

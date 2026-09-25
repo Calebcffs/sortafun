@@ -34,6 +34,7 @@
   .hud b { font-size: 20px; }
   .hint2 { font-size: 13px; color: #777; }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body class="k-puzzle">
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -97,6 +98,7 @@ function reset() {
 }
 
 function build() {
+  gridEl.setAttribute("data-nosfx", "");
   gridEl.innerHTML = "";
   cells = [];
   for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) {
@@ -139,6 +141,7 @@ function tick() {
   timeEl.textContent = ((Date.now() - startT) / 1000).toFixed(1);
 }
 
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 function reveal(r, c) {
   if (dead || wonFlag) return;
   var i = idx(r, c);
@@ -151,21 +154,23 @@ function reveal(r, c) {
     hint2.textContent = "";
   }
   if (mine[i]) { boom(i); return; }
-  flood(r, c);
-  checkWin();
+  var opened = flood(r, c);
+  if (!checkWin()) sfx(opened > 1 ? "whoosh" : "flip");
 }
 
 function flood(r, c) {
-  var stack = [[r, c]];
+  var stack = [[r, c]], n = 0;
   while (stack.length) {
     var p = stack.pop(), i = idx(p[0], p[1]);
     if (open[i] || flag[i]) continue;
     open[i] = true;
+    n++;
     var b = cells[i];
     b.classList.add("open");
     if (count[i]) { b.textContent = count[i]; b.classList.add("n" + count[i]); }
     else around(p[0], p[1]).forEach(function (q) { stack.push(q); });
   }
+  return n;
 }
 
 function toggleFlag(r, c) {
@@ -173,6 +178,7 @@ function toggleFlag(r, c) {
   var i = idx(r, c);
   if (open[i]) return;
   flag[i] = !flag[i];
+  sfx("place");
   cells[i].classList.toggle("flag", flag[i]);
   cells[i].textContent = flag[i] ? "?" : "";
   flags += flag[i] ? 1 : -1;
@@ -181,6 +187,8 @@ function toggleFlag(r, c) {
 
 function boom(hit) {
   dead = true;
+  sfx("boom");
+  setTimeout(function () { if (window.SortafunSFX) SortafunSFX.result("lose"); }, 700);
   clearInterval(timer);
   for (var i = 0; i < N * N; i++) {
     if (mine[i]) { cells[i].classList.add("open"); cells[i].textContent = "*"; }
@@ -192,11 +200,13 @@ function boom(hit) {
 function checkWin() {
   var cleared = 0;
   for (var i = 0; i < N * N; i++) if (open[i]) cleared++;
-  if (cleared === N * N - MINES) win();
+  if (cleared === N * N - MINES) { win(); return true; }
+  return false;
 }
 
 function win() {
   wonFlag = true;
+  if (window.SortafunSFX) SortafunSFX.result("win");
   clearInterval(timer);
   var ms = Date.now() - startT;
   timeEl.textContent = (ms / 1000).toFixed(1);

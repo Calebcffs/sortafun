@@ -648,6 +648,7 @@
     .ticker .run { padding-left: 0; }
   }
 </style>
+<script src="sfx.js"></script>
 </head>
 <body>
 <div class="site">
@@ -782,6 +783,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-25</span> the site makes noise now! clicks, dings, fanfares and a little 8-bit tune on this page. the speaker button turns it off.</li>
         <li><span class="when">09-25</span> birdie update: fly in through the windows, land on any roof, new controls (up = go fast) and a slower poo-o-meter.</li>
         <li><span class="when">09-25</span> birdie! fly as one of ten birds round an endless 3D world. it's on the top of the page.</li>
         <li><span class="when">09-24</span> three new daily word games: five letters, four sides and word grab.</li>
@@ -1490,6 +1492,15 @@ function openIfBasement() {
 }
 window.addEventListener("hashchange", openIfBasement);
 openIfBasement();
+
+/* sound: the lobby tune (starts on your first click or key, see sfx.js),
+ * and the basement door creaks */
+if (window.SortafunSFX) {
+  SortafunSFX.music.auto();
+  document.getElementById("late").addEventListener("toggle", function () {
+    if (this.open) SortafunSFX.play("door");
+  });
+}
 </script>
 </body>
 </html>
