@@ -1,0 +1,41 @@
+name: Realtime Database (Birdie multiplayer)
+
+# Makes sure the default Realtime Database exists and deploys
+# database.rules.json to it. Birdie's multiplayer (birdie/net.js) keeps
+# every flying player's position there.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "database.rules.json"
+      - "tools/rtdb-setup.mjs"
+      - ".github/workflows/rtdb-deploy.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Write service account key
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Make sure the database exists
+        run: node tools/rtdb-setup.mjs
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+
+      - name: Deploy database rules
+        if: hashFiles('database.rules.json') != ''
+        run: npx --yes firebase-tools@13 deploy --only database --project "$FIREBASE_PROJECT_ID" --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
