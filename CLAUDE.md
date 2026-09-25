@@ -452,45 +452,90 @@ the warden), `human.js` (you on foot: walking physics, camera, guns; `pos` is
 the feet), `weapons.js` (`WEAPONS`, `AMMO`, `Gunfire`: hitscan against
 `world.raycast` + targets, rockets, grenades, explosions, effects),
 `vehicles.js` (`VEHICLES`, `Vehicle` physics for car / bike / plane,
-`VehicleManager`: parked, traffic, police cars), `npcs.js` (townsfolk and
+`VehicleManager`: parked, traffic, police cars), `npcs.js` (zombies and
 wardens), `loot.js` (containers + drops, `VALUABLES`), `shop.js` (save in
 localStorage `city-save-v1` + the shop UI), `cityhud.js`, `sandbox.js` (the
 human-side rules object tying it together: interact, hijack, wanted level,
-death), `net.js` (online), `menu.js`, `main.js` (`startHuman` / `tickHuman`).
+death), `net.js` (online), `menu.js`, `main.js` (`startHuman` / `tickHuman`),
+plus `hub.js`, `map.js`, `defences.js`, `structures.js` (below).
+
+**2026-09-26 rework (Caleb playtested and asked for all of this):** birds are
+now only an easter egg (the little grey bird in the corner of the title card
+swaps in the bird picker). The title is just name + look + PLAY: one world
+(`SHARED_SEED`), always online (falls back to solo if the join fails), and you
+spawn at a random bit of dry land within ~3.2km (`main.js randomSpot()`); death
+respawns you somewhere random too. Every NPC on foot is a **zombie**, the sky is
+held at **golden hour**, and there's a lot more city to get into.
 
 How it plays (human): WASD + mouse look (pointer lock: click the game), shift
-sprint, space jump, C crouch, left click fire, right click aim (sniper = scope),
-R reload, 1-9 / wheel / Q weapons, G grenade, E open / get in / get out /
-hijack, B shop, H medkit (horn in a car), V camera distance, P pause. Phones:
-stick + drag to look + FIRE / JUMP / USE / AIM. Start with fists and $150.
-- **Loot** sits on the spots the world already lists per chunk (sidewalks,
-  yards, parks, beaches, tables indoors); which spots, what kind, and what's
-  inside come from a hash of the position and the 8-minute refill window, so
-  it's the same for everyone. Cases always hold a gun.
-- **Shop** (bottom-right button or B): guns, ammo, medkits, armour, grenades,
-  vehicles (delivered next to you, then in your garage to call in free),
-  outfits, and selling valuables. Card pictures are rendered from the real
-  models with the game's own renderer into a render target (a second WebGL
-  renderer was slow and blank), in the background 6s after starting.
+sprint, space jump, C crouch, left click fire, right click **aim down the
+sights**, R reload, 1-9 / wheel / Q weapons, G grenade, **F** open / get in /
+lifts / metro stairs / ladders / hijack, **E** the menu (B opens it on the shop,
+M on the map, M no longer mutes), T build, H medkit (horn in a car), V camera, P
+pause. Esc backs out of lift panel / menu / build mode before pausing. Phones:
+stick + drag to look + FIRE / JUMP / USE / AIM / MENU. Start with fists, $150
+and one barricade.
+- **The E menu** (`hub.js`): releases the pointer lock, E again re-locks
+  (`input.lock()`, allowed because it follows a key press). Tabs: inventory
+  (equip / use / place / sell anything), shop (`shop.js`: guns, ammo & gear,
+  defences, rides, outfits, sell; `SELL` = buy-back prices), map (`map.js`).
+- **Map** (`map.js`): drawn from `terrain.sample` in cached 256m tiles, a few
+  rows per frame, coarse (8m/px) first. City/industry road grids are drawn by
+  the same period maths as world.js. Markers: you, players, metro stations,
+  hangars, your defences. Click = teleport, once per `TELEPORT_EVERY` (60s,
+  also kept in localStorage `city-tp-at`). `main.relocate(x, z)` builds the
+  world there with `world.preload` behind the `#fade` curtain before placing
+  you (tickHuman does nothing while `relocating`).
+- **Guns**: from the hip normal spread; aiming goes first person (camera to the
+  eyes, `human.ads` 0..1, a viewmodel gun in `human.view` sat under a CSS red
+  dot) and `spreadMul: 0` = exact (shotgun keeps a small cone). Any headshot
+  does `HEADSHOT` damage (online the hit is clamped to 400, still a kill).
+  NPC shooters pass `noHeadshot`.
+- **Zombies** (`npcs.js`): few (city ~10 round you, 7 in the metro), wander
+  paths slowly, come for you inside `AGGRO` (24m, and must see you past 9m) at
+  1.7-2.5 m/s, lose you past 42m, claw 14 every 1.1s. They also go for wardens
+  and claw at barricades in their way. Gunfire lures nearby ones. Tinted
+  green by `avatar.zombify()`, arms out. Killing them is never a crime.
+- **Wardens**: only a few, and new ones (and police cars, and traffic within
+  150m) only spawn where `npcs.inView()` says you can't see. Stars only come
+  from trouble with wardens themselves (shooting one, police car, hijacking in
+  front of one). Police cars from 3 stars. Wardens shoot zombies near them.
+- **Loot tiers** (`loot.js`): out (pavements, parks: small change), roof,
+  in (inside houses, lobbies, penthouses, metro: chests hold $3k-25k, cases
+  the big guns), vault strongboxes (penthouses, stations, some trains:
+  $20k-80k + diamonds). Containers only load within 70m vertically.
+- **Structures** (`structures.js`): office towers >= 28m get a hollow lobby,
+  a penthouse under the roof and a lift core (`ch.portals` kind "lift", one
+  per stop; F opens the `#lift` panel, keys 1-3). Brick/concrete blocks often
+  get a fire-escape ladder (`ch.ladders`; walk into it or F, W/S, space lets
+  go). **The metro** runs under every 3rd road (`METRO_EVERY`) at
+  `UNDER` = -200: tunnels with dead trains, station halls where lines cross,
+  a green kiosk on the street corner above each station (portal kind
+  "metro"). Below `UNDER_LINE` (-100) world.js has no terrain or sea
+  (groundAt / collideSphere / raycast skip it), and the sky switches to
+  `underground` (no sun, fog close, lamps lit via uNight = 1).
+- **Defences** (`defences.js`): barricade, steel wall (solid obox colliders
+  added to the world grid with a `defence` ref), spikes, landmine (only hurts
+  NPCs: `explode(..., {spare})`), turret (10 min). Online they're
+  `city/builds/<id>` (rules in `database.rules.json`, anyone may delete: it
+  broke or went off); offline in localStorage `city-builds-v1`, pushed up on
+  going online.
+- **Golden hour** (`sky.js GOLDEN`, `skyLow`): the light comes from ~13
+  degrees for long shadows but the sky shader's own sun sits just over the
+  horizon for an orange sky, and main.js patches `CustomToneMapping` into a
+  warm grade + ACES. Low graphics has no shadows at all.
+- **Shop** card pictures render from the real models (defences via
+  `buildThumb`) with the game's own renderer into a render target, in the
+  background 6s after starting.
 - **World additions** (`world.js`): `raycast()` (bullets and the camera),
   `ch.parking` (kerbside spots every city block, trucks in industry yards) and
   `isHangarBlock()` / `hangar()`: one industry block per industrial region,
-  nearest its middle, skipping blocks near the cooling towers (they share the
-  middle), becomes a closed hangar with the plane, its big door facing the
-  long east-west road that is the runway.
-- **Vehicles**: arcade physics, the car rests on the ground under its four
-  wheels, car-vs-car uses a separating-axis rectangle test (a circle test made
-  traffic grind against every parked car). Damage starts over ~20 km/h.
-  Plane: W/S throttle, down arrow climbs, up arrow dives, A/D bank; it turns on
-  the spot when taxiing. A plane with nobody in it cuts its engine and glides
-  down; bailing out at height opens a parachute.
-- **Wardens**: witnessed crimes (a warden within ~55m, or 45% of bad ones get
-  called in) give stars. Cops chase, shoot (worse with distance and your
-  speed), police cars join at 2+ stars. Stars fade after 14s + 5s per star out
-  of sight. Death: WASTED, respawn at the start, hospital keeps 10% (max $500).
+  nearest its middle, becomes a closed hangar with the plane.
+- **Vehicles**: arcade physics as before; traffic is thin now (survivors).
+  Plane: W/S throttle, down arrow climbs, up arrow dives, A/D bank.
 
 **Online (`city/net.js`)**: Firebase Realtime Database + anonymous sign-in,
-everything under `city/` (players, hits, cars, loot, feed; shapes in the
+everything under `city/` (players, hits, cars, loot, feed, builds; shapes in the
 net.js header, rules in `database.rules.json`, auto-deployed with the rtdb
 workflow). People and birds are one list, 50 max, checked on join. Position
 strings 5x a second, drawn 0.25s in the past; people pack their vehicle's pose
@@ -501,7 +546,11 @@ in the feed with a $100 bounty for the killer. Taking a car writes
 it's left. Opening loot writes `city/loot/<id>`. Gunfire is a `fx` string
 (latest shot) the others replay as tracers, flashes and sound.
 
-**Testing** (all headless Chrome, see earlier notes): `birdie.simulate(sec,
+**Testing** (all headless Chrome, see earlier notes; `window.city` = `window.birdie`).
+The game is always online now, so test against the emulators (`city.html?emu`)
+or you join the real world. Lift / metro moves go through a 170ms fade timer,
+which swiftshader can delay a lot: poll for the new position rather than
+sleeping. `city.simulate(sec,
 {keys: ["KeyW"], hits: ["KeyE"], fire, aim, mdx, mdy})` drives the person
 (`hits` = pressed this frame; semi-auto guns need `hits: ["Mouse0"]`).
 Multiplayer: `npx firebase-tools@13 emulators:start --only auth,database

@@ -1,8 +1,9 @@
 // City Sandbox HUD, on top of the shared one (hud.js: toasts, big messages,
 // compass, the radar, which is the bird's poo-cam pointed down from higher
 // up). Cash and wanted stars top right, health and armour under the radar,
-// crosshair and prompts in the middle, weapon + ammo and the SHOP button
-// bottom right, speedometer when driving, red flash when hurt, sniper scope.
+// crosshair and prompts in the middle (a red dot instead when you're down
+// the sights), weapon + ammo and the MENU button bottom right, speedometer
+// when driving, red flash when hurt, sniper scope, HEADSHOT.
 
 import { WEAPONS, AMMO } from "./weapons.js";
 import { money } from "./shop.js";
@@ -25,7 +26,9 @@ export class CityHud {
         <div class="ch-hit">&#x2715;</div>
         <div class="ch-prompt"></div>
         <div class="ch-weapon"><b></b><span></span><em></em></div>
-        <button class="ch-shopbtn" title="shop (B)">$ SHOP <small>B</small></button>
+        <button class="ch-shopbtn" title="inventory, shop and map (E)">MENU <small>E</small></button>
+        <div class="ch-dot"></div>
+        <div class="ch-hs">HEADSHOT</div>
         <div class="ch-speedo"></div>
         <div class="ch-vig"></div>
         <div class="ch-scope"></div>
@@ -35,7 +38,7 @@ export class CityHud {
     }
     this.el = el;
     this.q = (s) => el.querySelector(s);
-    this.q(".ch-shopbtn").onclick = (e) => { e.stopPropagation(); this.sb.shop.toggle(); };
+    this.q(".ch-shopbtn").onclick = (e) => { e.stopPropagation(); this.sb.hub.toggle(); };
     this.moneyShown = sandbox.inv.money;
     this.hitT = 0; this.vigT = 0;
     el.hidden = false;
@@ -55,7 +58,7 @@ export class CityHud {
       this.q(".ch-tr").appendChild(f);
       setTimeout(() => f.remove(), 1600);
     }
-    if (this.sb.shop) this.sb.shop.render();
+    if (this.sb.hub) this.sb.hub.render();
   }
 
   health() {
@@ -94,6 +97,11 @@ export class CityHud {
     this.g.sound.hitmark();
   }
 
+  headshot() {
+    const h = this.q(".ch-hs");
+    h.classList.remove("show"); void h.offsetWidth; h.classList.add("show");
+  }
+
   hurt(info) {
     this.vigT = 0.5;
     this.q(".ch-vig").style.opacity = 1;
@@ -116,7 +124,8 @@ export class CityHud {
     // crosshair: spreads when moving, hidden in vehicles and when scoped
     const cross = this.q(".ch-cross");
     const W = p.W;
-    cross.hidden = !!p.vehicle || p.dead || p.scoped;
+    cross.hidden = !!p.vehicle || p.dead || p.scoped || p.ads > 0.6 || !!this.sb.defences.placing;
+    this.q(".ch-dot").hidden = !(p.ads > 0.6 && !p.scoped && !p.vehicle && !p.dead);
     const spread = W.melee ? 6 : 8 + (W.spread || 0) * 500 * (p.aiming ? 0.6 : 1.2) + (p.speed > 4 ? 8 : 0);
     cross.style.setProperty("--gap", Math.round(spread) + "px");
     this.q(".ch-scope").classList.toggle("show", !!p.scoped);

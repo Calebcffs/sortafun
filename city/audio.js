@@ -309,6 +309,16 @@ export class Sound {
   horn() { if (this.ensure()) { this.tone("sawtooth", 415, 415, 0.45, 0.12, 0, [900, 1]); this.tone("sawtooth", 523, 523, 0.45, 0.1, 0, [1000, 1]); } }
   door() { if (this.ensure()) { this.noiseBurst(0.08, "lowpass", 700, 1, 0.3); this.tone("sine", 180, 90, 0.08, 0.15, 0.02); } }
   crashCar(vol = 1) { if (this.ensure()) { this.noiseBurst(0.4, "lowpass", 1200, 0.7, 0.5 * vol); this.noiseBurst(0.3, "bandpass", 3000, 1, 0.2 * vol, 0.05); } }
+  // zombies, building, the lift, the map teleport
+  groan(vol = 1) {
+    if (!this.ensure() || vol <= 0.02) return;
+    const f = 85 + Math.random() * 40;
+    this.tone("sawtooth", f, f * 0.7, 0.7 + Math.random() * 0.4, 0.09 * vol, 0, [420, 3]);
+    this.tone("sawtooth", f * 1.5, f * 1.1, 0.6, 0.04 * vol, 0.08, [600, 2]);
+  }
+  build() { if (this.ensure()) { for (let i = 0; i < 3; i++) { this.noiseBurst(0.05, "bandpass", 1800, 2, 0.25, i * 0.12); this.tone("sine", 240, 160, 0.05, 0.12, i * 0.12); } } }
+  lift() { if (this.ensure()) { this.tone("sine", 1046, 1046, 0.25, 0.1); this.tone("sine", 784, 784, 0.4, 0.1, 0.18); } }
+  warp() { if (this.ensure()) { this.tone("sine", 200, 1400, 0.45, 0.12); this.noiseBurst(0.5, "bandpass", 1500, 1, 0.12); } }
   splashBig() { if (this.ensure()) this.noiseBurst(0.6, "lowpass", 1400, 0.7, 0.35); }
 
   // a steady engine note for whatever you're driving (null to stop)

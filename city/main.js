@@ -1,7 +1,8 @@
 // City Sandbox (was Birdie): the game. Wires the world, sky, HUD and sound
-// together and runs the loop. You play as a person (sandbox.js and friends,
-// the main mode) or as a bird (the original poo game: flight.js + game.js),
-// in the same world, online together.
+// together and runs the loop. You play as a person in one big shared world,
+// overrun with zombies (sandbox.js and friends), dropped somewhere random
+// every time. The original bird game (flight.js + game.js) is still in
+// there as an easter egg (menu.js has the way in).
 //
 // Files:
 //   noise.js     seeded random + simplex noise
@@ -19,12 +20,16 @@
 //   audio.js     synthesised sound
 //   menu.js      title screen, bird picker, pause / game over
 //   net.js       online play: everyone, birds and people, in one shared world
-//   sandbox.js   playing as a person: human.js (you), vehicles.js, npcs.js,
-//                loot.js, weapons.js, shop.js, cityhud.js, avatar.js, assets.js
+//   sandbox.js   playing as a person: human.js (you), vehicles.js, npcs.js
+//                (zombies and wardens), loot.js, weapons.js, shop.js, hub.js
+//                (the E menu) + map.js, defences.js, structures.js (towers,
+//                ladders, the metro), cityhud.js, avatar.js, assets.js
 
 import * as THREE from "three";
 import { World } from "./world.js";
-import { SkySystem } from "./sky.js";
+import { SkySystem, GOLDEN } from "./sky.js";
+import { UNDER_LINE } from "./structures.js";
+import { TELEPORT_EVERY } from "./map.js";
 import { Bird } from "./model.js";
 import { SPECIES, gameScale } from "./species.js";
 import { Flyer } from "./flight.js";
@@ -39,6 +44,17 @@ import { BlobShadow, Snow, Streaks } from "./effects.js";
 import { Net, SHARED_SEED } from "./net.js";
 import { Sandbox } from "./sandbox.js";
 import { preload } from "./assets.js";
+
+// the golden-hour grade: a warm push and a touch more colour before the
+// usual ACES tone mapping (renderer.toneMapping = CustomToneMapping)
+THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
+  "vec3 CustomToneMapping( vec3 color ) { return color; }",
+  `vec3 CustomToneMapping( vec3 color ) {
+    color *= vec3( 1.1, 0.97, 0.8 );
+    float l = dot( color, vec3( 0.2126, 0.7152, 0.0722 ) );
+    color = max( vec3( 0.0 ), mix( vec3( l ), color, 1.18 ) );
+    return ACESFilmicToneMapping( color );
+  }`);
 
 const QUALITY = {
   low: { pr: 0.75, shadows: false, shadowSize: 1024, radius: 3, fog: 0.72 },
@@ -96,10 +112,10 @@ class Game {
   }
 
   // ------------------------------------------------------------
-  // starting a flight
+  // starting
   // ------------------------------------------------------------
   async start(opts) {
-    // opts: {kind: "human"|"bird", species, outfit, scape, seed, quality, invert, online, name}
+    // opts: {kind: "human"|"bird", species, outfit, quality, invert, name}
     this.stop();
     this.quality = opts.quality;
     const q = QUALITY[opts.quality];
@@ -107,16 +123,20 @@ class Game {
     this.input.invert = opts.invert;
     this.scene = new THREE.Scene();
     this.renderer.shadowMap.enabled = q.shadows;
-    this.sky = new SkySystem(this.renderer, this.scene, { shadows: q.shadows, shadowSize: q.shadowSize, startTime: 0.29 });
+    this.human = opts.kind === "human";
+    // people get golden hour, always; the bird keeps its day going round
+    this.sky = new SkySystem(this.renderer, this.scene, { shadows: q.shadows, shadowSize: q.shadowSize, startTime: this.human ? GOLDEN : 0.29 });
+    this.sky.frozen = this.human;
+    this.sky.skyLow = this.human;
+    this.renderer.toneMapping = this.human ? THREE.CustomToneMapping : THREE.ACESFilmicToneMapping;
     this.sky.fogScale = q.fog;
     this.sky.shadowsWanted = q.shadows;
-    // online, everyone flies in the same world
-    this.online = !!opts.online;
-    this.world = new World(this.scene, this.online ? SHARED_SEED : opts.seed, { radius: q.radius, shadows: q.shadows });
-    // pick a spawn: the nearest region of the chosen type
-    const spawn = this.findSpawn(opts.scape);
-    this.menu.loading(0, "building the " + (opts.scapeLabel || "world") + "...");
-    this.human = opts.kind === "human";
+    // one world, everyone in it
+    this.online = true;
+    this.world = new World(this.scene, SHARED_SEED, { radius: q.radius, shadows: q.shadows });
+    // dropped somewhere random
+    const spawn = this.human ? this.randomSpot() : this.findSpawn("city");
+    this.menu.loading(0, "building the world...");
     await this.world.preload(spawn.x, spawn.z, (p) => this.menu.loading(p * (this.human ? 0.75 : 0.9)));
     if (this.human) return this.startHuman(opts, spawn, q);
     this.input.wantLock = false;
@@ -148,7 +168,7 @@ class Game {
     this.menu.hide();
     this.clock.getDelta();
     this.stage.focus();
-    this.hud.toast("welcome to the " + (opts.scapeLabel || "world") + "! hold down to take off, up to fly fast.", "good");
+    this.hud.toast("you found the birds! hold down to take off, up to fly fast.", "good");
     if (this.online) this.goOnline(opts.name);
   }
 
@@ -169,6 +189,7 @@ class Game {
     const jit = opts.online ? 20 : 0;
     const place = this.findPerch(spawn.x + (Math.random() - 0.5) * jit, spawn.z + (Math.random() - 0.5) * jit);
     const g = this.world.groundAt(place.x, place.z, 1e9, {});
+    this.flyer.camYaw = place.yaw;
     this.spawnPoint = { x: place.x, y: g.y, z: place.z, yaw: place.yaw };
     this.flyer.place(place.x, g.y, place.z, place.yaw);
     this.snow = new Snow(this.scene, opts.quality === "low" ? 700 : 1800);
@@ -181,8 +202,78 @@ class Game {
     this.menu.hide();
     this.clock.getDelta();
     this.stage.focus();
-    this.hud.toast("welcome to the " + (opts.scapeLabel || "city") + "! click the game to use the mouse. loot chests and cases, B opens the shop.", "good");
+    this.hud.toast("click the game to look around. E is your stuff, the shop and the map. the best loot is inside buildings. mind the zombies.", "good");
     if (opts.online) this.goOnline(opts.name);
+  }
+
+  // ------------------------------------------------------------
+  // moving about the world in one go: teleports, respawns
+  // ------------------------------------------------------------
+  // a random bit of dry land anywhere in the world (within a few km)
+  randomSpot() {
+    const T = this.world.terrain;
+    for (let i = 0; i < 400; i++) {
+      const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 3200;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      const s = T.sample(x, z);
+      if (s.h > 0.8 && !s.ice) return { x, z };
+    }
+    return this.findSpawn("city");
+  }
+
+  respawnSomewhere() { const p = this.randomSpot(); return this.relocate(p.x, p.z); }
+
+  teleportWait() {
+    let at = this.lastTp || 0;
+    try { at = Math.max(at, Number(localStorage.getItem("city-tp-at")) || 0); } catch (e) {}
+    return Math.max(0, TELEPORT_EVERY - (Date.now() - at) / 1000);
+  }
+
+  teleportTo(x, z) {
+    const sb = this.sandbox;
+    if (!sb || this.relocating) return;
+    const wait = this.teleportWait();
+    if (wait > 0) { this.sound.click(); return this.hud.toast("the teleport needs " + Math.ceil(wait) + " more seconds", "warn"); }
+    if (sb.player.dead) return;
+    this.lastTp = Date.now();
+    try { localStorage.setItem("city-tp-at", String(this.lastTp)); } catch (e) {}
+    sb.hub.close();
+    this.sound.warp();
+    return this.relocate(x, z, true);
+  }
+
+  // build the world round (x, z) behind a curtain, then put you there
+  async relocate(x, z, warp) {
+    const sb = this.sandbox;
+    if (!sb || this.relocating) return;
+    this.relocating = true;
+    const fade = document.getElementById("fade");
+    fade.textContent = warp ? "teleporting..." : "";
+    fade.classList.add("on");
+    if (sb.player.vehicle) sb.exitVehicle(true);
+    sb.player.ladder = null;
+    sb.defences.stopPlacing();
+    await new Promise((r) => setTimeout(r, 200));
+    await this.world.preload(x, z);
+    if (this.sandbox !== sb) return;
+    const place = this.findPerch(x, z);
+    const g = this.world.groundAt(place.x, place.z, 1e9, {});
+    sb.player.place(place.x, g.y, place.z, place.yaw);
+    sb.player.camYaw = place.yaw;
+    this.spawnPoint = { x: place.x, y: g.y, z: place.z, yaw: place.yaw };
+    this.clock.getDelta();
+    this.relocating = false;
+    setTimeout(() => { fade.classList.remove("on"); fade.textContent = ""; }, 150);
+    if (warp) this.hud.toast("whoosh", "good");
+  }
+
+  // a quick blink to black for lifts and stairs: fn runs while it's dark
+  fade(fn, hold = 0.25) {
+    const el = document.getElementById("fade");
+    el.textContent = "";
+    el.classList.add("on");
+    this.sound.click();
+    setTimeout(() => { fn(); this.clock.getDelta(); setTimeout(() => el.classList.remove("on"), hold * 1000); }, 170);
   }
 
   // join the shared sky; if it's full or unreachable, carry on solo
@@ -194,6 +285,7 @@ class Game {
         net.offlineMsg = "the city is full (50 players). playing solo";
         this.hud.toast("the online city is full right now (50 players). you're on your own in the same world.", "warn");
       } else if (r === "ok") {
+        if (this.sandbox) this.sandbox.defences.goneOnline();
         const n = net.players.size;
         this.hud.toast(n ? "you're online with " + n + (n === 1 ? " other player" : " other players") + "!" : "you're online. nobody else is here yet.", "good");
       }
@@ -208,6 +300,8 @@ class Game {
 
   stop() {
     this.running = false;
+    this.relocating = false;
+    document.getElementById("fade").classList.remove("on");
     if (this.net) { this.net.close(); this.net = null; }
     if (this.rules) this.rules.dispose();
     if (this.world) this.world.dispose();
@@ -377,11 +471,16 @@ class Game {
 
   tickHuman(dt, input) {
     const sb = this.sandbox;
+    if (this.relocating) return; // (the world's being built somewhere else)
     if (input.pause) {
-      if (sb.menuOpen) sb.shop.close(); else this.setPaused(true);
+      // Esc backs out of whatever's open first
+      if (sb.lift) sb.closeLift();
+      else if (sb.hub.isOpen) sb.hub.close();
+      else if (sb.defences.placing) sb.defences.stopPlacing();
+      else this.setPaused(true);
       return;
     }
-    if (input.mute) this.sound.toggleMute();
+    // (M is the map here, not mute)
     sb.update(dt, input);
     if (!this.running) return;
     if (this.net) this.net.update(dt);
@@ -391,10 +490,13 @@ class Game {
     const vel = v ? f.vehicle.forward().multiplyScalar(v.speed) : f.vel;
     this.world.update(f.pos.x + vel.x * 1.5, f.pos.z + vel.z * 1.5, 4);
     const s = this.world.terrain.sample(this.camera.position.x, this.camera.position.z);
+    const under = this.camera.position.y < UNDER_LINE;
+    this.sky.underground = under;
     this.sky.update(dt, this.camera.position, s.w, f.pos.y, false);
-    this.world.uniforms.uNight.value = this.sky.night;
+    // windows and lamps: warm at golden hour, all lit down in the metro
+    this.world.uniforms.uNight.value = under ? 1 : Math.max(this.sky.night, 0.35);
     this.sky.updateSmoke(dt);
-    this.snow.update(dt, this.camera.position, clamp((s.w.snow - 0.4) * 1.7, 0, 1), this.sky.wind);
+    this.snow.update(dt, this.camera.position, under ? 0 : clamp((s.w.snow - 0.4) * 1.7, 0, 1), this.sky.wind);
     this.hud.update(dt);
     this.sound.update(dt, v ? { vel, mode: v.plane && !v.onGround ? "air" : "ground", pos: f.pos } : f, this.sky.night);
   }
@@ -469,4 +571,4 @@ class Game {
   }
 }
 
-window.birdie = new Game();
+window.city = window.birdie = new Game(); // (birdie: the old name, tests use it)

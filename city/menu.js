@@ -1,7 +1,11 @@
-// City Sandbox's menus: title screen (person or bird, outfit / bird picker
-// with a turning 3D preview, start region, online or solo, graphics),
-// loading, pause and game over (with the leaderboard). Choices are
-// remembered in localStorage.
+// City Sandbox's menus: the title screen (your name, your look with a
+// turning 3D preview, PLAY; graphics settings underneath), loading, pause
+// and game over (with the leaderboard). There's one world and you're dropped
+// somewhere random in it, so nothing else to choose. Choices are remembered
+// in localStorage.
+//
+// The easter egg: the little grey bird in the corner of the title card
+// swaps the outfits for the old bird picker, and PLAY for FLY.
 
 import * as THREE from "three";
 import { Bird } from "./model.js";
@@ -9,15 +13,6 @@ import { SPECIES, SPECIES_ORDER, FOOD, gameScale } from "./species.js";
 import { countOnline, cleanName, MAX_PLAYERS } from "./net.js";
 import { Avatar, OUTFITS } from "./avatar.js";
 import { loadSave, money } from "./shop.js";
-
-const SCAPES = [
-  { key: "city", label: "City", color: "linear-gradient(#8fb9e8, #9aa3ad 60%, #50555c)" },
-  { key: "hills", label: "Hills", color: "linear-gradient(#9fd0f5, #6fae4f 55%, #3f7a2c)" },
-  { key: "snow", label: "Snowscape", color: "linear-gradient(#c8dff2, #f2f6fa 55%, #b9c7d4)" },
-  { key: "island", label: "Islands", color: "linear-gradient(#7fd0f0, #2f86b8 50%, #e8d59a)" },
-  { key: "industry", label: "Industry", color: "linear-gradient(#e0a080, #a78270 50%, #6d6862)" },
-];
-const SCAPE_LABEL = { city: "city", hills: "hills", snow: "snowscape", island: "islands", industry: "industry" };
 
 function load(key, def) { try { const v = localStorage.getItem(key); return v == null ? def : v; } catch (e) { return def; } }
 function save(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
@@ -30,21 +25,13 @@ export class Menu {
     this.visible = true;
     this.species = load("birdie-species", "pigeon");
     if (!SPECIES[this.species]) this.species = "pigeon";
-    this.scape = load("birdie-scape", "city");
     this.quality = load("birdie-quality", matchMedia("(pointer: coarse)").matches ? "low" : "high");
     this.invert = load("birdie-invert", "0") === "1";
-    const seedEl = document.getElementById("seed");
-    seedEl.value = load("birdie-seed", String(Math.floor(Math.random() * 999999)));
-    document.getElementById("randseed").addEventListener("click", () => { seedEl.value = String(Math.floor(Math.random() * 999999)); });
-    // online or solo; online needs a name to put over your bird
-    this.mode = load("birdie-mode", "online");
-    for (const b of document.querySelectorAll(".m-modes button")) b.addEventListener("click", () => { this.mode = b.dataset.mode; save("birdie-mode", this.mode); this.markMode(); });
-    // person or bird
-    this.kind = load("city-kind", "human");
-    for (const b of document.querySelectorAll(".m-kinds button")) b.addEventListener("click", () => { this.kind = b.dataset.kind; save("city-kind", this.kind); this.markKind(); });
+    // a person, unless you found the bird
+    this.kind = "human";
+    document.getElementById("egg").addEventListener("click", () => { this.kind = this.kind === "bird" ? "human" : "bird"; this.markKind(); });
     this.nameEl = document.getElementById("pname");
     this.nameEl.value = load("sortafun-name", "");
-    this.markMode();
     const q = document.getElementById("quality");
     q.value = this.quality;
     q.addEventListener("change", () => { this.quality = q.value; save("birdie-quality", q.value); });
@@ -67,13 +54,12 @@ export class Menu {
     document.getElementById("again2").addEventListener("click", toTitle);
     document.getElementById("again").addEventListener("click", () => this.play());
 
-    this.buildScapes();
     this.previewRenderer = null;
   }
 
   markKind() {
     const human = this.kind === "human";
-    for (const b of document.querySelectorAll(".m-kinds button")) b.classList.toggle("on", b.dataset.kind === this.kind);
+    document.getElementById("egg").classList.toggle("on", !human);
     document.getElementById("outfitbox").hidden = !human;
     document.getElementById("birdbox").hidden = human;
     document.getElementById("keys-human").hidden = !human;
@@ -138,21 +124,14 @@ export class Menu {
       `<div class="diet">start with your fists and ${money(150)} the first time. loot the city, then hit the shop.</div>`;
   }
 
-  markMode() {
-    for (const b of document.querySelectorAll(".m-modes button")) b.classList.toggle("on", b.dataset.mode === this.mode);
-    // online everyone shares one world, so the world picker only matters solo
-    document.getElementById("seedbox").hidden = this.mode === "online";
-    document.getElementById("namebox").hidden = this.mode !== "online";
-  }
-
-  // "4 birds flying now" on the online button
+  // "4 playing now" under the play button
   async headCount() {
     const el = document.getElementById("headcount");
     try {
       const n = await countOnline();
-      el.textContent = n >= MAX_PLAYERS ? "full right now (" + n + ")" : n ? n + " playing now" : "nobody on yet, be first";
+      el.textContent = n >= MAX_PLAYERS ? "the world's full right now (" + n + "), you'll play on your own" : n ? n + (n === 1 ? " person" : " people") + " playing right now" : "nobody's on right now. be the first";
     } catch (e) {
-      el.textContent = "everyone in one world";
+      el.textContent = "";
     }
   }
 
@@ -261,19 +240,6 @@ export class Menu {
       `<div class="diet">eats: ${dietHtml}${sp.life.swim ? ' &middot; <em style="background:#9fe0ff">swims</em>' : ""}</div>`;
   }
 
-  buildScapes() {
-    const box = document.getElementById("scapes");
-    for (const s of SCAPES) {
-      const b = document.createElement("button");
-      b.dataset.key = s.key;
-      b.innerHTML = `<span class="sw" style="background:${s.color}"></span>${s.label}`;
-      b.addEventListener("click", () => { this.scape = s.key; save("birdie-scape", s.key); this.markScape(); });
-      box.appendChild(b);
-    }
-    this.markScape();
-  }
-  markScape() { for (const b of document.querySelectorAll("#scapes button")) b.classList.toggle("on", b.dataset.key === this.scape); }
-
   // spin the preview bird; it takes off and lands every few seconds
   renderPreview(dt) {
     if (!this.visible || this.screens.title.hidden) return;
@@ -306,24 +272,14 @@ export class Menu {
 
   play() {
     this.g.sound.ensure();
-    const online = this.mode === "online";
-    const name = cleanName(this.nameEl.value);
-    if (online && !name) {
-      // back to the title if we came from game over, then ask for a name
-      if (this.screens.title.hidden) this.showTitle();
-      this.nameEl.focus();
-      this.nameEl.classList.remove("want"); void this.nameEl.offsetWidth; this.nameEl.classList.add("want");
-      return;
-    }
-    if (name) save("sortafun-name", name);
-    const seedStr = document.getElementById("seed").value.trim() || "1";
-    save("birdie-seed", seedStr);
-    let seed = 0;
-    for (const ch of seedStr) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+    // no name? you get one
+    let name = cleanName(this.nameEl.value);
+    if (!name) { name = "survivor" + Math.floor(100 + Math.random() * 900); this.nameEl.value = name; }
+    save("sortafun-name", name);
     this.g.hud.hide();
     this.show("loading");
     // give the loading screen a frame to appear before the heavy work
-    setTimeout(() => this.g.start({ species: this.species, scape: this.scape, scapeLabel: SCAPE_LABEL[this.scape], seed, quality: this.quality, invert: this.invert, online, name, kind: this.kind, outfit: this.outfit }), 30);
+    setTimeout(() => this.g.start({ species: this.species, quality: this.quality, invert: this.invert, online: true, name, kind: this.kind, outfit: this.outfit }), 30);
   }
 
   loading(p, msg) {
@@ -333,6 +289,7 @@ export class Menu {
 
   showPause() {
     this.show("pause");
+    document.getElementById("resume").textContent = this.g.sandbox ? "keep playing" : "keep flying";
     const s = this.g.rules.summary();
     document.getElementById("pausestats").innerHTML = s.human ? humanStats(s) : statsHtml(s);
     document.getElementById("daylock").checked = this.g.sky.frozen;
@@ -371,5 +328,5 @@ function statsHtml(s) {
 
 function humanStats(s) {
   return `<b>${money(s.money)}</b> in your pocket &middot; earned ${money(s.earned)} all told &middot; opened ${s.opened} ${s.opened === 1 ? "container" : "containers"}<br>` +
-    `${s.kills} takedowns &middot; ${s.deaths} trips to the hospital &middot; ${s.garage} ${s.garage === 1 ? "vehicle" : "vehicles"} in the garage`;
+    `${s.zombies} ${s.zombies === 1 ? "zombie" : "zombies"} down &middot; ${s.kills} wardens &middot; ${s.deaths} trips to the hospital &middot; ${s.garage} ${s.garage === 1 ? "vehicle" : "vehicles"} in the garage`;
 }

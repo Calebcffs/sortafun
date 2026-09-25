@@ -8,6 +8,10 @@
 //  - a reflection probe of the sky (PMREM) so water and glass reflect it
 //  - billboard clouds drifting overhead, smoke from chimneys and towers
 //  - an endless water plane with scrolling ripples
+//
+// City Sandbox holds the clock at golden hour (GOLDEN): the sun low in the
+// west, everything warm, long shadows, haze glowing round the sun. Down in
+// the metro (underground = true) there's no sun at all, just the lamps.
 
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
@@ -73,6 +77,8 @@ class Billboards {
   }
 }
 
+export const GOLDEN = 0.71; // time of day: the sun ~13 degrees up in the west, going down
+
 export class SkySystem {
   constructor(renderer, scene, opts = {}) {
     this.renderer = renderer;
@@ -99,7 +105,7 @@ export class SkySystem {
     this.sun.castShadow = opts.shadows !== false;
     this.sun.shadow.mapSize.set(opts.shadowSize || 2048, opts.shadowSize || 2048);
     const sc = this.sun.shadow.camera;
-    sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 1; sc.far = 600;
+    sc.left = -80; sc.right = 80; sc.top = 80; sc.bottom = -80; sc.near = 1; sc.far = 700;
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.6;
     scene.add(this.sun);
@@ -212,22 +218,34 @@ export class SkySystem {
     const sunUp = smoothstep(-0.08, 0.1, elev);
     const night = this.night;
     const u = this.sky.material.uniforms;
-    u.sunPosition.value.copy(this.sunDir).multiplyScalar(1000);
-    // hazier near sunrise/sunset
-    u.turbidity.value = lerp(3.5, 9, 1 - smoothstep(0.05, 0.4, Math.abs(elev)));
-    u.rayleigh.value = lerp(1.2, 3, 1 - smoothstep(0.0, 0.35, Math.abs(elev))) * (1 - night * 0.6);
+    // (skyLow: the sky's own sun sits just over the horizon for a proper
+    // orange sunset, while the light keeps its angle so the streets get some)
+    const skySun = this._skySun || (this._skySun = new THREE.Vector3());
+    skySun.copy(this.sunDir);
+    if (this.skyLow) { skySun.y = Math.max(0.035, skySun.y - 0.2); skySun.normalize(); }
+    u.sunPosition.value.copy(skySun).multiplyScalar(1000);
+    // hazier near sunrise/sunset, with a big glow round the sun
+    const low = 1 - smoothstep(0.05, 0.4, Math.abs(elev));
+    u.turbidity.value = lerp(3.5, 10, low);
+    u.rayleigh.value = lerp(1.2, 3.2, 1 - smoothstep(0.0, 0.35, Math.abs(elev))) * (1 - night * 0.6);
+    u.mieCoefficient.value = lerp(0.004, 0.011, low);
+    u.mieDirectionalG.value = lerp(0.8, 0.9, low);
     this.sky.position.copy(camPos);
 
     // sun light follows the camera so shadows stay sharp around the bird
     this.sun.position.copy(camPos).addScaledVector(this.sunDir, 300);
     this.sun.target.position.copy(camPos);
     const warm = 1 - smoothstep(0.05, 0.45, elev);
-    this.sun.color.setRGB(1, lerp(0.95, 0.62, warm), lerp(0.88, 0.4, warm));
-    this.sun.intensity = 3.2 * sunUp;
+    // golden hour: the sun low (under ~25 degrees) but up. It has to be
+    // strong: that low, flat ground only catches a sliver of it
+    const gold = sunUp * (1 - smoothstep(0.22, 0.5, elev));
+    this.sun.color.setRGB(1, lerp(lerp(0.95, 0.6, warm), 0.55, gold), lerp(lerp(0.88, 0.3, warm), 0.26, gold));
+    this.sun.intensity = lerp(3.2, 9, gold) * sunUp;
     this.sun.castShadow = this.sun.intensity > 0.05 && this.shadowsWanted !== false;
-    this.hemi.intensity = lerp(1.15, 0.22, night);
-    this.hemi.color.setRGB(lerp(0.72, 0.25, night), lerp(0.84, 0.32, night), lerp(1, 0.55, night));
-    this.hemi.groundColor.setRGB(lerp(0.36, 0.08, night), lerp(0.32, 0.08, night), lerp(0.26, 0.12, night));
+    // (golden hour: the shade goes a soft violet so the sunlit sides glow)
+    this.hemi.intensity = lerp(lerp(1.15, 0.5, gold), 0.22, night);
+    this.hemi.color.setRGB(lerp(lerp(0.72, 0.7, gold), 0.25, night), lerp(lerp(0.84, 0.62, gold), 0.32, night), lerp(lerp(1, 0.78, gold), 0.55, night));
+    this.hemi.groundColor.setRGB(lerp(lerp(0.36, 0.4, gold), 0.08, night), lerp(lerp(0.32, 0.26, gold), 0.08, night), lerp(lerp(0.26, 0.2, gold), 0.12, night));
 
     // moon opposite the sun
     const moonDir = this.sunDir.clone().multiplyScalar(-1);
@@ -243,23 +261,23 @@ export class SkySystem {
 
     // fog colour: sky near the horizon, tinted by region, darkened at night
     const day = new THREE.Color(0.72, 0.82, 0.93);
-    const dusk = new THREE.Color(0.95, 0.66, 0.45);
+    const dusk = new THREE.Color(1, 0.66, 0.4);
     const dark = new THREE.Color(0.05, 0.07, 0.13);
-    const fc = this.fogColor.copy(day).lerp(dusk, warm * sunUp).lerp(dark, night);
+    const fc = this.fogColor.copy(day).lerp(dusk, Math.max(warm * sunUp, gold * 0.85)).lerp(dark, night);
     const ind = biomeW.industry || 0, snow = biomeW.snow || 0, city = biomeW.city || 0;
     this.tint.setRGB(1, 1, 1).lerp(new THREE.Color(1.15, 0.72, 0.6), ind * 0.8).lerp(new THREE.Color(0.95, 1, 1.08), snow * 0.5);
     fc.multiply(this.tint);
-    // city smog low down, clearing as you climb
+    // city smog low down, clearing as you climb (golden haze at golden hour)
     const smog = city * (1 - smoothstep(40, 160, altitude)) * (1 - night * 0.5);
-    fc.lerp(new THREE.Color(0.7, 0.68, 0.6), smog * 0.35);
+    fc.lerp(new THREE.Color(0.7, 0.68, 0.6).lerp(new THREE.Color(0.95, 0.62, 0.38), gold), smog * 0.35);
     this.scene.fog.color.copy(fc);
     this.scene.fog.near = lerp(260, 90, Math.max(smog * 0.8, ind * 0.6)) * (this.fogScale || 1);
     this.scene.fog.far = lerp(1150, 650, Math.max(smog * 0.6, ind * 0.5)) * (this.fogScale || 1);
-    this.renderer.toneMappingExposure = lerp(0.6, 0.42, night) * (1 + ind * 0.05);
+    this.renderer.toneMappingExposure = lerp(0.6, 0.42, night) * (1 + ind * 0.05) * (1 + gold * 0.06);
 
     // clouds: drift with the wind, wrap around the camera, lit by the sun
     this.cloudDrift.addScaledVector(this.wind, dt);
-    const cloudCol = new THREE.Color(1, 1, 1).lerp(new THREE.Color(1, 0.72, 0.55), warm * sunUp).lerp(new THREE.Color(0.18, 0.2, 0.28), night);
+    const cloudCol = new THREE.Color(1, 1, 1).lerp(new THREE.Color(1, 0.66, 0.46), Math.max(warm * sunUp, gold * 0.9)).lerp(new THREE.Color(0.18, 0.2, 0.28), night);
     cloudCol.multiply(this.tint);
     this.cloudMat.color.copy(cloudCol);
     this.clouds.forEach((c, i) => {
@@ -277,6 +295,19 @@ export class SkySystem {
     wn.offset.y = -(this.water.position.z / 6000) * 160 + performance.now() * 0.000008;
     this.waterMat.color.setRGB(lerp(0.17, 0.03, night), lerp(0.42, 0.06, night), lerp(0.52, 0.12, night)).multiply(this.tint);
 
+    // down in the metro: no sun, no sky, dark and close, the lamps lit
+    if (this.underground) {
+      this.sun.intensity = 0; this.sun.castShadow = false;
+      this.moonLight.intensity = 0;
+      this.hemi.intensity = 0.55;
+      this.hemi.color.setRGB(0.75, 0.72, 0.62); this.hemi.groundColor.setRGB(0.2, 0.19, 0.17);
+      this.scene.fog.color.setRGB(0.04, 0.04, 0.045);
+      this.scene.fog.near = 12; this.scene.fog.far = 120;
+      this.renderer.toneMappingExposure = 0.75;
+      this.scene.environmentIntensity = 0.12;
+      return;
+    }
+
     // refresh the sky reflection now and then (it's slow-ish)
     this.envTimer -= dt;
     if (this.envTimer <= 0 || force) {
@@ -287,7 +318,9 @@ export class SkySystem {
       if (this.envRT) this.envRT.dispose();
       this.envRT = this.pmrem.fromScene(this.envScene, 0, 0.1, 2000);
       this.scene.environment = this.envRT.texture;
-      this.scene.environmentIntensity = lerp(0.9, 0.08, night);
+    }
+    if (!this.underground) {
+      this.scene.environmentIntensity = lerp(lerp(0.9, 0.45, gold), 0.08, night);
     }
   }
 

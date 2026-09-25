@@ -21,6 +21,7 @@ import { Batch, treeGeometry } from "./builders.js";
 import { L, TILE, atlasMaterial, detailTexture } from "./textures.js";
 import { rngAt, hash3, clamp, lerp, smoothstep, mulberry32 } from "./noise.js";
 import { hollow, furnish, frameOf } from "./interiors.js";
+import { towerLobby, penthouse, roofLift, addLift, ladder, metro, UNDER_LINE } from "./structures.js";
 
 export const CHUNK = 128;
 const CELL = 16; // spatial hash cell size for colliders
@@ -121,9 +122,10 @@ export class World {
   load(job) {
     const ch = {
       key: job.key, ix: job.x, iz: job.z, x0: job.x * CHUNK, z0: job.z * CHUNK,
-      res: job.res, objects: [], colliders: [], spots: { ground: [], roof: [], park: [], beach: [], field: [], water: [], inside: [] },
+      res: job.res, objects: [], colliders: [], spots: { ground: [], roof: [], park: [], beach: [], field: [], water: [], inside: [], vault: [] },
       paths: [], bins: [], smoke: [], lanes: [], lights: [], hunters: [], tourists: [],
       parking: [], // parked vehicles (City Sandbox): {id, type, x, y, z, yaw}
+      ladders: [], portals: [], // (structures.js)
     };
     this.buildTerrain(ch);
     this.populate(ch);
@@ -470,6 +472,8 @@ export class World {
     // power lines along the south side of some blocks
     if (hash3(bz, 11, this.seed) % 3 === 0) this.powerLine(ctx, cx - inner / 2 + 3, cx + inner / 2 - 3, cz - edge + 0.2, top);
     this.kerbParking(ctx, bx, bz, cx, cz, inner);
+    // the metro under every third road (structures.js)
+    metro(this, ctx, bx, bz);
 
     const r = rnd();
     const lotY = top;
@@ -604,12 +608,31 @@ export class World {
       } else tiers.push([w * k, d * k, H - h1]);
     } else tiers.push([w, d, H]);
     let base = y;
+    // office towers (structures.js): a walk-in lobby at the bottom, a
+    // penthouse at the top, and a lift up the middle that stops on the roof
+    const office = style === L.OFFICE || style === L.OFFICE2;
+    const lift = office && H >= 28 && tiers[0][0] >= 12 && tiers[0][1] >= 12 && tiers[tiers.length - 1][0] >= 11 && tiers[tiers.length - 1][1] >= 11;
+    const stops = [];
+    if (lift) {
+      const lob = towerLobby(this, ctx, x, y, z, tiers[0][0], tiers[0][1], col, rnd);
+      stops.push({ y: lob.floorY, name: "lobby" });
+      tiers[0][2] -= lob.roofTop - y;
+      base = lob.roofTop;
+    }
     for (let t = 0; t < tiers.length; t++) {
       const [tw, td, th] = tiers[t];
-      b.box(x, base, z, tw, th, td, 0, { side: style, top: L.ROOF_FLAT, color: col, topColor: [0.9, 0.9, 0.9], uOff });
-      this.addBox(ctx, x - tw / 2, base, z - td / 2, x + tw / 2, base + th, z + td / 2, "building");
+      const last = t === tiers.length - 1;
+      const pent = lift && last && th > 9;
+      const solidH = pent ? th - 5.2 : th;
+      b.box(x, base, z, tw, solidH, td, 0, { side: style, top: L.ROOF_FLAT, color: col, topColor: [0.9, 0.9, 0.9], uOff });
+      this.addBox(ctx, x - tw / 2, base, z - td / 2, x + tw / 2, base + solidH, z + td / 2, "building");
+      let py = base + th;
+      if (pent) {
+        const ph = penthouse(this, ctx, x, base + solidH + 0.3, z, tw, td, col, rnd);
+        stops.push({ y: ph.floorY, name: "penthouse" });
+        py = ph.roofTop;
+      }
       // parapet around each roof edge
-      const py = base + th;
       const pc = [col[0] * 0.8, col[1] * 0.8, col[2] * 0.8];
       b.box(x, py, z - td / 2 + 0.15, tw, 0.8, 0.3, 0, { side: L.CONCRETE, top: L.CONCRETE, color: pc });
       b.box(x, py, z + td / 2 - 0.15, tw, 0.8, 0.3, 0, { side: L.CONCRETE, top: L.CONCRETE, color: pc });
@@ -623,14 +646,28 @@ export class World {
       if (t < tiers.length - 1) ch.spots.roof.push([x + tw / 2 - 2, py, z + (rnd() - 0.5) * td * 0.6]);
       base = py;
     }
+    if (lift) {
+      roofLift(this, ctx, x, base, z);
+      stops.push({ y: base, name: "roof" });
+      addLift(ctx, x, z, stops);
+    }
+    // a fire-escape ladder up the side of the smaller blocks
+    if (!office && tiers.length === 1 && rnd() < 0.7) {
+      const side = Math.floor(rnd() * 3); // not the front (+z), that's where the awning goes
+      const along = (rnd() - 0.5) * 0.5;
+      if (side === 0) ladder(this, ctx, x + along * w, z - d / 2, 0, -1, y, base);
+      else if (side === 1) ladder(this, ctx, x + w / 2, z + along * d, 1, 0, y, base);
+      else ladder(this, ctx, x - w / 2, z + along * d, -1, 0, y, base);
+    }
     const [tw, td] = tiers[tiers.length - 1];
     const roofY = base;
     ch.spots.roof.push([x + (rnd() - 0.5) * tw * 0.5, roofY, z + (rnd() - 0.5) * td * 0.5]);
     // rooftop clutter: air-con units, vents, a water tank or an antenna
     const nAc = 1 + Math.floor(rnd() * 3);
     for (let i = 0; i < nAc; i++) {
-      const ax = x + (rnd() - 0.5) * (tw - 4), az = z + (rnd() - 0.5) * (td - 4);
+      let ax = x + (rnd() - 0.5) * (tw - 4), az = z + (rnd() - 0.5) * (td - 4);
       const s = 1.2 + rnd() * 1.6;
+      if (lift && Math.abs(ax - x) < 3 + s && Math.abs(az - z) < 3.5 + s) { ax = x + (ax < x ? -1 : 1) * Math.min(tw / 2 - s - 1, 3 + s); }
       b.box(ax, roofY, az, s * 1.4, s * 0.8, s, 0, { side: L.WAREHOUSE, top: L.CONTAINER, color: [0.78, 0.8, 0.82], topColor: [0.6, 0.62, 0.64] });
       b.cyl(ax, roofY + s * 0.8, az, s * 0.3, 0.1, 10, L.WHITE, [0.3, 0.3, 0.32]);
       this.addBox(ctx, ax - s * 0.7, roofY, az - s / 2, ax + s * 0.7, roofY + s * 0.8, az + s / 2, "ac");
@@ -646,9 +683,10 @@ export class World {
     }
     if (H > 60 && rnd() < 0.6) {
       const hgt = 6 + rnd() * 12;
-      b.cyl(x, roofY, z, 0.25, hgt, 5, L.WHITE, [0.55, 0.55, 0.58], { r1: 0.06 });
-      b.sphere(x, roofY + hgt, z, 0.35, 8, L.LIGHT, [1, 0.2, 0.2]);
-      this.addCyl(ctx, x, z, 0.3, roofY, roofY + hgt, "antenna");
+      const ax = lift ? x + tw / 2 - 2 : x, az = lift ? z - td / 2 + 2 : z;
+      b.cyl(ax, roofY, az, 0.25, hgt, 5, L.WHITE, [0.55, 0.55, 0.58], { r1: 0.06 });
+      b.sphere(ax, roofY + hgt, az, 0.35, 8, L.LIGHT, [1, 0.2, 0.2]);
+      this.addCyl(ctx, ax, az, 0.3, roofY, roofY + hgt, "antenna");
     }
     // shop awnings on brick buildings
     if (style === L.BRICK && rnd() < 0.7) {
@@ -1433,9 +1471,15 @@ export class World {
   // Returns {y, kind, water, ice, collider}
   groundAt(x, z, yMax = 1e9, out) {
     out = out || {};
-    const s = this.terrain.sample(x, z);
-    out.y = s.h; out.kind = "ground"; out.water = false; out.ice = s.ice; out.collider = null;
-    if (s.h < SEA && !s.ice) { out.y = SEA; out.kind = "water"; out.water = true; }
+    out.collider = null;
+    if (yMax < UNDER_LINE) {
+      // down in the metro there's no ground or sea, only what's built
+      out.y = -1e9; out.kind = "void"; out.water = false; out.ice = false;
+    } else {
+      const s = this.terrain.sample(x, z);
+      out.y = s.h; out.kind = "ground"; out.water = false; out.ice = s.ice;
+      if (s.h < SEA && !s.ice) { out.y = SEA; out.kind = "water"; out.water = true; }
+    }
     const list = this.nearby(x, z, 1, this._tmpList || (this._tmpList = []));
     for (const c of list) {
       if (!c.land) continue;
@@ -1470,8 +1514,8 @@ export class World {
   // number of contacts. The caller decides whether it's a landing or a crash.
   collideSphere(p, r, hit) {
     let n = 0;
-    // terrain
-    const h = this.terrain.height(p.x, p.z);
+    // terrain (none down in the metro)
+    const h = p.y < UNDER_LINE ? -1e9 : this.terrain.height(p.x, p.z);
     if (p.y - r < h) {
       const nr = this.terrain.normal(p.x, p.z, this._tn || (this._tn = { x: 0, y: 1, z: 0 }));
       hit(nr, h - (p.y - r), null);
@@ -1594,7 +1638,7 @@ export class World {
     // ground and water: march, then home in
     const surf = (x, z) => Math.max(T.height(x, z), SEA);
     let prevT = 0;
-    for (let t = 1.5; t <= bestT + 1.5; t += t < 60 ? 1.5 : 4) {
+    if (o.y > UNDER_LINE) for (let t = 1.5; t <= bestT + 1.5; t += t < 60 ? 1.5 : 4) {
       const tt = Math.min(t, bestT);
       const y = o.y + d.y * tt;
       if (y < surf(o.x + d.x * tt, o.z + d.z * tt)) {

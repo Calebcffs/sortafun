@@ -10,6 +10,13 @@
 //   box    storage box: some cash, ammo, a medkit, maybe a phone or watch
 //   chest  trunk: more cash and valuables, sometimes a gun
 //   case   gun case: always a gun (or ammo for one you already have)
+//
+// Where it is matters a lot more than what it is (the spot's tier):
+//   out    pavements, parks, beaches, fields: small change, basic guns
+//   roof   rooftops (ladders and lifts): decent
+//   in     inside houses, lobbies, penthouses, the metro: silly good. A chest
+//          indoors can hold tens of thousands, cases have the big guns
+//   vault  strongboxes in penthouses and metro stations: a fortune
 
 import * as THREE from "three";
 import { model } from "./assets.js";
@@ -32,6 +39,7 @@ const KIND = {
   box: { path: "props/box-large.glb", size: 0.75, label: "storage box" },
   chest: { path: "props/chest.glb", size: 0.85, label: "chest" },
   case: { path: "guns/case.glb", size: 1.0, label: "gun case" },
+  vault: { path: "props/chest.glb", size: 1.15, label: "strongbox" },
 };
 
 function pick(rnd, table) {
@@ -43,33 +51,68 @@ function pick(rnd, table) {
 }
 
 // what's in a container: [{kind: "cash"|"ammo"|"weapon"|"valuable"|"medkit"|"armor"|"grenade", ...}]
-export function contents(id, type, cycle) {
+export function contents(id, type, cycle, tier = "out") {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   const rnd = mulberry32(hash3(h, cycle, 77));
   const out = [];
-  const ammo = () => ({ kind: "ammo", ammo: pick(rnd, [["light", 50], ["shells", 20], ["rifle", 25], ["rocket", 3]]), packs: 1 });
-  if (type === "box") {
-    if (rnd() < 0.75) out.push({ kind: "cash", n: 10 + Math.floor(rnd() * 55) });
-    if (rnd() < 0.5) out.push(ammo());
-    if (rnd() < 0.22) out.push({ kind: "medkit" });
-    if (rnd() < 0.08) out.push({ kind: "armor" });
-    if (rnd() < 0.1) out.push({ kind: "grenade", n: 1 });
-    if (rnd() < 0.28) out.push({ kind: "valuable", v: pick(rnd, [["phone", 5], ["watch", 4], ["necklace", 1]]) });
-  } else if (type === "chest") {
-    out.push({ kind: "cash", n: 40 + Math.floor(rnd() * 220) });
-    if (rnd() < 0.75) out.push({ kind: "valuable", v: pick(rnd, [["watch", 30], ["necklace", 22], ["camera", 18], ["laptop", 14], ["goldbar", 7], ["diamond", 2]]) });
-    if (rnd() < 0.3) out.push({ kind: "valuable", v: pick(rnd, [["phone", 5], ["watch", 4], ["necklace", 3]]) });
-    if (rnd() < 0.15) out.push({ kind: "weapon", w: pick(rnd, [["pistol", 5], ["revolver", 3], ["smg", 2], ["shotgun", 2], ["axe", 3]]) });
-    if (rnd() < 0.35) out.push(ammo());
-    if (rnd() < 0.15) out.push({ kind: "armor" });
-  } else {
-    const w = pick(rnd, [["pistol", 20], ["revolver", 12], ["smg", 18], ["shotgun", 16], ["rifle", 14], ["sniper", 8], ["minigun", 3], ["rocket", 3], ["grenade", 6]]);
+  const cash = (lo, hi, curve = 1) => out.push({ kind: "cash", n: Math.round((lo + Math.pow(rnd(), curve) * (hi - lo)) / 5) * 5 });
+  const ammo = (packs = 1) => ({ kind: "ammo", ammo: pick(rnd, [["light", 50], ["shells", 20], ["rifle", 25], ["rocket", 3]]), packs });
+  const val = (table) => out.push({ kind: "valuable", v: pick(rnd, table) });
+  const gun = (table, packs) => {
+    const w = pick(rnd, table);
     if (w === "grenade") out.push({ kind: "grenade", n: 3 });
-    else { out.push({ kind: "weapon", w }); out.push({ kind: "ammo", ammo: WEAPONS[w].ammo, packs: w === "rocket" ? 1 : 2 }); }
-    if (rnd() < 0.4) out.push({ kind: "cash", n: Math.floor(rnd() * 120) });
-    if (rnd() < 0.2) out.push({ kind: "armor" });
+    else { out.push({ kind: "weapon", w }); if (WEAPONS[w].ammo) out.push({ kind: "ammo", ammo: WEAPONS[w].ammo, packs: w === "rocket" ? Math.max(1, packs - 1) : packs }); }
+  };
+  if (type === "vault") {
+    // jackpot
+    cash(20000, 80000, 1.6);
+    val([["diamond", 1]]); val([["goldbar", 2], ["diamond", 1]]); val([["goldbar", 3], ["laptop", 1]]);
+    if (rnd() < 0.5) gun([["minigun", 1], ["rocket", 1], ["sniper", 1]], 3);
+    out.push({ kind: "armor" });
+  } else if (tier === "in") {
+    if (type === "box") {
+      cash(400, 2500);
+      out.push(ammo(2));
+      if (rnd() < 0.5) out.push({ kind: "medkit" });
+      if (rnd() < 0.35) out.push({ kind: "armor" });
+      if (rnd() < 0.35) out.push({ kind: "grenade", n: 3 });
+      if (rnd() < 0.5) val([["camera", 3], ["laptop", 3], ["goldbar", 1]]);
+    } else if (type === "chest") {
+      // a ton of money
+      cash(3000, 25000, 1.8);
+      val([["laptop", 30], ["goldbar", 30], ["diamond", 15], ["camera", 25]]);
+      if (rnd() < 0.6) val([["watch", 3], ["necklace", 3], ["goldbar", 2], ["diamond", 1]]);
+      if (rnd() < 0.4) gun([["rifle", 4], ["sniper", 3], ["smg", 3], ["shotgun", 3]], 2);
+      if (rnd() < 0.4) out.push({ kind: "armor" });
+    } else {
+      gun([["rifle", 25], ["sniper", 18], ["minigun", 12], ["rocket", 12], ["smg", 15], ["shotgun", 18]], 3);
+      if (rnd() < 0.5) out.push({ kind: "grenade", n: 3 });
+      if (rnd() < 0.5) out.push({ kind: "armor" });
+      cash(200, 1500);
+    }
+  } else if (tier === "roof") {
+    if (type === "box") { cash(100, 600); out.push(ammo(1)); if (rnd() < 0.3) out.push({ kind: "medkit" }); }
+    else if (type === "chest") { cash(1000, 6000, 1.5); val([["camera", 3], ["laptop", 2], ["goldbar", 1]]); }
+    else { gun([["smg", 20], ["shotgun", 20], ["rifle", 20], ["sniper", 15], ["revolver", 15], ["grenade", 10]], 2); if (rnd() < 0.3) out.push({ kind: "armor" }); }
+  } else {
+    // out on the street: not much
+    if (type === "box") {
+      if (rnd() < 0.65) cash(5, 30);
+      if (rnd() < 0.35) out.push(ammo(1));
+      if (rnd() < 0.1) out.push({ kind: "medkit" });
+      if (rnd() < 0.12) val([["phone", 5], ["watch", 3]]);
+    } else if (type === "chest") {
+      cash(15, 80);
+      if (rnd() < 0.4) val([["phone", 5], ["watch", 4], ["necklace", 2]]);
+      if (rnd() < 0.1) gun([["pistol", 3], ["axe", 2]], 1);
+      if (rnd() < 0.25) out.push(ammo(1));
+    } else {
+      gun([["pistol", 40], ["revolver", 15], ["smg", 15], ["shotgun", 15], ["rifle", 8], ["grenade", 7]], 1);
+      if (rnd() < 0.3) cash(5, 40);
+    }
   }
+  if (!out.length) cash(5, 20);
   return out;
 }
 
@@ -92,20 +135,23 @@ export class Loot {
   // which spots in a chunk get a container, and what kind
   spotsFor(ch) {
     const out = [];
-    const add = (list, chance, types) => {
+    const add = (list, chance, types, tier) => {
       for (const s of list) {
         const h = hash3(Math.round(s[0] * 3), Math.round(s[2] * 3), this.g.world.seed ^ 0x5eed);
         if ((h % 1000) / 1000 >= chance) continue;
         const type = types[(h >>> 10) % types.length];
-        const id = "L" + Math.round(s[0] * 10) + "_" + Math.round(s[2] * 10);
-        out.push({ id, type, x: s[0], y: s[1], z: s[2], yaw: ((h >>> 4) % 628) / 100 });
+        // (y in the id too: a penthouse spot can sit right over a lobby one)
+        const id = "L" + Math.round(s[0] * 10) + "_" + Math.round(s[2] * 10) + (tier === "out" ? "" : "_" + Math.round(s[1]));
+        out.push({ id, type, tier, x: s[0], y: s[1], z: s[2], yaw: ((h >>> 4) % 628) / 100 });
       }
     };
-    add(ch.spots.ground, 0.16, ["box", "box", "box", "chest", "case"]);
-    add(ch.spots.inside, 0.35, ["box", "box", "case", "chest"]);
-    add(ch.spots.park, 0.22, ["chest", "box", "case"]);
-    add(ch.spots.beach, 0.25, ["chest", "chest", "case"]);
-    add(ch.spots.field, 0.08, ["box", "chest"]);
+    add(ch.spots.ground, 0.12, ["box", "box", "box", "chest", "case"], "out");
+    add(ch.spots.inside, 0.45, ["chest", "chest", "case", "box"], "in");
+    add(ch.spots.vault || [], 1, ["vault"], "in");
+    add(ch.spots.roof, 0.22, ["box", "chest", "case"], "roof");
+    add(ch.spots.park, 0.15, ["chest", "box", "case"], "out");
+    add(ch.spots.beach, 0.2, ["chest", "chest", "case"], "out");
+    add(ch.spots.field, 0.06, ["box", "chest"], "out");
     return out;
   }
 
@@ -118,7 +164,9 @@ export class Loot {
       if (Math.abs(ch.x0 + 64 - p.x) > 200 || Math.abs(ch.z0 + 64 - p.z) > 200) continue;
       if (!ch.lootSpots) ch.lootSpots = this.spotsFor(ch);
       for (const s of ch.lootSpots) {
-        if (Math.hypot(s.x - p.x, s.z - p.z) > 150) continue;
+        // (only what's on your level: the metro's loot isn't loaded while
+        // you're up on the street, nor the penthouse's)
+        if (Math.hypot(s.x - p.x, s.z - p.z) > 150 || Math.abs(s.y - p.y) > 70) continue;
         want.add(s.id);
         if (!this.containers.has(s.id)) this.place(s);
       }
@@ -139,6 +187,11 @@ export class Loot {
     g.add(m.obj);
     g.position.copy(c.pos);
     g.rotation.y = s.yaw;
+    if (s.type === "vault") {
+      // strongboxes: gold, and they shine
+      m.obj.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.multiply(new THREE.Color(1.3, 1.05, 0.35)); o.material.metalness = 0.6; o.material.roughness = 0.35; } });
+      const glow = new THREE.Sprite(this.glowMat); glow.scale.setScalar(2.4); glow.position.y = 0.5; g.add(glow);
+    }
     this.g.scene.add(g);
     c.obj = g; c.model = m.obj;
     this.refresh(c);
@@ -174,7 +227,7 @@ export class Loot {
 
   open(c) {
     // same contents for everyone within one refill window
-    const items = contents(c.id, c.type, Math.floor(this.sb.now() / 1000 / REFILL));
+    const items = contents(c.id, c.type, Math.floor(this.sb.now() / 1000 / REFILL), c.tier);
     this.opened.set(c.id, this.time);
     this.refresh(c);
     this.g.sound.openBox();

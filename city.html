@@ -6,42 +6,46 @@
 <title>city sandbox &middot; SORTAFUN.ORG</title>
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css?v=078c46a8">
-<link rel="stylesheet" href="city/city.css?v=84ea485b">
+<link rel="stylesheet" href="city/city.css?v=1c9cc02a">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./city/ambient.js": "./city/ambient.js?v=5c3282d0",
   "./city/assets.js": "./city/assets.js?v=d2a6be3b",
-  "./city/audio.js": "./city/audio.js?v=88ee4858",
-  "./city/avatar.js": "./city/avatar.js?v=6885b33a",
+  "./city/audio.js": "./city/audio.js?v=cf5b0e9d",
+  "./city/avatar.js": "./city/avatar.js?v=0d75fd7e",
   "./city/builders.js": "./city/builders.js?v=9442795c",
-  "./city/cityhud.js": "./city/cityhud.js?v=32a7661a",
+  "./city/cityhud.js": "./city/cityhud.js?v=a4d7285c",
+  "./city/defences.js": "./city/defences.js?v=b8ef47d6",
   "./city/effects.js": "./city/effects.js?v=3d83c8d2",
   "./city/flight.js": "./city/flight.js?v=b1193206",
   "./city/game.js": "./city/game.js?v=1673834d",
-  "./city/hud.js": "./city/hud.js?v=ae0f0df1",
-  "./city/human.js": "./city/human.js?v=fe571277",
-  "./city/input.js": "./city/input.js?v=6f4bce2d",
-  "./city/interiors.js": "./city/interiors.js?v=743c91ef",
+  "./city/hub.js": "./city/hub.js?v=2538e7eb",
+  "./city/hud.js": "./city/hud.js?v=a5424e21",
+  "./city/human.js": "./city/human.js?v=6a41df78",
+  "./city/input.js": "./city/input.js?v=9bb5d5f5",
+  "./city/interiors.js": "./city/interiors.js?v=57ac6952",
   "./city/items.js": "./city/items.js?v=3d33fe6d",
-  "./city/loot.js": "./city/loot.js?v=c20a779c",
-  "./city/main.js": "./city/main.js?v=8c7bb7fa",
-  "./city/menu.js": "./city/menu.js?v=4e541196",
+  "./city/loot.js": "./city/loot.js?v=21ce328f",
+  "./city/main.js": "./city/main.js?v=1629ba9b",
+  "./city/map.js": "./city/map.js?v=419cc64c",
+  "./city/menu.js": "./city/menu.js?v=867217a9",
   "./city/model.js": "./city/model.js?v=e063d2e0",
-  "./city/net.js": "./city/net.js?v=07889307",
+  "./city/net.js": "./city/net.js?v=3729ba1d",
   "./city/noise.js": "./city/noise.js?v=eb132f6e",
-  "./city/npcs.js": "./city/npcs.js?v=db0d7a08",
+  "./city/npcs.js": "./city/npcs.js?v=93900e18",
   "./city/people.js": "./city/people.js?v=d3359f9c",
-  "./city/sandbox.js": "./city/sandbox.js?v=59e3e862",
-  "./city/shop.js": "./city/shop.js?v=10716c2e",
-  "./city/sky.js": "./city/sky.js?v=0aa93995",
+  "./city/sandbox.js": "./city/sandbox.js?v=10500900",
+  "./city/shop.js": "./city/shop.js?v=f9f9997e",
+  "./city/sky.js": "./city/sky.js?v=c31253c8",
   "./city/species.js": "./city/species.js?v=32bd7215",
+  "./city/structures.js": "./city/structures.js?v=ef7659e5",
   "./city/terrain.js": "./city/terrain.js?v=9a0cfd9a",
   "./city/textures.js": "./city/textures.js?v=0aa51510",
-  "./city/vehicles.js": "./city/vehicles.js?v=9c4a29d8",
-  "./city/weapons.js": "./city/weapons.js?v=7d55b122",
-  "./city/world.js": "./city/world.js?v=24dd21cd"
+  "./city/vehicles.js": "./city/vehicles.js?v=72c53eb6",
+  "./city/weapons.js": "./city/weapons.js?v=ab7189e4",
+  "./city/world.js": "./city/world.js?v=0165c29a"
 } }
 </script>
 <script src="sfx.js?v=fb4567ef"></script>
@@ -50,9 +54,8 @@
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap birdie-wrap">
   <h1>city sandbox</h1>
-  <p class="sub">an open world city you can walk, drive, fly and loot, live with up to 50 other players.
-    open gun cases, chests and storage boxes for cash, guns and valuables, spend it in the shop (bottom corner),
-    hijack cars, find the plane in the secret hangar, and stay one step ahead of the wardens. or play as a bird and poo on everyone.</p>
+  <p class="sub">one big city gone quiet, except for the zombies. you get dropped somewhere random, online with everyone else.
+    loot the insides of buildings (that's where the money is), buy guns and barricades, ride the lifts up the towers, get down into the metro, and don't let them get close.</p>
 
   <div id="stage" class="stage" tabindex="0">
     <canvas id="view"></canvas>
@@ -90,6 +93,7 @@
           <button id="t-jump" class="tbtn jump">JUMP</button>
           <button id="t-use" class="tbtn use">USE</button>
           <button id="t-aim" class="tbtn aim">AIM</button>
+          <button id="t-menu" class="tbtn menu">MENU</button>
         </div>
       </div>
       <button id="pausebtn" class="pausebtn" title="pause (P)">II</button>
@@ -99,44 +103,30 @@
     <div id="menu" class="menu">
       <div id="m-title" class="m-screen">
         <div class="m-logo">city sandbox</div>
-        <div class="m-tag">walk, drive, fly, loot. online with everyone. no downloads!</div>
+        <div class="m-tag">loot it, build, survive. one world, everyone in it. no downloads!</div>
         <div class="m-pick">
           <div class="m-col">
-            <h3>1. play as</h3>
-            <div class="m-kinds">
-              <button data-kind="human">a person <small>guns, cars, loot, the shop</small></button>
-              <button data-kind="bird">a bird <small>fly, eat, poo on people</small></button>
-            </div>
-            <div id="outfitbox"><h3>2. pick your look <small class="m-note">(more outfits in the shop)</small></h3><div id="outfitlist" class="birdlist"></div></div>
-            <div id="birdbox"><h3>2. pick your bird</h3><div id="birdlist" class="birdlist"></div></div>
-            <h3>3. pick where to start</h3>
-            <div id="scapes" class="scapes"></div>
-            <h3>4. play with everyone, or on your own</h3>
-            <div class="m-row online-row">
-              <div class="m-modes">
-                <button id="mode-online" data-mode="online">online <small id="headcount">everyone in one world</small></button>
-                <button id="mode-solo" data-mode="solo">solo <small>your own world</small></button>
-              </div>
-              <label class="m-opt" id="namebox">your name <input id="pname" type="text" maxlength="16" size="12" placeholder="shown over your bird" autocomplete="off" spellcheck="false"></label>
-            </div>
-            <div class="m-row">
-              <span id="seedbox" class="m-opt"><label class="m-opt">world <input id="seed" type="text" maxlength="12" size="8"></label>
-              <button id="randseed" class="m-small">new world</button></span>
+            <label class="m-name">your name <input id="pname" type="text" maxlength="16" size="14" placeholder="shown over your head" autocomplete="off" spellcheck="false"></label>
+            <div id="outfitbox"><h3>your look <small class="m-note">(more outfits in the shop)</small></h3><div id="outfitlist" class="birdlist"></div></div>
+            <div id="birdbox" hidden><h3>pick your bird <small class="m-note">(you found the birds)</small></h3><div id="birdlist" class="birdlist"></div></div>
+            <button id="play" class="m-play">PLAY! &#9654;</button>
+            <div class="m-online" id="headcount">&nbsp;</div>
+            <div class="m-row center m-settings">
               <label class="m-opt">graphics <select id="quality"><option value="low">low</option><option value="med">medium</option><option value="high">high</option></select></label>
               <label class="m-opt"><input id="invert" type="checkbox"> invert up/down</label>
             </div>
-            <button id="play" class="m-play">FLY! &#9654;</button>
           </div>
           <div class="m-col preview-col">
             <canvas id="preview" width="420" height="300"></canvas>
             <div id="birdinfo" class="birdinfo"></div>
           </div>
         </div>
-        <div class="m-keys" id="keys-bird"><b>left / right</b> turn &middot; <b>down / S</b> flap straight up (and flare to land) &middot; <b>up / W</b> fly fast and a bit up &middot; <b>let go</b> swoop down &middot; <b>shift</b> dive &middot; <b>space</b> poo, nest, lay, feed &middot; <b>C</b> call &middot; <b>V</b> camera &middot; <b>P</b> pause &middot; drag to look around</div>
-        <div class="m-keys" id="keys-human"><b>WASD</b> move &middot; <b>mouse</b> look (click the game first) &middot; <b>shift</b> sprint &middot; <b>space</b> jump &middot; <b>C</b> crouch &middot; <b>left click</b> shoot &middot; <b>right click</b> aim &middot; <b>R</b> reload &middot; <b>1-9 / wheel / Q</b> weapons &middot; <b>G</b> grenade &middot; <b>E</b> open, get in and out, hijack &middot; <b>B</b> shop &middot; <b>H</b> medkit (horn in a car) &middot; <b>V</b> camera &middot; <b>P</b> pause</div>
+        <div class="m-keys" id="keys-human"><b>WASD</b> move &middot; <b>mouse</b> look (click the game first) &middot; <b>shift</b> sprint &middot; <b>space</b> jump &middot; <b>C</b> crouch &middot; <b>left click</b> shoot &middot; <b>right click</b> aim down the sights &middot; <b>R</b> reload &middot; <b>1-9 / wheel / Q</b> weapons &middot; <b>G</b> grenade &middot; <b>F</b> open, get in, lifts, ladders, stairs &middot; <b>E</b> inventory, shop and map &middot; <b>T</b> build &middot; <b>H</b> medkit &middot; <b>V</b> camera &middot; <b>P</b> pause</div>
+        <div class="m-keys" id="keys-bird" hidden><b>left / right</b> turn &middot; <b>down / S</b> flap straight up (and flare to land) &middot; <b>up / W</b> fly fast and a bit up &middot; <b>let go</b> swoop down &middot; <b>shift</b> dive &middot; <b>space</b> poo, nest, lay, feed &middot; <b>C</b> call &middot; <b>V</b> camera &middot; <b>P</b> pause &middot; drag to look around</div>
+        <button id="egg" class="egg" title="coo?" aria-label="something small"><svg viewBox="0 0 24 24"><path d="M3 13c3-1 5-4 9-4 2 0 3-2 5-2 1.5 0 2.5 1 3 2l2 .5-2 1c-.5 3-3 6-8 6-3 0-6-1-9-3.5z" fill="#9aa3ad" stroke="#1d1b2e" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17.3" cy="9" r="0.9" fill="#1d1b2e"/></svg></button>
       </div>
       <div id="m-loading" class="m-screen" hidden>
-        <div class="m-logo small">birdie</div>
+        <div class="m-logo small">city sandbox</div>
         <div class="m-tag" id="loadmsg">building the world...</div>
         <div class="loadbar"><div id="loadfill"></div></div>
       </div>
@@ -144,7 +134,7 @@
         <div class="m-logo small">paused</div>
         <div class="m-stats" id="pausestats"></div>
         <div class="m-row center">
-          <button id="resume" class="m-play">keep flying</button>
+          <button id="resume" class="m-play">keep playing</button>
         </div>
         <div class="m-row center">
           <label class="m-opt"><input id="invert2" type="checkbox"> invert up/down</label>
@@ -167,22 +157,41 @@
         </div>
       </div>
     </div>
-    <div id="shop" class="shop" hidden>
-      <div class="shop-head"><b>the shop</b><span class="shop-money"></span><button class="shop-close" title="close (B)">&#x2715;</button></div>
-      <div class="shop-tabs"><button data-tab="guns">guns</button><button data-tab="gear">ammo &amp; gear</button><button data-tab="rides">rides</button><button data-tab="outfits">outfits</button><button data-tab="sell">sell loot</button></div>
-      <div class="shop-grid"></div>
-      <div class="shop-foot">delivered instantly. vehicles you buy are parked next to you and stay in your garage (call them in again for free).</div>
+
+    <!-- the E menu: inventory, shop, map -->
+    <div id="hub" class="hub" hidden>
+      <div class="hub-win">
+        <div class="hub-head">
+          <div class="hub-tabs"><button data-tab="inv">inventory</button><button data-tab="shop">shop</button><button data-tab="map">map</button></div>
+          <span class="hub-money"></span>
+          <button class="hub-close" title="close (E)">&#x2715;</button>
+        </div>
+        <div class="hub-pane inv-pane" data-pane="inv"></div>
+        <div class="hub-pane shop-pane" data-pane="shop" hidden>
+          <div class="shop-tabs"><button data-tab="guns">guns</button><button data-tab="gear">ammo &amp; gear</button><button data-tab="builds">defences</button><button data-tab="rides">rides</button><button data-tab="outfits">outfits</button><button data-tab="sell">sell</button></div>
+          <div class="shop-grid"></div>
+          <div class="shop-foot"></div>
+        </div>
+        <div class="hub-pane map-pane" data-pane="map" hidden>
+          <canvas class="map-canvas"></canvas>
+          <div class="map-bar"><span class="map-info"></span><span class="map-btns"><button data-zoom="-1" title="zoom in">+</button><button data-zoom="1" title="zoom out">&minus;</button><button class="map-me">find me</button></span></div>
+          <div class="map-key"><i style="background:#ffd43b"></i>you <i style="background:#fff"></i>players <i style="background:#1fa84f"></i>metro <i style="background:#b27bff"></i>hangar <i style="background:#ff9a3c"></i>your defences</div>
+        </div>
+        <div class="hub-hint">E or Esc to close &middot; B shop &middot; M map</div>
+      </div>
     </div>
+    <div id="lift" class="lift" hidden><b>lift</b><div class="lift-btns"></div><small>press a number or click. F to stay put.</small></div>
+    <div id="fade" class="fade"></div>
     <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
   </div>
 
   <div class="birdie-help">
-    <div><b>loot:</b> gun cases (orange on the radar), chests and storage boxes (yellow) are dotted round the city: on pavements, in yards and parks, on beaches and on tables inside houses. walk up and press E. cases always have a gun. what's inside refills after 8 minutes.</div>
-    <div><b>money:</b> cash from loot, wallets people drop, and valuables (watches, laptops, gold, diamonds) you sell in the shop. the shop button is in the bottom corner, or press B: guns, ammo, armour, medkits, outfits and vehicles, delivered right next to you. your stuff is saved in this browser.</div>
-    <div><b>vehicles:</b> parked cars and motorbikes are yours for the taking (E). so is traffic, if you don't mind the driver being upset. somewhere in every industrial zone there's a hangar with a plane in it: taxi out onto the long road, full throttle, then pull up (down arrow).</div>
-    <div><b>the wardens:</b> shoot, hijack or cause trouble where a warden can see and you get wanted stars. more stars, more wardens, then police cars. keep out of sight and the stars fade. get taken down and the hospital keeps 10% of your cash.</div>
-    <div><b>online:</b> everyone (up to 50, people and birds) shares one city. names float over heads. you can shoot other players if you want to, or just drive around together.</div>
-    <div><b>as a bird:</b> the poo-o-meter is your fuel, eat to fill it, poo on people for points, build a nest and raise a chick for an extra life. people with guns can shoot you down.</div>
+    <div><b>getting started:</b> you land somewhere random with your fists and a bit of cash. find a building with a door and get inside: chests and gun cases indoors are where the real money and the big guns are. stuff on the pavement is small change.</div>
+    <div><b>zombies:</b> there aren't many, and they're slow, but they don't give up easily once they've seen you. get too close and they come for you. you can outwalk them and easily outrun them. aim down the sights (right click) and go for the head: one shot does it.</div>
+    <div><b>E menu:</b> your inventory (use, equip, place or sell anything), the shop (guns, ammo, armour, defences, cars, outfits) and the map. click anywhere on the map to teleport there, once a minute.</div>
+    <div><b>defences:</b> barricades and steel walls block doorways, spike traps and landmines only go off under zombies (and wardens), turrets shoot zombies by themselves. everyone online sees what you build.</div>
+    <div><b>going up and down:</b> office towers have a lift in the lobby up to a penthouse (strongboxes!) and the roof. smaller blocks have fire-escape ladders. green M kiosks on street corners go down to the metro: tunnels, dead trains and stations full of loot.</div>
+    <div><b>the wardens:</b> a few are still about. they shoot zombies, but shoot one of them, take a police car or hijack someone in front of them and they'll come after you. keep out of sight and the stars fade.</div>
   </div>
 
   <a class="back" href="index.html">&larr; back up the pipe</a>
@@ -190,7 +199,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=0c8ecaf4"></script>
-<script type="module" src="city/main.js?v=8c7bb7fa"></script>
+<script type="module" src="city/main.js?v=1629ba9b"></script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

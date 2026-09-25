@@ -28,7 +28,7 @@ export function frameOf(cx, cz, rot) {
 }
 
 // one axis-aligned (in local space) box: drawn and made solid
-function part(world, ctx, F, lx, y0, lz, sx, sy, sz, opts, kind = "furniture", solid = true) {
+export function part(world, ctx, F, lx, y0, lz, sx, sy, sz, opts, kind = "furniture", solid = true) {
   const [x, z] = F.at(lx, lz);
   ctx.b.box(x, y0, z, sx, sy, sz, F.rot, opts);
   if (solid) world.addOBox(ctx, x, y0, z, sx, sy, sz, F.rot, kind);
@@ -120,15 +120,17 @@ export function hollow(world, ctx, spec, rnd) {
   // sample the ground under the footprint: the floor has to sit above the
   // highest bit (or the hillside pokes through the floorboards) and the
   // foundation has to reach down past the lowest (or the house floats)
+  // (spec.slab: a floor high up a tower or down in the metro, just a slab
+  // that thick, no foundation)
   let hi = -1e9, lo = 1e9;
-  for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) {
+  if (spec.slab == null) for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) {
     const [sx, sz] = F.at((i / 4 - 0.5) * w, (j / 4 - 0.5) * d);
     const th = world.terrain.height(sx, sz);
     if (th > hi) hi = th;
     if (th < lo) lo = th;
   }
-  const y = Math.max(spec.y, hi - 0.1);
-  const base = Math.min(y - 2.6, lo - 1);
+  const y = spec.slab != null ? spec.y : Math.max(spec.y, hi - 0.1);
+  const base = spec.slab != null ? y - spec.slab : Math.min(y - 2.6, lo - 1);
   const [fx, fz] = F.at(0, 0);
   // floor slab on a deep foundation
   ctx.b.box(fx, base, fz, w + 0.1, y + 0.2 - base, d + 0.1, F.rot, { side: L.CONCRETE, top: look.floor, color: [0.7, 0.68, 0.65], topColor: look.floorColor });
@@ -181,14 +183,14 @@ export function hollow(world, ctx, spec, rnd) {
 // ------------------------------------------------------------------
 const WOOD = [0.55, 0.38, 0.22], DARKWOOD = [0.35, 0.23, 0.14], WHITEISH = [0.92, 0.9, 0.86];
 
-function table(world, ctx, F, lx, lz, y, w, d, h, col) {
+export function table(world, ctx, F, lx, lz, y, w, d, h, col) {
   part(world, ctx, F, lx, y + h - 0.06, lz, w, 0.06, d, { side: L.PLANKS, top: L.PLANKS, color: col || WOOD });
   for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) part(world, ctx, F, lx + sx * (w / 2 - 0.06), y, lz + sz * (d / 2 - 0.06), 0.07, h - 0.06, 0.07, { color: col || WOOD }, "furniture", false);
   // one collider for the whole table so you can walk under it
   return [lx, y + h, lz];
 }
 
-function chair(world, ctx, F, lx, lz, y, facing, col) {
+export function chair(world, ctx, F, lx, lz, y, facing, col) {
   const c = col || WOOD;
   part(world, ctx, F, lx, y + 0.42, lz, 0.45, 0.05, 0.45, { color: c });
   for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) part(world, ctx, F, lx + sx * 0.19, y, lz + sz * 0.19, 0.05, 0.42, 0.05, { color: c }, "furniture", false);
@@ -196,7 +198,7 @@ function chair(world, ctx, F, lx, lz, y, facing, col) {
   part(world, ctx, F, lx, y + 0.47, bz, 0.45, 0.5, 0.05, { color: c });
 }
 
-function shelf(world, ctx, F, lx, lz, y, w, h, alongX, rnd) {
+export function shelf(world, ctx, F, lx, lz, y, w, h, alongX, rnd) {
   const sx = alongX ? w : 0.35, sz = alongX ? 0.35 : w;
   part(world, ctx, F, lx, y, lz, sx, 0.05, sz, { color: DARKWOOD }, "furniture", false);
   const levels = Math.floor(h / 0.45);
@@ -219,14 +221,14 @@ function shelf(world, ctx, F, lx, lz, y, w, h, alongX, rnd) {
   }
 }
 
-function rug(ctx, F, lx, lz, y, w, d, col) {
+export function rug(ctx, F, lx, lz, y, w, d, col) {
   const [x, z] = F.at(lx, lz);
   ctx.b.box(x, y, z, w, 0.015, d, F.rot, { color: col, top: L.WHITE });
   const [x2, z2] = F.at(lx, lz);
   ctx.b.box(x2, y + 0.016, z2, w * 0.8, 0.004, d * 0.8, F.rot, { color: [col[0] * 0.7, col[1] * 0.7, col[2] * 0.7] });
 }
 
-function bed(world, ctx, F, lx, lz, y, alongX, rnd) {
+export function bed(world, ctx, F, lx, lz, y, alongX, rnd) {
   const L2 = 2.0, W2 = 1.4;
   const sx = alongX ? L2 : W2, sz = alongX ? W2 : L2;
   part(world, ctx, F, lx, y, lz, sx, 0.35, sz, { color: DARKWOOD });
@@ -240,7 +242,7 @@ function bed(world, ctx, F, lx, lz, y, alongX, rnd) {
   part(world, ctx, F, hx, y, hz, alongX ? 0.1 : W2, 1.0, alongX ? W2 : 0.1, { color: DARKWOOD });
 }
 
-function sofa(world, ctx, F, lx, lz, y, facing, rnd) {
+export function sofa(world, ctx, F, lx, lz, y, facing, rnd) {
   const col = [[0.55, 0.2, 0.2], [0.25, 0.35, 0.55], [0.35, 0.45, 0.3], [0.6, 0.5, 0.35]][Math.floor(rnd() * 4)];
   part(world, ctx, F, lx, y, lz, 2.0, 0.42, 0.85, { color: col });
   part(world, ctx, F, lx, y + 0.42, lz - facing * 0.34, 2.0, 0.45, 0.2, { color: col });
@@ -257,7 +259,7 @@ function fireplace(world, ctx, F, lx, lz, y, alongX) {
   ctx.b.box(x, y + 0.12, z, alongX ? 0.6 : 0.63, 0.25, alongX ? 0.63 : 0.6, F.rot, { side: L.LIGHT, top: L.LIGHT, color: [1, 0.45, 0.12] });
 }
 
-function crate(world, ctx, F, lx, lz, y, s, col) {
+export function crate(world, ctx, F, lx, lz, y, s, col) {
   part(world, ctx, F, lx, y, lz, s, s, s, { side: L.PLANKS, top: L.PLANKS, color: col || [0.8, 0.62, 0.4] });
 }
 

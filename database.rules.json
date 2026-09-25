@@ -61,6 +61,21 @@
           ".validate": "newData.val() === now"
         }
       },
+      "builds": {
+        ".read": "auth != null",
+        "$id": {
+          ".write": "auth != null && $id.length <= 40 && ((!data.exists() && newData.child('by').val() === auth.uid) || !newData.exists())",
+          ".validate": "newData.hasChildren(['ty', 'x', 'y', 'z', 'r', 'by', 't']) && newData.child('t').val() === now",
+          "ty": { ".validate": "newData.isString() && newData.val().matches(/^(barricade|wall|spikes|mine|turret)$/)" },
+          "x": { ".validate": "newData.isNumber()" },
+          "y": { ".validate": "newData.isNumber()" },
+          "z": { ".validate": "newData.isNumber()" },
+          "r": { ".validate": "newData.isNumber()" },
+          "by": { ".validate": "newData.isString()" },
+          "t": { ".validate": true },
+          "$other": { ".validate": false }
+        }
+      },
       "feed": {
         ".read": "auth != null",
         "$id": {

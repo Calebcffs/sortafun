@@ -8,6 +8,11 @@
 // target is a vertical capsule {x, y (feet), z, r, h} or a box {obox}, plus
 // hit(dmg, info). Hitscan tests the world (world.raycast) and every target and
 // takes whichever is nearer.
+//
+// Aiming down the sights (opts.spreadMul 0) is dead accurate, even the
+// shotgun's pellets bunch up. A headshot kills outright (HEADSHOT damage;
+// players online get the most a hit can carry, which is more than full
+// health plus armour).
 
 import * as THREE from "three";
 import { clamp } from "./noise.js";
@@ -34,7 +39,9 @@ export const WEAPONS = {
   minigun: { name: "minigun", ammo: "rifle", dmg: 14, rate: 22, mag: 200, spread: 0.05, range: 160, slot: 7, auto: true, spin: 0.6, reload: 3.5, price: 14000, zoom: 55 },
   rocket: { name: "rocket launcher", ammo: "rocket", dmg: 170, rate: 0.7, mag: 1, spread: 0, range: 400, slot: 8, rocket: true, blast: 7, reload: 2.4, price: 16000, zoom: 50 },
   grenade: { name: "grenade", thrown: true, dmg: 150, blast: 6.5, rate: 1.1, slot: 9, price: 200 },
+  mine: { name: "landmine", dmg: 260, blast: 5, slot: -1, price: 0 }, // (defences.js; never in your hands)
 };
+export const HEADSHOT = 10000;
 export const WEAPON_ORDER = ["fists", "axe", "pistol", "revolver", "smg", "shotgun", "rifle", "sniper", "minigun", "rocket", "grenade"];
 
 // ------------------------------------------------------------
@@ -174,7 +181,8 @@ export class Gunfire {
     if (loud) this.g.sound.gun(key, opts.vol ?? 1);
     if (W.rocket) { this.launchRocket(shooter, muzzle || eye, dir, opts); return hits; }
     const n = W.pellets || 1;
-    const spread = W.spread * (opts.spreadMul ?? 1);
+    // (down the sights the shotgun keeps a tight little cone, everything else is exact)
+    const spread = opts.spreadMul === 0 ? (W.pellets ? W.spread * 0.18 : 0) : W.spread * (opts.spreadMul ?? 1);
     for (let i = 0; i < n; i++) {
       const d = this.tmpD.copy(dir);
       if (spread > 0) {
@@ -188,7 +196,7 @@ export class Gunfire {
       const h = this.trace(shooter, eye, d, W.range, opts.skipT || 0);
       const end = h.point;
       if (h.target) {
-        const dmg = W.dmg * (h.head ? 2 : 1) * (opts.dmgMul ?? 1);
+        const dmg = h.head && !opts.noHeadshot ? HEADSHOT : W.dmg * (opts.dmgMul ?? 1);
         hits.push({ target: h.target, dmg, head: h.head, point: end.clone(), key });
         this.sprite(h.target.kind === "vehicle" ? this.sparkMat : this.popMat, end, 0.45, 0.18, { grow: 1.5 });
       } else if (h.world) {
@@ -303,7 +311,7 @@ export class Gunfire {
     this.shake = Math.max(this.shake, clamp(1.2 - d / 60, 0, 1.2));
     if (opts.visualOnly) return;
     for (const t of this.targets()) {
-      if (t.dead) continue;
+      if (t.dead || (opts.spare && opts.spare(t))) continue;
       const cx = t.obox ? t.obox.x : t.x, cy = t.obox ? (t.obox.y0 + t.obox.y1) / 2 : t.y + t.h / 2, cz = t.obox ? t.obox.z : t.z;
       const dist = Math.hypot(cx - p.x, cy - p.y, cz - p.z);
       if (dist > R) continue;

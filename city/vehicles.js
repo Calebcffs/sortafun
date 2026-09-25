@@ -569,7 +569,7 @@ export class VehicleManager {
       if (lane.axis === "x") { x = lerp(lane.x0, lane.x1, t); z = lane.z - side; yaw = dir > 0 ? Math.PI / 2 : -Math.PI / 2; }
       else { z = lerp(lane.z0, lane.z1, t); x = lane.x + side; yaw = dir > 0 ? 0 : Math.PI; }
       const d = Math.hypot(x - p.x, z - p.z);
-      if (d < 50 || d > 230) continue;
+      if (d < 50 || d > 230 || (d < 150 && this.sb.npcs.inView(x, CITY_H, z))) continue;
       if ([...this.all()].some((c) => Math.hypot(c.pos.x - x, c.pos.z - z) < 14)) continue;
       const type = TRAFFIC[Math.floor(Math.random() * TRAFFIC.length)];
       const v = new Vehicle(this, type, x, CITY_H, z, yaw);
@@ -627,7 +627,8 @@ export class VehicleManager {
       const t = Math.random();
       const x = lane.axis === "x" ? lerp(lane.x0, lane.x1, t) : lane.x, z = lane.axis === "x" ? lane.z : lerp(lane.z0, lane.z1, t);
       const d = Math.hypot(x - me.pos.x, z - me.pos.z);
-      if (d < 70 || d > 190) continue;
+      // far off and out of sight: they drive in, they don't appear
+      if (d < 110 || d > 220 || this.sb.npcs.inView(x, CITY_H, z)) continue;
       const v = new Vehicle(this, "police", x, CITY_H, z, Math.atan2(me.pos.x - x, me.pos.z - z));
       v.ai = { chase: true, stuck: 0, want: 30, unload: false };
       v.driver = { npc: true, cop: true };
@@ -664,7 +665,8 @@ export class VehicleManager {
     this.trafficT -= dt;
     const me = this.sb.player;
     const s = this.g.world.terrain.sample(me.pos.x, me.pos.z);
-    const wantCars = Math.round(s.w.city * 12 + s.w.industry * 5);
+    // only a few survivors still driving about (not down in the metro)
+    const wantCars = me.pos.y < -100 ? 0 : Math.round(s.w.city * 5 + s.w.industry * 2);
     if (this.trafficT <= 0) {
       this.trafficT = 0.6;
       const near = this.traffic.filter((c) => c.pos.distanceTo(me.pos) < 230).length;

@@ -67,7 +67,7 @@ export class Hud {
       this.g.input.bindButton(document.getElementById("t-poop"), "poop");
       this.g.input.bindButton(document.getElementById("t-flap"), "dive");
       this.g.input.bindButton(document.getElementById("t-call"), "call");
-      for (const k of ["fire", "jump", "use", "aim"]) this.g.input.bindButton(document.getElementById("t-" + k), k);
+      for (const k of ["fire", "jump", "use", "aim", "menu"]) this.g.input.bindButton(document.getElementById("t-" + k), k);
       this.g.input.attachTouchLook(this.g.canvas);
     }
   }

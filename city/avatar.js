@@ -46,6 +46,21 @@ function clips() {
   return clipsP;
 }
 
+// zombies: the same people, gone green and grey (one tinted copy of each
+// material, shared by every zombie)
+const ZOMBIE_MATS = new Map();
+function zombieMat(m) {
+  let z = ZOMBIE_MATS.get(m);
+  if (!z) {
+    z = m.clone();
+    z.color.multiply(new THREE.Color(0.5, 0.78, 0.46));
+    if (z.emissive) z.emissive.setRGB(0.02, 0.05, 0.01);
+    z.userData.keepMat = true;
+    ZOMBIE_MATS.set(m, z);
+  }
+  return z;
+}
+
 const ONCE = new Set(["jump", "die", "attack-melee-right", "pick-up", "interact-right", "holding-right-shoot", "holding-both-shoot"]);
 
 export class Avatar {
@@ -82,6 +97,15 @@ export class Avatar {
     this.play("upper", "idle", 0);
     const w = this.weapon; this.weapon = null; this.gun = null;
     if (w) this.setWeapon(w);
+    if (this.zombie) this.zombify();
+  }
+
+  zombify() {
+    this.zombie = true;
+    if (!this.body) return;
+    this.body.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(zombieMat) : zombieMat(o.material); });
+    // a bit hunched
+    this.body.rotation.x = 0.12;
   }
 
   action(layer, name) {
@@ -157,6 +181,7 @@ export class Avatar {
     if (s.dead) upper = "die";
     else if (this.pulseT > 0 && this.pulse) upper = this.pulse;
     else if (s.drive) upper = "drive";
+    else if (this.zombie) upper = "holding-both"; // arms out in front
     else if (this.weapon && this.weapon !== "fists" && this.weapon !== "grenade") upper = TWO_HANDED.has(this.weapon) ? "holding-both" : "holding-right";
     else upper = lower;
     this.play("upper", upper, 0.12, upper === lower ? lspeed : 1);

@@ -9,11 +9,19 @@
 // Controls: WASD move (camera-relative), shift sprint, space jump, C crouch,
 // mouse look (click the game to capture the mouse), left click fire, right
 // click aim, R reload, 1-9 / wheel / Q weapons, G grenade.
+//
+// Aiming (right click) with a gun goes first person, down the sights: the
+// camera moves to your eyes, the gun sits in front of it (the viewmodel) with
+// a red dot in the middle, and shots go exactly where the dot is. From the
+// hip there's normal spread. Ladders (ch.ladders, structures.js): walk into
+// one or press F by it, W / S to climb, space to let go.
 
 import * as THREE from "three";
 import { Avatar, HEIGHT } from "./avatar.js";
 import { WEAPONS, WEAPON_ORDER } from "./weapons.js";
 import { SEA } from "./terrain.js";
+import { UNDER_LINE } from "./structures.js";
+import { model } from "./assets.js";
 import { clamp, damp, dampAngle } from "./noise.js";
 
 const WALK = 3.3, RUN = 7.2, CROUCH = 1.7, SWIM = 2.4, JUMP = 7.2, GRAVITY = 22;
@@ -54,6 +62,13 @@ export class HumanPlayer {
     this.camTarget = new THREE.Vector3();
     this.id = "me";
     this.isPlayer = true; // (what hit code checks to know a shot was ours)
+    this.ads = 0;         // 0..1 how far into aiming down the sights
+    this.ladder = null;   // the ladder we're on
+    // the gun you see in front of the camera when aiming down the sights
+    this.view = new THREE.Group();
+    this.view.visible = false;
+    game.scene.add(this.view);
+    this.viewGun = null; this.viewKey = null;
   }
 
   place(x, y, z, yaw) {
@@ -159,13 +174,15 @@ export class HumanPlayer {
     this.inv.mag[this.weapon] = this.mag() - 1;
     this.avatar.pulseUpper(W.slot >= 3 ? "holding-both-shoot" : "holding-right-shoot", 0.12);
     const muzzle = this.muzzle(d);
-    const spreadMul = (this.aiming ? 0.55 : 1.2) * (this.speed > 4 ? 1.8 : 1) * (this.onGround ? 1 : 1.6);
-    const hits = this.g.gunfire.fire(this, this.weapon, o, d, muzzle, { spreadMul });
+    // down the sights: dead on. From the hip: normal spread, more on the move
+    const spreadMul = this.ads > 0.6 ? 0 : 1.2 * (this.speed > 4 ? 1.8 : 1) * (this.onGround ? 1 : 1.6);
+    const hits = this.g.gunfire.fire(this, this.weapon, o, d, this.ads > 0.6 ? this.viewMuzzle(d) : muzzle, { spreadMul });
     if (hits.length) this.sb.hud.hitMarker(hits.some((h) => h.head));
     this.sb.onShot(this.weapon, muzzle, hits, o, d);
     // kick the view up a little
     const kick = { pistol: 0.012, revolver: 0.05, smg: 0.008, shotgun: 0.06, rifle: 0.01, sniper: 0.08, minigun: 0.004, rocket: 0.05 }[this.weapon] || 0.01;
-    this.recoil += kick;
+    this.recoil += kick * (this.ads > 0.6 ? 0.45 : 1);
+    this.viewKick = 1;
     this.sb.hud.weapon();
     if (this.mag() <= 0 && (this.inv.ammo[W.ammo] || 0) > 0) this.startReload();
   }
@@ -221,21 +238,30 @@ export class HumanPlayer {
     // V: camera near / middle / far
     if (input.camera) this.camDist = this.camDist < 3.5 ? 4.6 : this.camDist < 6 ? 7.5 : 3;
 
-    if (this.vehicle) { this.mode = "drive"; this.aiming = false; this.scoped = false; this.avatarUpdate(dt); return; }
+    if (this.vehicle || this.dead) { this.ladder = null; this.aiming = false; this.scoped = false; this.ads = 0; }
+    if (this.vehicle) { this.mode = "drive"; this.avatarUpdate(dt); return; }
     if (this.dead) { this.avatar.update(dt, { dead: true }); this.avatar.root.position.copy(this.pos); return; }
 
-    // weapons
+    // weapons (guns only aim down the sights; not fists, the axe or a grenade)
     const W = this.W;
-    this.aiming = input.mouse.right && !W.melee;
-    this.scoped = this.aiming && !!W.scope;
-    for (let i = 1; i <= 9; i++) if (input.hit("Digit" + i)) { const list = this.owned(); if (list[i - 1]) this.select(list[i - 1]); }
-    if (input.hit("Digit0")) this.select("fists");
-    if (input.zoom) this.cycle(input.zoom > 0 ? 1 : -1); // mouse wheel
-    if (input.hit("KeyQ")) this.select(this.prevWeapon);
-    if (input.hit("KeyR")) this.startReload();
-    if (input.hit("KeyG") && this.inv.grenades > 0) { const w = this.weapon; this.weapon = "grenade"; this.cool = 0; this.throwGrenade(); if (this.weapon === "grenade") this.weapon = w; }
-    if (input.hit("KeyC")) this.crouch = !this.crouch;
-    if (!this.sb.menuOpen) this.tryFire(input, dt);
+    const building = !!this.sb.defences.placing;
+    this.aiming = input.mouse.right && !!W.ammo && !this.ladder && !this.sb.menuOpen && !building;
+    this.scoped = this.aiming && !!W.scope && this.ads > 0.9;
+    this.ads = clamp(this.ads + (this.aiming ? dt / 0.14 : -dt / 0.12), 0, 1);
+    if (!this.sb.menuOpen) {
+      for (let i = 1; i <= 9; i++) if (input.hit("Digit" + i)) { const list = this.owned(); if (list[i - 1]) this.select(list[i - 1]); }
+      if (input.hit("Digit0")) this.select("fists");
+      if (input.zoom) this.cycle(input.zoom > 0 ? 1 : -1); // mouse wheel
+      if (input.hit("KeyQ")) this.select(this.prevWeapon);
+      if (input.hit("KeyR") && !building) this.startReload();
+      if (input.hit("KeyG") && this.inv.grenades > 0) { const w = this.weapon; this.weapon = "grenade"; this.cool = 0; this.throwGrenade(); if (this.weapon === "grenade") this.weapon = w; }
+      if (input.hit("KeyC")) this.crouch = !this.crouch;
+    }
+    if (!this.sb.menuOpen && !this.ladder && !building) this.tryFire(input, dt);
+    else if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.finishReload(); }
+
+    // on a ladder: that's all we do
+    if (this.ladder || this.grabLadder(input)) { this.climb(dt, input); return; }
 
     // moving
     let fx = 0, fz = 0;
@@ -272,6 +298,83 @@ export class HumanPlayer {
     this.avatarUpdate(dt);
   }
 
+  // ------------------------------------------------------------
+  // ladders
+  // ------------------------------------------------------------
+  // the ladder within reach: from the bottom or halfway up (you're in front
+  // of it) or from the roof (you're just behind the top of it)
+  nearLadder() {
+    const p = this.pos;
+    const cx = Math.floor(p.x / 128), cz = Math.floor(p.z / 128);
+    let best = null, bd = 1e9, top = false;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const ch = this.g.world.chunks.get((cx + dx) + "," + (cz + dz));
+      if (!ch || !ch.ladders) continue;
+      for (const l of ch.ladders) {
+        const rx = p.x - l.x, rz = p.z - l.z;
+        const out = rx * l.nx + rz * l.nz, side = Math.abs(-rx * l.nz + rz * l.nx);
+        if (side > 0.7) continue;
+        if (out > -0.2 && out < 1.1 && p.y > l.y0 - 0.6 && p.y < l.y1 - 0.4) { if (out < bd) { bd = out; best = l; top = false; } }
+        else if (out < -0.1 && out > -2 && Math.abs(p.y - l.top) < 0.7) { if (-out < bd) { bd = -out; best = l; top = true; } }
+      }
+    }
+    return best ? { l: best, top } : null;
+  }
+
+  // walking into one from the bottom (W) catches it, F catches any
+  grabLadder(input, force) {
+    if (this.vehicle || this.dead || this.swim) return false;
+    const n = this.nearLadder();
+    if (!n) return false;
+    const l = n.l;
+    if (!force) {
+      if (n.top || this.pos.y > l.y0 + 0.6) return false;
+      const fw = input.down("KeyW") || input.down("ArrowUp") || (input.stick && input.stick.y < -0.5);
+      const cf = Math.sin(this.camYaw) * l.nx + Math.cos(this.camYaw) * l.nz;
+      if (!fw || cf > -0.3) return false;
+    }
+    this.ladder = l;
+    if (n.top) this.pos.y = l.top + 0.2;
+    this.vel.set(0, 0, 0);
+    this.crouch = false;
+    this.g.sound.click();
+    return true;
+  }
+
+  climb(dt, input) {
+    const l = this.ladder;
+    let up = (input.down("KeyW") || input.down("ArrowUp") ? 1 : 0) - (input.down("KeyS") || input.down("ArrowDown") ? 1 : 0);
+    if (input.stick) up = -input.stick.y;
+    if (this.sb.menuOpen) up = 0;
+    // hug the ladder, face the wall
+    this.pos.x = damp(this.pos.x, l.x + l.nx * 0.42, 20, dt);
+    this.pos.z = damp(this.pos.z, l.z + l.nz * 0.42, 20, dt);
+    this.yaw = Math.atan2(-l.nx, -l.nz);
+    this.pos.y += up * 3.4 * dt;
+    this.vel.set(0, up * 3.4, 0);
+    this.speed = Math.abs(up) * 2;
+    this.onGround = false;
+    this.mode = "ground";
+    if (input.hit("Space") || input.hit("Touch:jump")) {
+      // let go, pushing off the wall a little
+      this.ladder = null;
+      this.vel.set(l.nx * 3, 2, l.nz * 3);
+      this.avatarUpdate(dt);
+      return;
+    }
+    if (this.pos.y >= l.top + 0.95) {
+      // over the parapet onto the roof
+      this.ladder = null;
+      this.place(l.x - l.nx * 1.3, l.top, l.z - l.nz * 1.3, this.yaw);
+      this.camYaw = this.yaw;
+    } else if (this.pos.y <= l.y0) {
+      this.ladder = null;
+      this.pos.y = l.y0;
+      this.onGround = true;
+    }
+    this.fallV = 0;
+    this.avatarUpdate(dt);
+  }
   avatarUpdate(dt) {
     const a = this.avatar;
     if (this.vehicle) {
@@ -282,10 +385,11 @@ export class HumanPlayer {
       this.pos.copy(v.pos);
       return;
     }
-    a.root.visible = !this.scoped;
+    a.root.visible = this.ads < 0.5;
     a.root.position.copy(this.pos);
     if (this.swim) a.root.position.y += 0.5;
     a.root.rotation.set(0, this.yaw, 0);
+    if (this.ladder) { a.update(dt, { speed: this.speed ? 1.2 : 0 }); return; }
     a.update(dt, { speed: this.speed, air: !this.onGround && !this.swim, vy: this.vel.y, crouch: this.crouch, swim: this.swim, aimPitch: this.aiming || this.W.ammo ? this.camPitch : 0 });
   }
 
@@ -380,21 +484,28 @@ export class HumanPlayer {
       // over the right shoulder, high enough that the (big) head stays clear
       // of the crosshair
       target = this.camTarget.copy(this.pos); target.y += this.crouch ? 1.35 : 1.95;
-      dist = this.aiming ? 2.6 : this.camDist;
-      side = this.aiming ? 1.0 : 0.55;
-      if (this.aiming) fovWant = this.W.zoom || 50;
+      dist = this.camDist;
+      side = 0.55;
+      if (this.ads > 0) fovWant = 62 + ((this.W.zoom || 50) - 62) * this.ads;
     }
     // vehicles: the camera swings round behind you when you're not looking about
     if (v && this.lookIdle > 1.2) this.camYaw = dampAngle(this.camYaw, v.camYawFor(), 2.5, dt);
     const cy = Math.cos(this.camYaw), sy = Math.sin(this.camYaw);
     const cp = Math.cos(this.camPitch), spp = Math.sin(this.camPitch);
     const fwd = this.tmp.set(sy * cp, spp, cy * cp);
+    const eye = this.tmp2 || (this.tmp2 = new THREE.Vector3());
+    eye.set(this.pos.x, this.pos.y + (this.crouch ? 1.12 : 1.52), this.pos.z).addScaledVector(fwd, 0.18);
     if (this.scoped) {
       // sniper scope: look from the head
-      c.position.set(this.pos.x, this.pos.y + 1.55, this.pos.z).addScaledVector(fwd, 0.4);
+      c.position.copy(eye);
       c.up.set(0, 1, 0);
       c.lookAt(c.position.x + fwd.x, c.position.y + fwd.y, c.position.z + fwd.z);
       fovWant = this.W.zoom;
+    } else if (this.ads >= 1 && !v) {
+      // down the sights: from the eyes, nothing in the way
+      c.position.copy(eye);
+      c.up.set(0, 1, 0);
+      c.lookAt(eye.x + fwd.x * 10, eye.y + fwd.y * 10, eye.z + fwd.z * 10);
     } else {
       const right = new THREE.Vector3(-cy, 0, sy);
       const desired = target.clone().addScaledVector(fwd, -dist).addScaledVector(right, side);
@@ -404,16 +515,67 @@ export class HumanPlayer {
       dir.divideScalar(L || 1);
       const h = world.raycast(target, dir, L + 0.3, this._camHit || (this._camHit = {}));
       if (h) desired.copy(target).addScaledVector(dir, Math.max(0.3, h.t - 0.3));
-      const gh = world.terrain.height(desired.x, desired.z);
-      if (desired.y < gh + 0.3) desired.y = gh + 0.3;
+      if (this.pos.y > UNDER_LINE) {
+        const gh = world.terrain.height(desired.x, desired.z);
+        if (desired.y < gh + 0.3) desired.y = gh + 0.3;
+      }
+      // swinging in to the eyes as we raise the gun
+      if (this.ads > 0 && !v) desired.lerp(eye, this.ads * this.ads);
       c.position.copy(desired);
       const shake = this.g.gunfire ? this.g.gunfire.shake : 0;
       if (shake > 0) c.position.add(new THREE.Vector3((Math.random() - 0.5) * shake * 0.3, (Math.random() - 0.5) * shake * 0.3, 0));
       c.up.set(0, 1, 0);
       c.lookAt(desired.x + fwd.x * 10, desired.y + fwd.y * 10, desired.z + fwd.z * 10);
     }
-    if (Math.abs(c.fov - fovWant) > 0.05) { c.fov = damp(c.fov, fovWant, this.scoped ? 30 : 10, dt); c.updateProjectionMatrix(); }
+    if (Math.abs(c.fov - fovWant) > 0.05) { c.fov = damp(c.fov, fovWant, this.scoped ? 30 : 16, dt); c.updateProjectionMatrix(); }
+    this.updateView(dt);
   }
 
-  dispose() { this.avatar.dispose(); }
+  // ------------------------------------------------------------
+  // the viewmodel: the gun in front of your eyes when aiming
+  // ------------------------------------------------------------
+  async loadViewGun(key) {
+    this.viewKey = key;
+    if (this.viewGun) { this.viewGun.removeFromParent(); this.viewGun = null; }
+    if (!WEAPONS[key] || !WEAPONS[key].ammo) return;
+    const m = await model("guns/" + key + ".glb");
+    if (this.viewKey !== key) return;
+    const len = { pistol: 0.3, revolver: 0.32, smg: 0.42, shotgun: 0.54, rifle: 0.56, sniper: 0.7, minigun: 0.6, rocket: 0.64 }[key] || 0.4;
+    const s = len / Math.max(m.size.x, m.size.y, m.size.z);
+    m.obj.scale.setScalar(s);
+    // Kenney's blasters already point down -z, which is the camera's forward.
+    // The top of the gun sits just under the middle of the screen.
+    m.obj.position.set(-(m.min.x + m.size.x / 2) * s, -(m.min.y + m.size.y) * s - 0.012, -(m.min.z + m.size.z / 2) * s);
+    const g = new THREE.Group();
+    g.add(m.obj);
+    g.userData.len = len;
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; } });
+    this.view.add(g);
+    this.viewGun = g;
+  }
+
+  updateView(dt) {
+    const on = this.ads > 0.35 && !this.scoped && !this.vehicle && !this.dead;
+    if (on && this.viewKey !== this.weapon) this.loadViewGun(this.weapon);
+    this.view.visible = on && !!this.viewGun;
+    if (!this.view.visible) return;
+    const c = this.g.camera;
+    this.view.position.copy(c.position);
+    this.view.quaternion.copy(c.quaternion);
+    // slides up into place as you aim, kicks back when you fire
+    this.viewKick = damp(this.viewKick || 0, 0, 14, dt);
+    const len = this.viewGun.userData.len;
+    const k = 1 - this.ads;
+    this.viewGun.position.set(k * 0.12, -k * 0.2, -len * 0.55 - 0.05 + this.viewKick * 0.05);
+    this.viewGun.rotation.set(this.viewKick * 0.06, 0, 0);
+  }
+
+  // where a shot leaves the gun you're looking down
+  viewMuzzle(d) {
+    const c = this.g.camera;
+    const len = this.viewGun ? this.viewGun.userData.len : 0.4;
+    return c.position.clone().addScaledVector(d, len + 0.1).add(new THREE.Vector3(0, -0.05, 0).applyQuaternion(c.quaternion));
+  }
+
+  dispose() { this.avatar.dispose(); this.view.removeFromParent(); }
 }

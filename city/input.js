@@ -175,6 +175,15 @@ export class Input {
 
   unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 
+  // capture the mouse again (after a menu closes). Only works straight after
+  // a key press or click, which is when the menus close.
+  lock() {
+    const t = this.target;
+    if (this.locked || !this.wantLock || !t.requestPointerLock || matchMedia("(pointer: coarse)").matches) return;
+    const plain = () => { try { const r = t.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {} };
+    try { const r = t.requestPointerLock({ unadjustedMovement: true }); if (r && r.catch) r.catch(plain); } catch (e) { plain(); }
+  }
+
   dispose() {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);

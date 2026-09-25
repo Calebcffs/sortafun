@@ -17,6 +17,8 @@
 //   city/cars/<id>  = {ty, x, y, z, yaw, by: uid driving or "", t, wr: wrecked}
 //   city/loot/<id>  = server time it was opened
 //   city/feed/<id>  = {k: killer, v: victim, w: weapon, by: killer uid, vu: victim uid, t}
+//   city/builds/<id> = {ty: barricade|wall|spikes|mine|turret, x, y, z, r: yaw, by: uid, t}
+//                      (defences.js; anyone can remove one: it broke or went off)
 //
 // Position updates go out ~5 times a second while moving (every 3 s when
 // still) and remote players are drawn 0.25 s in the past, smoothed.
@@ -232,6 +234,9 @@ export class Net {
       const loot = c.ref("loot");
       this.unsubs.push(db.onChildAdded(loot, (s) => this.onLoot(s.key, s.val(), s.ref)));
       this.unsubs.push(db.onChildChanged(loot, (s) => this.onLoot(s.key, s.val(), s.ref)));
+      const builds = c.ref("builds");
+      this.unsubs.push(db.onChildAdded(builds, (s) => this.onBuild(s.key, s.val(), s.ref)));
+      this.unsubs.push(db.onChildRemoved(builds, (s) => this.onBuild(s.key, null)));
     }
     const feed = db.query(c.ref("feed"), db.limitToLast(8));
     this.unsubs.push(db.onChildAdded(feed, (s) => this.onFeed(s.val(), s.ref)));
@@ -434,6 +439,25 @@ export class Net {
       const pv = vm.parked.get(id);
       if (pv && pv !== this.g.sandbox.player.vehicle && pv.pos.distanceTo(new THREE.Vector3(r.x, r.y, r.z)) > 1) { pv.dispose(); vm.parked.delete(id); }
     }
+  }
+
+  // defences people have built
+  addBuild(id, rec) {
+    if (!this.live) return;
+    const { db } = this.c;
+    db.set(this.c.ref("builds/" + id), { ty: rec.ty, x: rec.x, y: rec.y, z: rec.z, r: rec.r, by: this.uid, t: db.serverTimestamp() }).catch(() => {});
+  }
+  removeBuild(id) {
+    if (!this.live) return;
+    this.c.db.remove(this.c.ref("builds/" + id)).catch(() => {});
+  }
+  onBuild(id, v, ref) {
+    const sb = this.g.sandbox;
+    if (!sb) return;
+    if (!v) return sb.defences.onRemote(id, null);
+    if (typeof v.t !== "number") return;
+    if (this.c.now() - v.t > 3 * 3600e3) { if (ref) this.c.db.remove(ref).catch(() => {}); return; } // tidy old ones away
+    sb.defences.onRemote(id, { ...v, t: v.t - this.c.now() + Date.now() });
   }
 
   lootOpened(id) {

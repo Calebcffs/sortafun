@@ -7,11 +7,18 @@
 //   loot.js      gun cases, chests, boxes, dropped wallets
 //   weapons.js   shooting, rockets, grenades, explosions
 //   shop.js      your stuff, saving, the shop
+//   hub.js       the E menu: inventory, shop, map (map.js)
+//   defences.js  barricades, walls, traps and turrets you put down
 //   cityhud.js   money, health, crosshair, prompts
 //
-// Plus the bits in between: getting in and out of vehicles (and hijacking),
-// opening loot, the wanted level, dying and respawning, the radar markers,
+// Plus the bits in between: F does whatever's in front of you (loot, get in
+// and out of vehicles and hijack, lifts, the metro stairs, ladders), the
+// wanted level, dying and respawning somewhere random, the radar markers,
 // and the hooks net.js uses to show you to other players.
+//
+// Wanted stars only come from trouble with the wardens themselves now
+// (shooting one, taking a police car, hijacking in front of one): shooting
+// zombies is just surviving.
 
 import * as THREE from "three";
 import { HumanPlayer } from "./human.js";
@@ -19,7 +26,10 @@ import { Npcs } from "./npcs.js";
 import { VehicleManager, VEHICLES } from "./vehicles.js";
 import { Loot, VALUABLES } from "./loot.js";
 import { Gunfire, WEAPONS, AMMO } from "./weapons.js";
-import { Shop, loadSave, writeSave, money } from "./shop.js";
+import { loadSave, writeSave, money } from "./shop.js";
+import { Hub } from "./hub.js";
+import { Defences } from "./defences.js";
+import { UNDER_LINE } from "./structures.js";
 import { CityHud } from "./cityhud.js";
 import { WildBirds } from "./ambient.js";
 import { itemGeometry } from "./items.js";
@@ -50,7 +60,10 @@ export class Sandbox {
     this.npcs = new Npcs(game, this);
     this.vehicles = new VehicleManager(game, this);
     this.loot = new Loot(game, this);
-    this.shop = new Shop(game, this);
+    this.defences = new Defences(game, this);
+    this.hub = new Hub(game, this);
+    this.shop = this.hub.shop;
+    this.liftEl = document.getElementById("lift");
     this.wild = new WildBirds(game, { low: 3, med: 6, high: 8 }[game.quality] || 5);
     // what net.js needs to draw other players' poo (the birds online)
     this.geos = { poo: itemGeometry("poo"), splat: itemGeometry("splat") };
@@ -133,9 +146,9 @@ export class Sandbox {
   }
   onShot(key, muzzle, hits, o, d) {
     if (key === "fists" || key === "axe") return;
+    // gunfire draws zombies over to see (it doesn't bother the wardens:
+    // everyone's shooting zombies)
     this.npcs.alarm(this.player.pos, 32);
-    // shooting with a warden watching is enough
-    if (this.npcs.list.some((n) => n.cop && !n.dead && n.pos.distanceTo(this.player.pos) < 30)) this.addWanted(this.wanted ? 0 : 1, this.player.pos);
     if (this.g.net) {
       const end = hits.length ? hits[0].point : o.clone().addScaledVector(d, Math.min(WEAPONS[key].range || 80, 120));
       this.g.net.shot(key, muzzle, end);
@@ -143,6 +156,7 @@ export class Sandbox {
   }
   onThrow(from, d) { if (this.g.net) this.g.net.shot("grenade", from, from.clone().add(d)); }
   onKill(n, info) {
+    if (n.zombie) { this.inv.stats.zombies = (this.inv.stats.zombies || 0) + 1; if (info.head && !info.melee) this.hud.headshot(); return; }
     this.inv.stats.kills++;
     if (n.cop) this.hud.toast("you took down a warden. they won't like that.", "bad");
   }
@@ -187,7 +201,7 @@ export class Sandbox {
     this.g.sound.pickup();
     if (items.some((i) => i.kind === "cash")) this.g.sound.cash();
     this.hud.toast((verb || "found") + ": " + (got.join(", ") || "nothing"), "good");
-    if (items.some((i) => i.kind === "valuable")) this.hud.toast("sell valuables in the shop (B)", "");
+    if (items.some((i) => i.kind === "valuable") && !this.toldSell) { this.toldSell = true; this.hud.toast("sell valuables from your inventory (E)", ""); }
     this.hud.health(); this.hud.weapon();
     this.save();
   }
@@ -201,7 +215,7 @@ export class Sandbox {
 
   useMedkit() {
     const p = this.player;
-    if (this.inv.medkits <= 0) return this.hud.toast("no medkits. the shop has them (B).", "warn");
+    if (this.inv.medkits <= 0) return this.hud.toast("no medkits. the shop has them (E).", "warn");
     if (p.health >= 100) return this.hud.toast("you're fine", "");
     this.inv.medkits--;
     p.heal(60);
@@ -218,15 +232,93 @@ export class Sandbox {
   // ------------------------------------------------------------
   // vehicles: in and out
   // ------------------------------------------------------------
-  interact() {
+  // what F would do right now: {label, go}
+  action() {
     const me = this.player;
-    if (me.dead) return;
-    if (me.vehicle) return this.exitVehicle();
-    // loot first (it's usually what you're looking at), then vehicles
+    if (me.dead || this.menuOpen) return null;
+    if (me.vehicle) {
+      const v = me.vehicle;
+      if (Math.abs(v.speed) > 12 && !v.bike && !(v.plane && !v.onGround)) return null;
+      return { label: v.plane && !v.onGround ? "bail out" : "get out", go: () => this.exitVehicle() };
+    }
+    if (me.ladder) return null;
+    // loot first (it's usually what you're looking at), then lifts, stairs,
+    // ladders, vehicles
     const c = this.loot.nearest(me.pos, 2.2);
-    if (c) { this.give(this.loot.open(c), this.loot.label(c)); return; }
+    if (c) return { label: "open " + this.loot.label(c), go: () => this.give(this.loot.open(c), this.loot.label(c)) };
+    const p = this.portalAt(me.pos);
+    if (p) return { label: p.label, go: () => this.usePortal(p) };
+    const l = me.nearLadder();
+    if (l) return { label: l.top ? "climb down the ladder" : "climb the ladder", go: () => me.grabLadder(null, true) };
     const v = this.vehicles.nearest(me.pos, 2.6);
-    if (v) return this.enterVehicle(v);
+    if (v) return { label: (v.ai || (v.driver && v.driver.npc) ? "hijack the " : "get in the ") + VEHICLES[v.type].name, go: () => this.enterVehicle(v) };
+    return null;
+  }
+
+  interact() { const a = this.action(); if (a) a.go(); }
+
+  // ------------------------------------------------------------
+  // lifts and the metro stairs (structures.js portals)
+  // ------------------------------------------------------------
+  portalAt(p) {
+    const cx = Math.floor(p.x / 128), cz = Math.floor(p.z / 128);
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const ch = this.world.chunks.get((cx + dx) + "," + (cz + dz));
+      if (!ch || !ch.portals) continue;
+      for (const q of ch.portals) {
+        if (Math.abs(p.y - q.y) > (q.yr || 1.6)) continue;
+        if (Math.hypot(p.x - q.x, p.z - q.z) < q.r) return q;
+      }
+    }
+    return null;
+  }
+
+  usePortal(q) {
+    if (q.kind === "lift") return this.openLift(q);
+    this.g.fade(() => {
+      const t = q.to;
+      this.player.place(t.x, t.y, t.z, t.yaw);
+      this.player.camYaw = t.yaw;
+      this.g.sound.door();
+      if (t.y < UNDER_LINE && !this.toldMetro) { this.toldMetro = true; this.hud.toast("the metro. tunnels run under every third road, with a station where two lines cross. the stairs take you back up.", ""); }
+    });
+  }
+
+  // the lift's buttons: every stop but this one (keys 1-3 or click)
+  openLift(q) {
+    this.lift = q;
+    const box = this.liftEl.querySelector(".lift-btns");
+    box.innerHTML = "";
+    q.stops.forEach((s, i) => {
+      const b = document.createElement("button");
+      b.textContent = (i + 1) + ". " + s.name;
+      b.disabled = s.name === q.here;
+      b.onclick = () => this.rideLift(s);
+      box.appendChild(b);
+    });
+    this.liftEl.hidden = false;
+    this.menuOpen = true;
+    this.g.input.unlock();
+    this.g.input.wantLock = false;
+    this.g.sound.lift();
+  }
+  closeLift() {
+    if (!this.lift) return;
+    this.lift = null;
+    this.liftEl.hidden = true;
+    this.menuOpen = false;
+    this.g.input.wantLock = true;
+    this.g.input.lock();
+    this.g.stage.focus();
+  }
+  rideLift(s) {
+    this.closeLift();
+    this.g.fade(() => {
+      this.player.place(s.x, s.y, s.z, s.yaw);
+      this.player.camYaw = s.yaw;
+      this.g.sound.lift();
+      if (s.name === "penthouse" && !this.toldPent) { this.toldPent = true; this.hud.toast("the penthouse. rich people keep strongboxes up here.", "good"); }
+    }, 0.5);
   }
 
   enterVehicle(v) {
@@ -236,9 +328,8 @@ export class Sandbox {
       // hijack: the driver gets thrown out and legs it
       const wasCop = this.vehicles.takeFromTraffic(v);
       const p = v.exitPoint();
-      const n = this.npcs.make(wasCop ? "male-c" : ["male-a", "male-d", "female-b", "female-d", "male-f"][Math.floor(Math.random() * 5)], p.x, v.pos.y, p.z);
-      n.panic = 10; n.fleeFrom = me.pos.clone(); n.cop = wasCop;
-      if (wasCop) { n.weapon = "pistol"; n.chase = true; this.addWanted(2, v.pos); }
+      const n = this.npcs.survivor(wasCop ? "male-c" : ["male-a", "male-d", "female-b", "female-d", "male-f"][Math.floor(Math.random() * 5)], p.x, v.pos.y, p.z, me.pos);
+      if (wasCop) { n.survivor = false; n.panic = 0; n.cop = true; n.weapon = "pistol"; n.chase = true; this.addWanted(2, v.pos); }
       else this.crimeSeen(v.pos, 1);
       this.shout(n, wasCop ? "HEY! THAT'S A POLICE CAR!" : "MY CAR!");
     }
@@ -249,7 +340,7 @@ export class Sandbox {
     me.crouch = false;
     this.g.sound.door();
     this.chute.visible = false; me.parachute = false;
-    const hint = v.plane ? "W/S throttle, down arrow to climb, up arrow to dive, A/D to bank. get fast on a long road, then pull up." : v.bike ? "W/S go and brake, A/D lean. space is the handbrake." : "W/S drive, A/D steer, space handbrake, H horn. E gets you out.";
+    const hint = v.plane ? "W/S throttle, down arrow to climb, up arrow to dive, A/D to bank. get fast on a long road, then pull up." : v.bike ? "W/S go and brake, A/D lean. space is the handbrake." : "W/S drive, A/D steer, space handbrake, H horn. F gets you out.";
     if (!this.hinted || !this.hinted[v.type]) { this.hinted = this.hinted || {}; this.hinted[v.type] = true; this.hud.toast(hint, ""); }
     if (v.plane && !this.inv.garage.includes("plane") && !this.planeFound) { this.planeFound = true; this.hud.big("YOU FOUND THE SECRET PLANE!", "good"); }
     if (this.g.net) this.g.net.enteredVehicle(v);
@@ -298,6 +389,7 @@ export class Sandbox {
     this.hud.wasted(true);
     this.g.sound.crash();
     this.deadT = 4;
+    this.hub.close(); this.closeLift(); this.defences.stopPlacing();
     this.g.input.unlock();
     if (this.g.net && info && info.remote) this.g.net.died(info);
   }
@@ -309,9 +401,8 @@ export class Sandbox {
     me.dead = false; me.health = 100; me.armor = 0;
     this.wanted = 0; this.hud.wanted();
     this.hud.wasted(false);
-    const s = this.g.spawnPoint;
-    me.place(s.x, s.y, s.z, s.yaw);
-    me.vel.set(0, 0, 0);
+    // somewhere new, anywhere in the world
+    this.g.respawnSomewhere();
     this.godT = 4;
     this.hud.money(fee ? -fee : 0);
     this.hud.health();
@@ -356,9 +447,16 @@ export class Sandbox {
   radarTargets() {
     const me = this.player.pos, out = [];
     for (const c of this.loot.containers.values()) {
-      if (this.loot.isOpen(c.id)) continue;
+      if (this.loot.isOpen(c.id) || Math.abs(c.pos.y - me.y) > 25) continue;
       const d = Math.hypot(c.pos.x - me.x, c.pos.z - me.z);
-      if (d < 90) out.push({ x: c.pos.x, z: c.pos.z, d, color: c.type === "case" ? "#ff9a3c" : "#ffd21f" });
+      if (d < 90) out.push({ x: c.pos.x, z: c.pos.z, d, color: c.type === "vault" ? "#ff5cf0" : c.type === "case" ? "#ff9a3c" : "#ffd21f" });
+    }
+    // zombies that are close, and the metro stairs
+    for (const n of this.npcs.list) if (n.zombie && !n.dead) { const d = n.pos.distanceTo(me); if (d < 45) out.push({ x: n.pos.x, z: n.pos.z, d, color: "#7cff5a" }); }
+    const cx = Math.floor(me.x / 128), cz = Math.floor(me.z / 128);
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const ch = this.world.chunks.get((cx + dx) + "," + (cz + dz));
+      if (ch && ch.portals) for (const q of ch.portals) if (q.kind === "metro" && Math.abs(q.y - me.y) < 12) { const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < 150) out.push({ x: q.x, z: q.z, d, color: "#1fa84f", label: "M" }); }
     }
     for (const d0 of this.loot.drops) { const d = Math.hypot(d0.pos.x - me.x, d0.pos.z - me.z); out.push({ x: d0.pos.x, z: d0.pos.z, d, color: "#5cf08e" }); }
     for (const n of this.npcs.list) if (n.cop && !n.dead && n.chase && this.wanted) out.push({ x: n.pos.x, z: n.pos.z, d: n.pos.distanceTo(me), color: "#3b6bff" });
@@ -379,10 +477,22 @@ export class Sandbox {
     this.time += dt;
     this.godT -= dt;
     const me = this.player;
-    // keys
-    if (input.hit("KeyB") || input.hit("Touch:shop")) this.shop.toggle();
-    if (input.hit("KeyH") && !me.vehicle) this.useMedkit();
-    if (!this.menuOpen && (input.hit("KeyE") || input.hit("KeyF") || input.hit("Touch:use"))) this.interact();
+    // keys: E the menu (B on the shop, M on the map), F does things, T builds
+    if (this.lift) {
+      const stops = this.lift.stops, here = this.lift.here;
+      for (let i = 0; i < stops.length; i++) if (input.hit("Digit" + (i + 1)) && stops[i].name !== here) { this.rideLift(stops[i]); break; }
+      if (this.lift && (input.hit("KeyE") || input.hit("KeyF"))) this.closeLift();
+    } else {
+      if (input.hit("KeyE") || input.hit("Tab") || input.hit("Touch:menu")) this.hub.toggle();
+      if (input.hit("KeyB")) this.hub.toggle("shop");
+      if (input.hit("KeyM")) this.hub.toggle("map");
+    }
+    if (input.hit("KeyH") && !me.vehicle && !this.menuOpen) this.useMedkit();
+    if (!this.menuOpen && (input.hit("KeyF") || input.hit("Touch:use"))) this.interact();
+    if (!this.menuOpen && input.hit("KeyT") && !this.defences.placing) {
+      const k = this.inv.lastBuild && this.inv.builds[this.inv.lastBuild] > 0 ? this.inv.lastBuild : Object.keys(this.inv.builds).find((k) => this.inv.builds[k] > 0);
+      if (k) this.defences.startPlacing(k); else this.hud.toast("nothing to build. the shop has barricades, traps and turrets (E).", "warn");
+    } else if (!this.menuOpen) this.defences.updatePlacing(input);
     // you
     me.update(dt, input);
     if (me.vehicle) {
@@ -418,34 +528,29 @@ export class Sandbox {
     this.hitByCars(dt);
     this.npcs.update(dt);
     this.loot.update(dt);
+    this.defences.update(dt);
+    this.hub.update();
     this.g.gunfire.update(dt);
     this.wild.update(dt);
     this.updateBubbles(dt);
     // wanted: stars go when no warden has seen you for a while; police cars join in at 2+
     if (this.wanted > 0) {
       this.unseenT += dt;
-      if (this.unseenT > 14 + this.wanted * 5) { this.wanted--; this.unseenT = 0; this.hud.wanted(); if (!this.wanted) this.hud.toast("you lost the wardens", "good"); }
+      if (this.unseenT > 10 + this.wanted * 4) { this.wanted--; this.unseenT = 0; this.hud.wanted(); if (!this.wanted) this.hud.toast("you lost the wardens", "good"); }
+      // a police car at 3 stars, two at 5, never in plain sight
       this.copCarT -= dt;
-      if (this.wanted >= 2 && this.copCarT <= 0 && this.vehicles.police.filter((v) => !v.dead).length < this.wanted - 1) { this.copCarT = 6; this.vehicles.spawnPolice(); }
+      if (this.wanted >= 3 && this.copCarT <= 0 && me.pos.y > UNDER_LINE && this.vehicles.police.filter((v) => !v.dead).length < Math.floor((this.wanted - 1) / 2)) { this.copCarT = 12; this.vehicles.spawnPolice(); }
     }
     // health creeps back up to half when you keep out of trouble
     if (!me.dead && me.health < 50 && this.time - me.lastHurt > 8) { me.health = Math.min(50, me.health + dt * 2); this.hud.health(); }
     // dead: wait, then back to the start
     if (me.dead) { this.deadT -= dt; if (this.deadT <= 0) this.respawn(); }
-    // what E would do right now
+    // what F would do right now
     let prompt = "";
-    if (!me.dead && !this.menuOpen) {
-      if (me.vehicle) prompt = Math.abs(me.vehicle.speed) > 12 && !me.vehicle.bike && !(me.vehicle.plane && !me.vehicle.onGround) ? "" : me.vehicle.plane && !me.vehicle.onGround ? "[E] bail out" : "[E] get out";
-      else {
-        const c = this.loot.nearest(me.pos, 2.2);
-        if (c) prompt = "[E] open " + this.loot.label(c);
-        else {
-          const v = this.vehicles.nearest(me.pos, 2.6);
-          if (v) prompt = (v.ai || (v.driver && v.driver.npc) ? "[E] hijack the " : "[E] get in the ") + VEHICLES[v.type].name;
-        }
-      }
-    }
-    this.hud.prompt(matchMedia("(pointer: coarse)").matches ? prompt.replace("[E] ", "") : prompt);
+    if (this.defences.placing) prompt = "[click] put it down  [R] turn  [right click] cancel";
+    else if (me.ladder) prompt = "[W/S] climb  [space] let go";
+    else { const a = this.action(); if (a) prompt = "[F] " + a.label; }
+    this.hud.prompt(matchMedia("(pointer: coarse)").matches ? prompt.replace(/\[[^\]]*\] ?/g, "") : prompt);
     this.hud.update(dt);
     this.score = this.inv.money;
   }
@@ -496,7 +601,7 @@ export class Sandbox {
   targetsLegacy() { return []; }
   summary() {
     const s = this.inv.stats;
-    return { human: true, score: this.inv.money, money: this.inv.money, kills: s.kills, opened: s.opened, earned: s.earned, deaths: s.deaths, garage: this.inv.garage.length };
+    return { human: true, score: this.inv.money, money: this.inv.money, kills: s.kills, zombies: s.zombies || 0, opened: s.opened, earned: s.earned, deaths: s.deaths, garage: this.inv.garage.length };
   }
 
   dispose() {
@@ -507,10 +612,12 @@ export class Sandbox {
     this.npcs.dispose();
     this.vehicles.dispose();
     this.loot.dispose();
+    this.defences.dispose();
+    this.hub.dispose();
+    this.liftEl.hidden = true;
     this.wild.dispose();
     this.g.gunfire.dispose();
     this.hud.dispose();
-    this.shop.close();
     for (const b of this.bubbles) b.s.removeFromParent();
     for (const s of this.splats) s.removeFromParent();
     this.g.gunfire = null;
