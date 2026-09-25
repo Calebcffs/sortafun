@@ -427,8 +427,11 @@ game headless for testing.
 Controls (changed from the original on Caleb's ask): DOWN/S flaps nearly
 straight up (60-72 deg, forward speed drops to ~0.18x cruise, height comes
 fast; near a surface while coming down it's the landing flare instead: brakes,
-sinks at ~1 m/s, lands), UP/W is powered fast flight (~1.9x cruise, rising a
-touch, ~0.035x its speed), SHIFT dives, space = poo / nest / lay / feed. After landing
+sinks at ~1 m/s, lands), UP/W is powered fast flight (~1.9x cruise, full
+flapping, rising ~3 deg; heading down, it pulls the nose up hard first),
+hands off is a diving glide (-14 deg, ~1.35x cruise, wings a bit swept) that
+rounds out by itself just above the ground so gliding in still lands you,
+SHIFT is the steep dive, space = poo / nest / lay / feed. After landing
 DOWN has to be let go before it takes off again (`holdLatch`). The
 poo-o-meter drains at one constant rate (`game.js`, 0.0013/s) whatever you do.
 Flight tuning lives in each species' `flight` block; check changes by
@@ -454,8 +457,10 @@ over anything clickable and blips on click (`data-nosfx` on an element or
 container turns that off, `data-sfx="coin"` swaps the click for another
 sound), and adds a speaker button to `.homebar` / the homepage `.nav`
 (localStorage `sortafun-sound`). The homepage also calls
-`SortafunSFX.music.auto()`: a 16-bar chiptune loop (the `SONG` table in
-`sfx.js`) with its own button (`sortafun-music`). Browsers block audio until
+`SortafunSFX.music.auto(1)`: a 16-bar chiptune loop (the `SONG` table in
+`sfx.js`) with its own button (`sortafun-music`). Every other page plays it
+at half volume (`<html data-nomusic>` opts a page out) and it carries on from
+page to page (position in sessionStorage `sortafun-music-pos`). Browsers block audio until
 the first click or key, so nothing plays before that (`whenReady(fn)` queues
 something for then, the passport uses it for stamp thumps).
 
