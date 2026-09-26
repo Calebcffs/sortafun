@@ -6,14 +6,14 @@
 <title>city sandbox &middot; SORTAFUN.ORG</title>
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css?v=078c46a8">
-<link rel="stylesheet" href="city/city.css?v=c5292ec9">
+<link rel="stylesheet" href="city/city.css?v=42afc847">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./city/ambient.js": "./city/ambient.js?v=5c3282d0",
   "./city/assets.js": "./city/assets.js?v=d2a6be3b",
-  "./city/audio.js": "./city/audio.js?v=3412e24e",
+  "./city/audio.js": "./city/audio.js?v=4b5fadab",
   "./city/avatar.js": "./city/avatar.js?v=8eba6d58",
   "./city/builders.js": "./city/builders.js?v=9442795c",
   "./city/cityhud.js": "./city/cityhud.js?v=857843d8",
@@ -21,7 +21,7 @@
   "./city/crew.js": "./city/crew.js?v=06331265",
   "./city/defences.js": "./city/defences.js?v=e1cf473a",
   "./city/effects.js": "./city/effects.js?v=3d83c8d2",
-  "./city/evac.js": "./city/evac.js?v=1157db9c",
+  "./city/evac.js": "./city/evac.js?v=eb7aea8d",
   "./city/flight.js": "./city/flight.js?v=b1193206",
   "./city/game.js": "./city/game.js?v=1673834d",
   "./city/horde.js": "./city/horde.js?v=f6ce343b",
@@ -30,25 +30,26 @@
   "./city/human.js": "./city/human.js?v=89e1c6fc",
   "./city/input.js": "./city/input.js?v=9bb5d5f5",
   "./city/interiors.js": "./city/interiors.js?v=57ac6952",
+  "./city/intro.js": "./city/intro.js?v=e98dbe44",
   "./city/items.js": "./city/items.js?v=3d33fe6d",
   "./city/loot.js": "./city/loot.js?v=816dd7c8",
-  "./city/main.js": "./city/main.js?v=6f424eeb",
+  "./city/main.js": "./city/main.js?v=9aec434d",
   "./city/map.js": "./city/map.js?v=7947a347",
-  "./city/menu.js": "./city/menu.js?v=d099c126",
+  "./city/menu.js": "./city/menu.js?v=71d8596d",
   "./city/model.js": "./city/model.js?v=e063d2e0",
   "./city/net.js": "./city/net.js?v=59be861b",
   "./city/noise.js": "./city/noise.js?v=eb132f6e",
   "./city/npcs.js": "./city/npcs.js?v=d19fa5e5",
   "./city/people.js": "./city/people.js?v=d3359f9c",
   "./city/progress.js": "./city/progress.js?v=08b41d6b",
-  "./city/sandbox.js": "./city/sandbox.js?v=46f90aaa",
+  "./city/sandbox.js": "./city/sandbox.js?v=b2ae1f5e",
   "./city/shop.js": "./city/shop.js?v=f9f9997e",
   "./city/sky.js": "./city/sky.js?v=f44f2eeb",
   "./city/species.js": "./city/species.js?v=32bd7215",
   "./city/structures.js": "./city/structures.js?v=a59af21d",
   "./city/terrain.js": "./city/terrain.js?v=9a0cfd9a",
   "./city/textures.js": "./city/textures.js?v=0aa51510",
-  "./city/vehicles.js": "./city/vehicles.js?v=72c53eb6",
+  "./city/vehicles.js": "./city/vehicles.js?v=951e708d",
   "./city/weapons.js": "./city/weapons.js?v=6d794ea4",
   "./city/world.js": "./city/world.js?v=10deada9"
 } }
@@ -112,7 +113,7 @@
         <div class="m-pick">
           <div class="m-col">
             <label class="m-name">your name <input id="pname" type="text" maxlength="16" size="14" placeholder="shown over your head" autocomplete="off" spellcheck="false"></label>
-            <div id="outfitbox"><h3>your look <small class="m-note">(more outfits in the shop)</small></h3><div id="outfitlist" class="birdlist"></div></div>
+            <div id="outfitbox" hidden><h3>your look <small class="m-note">(more outfits in the shop)</small></h3><div id="outfitlist" class="birdlist"></div></div>
             <div id="birdbox" hidden><h3>pick your bird <small class="m-note">(you found the birds)</small></h3><div id="birdlist" class="birdlist"></div></div>
             <button id="play" class="m-play">PLAY! &#9654;</button>
             <div class="m-online" id="headcount">&nbsp;</div>
@@ -126,7 +127,7 @@
             <div id="birdinfo" class="birdinfo"></div>
           </div>
         </div>
-        <div class="m-keys" id="keys-human"><b>WASD</b> move &middot; <b>mouse</b> look (click the game first) &middot; <b>shift</b> sprint &middot; <b>space</b> jump &middot; <b>C</b> crouch &middot; <b>left click</b> shoot &middot; <b>right click</b> aim down the sights &middot; <b>R</b> reload &middot; <b>1-9 / wheel / Q</b> weapons &middot; <b>G</b> grenade &middot; <b>F</b> open, get in, lifts, ladders, stairs (hold it to pick people up, crack drops, hold the signal) &middot; <b>E</b> inventory, shop, crew and map &middot; <b>T</b> build &middot; <b>L</b> torch &middot; <b>Z</b> ping &middot; <b>X</b> quick chat &middot; <b>J</b> join a crew invite &middot; <b>H</b> medkit &middot; <b>V</b> camera &middot; <b>P</b> pause</div>
+        <div class="m-keys" id="keys-human">WASD move &middot; mouse look &middot; click shoot &middot; right click aim &middot; F use &middot; E menu &middot; the intro shows you the rest</div>
         <div class="m-keys" id="keys-bird" hidden><b>left / right</b> turn &middot; <b>down / S</b> flap straight up (and flare to land) &middot; <b>up / W</b> fly fast and a bit up &middot; <b>let go</b> swoop down &middot; <b>shift</b> dive &middot; <b>space</b> poo, nest, lay, feed &middot; <b>C</b> call &middot; <b>V</b> camera &middot; <b>P</b> pause &middot; drag to look around</div>
         <button id="egg" class="egg" title="coo?" aria-label="something small"><svg viewBox="0 0 24 24"><path d="M3 13c3-1 5-4 9-4 2 0 3-2 5-2 1.5 0 2.5 1 3 2l2 .5-2 1c-.5 3-3 6-8 6-3 0-6-1-9-3.5z" fill="#9aa3ad" stroke="#1d1b2e" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17.3" cy="9" r="0.9" fill="#1d1b2e"/></svg></button>
       </div>
@@ -187,6 +188,17 @@
       </div>
     </div>
     <div id="qchat" class="qchat" hidden></div>
+    <!-- the intro (intro.js) -->
+    <div id="intro" class="intro" hidden>
+      <div class="in-tint"></div><div class="in-static"></div><div class="in-grain"></div><div class="in-vig"></div><div class="in-flash"></div>
+      <div class="in-bar top"></div><div class="in-bar bot"></div>
+      <div class="in-card"></div>
+      <div class="in-cap"></div>
+      <div class="in-guide"></div>
+      <div class="in-title"><b>city sandbox</b><span>survive the night. get out.</span></div>
+      <button class="in-skip" data-nosfx>skip intro &#9656;</button>
+      <div class="in-prog"><i></i></div>
+    </div>
     <div id="lift" class="lift" hidden><b>lift</b><div class="lift-btns"></div><small>press a number or click. F to stay put.</small></div>
     <div id="fade" class="fade"></div>
     <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
@@ -206,7 +218,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=0c8ecaf4"></script>
-<script type="module" src="city/main.js?v=6f424eeb"></script>
+<script type="module" src="city/main.js?v=9aec434d"></script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

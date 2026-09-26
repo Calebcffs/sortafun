@@ -60,13 +60,16 @@ export class Menu {
   markKind() {
     const human = this.kind === "human";
     document.getElementById("egg").classList.toggle("on", !human);
-    document.getElementById("outfitbox").hidden = !human;
+    // (no picking a look here any more: outfits are in the shop. The preview
+    // only comes back for the birds)
+    document.getElementById("outfitbox").hidden = true;
+    document.querySelector("#m-title .preview-col").hidden = human;
+    document.querySelector("#m-title .m-pick").classList.toggle("solo", human);
     document.getElementById("birdbox").hidden = human;
     document.getElementById("keys-human").hidden = !human;
     document.getElementById("keys-bird").hidden = human;
     document.getElementById("play").innerHTML = human ? "PLAY! &#9654;" : "FLY! &#9654;";
-    if (human) { this.buildOutfitList(); this.selectOutfit(this.outfit); }
-    else if (this.previewRenderer) { this.buildBirdList(); this.selectBird(this.species); }
+    if (!human && this.previewRenderer) { this.buildBirdList(); this.selectBird(this.species); }
   }
 
   // the outfits you own (the save in shop.js), each with a little picture
@@ -277,9 +280,18 @@ export class Menu {
     if (!name) { name = "survivor" + Math.floor(100 + Math.random() * 900); this.nameEl.value = name; }
     save("sortafun-name", name);
     this.g.hud.hide();
-    this.show("loading");
-    // give the loading screen a frame to appear before the heavy work
-    setTimeout(() => this.g.start({ species: this.species, quality: this.quality, invert: this.invert, online: true, name, kind: this.kind, outfit: this.outfit }), 30);
+    const go = () => {
+      this.show("loading");
+      // give the loading screen a frame to appear before the heavy work
+      setTimeout(() => this.g.start({ species: this.species, quality: this.quality, invert: this.invert, online: true, name, kind: this.kind, outfit: this.outfit }), 30);
+    };
+    // people get the intro first (intro.js; skippable)
+    if (this.kind === "human" && !this.g.running) {
+      this.g.stop();
+      this.hide();
+      this.g.input.enabled = false;
+      this.g.intro.run(this.quality).then(go);
+    } else go();
   }
 
   loading(p, msg) {

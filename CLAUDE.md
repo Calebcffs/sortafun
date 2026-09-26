@@ -531,8 +531,22 @@ and one barricade.
   `ch.parking` (kerbside spots every city block, trucks in industry yards) and
   `isHangarBlock()` / `hangar()`: one industry block per industrial region,
   nearest its middle, becomes a closed hangar with the plane.
-- **Vehicles**: arcade physics as before; traffic is thin now (survivors).
-  Plane: W/S throttle, down arrow climbs, up arrow dives, A/D bank.
+- **Vehicles** (reworked 2026-09-26, Caleb said driving felt bad): cars and
+  bikes are a flat rigid body (forward speed `u`, sideways `lat`, yaw rate
+  `w`; `speed` is a getter/setter for `u`) with slip-angle tyres per axle
+  capped by mu x axle load (friction circle), load transfer, power-limited
+  engine with gears (`rpm` drives the engine note), brakes, drag, handbrake
+  locks the rear (drifts), surface grip (tarmac 1, grass .72, sand .6, snow
+  .42, ice .22; offroad vehicles better), stability control (ESC) on
+  everything, rear tyres stiffer than fronts so it understeers rather than
+  spins. Collisions are impulses (wall bounce + yaw kick, car-car by mass).
+  Stats come from each `VEHICLES` entry's `top` / `accel` / `len` via
+  `spec()`. Measured: sedan 0-100 8.6s, 100-0 in ~40m, ~1g cornering. The
+  plane (`fly`/`flyStep`) has lift (CL vs angle of attack, stalls at ~15
+  degrees), drag, prop thrust, auto-trim for hands-off level flight, and
+  bank-to-turn; takes off in ~120m, glides ~13:1. Test by driving a
+  `Vehicle` headless with `ground`/`surfaceGrip` stubbed flat (see
+  git history for the d1/d2 numbers).
 
 **2026-09-26 purpose update (read `city/ROADMAP.md`):** Caleb asked for the
 sandbox to have a point: co-op against zombies, horror at night, a goal. Five
@@ -568,6 +582,17 @@ Testing: two players = two `browser.createBrowserContext()`s against the
 emulators. A background tab is throttled to about 1 fps, so judge network
 effects from the foreground page or pump `city.simulate` yourself.
 Evac/escape timings run on real server time, not simulated time.
+
+**The intro (`city/intro.js`, 2026-09-26):** PLAY (as a person) runs a
+~90s cinematic before the game loads, skippable (button, Space, Enter, Esc).
+It builds its own World (same seed) + SkySystem and films real places:
+downtown and a street at golden hour, the mast, the industrial yards, hills,
+snow, islands, downtown at night, a tower roof, a metro tunnel, the chopper
+at the plaza, then six how-to cards (driven by the intro's own clock, not
+CSS time) and the title. Shots are data in `shots()`; `window.__introOnly =
+[i...]` plays just some (tests). Colour grades go on `#view` as a CSS
+filter (overlays can't blend with WebGL from inside the intro's layer).
+The title screen no longer has the outfit picker (outfits are in the shop).
 
 **Online (`city/net.js`)**: Firebase Realtime Database + anonymous sign-in,
 everything under `city/` (players, hits, cars, loot, feed, builds; shapes in the

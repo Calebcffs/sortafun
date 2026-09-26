@@ -30,6 +30,7 @@ import { World } from "./world.js";
 import { SkySystem, GOLDEN } from "./sky.js";
 import { UNDER_LINE } from "./structures.js";
 import { TELEPORT_EVERY } from "./map.js";
+import { Intro } from "./intro.js";
 import { Bird } from "./model.js";
 import { SPECIES, gameScale } from "./species.js";
 import { Flyer } from "./flight.js";
@@ -77,6 +78,7 @@ class Game {
     this.sound = new Sound();
     this.hud = new Hud(this);
     this.menu = new Menu(this);
+    this.intro = new Intro(this);
     this.clock = new THREE.Clock();
     this.running = false;
     this.paused = false;
@@ -406,6 +408,7 @@ class Game {
   loop() {
     requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, this.clock.getDelta());
+    if (this.intro.active) { this.intro.frame(dt); return; }
     if (!this.scene || !this.flyer) { this.menu.renderPreview(dt); return; }
     if (this.running && !this.paused) {
       const t0 = performance.now();

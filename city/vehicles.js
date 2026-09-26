@@ -113,7 +113,7 @@ export class Vehicle {
     this.pos = new THREE.Vector3(x, y, z);
     this.vel = new THREE.Vector3();
     this.yaw = yaw; this.pitch = 0; this.roll = 0;
-    this.speed = 0; this.steer = 0; this.vy = 0; this.side = 0;
+    this.u = 0; this.lat = 0; this.w = 0; this.steer = 0; this.vy = 0;
     this.throttle = 0; this.plThrottle = 0;
     this.hp = this.def.hp || 120;
     this.fire = 0; this.dead = false; this.wreck = false;
@@ -183,43 +183,172 @@ export class Vehicle {
   }
 
   // ------------------------------------------------------------
-  // driving. c = {throttle, steer, brake, handbrake, pitch, roll}
+  // driving. c = {throttle, steer, handbrake, pitch}
+  //
+  // Cars and bikes are a flat rigid body: forward speed u, sideways speed
+  // lat (right is +), yaw rate w (turning right is +), in the car's own
+  // frame. Each axle's tyres push back against sliding sideways (a slip-angle
+  // tyre: grip grows with slip, then tops out at mu x the load on it), the
+  // engine pushes through the driven wheels (power-limited, so it pulls hard
+  // low down and runs out at the top), brakes and drag slow it. Braking moves
+  // weight onto the front, accelerating onto the back, so a hard stop turns
+  // in and too much power in a rear-drive car steps the tail out. The
+  // handbrake locks the rear wheels: they lose most of their sideways grip,
+  // hence drifts. Grip depends on the surface (tarmac, grass, sand, snow, ice).
+  // Worked in small fixed steps so it stays steady at any frame rate.
   // ------------------------------------------------------------
+  get speed() { return this.u || 0; }
+  set speed(v) { this.u = v; if (!v) { this.lat = 0; this.w = 0; } if (this.v3) this.v3.copy(this.forward(new THREE.Vector3())).multiplyScalar(v); }
+
+  // mass, power, grip... from the table (with sensible guesses by size)
+  spec() {
+    if (this._spec) return this._spec;
+    const d = this.def;
+    const mass = d.mass || (this.bike ? 240 : Math.round(900 + this.len * this.len * 38 + (d.hp > 150 ? 3000 : 0)));
+    const L = this.bike ? 1.45 : Math.max(2.3, this.len * 0.6);
+    const a = L * (d.rear ? 0.45 : 0.5), b = L - a;          // CG to front / rear axle
+    const top = d.top, fMax = mass * Math.min(9.5, d.accel * 0.85); // pulling force from rest
+    const power = fMax * top * 0.36;                          // watts-ish
+    const drag = power / (top * top * top);                  // so drag = power at top speed
+    return (this._spec = {
+      mass, L, a, b, I: mass * (a * a + b * b) * 0.6, h: this.bike ? 0.7 : this.len > 5.5 ? 1.1 : 0.55,
+      fMax, power, drag, roll: 0.012 * mass * 9.81, mu: (this.bike ? 1.05 : 1) * (d.low ? 1.2 : 1),
+      // (the rear tyres grip a bit harder than the fronts, like a real road
+      // car set up to run wide rather than spin when pushed too far)
+      stiffF: this.bike ? 14 : 13, stiffR: this.bike ? 18 : 19, muF: 0.94,
+      drive: d.drive || (d.offroad ? "awd" : this.bike || d.low || d.top > 45 ? "rwd" : "fwd"),
+      brake: mass > 4000 ? 0.62 : 0.95, reverse: Math.min(9, top * 0.25), gears: this.bike ? 6 : d.top > 45 ? 6 : 5,
+      esc: true,
+    });
+  }
+
+  // how grippy the ground under us is (checked a few times a second)
+  surfaceGrip() {
+    this.gripT = (this.gripT || 0) - 1;
+    if (this.gripT > 0) return this.gripNow;
+    this.gripT = 10;
+    const g = this.g.world.groundAt(this.pos.x, this.pos.z, this.pos.y + 1, this.gtmp2 || (this.gtmp2 = {}));
+    let mu = 1;
+    if (g.kind === "ground" || g.kind === "void") {
+      const s = this.g.world.terrain.sample(this.pos.x, this.pos.z);
+      const off = this.def.offroad ? 0.25 : 0;
+      if (s.ice) mu = 0.22;
+      else if (s.built > 0.9) mu = 1;                           // tarmac
+      else if (s.w.snow > 0.5) mu = 0.42 + off;
+      else if (s.beach > 0.4) mu = 0.6 + off * 0.8;
+      else mu = 0.72 + off;                                    // grass and dirt
+    } else if (g.water) mu = 0.3;
+    this.gripNow = Math.min(1, mu);
+    return this.gripNow;
+  }
+
   drive(dt, c) {
     if (this.plane) return this.fly(dt, c);
-    const d = this.def;
-    const world = this.g.world;
     if (this.dead) c = { throttle: 0, steer: 0, handbrake: 1 };
-    const inWater = this.sunk;
-    // engine and brakes
-    const top = d.top * (inWater ? 0.1 : 1);
-    let acc = 0;
-    if (c.throttle > 0) acc = this.speed < -0.5 ? 18 : d.accel * 1.25 * c.throttle * (1 - Math.max(0, this.speed) / top);
-    else if (c.throttle < 0) acc = this.speed > 0.5 ? -18 : d.accel * 0.6 * c.throttle * (1 + Math.min(0, this.speed) / (top * 0.35));
-    if (!this.onGround) acc = 0;
-    this.speed += acc * dt;
-    // rolling resistance and air drag
-    this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), (1.2 + 0.0025 * this.speed * this.speed) * dt * (this.onGround ? 1 : 0.1));
-    if (c.handbrake && this.onGround) this.speed = damp(this.speed, 0, 1.5, dt);
-    // steering (less lock at speed); bikes lean
-    const lock = (this.bike ? 0.55 : 0.6) / (1 + Math.abs(this.speed) * 0.085);
-    this.steer = damp(this.steer, c.steer * lock, 8, dt);
-    const wb = this.len * 0.6;
-    if (this.onGround) {
-      let yawRate = (this.speed * Math.tan(this.steer)) / wb;
-      if (c.handbrake) yawRate *= 1.6;
-      this.yaw -= yawRate * dt;
-      // grip: sideways slip bleeds away (less with the handbrake: drift)
-      this.side = damp(this.side, (c.handbrake ? 0.35 : 0.05) * yawRate * Math.abs(this.speed) * 0.25, c.handbrake ? 1.5 : 8, dt);
+    const S = this.spec();
+    if (this.u == null) this.u = 0;
+    this.lat = this.lat || 0; this.w = this.w || 0;
+    const prev = this.pos.clone();
+    // steering: keyboards are all-or-nothing, so the wheel turns at a rate,
+    // and there's less lock at speed (like a real rack plus a steady hand)
+    const lock = (this.bike ? 0.5 : 0.62) / (1 + Math.max(0, Math.abs(this.u) - 6) * 0.045);
+    const want = clamp(c.steer || 0, -1, 1) * lock;
+    this.steer += clamp(want - this.steer, -3.2 * dt, 3.2 * dt);
+    const mu = this.surfaceGrip() * (this.sunk ? 0.2 : 1) * S.mu;
+    const n = Math.max(1, Math.ceil(dt / (1 / 120)));
+    const h = dt / n;
+    let ax = 0;
+    for (let i = 0; i < n; i++) ax = this.tyreStep(h, c, S, mu);
+    // what the engine note should do: rev through the gears
+    const gearTop = this.def.top / S.gears;
+    const au = Math.abs(this.u);
+    this.gear = Math.min(S.gears, 1 + Math.floor(au / gearTop));
+    const inGear = (au - (this.gear - 1) * gearTop) / gearTop;
+    this.rpm = clamp(0.22 + inGear * 0.7 + (this.gear > 1 ? 0.08 : 0) + (c.throttle > 0 && au < 2 ? 0.15 : 0), 0, 1);
+    // the body leans in corners and dips under braking (just for show)
+    this.bodyPitch = damp(this.bodyPitch || 0, clamp(ax * 0.012, -0.08, 0.08), 6, dt);
+    this.bodyRoll = damp(this.bodyRoll || 0, clamp(this.u * this.w * (this.bike ? 0 : 0.012), -0.09, 0.09), 6, dt);
+    this.ground(dt, prev);
+  }
+
+  // one small step of the tyre physics; returns forward acceleration
+  tyreStep(h, c, S, mu) {
+    const g = 9.81, m = S.mass;
+    const air = !this.onGround;
+    let u = this.u, v = this.lat, w = this.w;
+    const d = this.steer;
+    const thr = clamp(c.throttle || 0, -1, 1);
+    // driver: accelerate, brake, or reverse
+    let drive = 0, brake = 0;
+    if (thr > 0) { if (u < -0.5) brake = thr; else drive = thr; }
+    else if (thr < 0) { if (u > 0.5) brake = -thr; else drive = thr; }
+    const hb = c.handbrake ? 1 : 0;
+    // weight on each axle, shifted by how hard we're speeding up / slowing down
+    const ax0 = this.lastAx || 0;
+    let fzF = m * g * S.b / S.L - m * ax0 * S.h / S.L, fzR = m * g * S.a / S.L + m * ax0 * S.h / S.L;
+    fzF = Math.max(fzF, m * g * 0.15); fzR = Math.max(fzR, m * g * 0.15);
+    if (air) { fzF = 0; fzR = 0; }
+    // engine force (power-limited), shared out to the driven wheels
+    let fDrive = 0;
+    if (drive > 0) fDrive = Math.min(S.fMax, S.power / Math.max(Math.abs(u), 3)) * drive * (u > this.def.top ? 0 : 1);
+    else if (drive < 0) fDrive = u > -S.reverse ? S.fMax * 0.55 * drive : 0;
+    const share = S.drive === "awd" ? 0.5 : S.drive === "fwd" ? 1 : 0;
+    // brakes: 60/40 front/rear, and the handbrake on the rear
+    const bForce = brake * S.brake * mu * m * g;
+    const sgn = Math.sign(u) || 0;
+    let flF = fDrive * share - bForce * 0.6 * sgn;
+    let flR = fDrive * (1 - share) - (bForce * 0.4 + hb * mu * fzR * 0.8) * sgn;
+    // coasting: engine braking and rolling resistance
+    if (!drive && !brake) { const eb = (S.roll + S.drag * u * u * 0.4 + m * 0.4) * sgn; flR -= S.drive === "fwd" ? 0 : eb; flF -= S.drive === "fwd" ? eb : 0; }
+    // tyre slip: sideways speed of each axle in its own wheel's frame
+    const cs = Math.cos(d), sn = Math.sin(d);
+    const vf = v + S.a * w, vr = v - S.b * w;
+    const longF = u * cs + vf * sn, latF = -u * sn + vf * cs;
+    const reg = 2.5; // (below walking pace a slip angle means nothing)
+    let fyF = -S.stiffF * fzF * Math.atan(latF / Math.max(Math.abs(longF), reg));
+    let fyR = -S.stiffR * fzR * Math.atan(vr / Math.max(Math.abs(u), reg)) * (hb ? 0.35 : 1);
+    // each axle can only give so much, sideways and forwards together
+    const cap = (fx, fy, fz, lim) => { const tot = Math.hypot(fx, fy), max = mu * fz * lim; return tot > max && tot > 0 ? max / tot : 1; };
+    let k = cap(flF, fyF, fzF, S.muF); flF *= k; fyF *= k;
+    k = cap(flR, fyR, fzR, hb ? 0.7 : 1); flR *= k; fyR *= k;
+    // forces in the car's frame
+    const fx = flF * cs - fyF * sn + flR - S.drag * u * Math.abs(u) - (air ? 0 : S.roll * Math.tanh(u * 2) * 0.5);
+    const fy = flF * sn + fyF * cs + fyR - S.drag * v * Math.abs(v) * 3;
+    const tq = S.a * (flF * sn + fyF * cs) - S.b * fyR;
+    // (rotating frame: turning right swings the velocity round)
+    let du = fx / m + v * w, dv = fy / m - u * w, dw = tq / S.I;
+    if (air) { du = 0; dv = 0; dw = -w * 0.5; }
+    // stability control: if the car starts turning faster than the grip can
+    // carry it (a slide), brake the yaw back, unless you're on the handbrake
+    else if (S.esc && !hb && Math.abs(u) > 3) {
+      const wMax = (mu * 9.81 * 1.05) / Math.abs(u);
+      const slip = Math.atan2(Math.abs(v), Math.abs(u));
+      if (Math.abs(w) > wMax || slip > 0.14) {
+        const over = Math.max(Math.abs(w) - wMax, (slip - 0.14) * 2);
+        dw -= Math.sign(w) * Math.min(over * 8, Math.abs(w) * 8);
+        dv -= v * 1.5;
+      }
     }
-    const f = this.forward(this.tmp || (this.tmp = new THREE.Vector3()));
+    u += du * h; v += dv * h; w += dw * h;
+    // stopped and nobody on the pedals: stay stopped (no creeping about)
+    if (!drive && (brake || hb || Math.abs(u) < 0.25) && Math.abs(u) < 0.25 && Math.abs(v) < 0.3) { u = 0; v = 0; w *= 0.8; }
+    if (!drive && !brake && !hb && Math.abs(u) < 0.08 && Math.abs(v) < 0.08) { u = 0; v = 0; }
+    this.u = u; this.lat = v; this.w = w;
+    this.lastAx = damp(ax0, du, 20, h);
+    // move and turn
+    this.yaw -= w * h;
+    const fx0 = Math.sin(this.yaw), fz0 = Math.cos(this.yaw);
+    this.pos.x += (fx0 * u - fz0 * v) * h;
+    this.pos.z += (fz0 * u + fx0 * v) * h;
+    return du;
+  }
+
+  // keep the wheels on the ground, fly off ramps, bump into things
+  ground(dt, prev) {
+    const world = this.g.world;
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     const r = this.tmpR || (this.tmpR = new THREE.Vector3());
     r.set(-Math.cos(this.yaw), 0, Math.sin(this.yaw));
-    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-    const prev = this.pos.clone();
-    this.pos.x += (fx * this.speed + r.x * this.side) * dt;
-    this.pos.z += (fz * this.speed + r.z * this.side) * dt;
-    // the ground under each wheel: height, tilt
     const yMax = this.pos.y + 1.1;
     const g = this.gtmp || (this.gtmp = {});
     const hz = this.hz * 0.75, hx = this.hx * 0.8;
@@ -243,16 +372,24 @@ export class Vehicle {
       if (this.pos.y <= gy) { if (this.vy < -12) this.damage((-this.vy - 12) * 4, null); this.pos.y = gy; this.vy = 0; this.onGround = true; }
       this.pitch = damp(this.pitch, -this.vy * 0.02, 1.5, dt);
     } else {
-      // on the ground: follow it (fast drops off kerbs are fine)
-      if (gy < this.pos.y - 0.05 && Math.abs(this.speed) > 12 && gy < this.pos.y - 0.6) { this.onGround = false; this.vy = 0; }
-      else { this.pos.y = damp(this.pos.y, gy, 18, dt); this.vy = 0; this.onGround = true; }
+      // on the ground: follow it; a crest at speed throws you into the air
+      if (gy < this.pos.y - 0.6 && Math.abs(this.u) > 12) { this.onGround = false; this.vy = -Math.sin(this.pitch) * Math.abs(this.u) * 0.2; }
+      else {
+        // going up a slope at speed: keep some of that as a little lift
+        const climb = (gy - this.pos.y) / Math.max(dt, 1e-3);
+        this.pos.y = damp(this.pos.y, gy, 18, dt); this.vy = 0; this.onGround = true;
+        if (climb > 6 && Math.abs(this.u) > 15) { this.vy = Math.min(climb * 0.35, 7); this.onGround = false; }
+      }
       this.pitch = damp(this.pitch, -tp, 10, dt);
     }
-    this.roll = this.bike ? damp(this.roll, clamp(-this.steer * Math.abs(this.speed) * 0.09, -0.7, 0.7), 5, dt) : damp(this.roll, -tr, 10, dt);
+    // bikes lean into the turn (the lean a real bike needs for the corner)
+    this.roll = this.bike ? damp(this.roll, clamp(-Math.atan(this.u * this.w / 9.81), -0.8, 0.8), 8, dt) : damp(this.roll, -tr, 10, dt);
     // deep water: the car sinks, the engine dies
     this.sunk = water >= 3 && world.terrain.height(this.pos.x, this.pos.z) < SEA - 1.2;
-    if (this.sunk) { this.speed = damp(this.speed, 0, 2, dt); this.sinkT = (this.sinkT || 0) + dt; if (this.sinkT > 6 && !this.dead) this.damage(1000, null); } else this.sinkT = 0;
-    // walls and props: spheres along the body
+    if (this.sunk) { this.u = damp(this.u, 0, 2, dt); this.sinkT = (this.sinkT || 0) + dt; if (this.sinkT > 6 && !this.dead) this.damage(1000, null); } else this.sinkT = 0;
+    // walls and props: spheres along the body. Hitting one bounces the
+    // velocity off the wall and knocks the car round
+    const S = this.spec();
     let bump = 0;
     const p2 = this.pp || (this.pp = new THREE.Vector3());
     const rad = Math.max(0.5, this.hx);
@@ -264,9 +401,9 @@ export class Vehicle {
         if (!col || col.kind === "canopy" || col.t === "seg") return;
         const hn = Math.hypot(nr.x, nr.z);
         if (hn < 0.3) return;
-        this.pos.x += (nr.x / hn) * depth; this.pos.z += (nr.z / hn) * depth;
-        const into = -(fx * nr.x + fz * nr.z) / hn;
-        if (into > 0.25) bump = Math.max(bump, Math.abs(this.speed) * into);
+        const nx = nr.x / hn, nz = nr.z / hn;
+        this.pos.x += nx * depth; this.pos.z += nz * depth;
+        bump = Math.max(bump, this.impact(nx, nz, a, 0.25, S));
       });
     }
     // other vehicles: turned rectangles overlapping (separating axis test)
@@ -276,87 +413,177 @@ export class Vehicle {
       if (Math.abs(this.pos.y - o.pos.y) > 2) continue;
       const hit = obbHit(this.pos.x, this.pos.z, this.yaw, this.hx, this.hz, o.pos.x, o.pos.z, o.yaw, o.hx, o.hz);
       if (!hit) continue;
-      // push apart (a parked car gets shoved too)
-      const share = !o.driver && !o.ai ? 0.5 : 1;
-      this.pos.x += hit.nx * hit.depth * share; this.pos.z += hit.nz * hit.depth * share;
-      if (share < 1) { o.pos.x -= hit.nx * hit.depth * (1 - share); o.pos.z -= hit.nz * hit.depth * (1 - share); o.nudged = true; o.speed = 0; }
-      // how hard: our speed into the other car, minus theirs
-      const ovx = Math.sin(o.yaw) * (o.speed || 0), ovz = Math.cos(o.yaw) * (o.speed || 0);
-      const rel = -((fx * this.speed - ovx) * hit.nx + (fz * this.speed - ovz) * hit.nz);
-      if (rel > 4) {
-        bump = Math.max(bump, rel);
-        o.damage(Math.max(0, rel - 5) * 1.2, this.driver === "me" ? "me" : null);
-        if (o.ai) o.ai.stuck = 1.5;
+      // push apart by weight
+      const Mo = o.spec ? o.spec().mass : 1500, Mt = S.mass;
+      const kThis = Mo / (Mo + Mt);
+      this.pos.x += hit.nx * hit.depth * kThis; this.pos.z += hit.nz * hit.depth * kThis;
+      o.pos.x -= hit.nx * hit.depth * (1 - kThis); o.pos.z -= hit.nz * hit.depth * (1 - kThis);
+      // relative speed along the contact normal
+      const vt = this.worldVel(), vo = o.worldVel ? o.worldVel() : { x: 0, z: 0 };
+      const rel = (vt.x - vo.x) * hit.nx + (vt.z - vo.z) * hit.nz;
+      if (rel < 0) {
+        // share the knock by mass (0.3 bounce)
+        const j = -(1.3 * rel) / (1 / Mt + 1 / Mo);
+        this.push(hit.nx * j / Mt, hit.nz * j / Mt);
+        if (o.push) { o.push(-hit.nx * j / Mo, -hit.nz * j / Mo); if (!o.driver && !o.ai) o.nudged = true; }
+        if (-rel > 4) {
+          bump = Math.max(bump, -rel);
+          o.damage(Math.max(0, -rel - 5) * 1.2, this.driver === "me" ? "me" : null);
+          if (o.ai) o.ai.stuck = 1.5;
+        }
       }
     }
     if (bump > 4) {
-      this.speed *= Math.max(0.1, 1 - bump / Math.max(10, Math.abs(this.speed) + 1));
       this.g.sound.crashCar(clamp(bump / 25, 0.2, 1) * (this.driver === "me" ? 1 : this.g.sound.near(this.pos.distanceTo(this.g.camera.position), 80)));
       this.damage(Math.max(0, bump - 6) * 1.1, null);
       if (this.driver === "me") this.g.gunfire.shake = Math.max(this.g.gunfire.shake, bump / 30);
-    } else if (bump > 0) this.speed *= 0.97;
+    }
     this.moved = prev.distanceTo(this.pos);
   }
 
-  // the plane: throttle W/S, pitch up/down, roll A/D (turns by banking)
+  // velocity over the ground, and a push to it (world x, z)
+  worldVel() {
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), u = this.u || 0, v = this.lat || 0;
+    return { x: fx * u - fz * v, z: fz * u + fx * v };
+  }
+  push(dx, dz) {
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    this.u = (this.u || 0) + dx * fx + dz * fz;
+    this.lat = (this.lat || 0) - dx * fz + dz * fx;
+  }
+  // hitting a wall at (along the car) a: bounce off it and spin a bit.
+  // Returns how hard it was
+  impact(nx, nz, a, e, S) {
+    const vel = this.worldVel();
+    const vn = vel.x * nx + vel.z * nz;
+    if (vn >= 0) return 0;
+    const j = -(1 + e) * vn;
+    this.push(nx * j, nz * j);
+    // scrub some speed along the wall too
+    this.u *= 0.985; this.lat *= 0.9;
+    // a hit away from the middle turns the car (r x J, as a yaw kick)
+    const rx = Math.sin(this.yaw) * a, rz = Math.cos(this.yaw) * a;
+    this.w = (this.w || 0) + ((rx * nz - rz * nx) * j * S.mass / S.I) * 0.5;
+    return -vn;
+  }
+
+  // ------------------------------------------------------------
+  // the plane: a small prop plane with real-ish aerodynamics. W/S throttle,
+  // down arrow pulls up (elevator), up arrow pushes down, A/D ailerons
+  // (bank to turn; it turns because the lift tilts). Lift grows with speed
+  // squared and angle of attack, until about 15 degrees, where the wing
+  // stalls and the nose drops. Drag grows with lift. It flies at 25 m/s and
+  // above; below that it sinks. On the ground it rolls on its wheels, steers
+  // with the nosewheel, and lifts off when there's enough air over the wing.
+  // ------------------------------------------------------------
   fly(dt, c) {
-    const world = this.g.world;
     if (this.dead || !this.driver) c = { throttle: -1, steer: 0, pitch: 0, handbrake: 1 }; // nobody flying it: engine off, glide down
     c = { throttle: c.throttle || 0, steer: c.steer || 0, pitch: c.pitch || 0, handbrake: c.handbrake || 0 };
     this.plThrottle = clamp(this.plThrottle + c.throttle * dt * 0.6, 0, 1);
-    const thrust = this.plThrottle * 10.5;
+    if (!this.v3) this.v3 = this.forward(new THREE.Vector3()).multiplyScalar(this.u || 0);
+    const n = Math.max(1, Math.ceil(dt / (1 / 90)));
+    for (let i = 0; i < n; i++) this.flyStep(dt / n, c);
+    this.u = this.v3.length() * Math.sign(this.v3.dot(this.forward(this.tmp || (this.tmp = new THREE.Vector3()))) || 1);
+    this.rpm = this.plThrottle;
+    if (this.prop) this.prop.rotation.z += (this.plThrottle * 60 + (this.driver ? 8 : 0)) * dt;
+  }
+
+  flyStep(h, c) {
+    const world = this.g.world;
+    const M = 850, S = 14, RHO = 1.2, g = 9.81;
+    const v = this.v3;
     const f = this.forward(this.tmp || (this.tmp = new THREE.Vector3()));
-    const liftSpeed = 30;
-    // speed along the nose: thrust, drag, and gravity along the climb
-    this.speed += (thrust - 0.0022 * this.speed * this.speed * 1.4 - 9.81 * Math.sin(-this.pitch) * 0.9) * dt;
-    if (this.onGround && c.handbrake) this.speed = damp(this.speed, 0, 1, dt);
-    this.speed = Math.max(this.onGround ? -2 : 5, this.speed);
-    const lift = clamp((this.speed - liftSpeed * 0.7) / (liftSpeed * 0.5), 0, 1); // 0 = stalled
-    // controls work better the faster we go
-    const auth = clamp(this.speed / 25, 0.15, 1.2);
-    if (!this.onGround) {
-      this.roll = clamp(this.roll + c.steer * 1.8 * auth * dt, -1.2, 1.2);
-      if (!c.steer) this.roll = damp(this.roll, 0, 0.8, dt);
-      this.pitch = clamp(this.pitch + c.pitch * 1.1 * auth * dt, -1.2, 1.2);
-      this.yaw -= Math.sin(this.roll) * 0.9 * auth * dt; // bank to turn
-      // stalling: the nose drops
-      if (lift < 0.6) this.pitch = damp(this.pitch, 0.5, (0.6 - lift) * 2, dt);
-    } else {
-      this.roll = damp(this.roll, 0, 6, dt);
-      // taxiing: turns almost on the spot when slow (brakes on one wheel)
-      this.yaw -= c.steer * (this.speed < 12 ? 0.75 : 0.9 * clamp(12 / this.speed, 0.2, 1)) * dt;
-      // rotate for take-off once fast enough
-      const want = this.speed > liftSpeed * 0.85 && c.pitch < 0 ? -0.18 : 0;
-      this.pitch = damp(this.pitch, want, 3, dt);
+    // the wings' "up", tilted by the bank
+    const right0 = new THREE.Vector3(-Math.cos(this.yaw), 0, Math.sin(this.yaw));
+    const up0 = new THREE.Vector3().crossVectors(right0, f).normalize();
+    const up = up0.clone().multiplyScalar(Math.cos(this.roll)).addScaledVector(right0, Math.sin(this.roll)).normalize();
+    const sp = v.length();
+    const q = 0.5 * RHO * sp * sp;
+    // angle of attack: how far the air meets the wing from below
+    const alpha = sp > 1 ? Math.atan2(-v.dot(up), Math.max(0.1, v.dot(f))) : 0;
+    const stall = 0.26;
+    const CL = Math.abs(alpha) < stall ? 0.25 + 5 * alpha : Math.sign(alpha) * (0.25 + 5 * stall) * Math.max(0.2, 1 - (Math.abs(alpha) - stall) * 4);
+    const CD = 0.035 + 0.05 * CL * CL + (this.onGround ? 0.02 : 0);
+    const force = new THREE.Vector3();
+    // thrust (a prop gives less as you go faster)
+    force.addScaledVector(f, this.plThrottle * 3600 * clamp(1 - sp / 95, 0.1, 1));
+    if (sp > 0.5) {
+      const vd = v.clone().divideScalar(sp);
+      // lift: square to the airflow, in the plane of the wings' up
+      const liftDir = up.clone().addScaledVector(vd, -up.dot(vd)).normalize();
+      force.addScaledVector(liftDir, q * S * CL);
+      force.addScaledVector(vd, -q * S * CD);
     }
-    // move: along the nose, plus sinking when there isn't enough lift
-    const fwd = this.forward(this.tmp);
-    this.vy = damp(this.vy, -(1 - lift) * 9, 1.2, dt);
-    this.pos.addScaledVector(fwd, this.speed * dt);
-    if (!this.onGround) this.pos.y += this.vy * dt;
-    // ground contact
-    const g = world.groundAt(this.pos.x, this.pos.z, this.pos.y + 1.5, this.gtmp || (this.gtmp = {}));
-    let gy = g.water ? SEA : g.y;
+    force.y -= M * g;
+    // on the ground: wheels, rolling friction, brakes, no sliding sideways
+    const gnd = world.groundAt(this.pos.x, this.pos.z, this.pos.y + 1.5, this.gtmp || (this.gtmp = {}));
+    let gy = gnd.water ? SEA : gnd.y;
     gy = Math.max(gy, this.mgr.solidTopAt(this.pos.x, this.pos.z, this.pos.y + 1.5, this));
+    if (this.onGround) {
+      if (force.y < 0) force.y = 0;
+      const along = v.dot(f);
+      force.addScaledVector(f, -Math.sign(along) * (M * g * (c.handbrake || (c.throttle < 0 && this.plThrottle < 0.05) ? 0.5 : 0.03)) * Math.min(1, Math.abs(along)));
+    }
+    v.addScaledVector(force, h / M);
+    if (this.onGround) {
+      // the wheels keep it rolling where it points
+      const along = v.dot(f);
+      const vy = Math.max(0, v.y);
+      v.copy(f).multiplyScalar(along); v.y = Math.max(vy, v.y);
+      if (Math.abs(along) < 0.05 && c.handbrake) v.set(0, 0, 0);
+    }
+    // controls: stronger the more air flows over them
+    const auth = clamp(sp / 30, 0.1, 1.3);
+    if (!this.onGround) {
+      this.roll = clamp(this.roll + c.steer * 1.9 * auth * h, -1.2, 1.2);
+      if (!c.steer) this.roll = damp(this.roll, 0, 0.35, h);
+      // elevator pitches the nose (down arrow = +pitch = nose up)
+      this.pitch = clamp(this.pitch + c.pitch * 1.1 * auth * h, -1.3, 1.3);
+      // the tail keeps the nose pointing into the airflow, a little above
+      // it: the plane's trimmed to hold its height with your hands off
+      // (the bank turns the nose round with the flight path)
+      if (sp > 5) {
+        const vd = v.clone().normalize();
+        const wantYaw = Math.atan2(vd.x, vd.z);
+        const trim = clamp(((M * g * Math.cos(this.roll)) / Math.max(1, q * S) - 0.25) / 5, -0.04, 0.2);
+        const wantPitch = -Math.asin(clamp(vd.y, -1, 1)) - (c.pitch ? 0 : trim);
+        this.yaw = dampAngle(this.yaw, wantYaw, 2.5 * auth, h);
+        if (Math.abs(alpha) > stall || sp < 18) {
+          // stalled: the nose drops and it falls until there's air again
+          // (the nose swings down into the airflow, which is what unstalls it)
+          this.pitch = damp(this.pitch, Math.max(-Math.asin(clamp(vd.y, -1, 1)), 0.35), 1.8, h);
+          this.roll = damp(this.roll, this.roll * 1.05, 0.5, h);
+        } else this.pitch = damp(this.pitch, wantPitch, (c.pitch ? 0.35 : 1.4) * auth, h);
+      }
+    } else {
+      this.roll = damp(this.roll, 0, 6, h);
+      // nosewheel steering, gentler with speed
+      this.yaw -= c.steer * (sp < 12 ? 0.8 : 0.8 * 12 / sp) * h;
+      // rotate for take-off once the elevator has air over it
+      const want = sp > 24 && c.pitch < 0 ? -0.2 : 0;
+      this.pitch = damp(this.pitch, want, 2.5, h);
+    }
+    this.pos.addScaledVector(v, h);
+    // ground contact
     if (this.pos.y <= gy) {
-      const hard = -fwd.y * this.speed - this.vy;
-      if (!this.onGround && (hard > 7 || Math.abs(this.roll) > 0.5 || this.pitch > 0.35 || g.water)) this.damage(hard * 8 + 30, null);
-      this.pos.y = gy; this.vy = 0; this.onGround = true;
+      const hard = -v.y;
+      if (!this.onGround && (hard > 5 || Math.abs(this.roll) > 0.45 || this.pitch > 0.3 || gnd.water)) this.damage(hard * 10 + 30, null);
+      this.pos.y = gy; if (v.y < 0) v.y = 0; this.onGround = true;
       if (this.pitch > 0) this.pitch = 0;
     } else if (this.pos.y > gy + 0.3) this.onGround = false;
+    this.vy = v.y;
     // hitting things
     let hit = 0;
     const p2 = this.pp || (this.pp = new THREE.Vector3());
-    for (const [a, side, up] of [[3.4, 0, 1.6], [0.9, 4.8, 2.1], [0.9, -4.8, 2.1], [-4.2, 0, 2.0]]) {
-      p2.set(this.pos.x + Math.sin(this.yaw) * a - Math.cos(this.yaw) * side, this.pos.y + up, this.pos.z + Math.cos(this.yaw) * a + Math.sin(this.yaw) * side);
+    for (const [a, side, upY] of [[3.4, 0, 1.6], [0.9, 4.8, 2.1], [0.9, -4.8, 2.1], [-4.2, 0, 2.0]]) {
+      p2.set(this.pos.x + Math.sin(this.yaw) * a - Math.cos(this.yaw) * side, this.pos.y + upY, this.pos.z + Math.cos(this.yaw) * a + Math.sin(this.yaw) * side);
       world.collideSphere(p2, 0.6, (nr, depth, col) => { if (col && col.kind !== "canopy" && col.t !== "seg") hit = Math.max(hit, depth); });
     }
     if (hit > 0.05) {
-      if (this.speed > 12) this.damage(this.speed * 4, null);
-      this.speed *= 0.3;
-      this.pos.addScaledVector(fwd, -0.4);
+      if (sp > 12) this.damage(sp * 4, null);
+      v.multiplyScalar(0.3);
+      this.pos.addScaledVector(f, -0.4);
     }
-    if (this.prop) this.prop.rotation.z += (this.plThrottle * 60 + (this.driver ? 8 : 0)) * dt;
   }
 
   // ------------------------------------------------------------
@@ -400,6 +627,8 @@ export class Vehicle {
     }
     this.root.position.copy(this.pos);
     this.root.rotation.set(this.pitch, this.yaw, this.roll, "YXZ");
+    // the body on its springs: squat, dive and lean (cars, not bikes)
+    if (this.body && !this.bike && !this.plane) { this.body.rotation.x = -(this.bodyPitch || 0); this.body.rotation.z = -(this.bodyRoll || 0); }
     this.wheelSpin += (this.speed * dt) / 0.38;
     for (const w of this.wheels) w.rotation.x = this.wheelSpin;
     for (const w of this.front) w.rotation.y = this.bike ? this.steer : this.steer;
@@ -690,7 +919,7 @@ export class VehicleManager {
     }
     for (const v of this.parked.values()) {
       if (!isFinite(v.pos.x + v.pos.y + v.pos.z)) { v.pos.copy(v.home ? new THREE.Vector3(v.home.x, v.home.y, v.home.z) : me.pos); v.speed = 0; v.vy = 0; }
-      if (v !== me.vehicle && (v.speed !== 0 || v.vy !== 0 || !v.onGround || v.nudged)) {
+      if (v !== me.vehicle && (v.speed !== 0 || v.lat || v.vy !== 0 || !v.onGround || v.nudged)) {
         // coasting to a stop after you get out, or pushed about
         v.drive(dt, { throttle: 0, steer: 0, handbrake: Math.abs(v.speed) < 3 ? 1 : 0 });
         if (Math.abs(v.speed) < 0.05 && v.onGround) { v.speed = 0; if (v.nudged) { v.nudged = false; this.leave(v); } }

@@ -686,7 +686,7 @@ export class Sandbox {
       v.drive(dt, { throttle: thr, steer, handbrake: input.down("Space") ? 1 : 0, pitch });
       v.update(dt);
       this.npcs.runOver(v);
-      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : "car", clamp(v.plane ? v.plThrottle : Math.abs(v.speed) / v.def.top, 0, 1));
+      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : "car", clamp(v.rpm != null ? v.rpm : Math.abs(v.speed) / v.def.top, 0, 1));
       if (v.sunk && !v.plane) { this.exitVehicle(true); this.hud.toast("your car sank!", "bad"); }
     } else this.g.sound.engine(null);
     // the parachute

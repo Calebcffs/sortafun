@@ -323,6 +323,15 @@ export class Sound {
     this.tone("sawtooth", 1500, 700, 1.1, 0.1 * vol, 0.2, [2600, 1]);
     this.noiseBurst(1.2, "bandpass", 1800, 2, 0.12 * vol, 0.1);
   }
+  // the intro: radio static, and a low sting for the title
+  static(secs = 4) { if (this.ensure()) { this.noiseBurst(secs, "bandpass", 2600, 0.6, 0.09); this.noiseBurst(secs * 0.6, "highpass", 5000, 0.5, 0.05, secs * 0.2); } }
+  stinger() {
+    if (!this.ensure()) return;
+    this.tone("sawtooth", 55, 41, 3.2, 0.16, 0, [300, 1]);
+    this.tone("sawtooth", 82.4, 61.7, 3.2, 0.1, 0, [500, 1]);
+    this.noiseBurst(1.5, "lowpass", 180, 1, 0.4);
+    this.tone("sine", 220, 207, 3, 0.05, 0.1);
+  }
   chop(vol = 1) { if (this.ensure() && vol > 0.02) this.noiseBurst(0.07, "lowpass", 260, 1.4, 0.35 * vol); }
   heartbeat(vol = 1) { if (this.ensure()) { this.tone("sine", 62, 45, 0.12, 0.3 * vol); this.tone("sine", 58, 42, 0.14, 0.24 * vol, 0.22); } }
   siren(vol = 1) { if (this.ensure()) { for (let i = 0; i < 3; i++) this.tone("sawtooth", 420, 780, 1.1, 0.045 * vol, i * 1.2, [1200, 1]); } }

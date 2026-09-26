@@ -324,7 +324,7 @@ export class Evac {
 }
 
 // a chunky rescue helicopter out of boxes
-function makeHeli(scene) {
+export function makeHeli(scene) {
   const g = new THREE.Group();
   const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, metalness: 0.2 });
   const body = M(0xe8e4d8), red = M(0xd8342c), dark = M(0x222428), glass = M(0x7fb6e6);
