@@ -6,7 +6,7 @@
 <title>city sandbox &middot; SORTAFUN.ORG</title>
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css?v=078c46a8">
-<link rel="stylesheet" href="city/city.css?v=42afc847">
+<link rel="stylesheet" href="city/city.css?v=ce225d4f">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -16,42 +16,50 @@
   "./city/audio.js": "./city/audio.js?v=4b5fadab",
   "./city/avatar.js": "./city/avatar.js?v=8eba6d58",
   "./city/builders.js": "./city/builders.js?v=9442795c",
-  "./city/cityhud.js": "./city/cityhud.js?v=857843d8",
+  "./city/campaign.js": "./city/campaign.js?v=4a0d02e8",
+  "./city/cast.js": "./city/cast.js?v=0204663b",
+  "./city/cinema.js": "./city/cinema.js?v=d644d58f",
+  "./city/cityhud.js": "./city/cityhud.js?v=bd63f29f",
   "./city/clock.js": "./city/clock.js?v=f1fa9ee7",
   "./city/crew.js": "./city/crew.js?v=06331265",
-  "./city/defences.js": "./city/defences.js?v=e1cf473a",
+  "./city/defences.js": "./city/defences.js?v=dfd147d5",
   "./city/effects.js": "./city/effects.js?v=3d83c8d2",
   "./city/evac.js": "./city/evac.js?v=eb7aea8d",
   "./city/flight.js": "./city/flight.js?v=b1193206",
   "./city/game.js": "./city/game.js?v=1673834d",
   "./city/horde.js": "./city/horde.js?v=f6ce343b",
-  "./city/hub.js": "./city/hub.js?v=709c8978",
+  "./city/hub.js": "./city/hub.js?v=57b51ced",
   "./city/hud.js": "./city/hud.js?v=a5424e21",
-  "./city/human.js": "./city/human.js?v=f4bfadca",
+  "./city/human.js": "./city/human.js?v=1eed73c7",
   "./city/input.js": "./city/input.js?v=9bb5d5f5",
   "./city/interiors.js": "./city/interiors.js?v=57ac6952",
   "./city/intro.js": "./city/intro.js?v=e98dbe44",
   "./city/items.js": "./city/items.js?v=3d33fe6d",
   "./city/loot.js": "./city/loot.js?v=816dd7c8",
-  "./city/main.js": "./city/main.js?v=9aec434d",
-  "./city/map.js": "./city/map.js?v=7947a347",
-  "./city/menu.js": "./city/menu.js?v=71d8596d",
+  "./city/main.js": "./city/main.js?v=94ca946a",
+  "./city/map.js": "./city/map.js?v=324f6b13",
+  "./city/menu.js": "./city/menu.js?v=0cf2d03d",
   "./city/model.js": "./city/model.js?v=e063d2e0",
   "./city/net.js": "./city/net.js?v=d49fce07",
   "./city/noise.js": "./city/noise.js?v=eb132f6e",
-  "./city/npcs.js": "./city/npcs.js?v=d19fa5e5",
+  "./city/npcs.js": "./city/npcs.js?v=dcbddacd",
   "./city/people.js": "./city/people.js?v=d3359f9c",
   "./city/progress.js": "./city/progress.js?v=08b41d6b",
-  "./city/sandbox.js": "./city/sandbox.js?v=9ae0ac22",
+  "./city/sandbox.js": "./city/sandbox.js?v=dd6f6e27",
   "./city/shop.js": "./city/shop.js?v=f9f9997e",
   "./city/sky.js": "./city/sky.js?v=f44f2eeb",
   "./city/species.js": "./city/species.js?v=32bd7215",
-  "./city/structures.js": "./city/structures.js?v=a59af21d",
+  "./city/story.js": "./city/story.js?v=28c6d57e",
+  "./city/story1.js": "./city/story1.js?v=097b6263",
+  "./city/story2.js": "./city/story2.js?v=2cbb8b82",
+  "./city/story3.js": "./city/story3.js?v=2cfa4fa5",
+  "./city/storykit.js": "./city/storykit.js?v=d25085eb",
+  "./city/structures.js": "./city/structures.js?v=082556a1",
   "./city/terrain.js": "./city/terrain.js?v=9a0cfd9a",
   "./city/textures.js": "./city/textures.js?v=0aa51510",
-  "./city/vehicles.js": "./city/vehicles.js?v=9255aa63",
-  "./city/weapons.js": "./city/weapons.js?v=6d794ea4",
-  "./city/world.js": "./city/world.js?v=10deada9"
+  "./city/vehicles.js": "./city/vehicles.js?v=6a9574f6",
+  "./city/weapons.js": "./city/weapons.js?v=e7b5503a",
+  "./city/world.js": "./city/world.js?v=6186aa28"
 } }
 </script>
 <script src="sfx.js?v=fb4567ef"></script>
@@ -60,7 +68,7 @@
 <header class="homebar"><a class="hb-logo" href="index.html">SORTAFUN<small>.org</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
 <div class="wrap birdie-wrap">
   <h1>city sandbox</h1>
-  <p class="sub">one big city gone quiet, except for the zombies. you get dropped somewhere random, online with everyone else.
+  <p class="sub">one big city gone quiet, except for the zombies. play the story on your own, or go online and get dropped somewhere random with everyone else.
     loot the insides of buildings (that's where the money is), buy guns and barricades, ride the lifts up the towers, get down into the metro, and don't let them get close.</p>
 
   <div id="stage" class="stage" tabindex="0">
@@ -115,7 +123,10 @@
             <label class="m-name">your name <input id="pname" type="text" maxlength="16" size="14" placeholder="shown over your head" autocomplete="off" spellcheck="false"></label>
             <div id="outfitbox" hidden><h3>your look <small class="m-note">(more outfits in the shop)</small></h3><div id="outfitlist" class="birdlist"></div></div>
             <div id="birdbox" hidden><h3>pick your bird <small class="m-note">(you found the birds)</small></h3><div id="birdlist" class="birdlist"></div></div>
-            <button id="play" class="m-play">PLAY! &#9654;</button>
+            <div class="m-modes" id="modes">
+              <button id="story" class="m-play m-mode story"><b>STORY</b><small>Halcyon: 12 chapters, on your own</small></button>
+              <button id="play" class="m-play m-mode"><b>ONLINE</b><small>one city, everyone in it</small></button>
+            </div>
             <div class="m-online" id="headcount">&nbsp;</div>
             <div class="m-row center m-settings">
               <label class="m-opt">graphics <select id="quality"><option value="low">low</option><option value="med">medium</option><option value="high">high</option></select></label>
@@ -131,6 +142,41 @@
         <div class="m-keys" id="keys-bird" hidden><b>left / right</b> turn &middot; <b>down / S</b> flap straight up (and flare to land) &middot; <b>up / W</b> fly fast and a bit up &middot; <b>let go</b> swoop down &middot; <b>shift</b> dive &middot; <b>space</b> poo, nest, lay, feed &middot; <b>C</b> call &middot; <b>V</b> camera &middot; <b>P</b> pause &middot; drag to look around</div>
         <button id="egg" class="egg" title="coo?" aria-label="something small"><svg viewBox="0 0 24 24"><path d="M3 13c3-1 5-4 9-4 2 0 3-2 5-2 1.5 0 2.5 1 3 2l2 .5-2 1c-.5 3-3 6-8 6-3 0-6-1-9-3.5z" fill="#9aa3ad" stroke="#1d1b2e" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17.3" cy="9" r="0.9" fill="#1d1b2e"/></svg></button>
       </div>
+      <div id="m-story" class="m-screen story-screen" hidden>
+        <div class="m-logo small">halcyon</div>
+        <div class="m-tag">a courier delivers one last package to Rhys Tower. three nights later, either the signal's off or the city's gone.</div>
+        <div class="st-top">
+          <button id="st-continue" class="m-play">continue</button>
+          <div class="st-diff" id="st-diff"><span>difficulty</span><button data-d="easy">easy</button><button data-d="normal">normal</button><button data-d="hard">hard</button></div>
+        </div>
+        <div class="st-list" id="st-list"></div>
+        <div class="m-row center">
+          <button id="st-new" class="m-small">new story</button>
+          <button id="st-back" class="m-small">back</button>
+        </div>
+      </div>
+      <div id="m-fail" class="m-screen" hidden>
+        <div class="m-logo small">you didn't make it</div>
+        <div class="m-tag" id="failwhy"></div>
+        <div class="m-row center">
+          <button id="f-retry" class="m-play">retry from checkpoint</button>
+        </div>
+        <div class="m-row center">
+          <button id="f-restart" class="m-small">restart the chapter</button>
+          <button id="f-quit" class="m-small">quit to chapters</button>
+        </div>
+      </div>
+      <div id="m-done" class="m-screen" hidden>
+        <div class="m-logo small" id="donetitle">chapter complete</div>
+        <div class="m-tag" id="donewhat"></div>
+        <div class="m-stats" id="donestats"></div>
+        <div class="m-row center">
+          <button id="d-next" class="m-play">next chapter &#9654;</button>
+        </div>
+        <div class="m-row center">
+          <button id="d-quit" class="m-small">chapters</button>
+        </div>
+      </div>
       <div id="m-loading" class="m-screen" hidden>
         <div class="m-logo small">city sandbox</div>
         <div class="m-tag" id="loadmsg">building the world...</div>
@@ -142,12 +188,17 @@
         <div class="m-row center">
           <button id="resume" class="m-play">keep playing</button>
         </div>
+        <div class="m-row center" id="pause-story" hidden>
+          <button id="p-retry" class="m-small">retry from checkpoint</button>
+          <button id="p-restart" class="m-small">restart the chapter</button>
+          <button id="p-quit" class="m-small">quit to chapters</button>
+        </div>
         <div class="m-row center">
           <label class="m-opt"><input id="invert2" type="checkbox"> invert up/down</label>
           <label class="m-opt"><input id="sound" type="checkbox" checked> sound</label>
           <label class="m-opt"><input id="daylock" type="checkbox"> stop the clock</label>
         </div>
-        <div class="m-row center">
+        <div class="m-row center" id="pause-online">
           <button id="endflight" class="m-small">end &amp; post score</button>
           <button id="newbird" class="m-small">back to the menu</button>
         </div>
@@ -199,12 +250,40 @@
       <button class="in-skip" data-nosfx>skip intro &#9656;</button>
       <div class="in-prog"><i></i></div>
     </div>
+    <!-- the story (cinema.js, campaign.js) -->
+    <div id="story-hud" class="story-hud" hidden>
+      <div class="sh-bars"></div>
+      <div class="sh-count"></div>
+      <div class="sh-meter" hidden><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg><div><i></i></div></div>
+      <div class="sh-way" hidden><b></b><span></span></div>
+      <div class="sh-edge" hidden><b></b><span></span></div>
+    </div>
+    <div id="radio" class="talk radio" hidden><img alt="" hidden><div><b></b><span></span></div></div>
+    <div id="qte" class="qte" hidden>
+      <svg class="qte-ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/></svg>
+      <kbd class="qte-key"></kbd>
+      <div class="qte-count"></div>
+      <div class="qte-label"></div>
+      <div class="qte-opts"></div>
+    </div>
+    <div id="cine" class="cine" hidden>
+      <div class="cn-bar top"></div><div class="cn-bar bot"></div>
+      <div class="cn-vig"></div><div class="cn-flash"></div>
+      <div class="cn-card"><span></span></div>
+      <div class="cn-cap"></div>
+      <div class="talk cn-talk"><img alt="" hidden><div><b></b><span></span></div></div>
+      <div class="cn-title"><small></small><b></b></div>
+      <div class="cn-credits"></div>
+      <div class="cn-skip">press again to skip</div>
+      <button class="cn-skipbtn" data-nosfx>skip &#9656;</button>
+    </div>
     <div id="lift" class="lift" hidden><b>lift</b><div class="lift-btns"></div><small>press a number or click. F to stay put.</small></div>
     <div id="fade" class="fade"></div>
     <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
   </div>
 
   <div class="birdie-help">
+    <div><b>story mode:</b> "Halcyon", twelve chapters over three nights, played on your own in the same city. you're the courier who delivered the part that switched on the broadcast. with Mari, Teo, Nana, Kofi and (eventually) Captain Varga, you've got until dawn after the third night to switch it off. checkpoints in every chapter, easy / normal / hard, and every chapter you finish pays into your online cash.</div>
     <div><b>the goal:</b> get out. everyone online shares one evacuation: fuel the radio mast at Broadcast Plaza (the red R on the map) with 12 fuel cans, then hold its console while the noise brings the horde, and a helicopter comes. be on the helipad when it leaves and you escape: $20,000 and a fresh start. then the mast needs fuel again.</div>
     <div><b>day and night:</b> the same clock for everyone. 11 minutes of golden hour, then dusk, then 5 and a half minutes of night: dark, twice as many zombies, runners that sprint, screamers that call the rest, brutes that shrug off headshots. get somewhere safe, keep your torch on (L) and stick together. survive to dawn and you get paid.</div>
     <div><b>going down:</b> at zero health you go down, not out. crawl, shoot, and hold on while someone holds F by you to pick you up, or use a medkit yourself. bleed out at night and you can rise as a zombie till dawn and hunt everyone else.</div>
@@ -218,7 +297,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=0c8ecaf4"></script>
-<script type="module" src="city/main.js?v=9aec434d"></script>
+<script type="module" src="city/main.js?v=94ca946a"></script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

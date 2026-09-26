@@ -380,6 +380,16 @@ export function broadcastPlaza(world, ctx, cx, cz, y) {
   }
   b.cyl(m.x, y + MAST_H, m.z, 0.15, 8, 6, L.WHITE, white);
   for (const hh of [MAST_H + 8, MAST_H * 0.66, MAST_H * 0.33]) b.sphere(m.x, y + hh, m.z, hh > MAST_H ? 0.7 : 0.5, 8, L.LIGHT, [1, 0.15, 0.1]);
+  // a ladder up the middle to a little platform at the top (the story's
+  // last climb, and a long way up for anyone else)
+  const topY = y + MAST_H;
+  b.box(m.x, topY - 0.3, m.z, 3.4, 0.3, 3.4, 0, { side: L.CONCRETE, top: L.CONCRETE, color: [0.35, 0.36, 0.38] });
+  world.addBox(ctx, m.x - 1.7, topY - 0.3, m.z - 1.7, m.x + 1.7, topY, m.z + 1.7, "platform");
+  for (const [sx, sz] of [[1, 0], [-1, 0], [0, -1]]) {
+    b.box(m.x + sx * 1.65, topY, m.z + sz * 1.65, sx ? 0.08 : 3.4, 1.1, sz ? 0.08 : 3.4, 0, { color: steel });
+    world.addBox(ctx, m.x + (sx ? sx * 1.65 - 0.05 : -1.7), topY, m.z + (sz ? sz * 1.65 - 0.05 : -1.7), m.x + (sx ? sx * 1.65 + 0.05 : 1.7), topY + 1.1, m.z + (sz ? sz * 1.65 + 0.05 : 1.7), "rail");
+  }
+  ladder(world, ctx, m.x, m.z + 0.25, 0, 1, y, topY);
   // dishes
   for (const [dx, dh] of [[1, 0.55], [-1, 0.72]]) b.cyl(m.x + dx * 2.2, y + MAST_H * dh, m.z, 1.2, 0.3, 12, L.WHITE, white, { r1: 0.4 });
   // the generator shed, with a big fuel tank on its side

@@ -176,7 +176,7 @@ export class CityHud {
       const v = p.vehicle;
       let t = "<b>" + Math.round(Math.abs(v.speed) * 3.6) + "</b> km/h";
       if (v.plane) t += "<br>alt " + Math.max(0, Math.round(v.pos.y - this.g.world.terrain.height(v.pos.x, v.pos.z))) + " m &middot; throttle " + Math.round(v.plThrottle * 100) + "%";
-      t += '<div class="ch-vhp"><i style="width:' + Math.round((v.hp / (v.def.hp || 120)) * 100) + '%"></i></div>';
+      t += '<div class="ch-vhp"><i style="width:' + Math.round((v.hp / (v.maxHp || v.def.hp || 120)) * 100) + '%"></i></div>';
       sp.innerHTML = t;
       sp.hidden = false;
     } else sp.hidden = true;
@@ -193,13 +193,13 @@ export class CityHud {
     // the clock (and the evac line, set by evac.js)
     this.clockT = (this.clockT || 0) - dt;
     if (this.clockT <= 0) {
-      this.clockT = 0.25;
+      this.clockT = this.sb.story ? 0.1 : 0.25;
       const c = this.sb.clock;
-      const t = p.turned ? "turned: " + c.label() : c.label();
+      const t = this.sb.story ? this.sb.story.clockLabel() : p.turned ? "turned: " + c.label() : c.label();
       const el = this.q(".ch-clock");
       if (el.textContent !== t) el.textContent = t;
       el.className = "ch-clock " + c.phase;
-      const o = this.sb.evac ? this.sb.evac.line() : "";
+      const o = this.sb.story ? this.sb.story.line() : this.sb.evac ? this.sb.evac.line() : "";
       const oe = this.q(".ch-obj");
       if (oe.textContent !== o) oe.textContent = o;
       oe.hidden = !o;

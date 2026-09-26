@@ -53,7 +53,7 @@ export class WorldMap {
       if (drag && drag.moved < 5 && e.target === c) {
         const r = c.getBoundingClientRect();
         const w = this.toWorld(e.clientX - r.left, e.clientY - r.top);
-        this.g.teleportTo(w.x, w.z);
+        if (!this.sb.story) this.g.teleportTo(w.x, w.z);
       }
       drag = null;
     });
@@ -77,7 +77,7 @@ export class WorldMap {
       if (t0 && t0.moved < 8) {
         const r = c.getBoundingClientRect();
         const w = this.toWorld(t0.x - r.left, t0.y - r.top);
-        this.g.teleportTo(w.x, w.z);
+        if (!this.sb.story) this.g.teleportTo(w.x, w.z);
       }
       t0 = null;
     });
@@ -254,15 +254,19 @@ export class WorldMap {
       if (s) { ctx.fillStyle = "#fff"; ctx.fillText("?", s.x, s.y + 0.5); }
     }
     // the evac: the mast, the helipad, supply drops
-    for (const e of this.sb.evac.mapMarkers()) {
+    if (this.sb.story) for (const e of this.sb.story.mapMarkers()) {
+      const s = dot(e.x, e.z, 8, e.color || "#ffd43b", "#fff");
+      if (s && e.label) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#1d1b2e"; ctx.lineWidth = 3; ctx.strokeText(e.label, s.x, s.y - 16); ctx.fillText(e.label, s.x, s.y - 16); }
+    }
+    if (this.sb.evac) for (const e of this.sb.evac.mapMarkers()) {
       if (e.kind === "mast") { const s = dot(e.x, e.z, 9, "#ff4a3c", "#fff"); if (s) { ctx.fillStyle = "#fff"; ctx.fillText("R", s.x, s.y + 0.5); if (m <= 8) { ctx.strokeStyle = "#1d1b2e"; ctx.lineWidth = 3; ctx.strokeText("radio mast", s.x, s.y - 16); ctx.fillText("radio mast", s.x, s.y - 16); } } }
       else if (e.kind === "pad" && m <= 2) { const s = dot(e.x, e.z, 6, "#ffd43b"); if (s) { ctx.fillStyle = "#1d1b2e"; ctx.fillText("H", s.x, s.y + 0.5); } }
       else if (e.kind === "drop") { const s = dot(e.x, e.z, 7, e.open ? "#8a8a8a" : "#ffb300"); if (s) { ctx.fillStyle = "#1d1b2e"; ctx.fillText("D", s.x, s.y + 0.5); } }
     }
     // pings
-    for (const p of this.sb.crew.mapMarkers()) dot(p.x, p.z, 5, p.kind === "zombie" ? "#ff5050" : p.kind === "loot" ? "#ffd43b" : "#5cf08e");
+    if (this.sb.crew) for (const p of this.sb.crew.mapMarkers()) dot(p.x, p.z, 5, p.kind === "zombie" ? "#ff5050" : p.kind === "loot" ? "#ffd43b" : "#5cf08e");
     // your crew's safehouse
-    const home = this.sb.crew.beacon();
+    const home = this.sb.crew && this.sb.crew.beacon();
     if (home) { const s = dot(home.x, home.z, 7, "#5cf08e", "#fff"); if (s) { ctx.fillStyle = "#1d1b2e"; ctx.fillText("S", s.x, s.y + 0.5); } }
     // your defences
     for (const d of this.sb.defences.markers()) if (d.mine) {
@@ -271,7 +275,7 @@ export class WorldMap {
     }
     // other players (your crew in green, anyone down in red)
     if (this.g.net) for (const p of this.g.net.players.values()) {
-      const s = dot(p.pos.x, p.pos.z, 5, p.down ? "#ff4040" : p.turned ? "#8a0000" : this.sb.crew.isMate(p) ? "#5cf08e" : "#fff");
+      const s = dot(p.pos.x, p.pos.z, 5, p.down ? "#ff4040" : p.turned ? "#8a0000" : this.sb.crew && this.sb.crew.isMate(p) ? "#5cf08e" : "#fff");
       if (s && m <= 4 && p.name) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#1d1b2e"; ctx.lineWidth = 3; ctx.strokeText(p.name, s.x, s.y - 12); ctx.fillText(p.name, s.x, s.y - 12); }
     }
     // you: an arrow
@@ -284,13 +288,13 @@ export class WorldMap {
     ctx.fillStyle = "#ffd43b"; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#1d1b2e"; ctx.stroke();
     ctx.restore();
     // where a click would take you
-    const left = this.g.teleportWait();
-    if (this.hover) {
+    const left = this.sb.story ? 1 : this.g.teleportWait();
+    if (this.hover && !this.sb.story) {
       const h = this.hover;
       ctx.strokeStyle = left > 0 ? "rgba(255,255,255,.5)" : "#ffd43b"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(h.x, h.y, 10, 0, Math.PI * 2); ctx.moveTo(h.x - 16, h.y); ctx.lineTo(h.x + 16, h.y); ctx.moveTo(h.x, h.y - 16); ctx.lineTo(h.x, h.y + 16); ctx.stroke();
     }
-    const t = left > 0 ? "teleport ready in " + Math.ceil(left) + "s" : "click anywhere to teleport there";
+    const t = this.sb.story ? "the story map: the gold dot is where you're going" : left > 0 ? "teleport ready in " + Math.ceil(left) + "s" : "click anywhere to teleport there";
     if (this.info.textContent !== t) { this.info.textContent = t; this.info.classList.toggle("ready", left <= 0); }
     // scale bar
     const len = 100 / m >= 60 ? 100 : 500;

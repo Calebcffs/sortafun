@@ -606,6 +606,31 @@ CSS time) and the title. Shots are data in `shots()`; `window.__introOnly =
 filter (overlays can't blend with WebGL from inside the intro's layer).
 The title screen no longer has the outfit picker (outfits are in the shop).
 
+**Story mode, "Halcyon" (2026-09-26, read `city/CAMPAIGN.md`):** Caleb asked
+for a single-player campaign, heavily story based, with a long opening
+cutscene, a cutscene or two per mission, quick-time events at checkpoints and
+every biome, vehicle and character getting a turn. The title card now has
+**STORY** and **ONLINE** (ONLINE is the old PLAY and keeps the intro).
+STORY opens a chapter panel (continue, 12 chapters that unlock in order,
+difficulty, new story). 12 missions over three nights plus an epilogue, 7
+characters (Mari, Teo, Nana Pru, Kofi, Captain Varga, Lucan Rhys, and "Nine",
+the silent courier you play). Files: `campaign.js` (the runner: `Campaign`,
+`StoryClock`, `Places`, the script helpers, checkpoints, `city-campaign-v1`
+save, the objective / marker / bars HUD, stealth), `cinema.js` (in-world
+cutscenes, the dialogue box with portraits rendered from the real models and
+voice blips, radio lines during play, QTEs, chapter titles, credits),
+`cast.js` (`CHARS`, allies / Listeners / guards / civilians / zombies /
+chase and convoy cars / solid props, extra ladders), `story.js` +
+`story1-3.js` (the missions), `storykit.js` (camera moves, tower spots, road
+and overland routes, props like the case, the coil, fuel cans, Nana's garden).
+Hooks in the old code all check `sb.story` (sandbox, npcs, vehicles, human,
+defences, hub, map, cityhud, weapons teams). The mast now has a ladder up the
+middle to a platform at the top (the finale, and there for everyone online).
+Voice rule applies to the dialogue too: lowercase-leaning, plain ASCII, no
+em dashes. Test with a driver that plays every chapter headless (skip cuts,
+pass QTEs, teleport to markers / actions, kill what's close): see the testing
+notes in CAMPAIGN.md; `city.timeScale` speeds the loop up for it.
+
 **Online (`city/net.js`)**: Firebase Realtime Database + anonymous sign-in,
 everything under `city/` (players, hits, cars, loot, feed, builds; shapes in the
 net.js header, rules in `database.rules.json`, auto-deployed with the rtdb

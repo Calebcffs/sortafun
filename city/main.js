@@ -20,6 +20,9 @@
 //   audio.js     synthesised sound
 //   menu.js      title screen, bird picker, pause / game over
 //   net.js       online play: everyone, birds and people, in one shared world
+//   campaign.js  the story, "Halcyon" (story.js + story1-3.js the missions,
+//                cinema.js cutscenes / talking / quick-time events, cast.js
+//                the story's people and things): a solo game in the same world
 //   sandbox.js   playing as a person: human.js (you), vehicles.js, npcs.js
 //                (zombies and wardens), loot.js, weapons.js, shop.js, hub.js
 //                (the E menu) + map.js, defences.js, structures.js (towers,
@@ -31,6 +34,8 @@ import { SkySystem, GOLDEN } from "./sky.js";
 import { UNDER_LINE } from "./structures.js";
 import { TELEPORT_EVERY } from "./map.js";
 import { Intro } from "./intro.js";
+import { Cinema } from "./cinema.js";
+import { Campaign } from "./campaign.js";
 import { Bird } from "./model.js";
 import { SPECIES, gameScale } from "./species.js";
 import { Flyer } from "./flight.js";
@@ -79,6 +84,7 @@ class Game {
     this.hud = new Hud(this);
     this.menu = new Menu(this);
     this.intro = new Intro(this);
+    this.cinema = new Cinema(this);
     this.clock = new THREE.Clock();
     this.running = false;
     this.paused = false;
@@ -125,7 +131,7 @@ class Game {
     this.input.invert = opts.invert;
     this.scene = new THREE.Scene();
     this.renderer.shadowMap.enabled = q.shadows;
-    this.human = opts.kind === "human";
+    this.human = opts.kind === "human" || !!opts.story;
     // people get golden hour, always; the bird keeps its day going round
     this.sky = new SkySystem(this.renderer, this.scene, { shadows: q.shadows, shadowSize: q.shadowSize, startTime: this.human ? GOLDEN : 0.29 });
     this.sky.frozen = this.human;
@@ -133,13 +139,18 @@ class Game {
     this.renderer.toneMapping = this.human ? THREE.CustomToneMapping : THREE.ACESFilmicToneMapping;
     this.sky.fogScale = q.fog;
     this.sky.shadowsWanted = q.shadows;
-    // one world, everyone in it
-    this.online = true;
+    // one world, everyone in it (the story's in the same world, on your own)
+    this.online = !opts.story;
     this.world = new World(this.scene, SHARED_SEED, { radius: q.radius, shadows: q.shadows });
-    // dropped somewhere random
-    const spawn = this.human ? this.randomSpot() : this.findSpawn("city");
+    // dropped somewhere random (or wherever the story starts)
+    let spawn;
+    if (opts.story) {
+      const cp = new Campaign(this, opts.story);
+      spawn = await cp.prepare((p, msg) => this.menu.loading(p * 0.5, msg));
+      if (this.campaign !== cp) return;
+    } else spawn = this.human ? this.randomSpot() : this.findSpawn("city");
     this.menu.loading(0, "building the world...");
-    await this.world.preload(spawn.x, spawn.z, (p) => this.menu.loading(p * (this.human ? 0.75 : 0.9)));
+    await this.world.preload(spawn.x, spawn.z, (p) => this.menu.loading((opts.story ? 0.5 + p * 0.25 : p * (this.human ? 0.75 : 0.9))));
     if (this.human) return this.startHuman(opts, spawn, q);
     this.input.wantLock = false;
     // the bird
@@ -184,13 +195,13 @@ class Game {
     this.speciesKey = null;
     this.bird = null;
     this.scale = 1;
-    this.sandbox = new Sandbox(this, opts);
+    this.sandbox = new Sandbox(this, { ...opts, story: this.campaign || null });
     this.rules = this.sandbox;
     this.flyer = this.sandbox.player;
     // online, don't all appear in the same spot
     const jit = opts.online ? 20 : 0;
-    const place = this.findPerch(spawn.x + (Math.random() - 0.5) * jit, spawn.z + (Math.random() - 0.5) * jit);
-    const g = this.world.groundAt(place.x, place.z, 1e9, {});
+    const place = this.campaign ? { x: spawn.x, z: spawn.z, yaw: 0 } : this.findPerch(spawn.x + (Math.random() - 0.5) * jit, spawn.z + (Math.random() - 0.5) * jit);
+    const g = this.world.groundAt(place.x, place.z, this.campaign ? (spawn.y ?? 1e9) + 2 : 1e9, {});
     this.flyer.camYaw = place.yaw;
     this.spawnPoint = { x: place.x, y: g.y, z: place.z, yaw: place.yaw };
     this.flyer.place(place.x, g.y, place.z, place.yaw);
@@ -204,6 +215,7 @@ class Game {
     this.menu.hide();
     this.clock.getDelta();
     this.stage.focus();
+    if (this.campaign) { this.campaign.begin(); return; }
     this.hud.toast("click the game to look around. E is your stuff, the shop and the map. the best loot is inside buildings. mind the zombies.", "good");
     if (opts.online) this.goOnline(opts.name);
   }
@@ -318,6 +330,8 @@ class Game {
     this.relocating = false;
     document.getElementById("fade").classList.remove("on");
     if (this.net) { this.net.close(); this.net = null; }
+    if (this.campaign) { this.campaign.dispose(); this.campaign = null; }
+    if (this.cinema && this.cinema.active) this.cinema.skip();
     if (this.rules) this.rules.dispose();
     if (this.world) this.world.dispose();
     if (this.bird) this.bird.dispose();
@@ -407,7 +421,7 @@ class Game {
   // ------------------------------------------------------------
   loop() {
     requestAnimationFrame(this.loop);
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const dt = Math.min(0.05, this.clock.getDelta()) * (this.timeScale || 1); // (timeScale: tests)
     if (this.intro.active) { this.intro.frame(dt); return; }
     if (!this.scene || !this.flyer) { this.menu.renderPreview(dt); return; }
     if (this.running && !this.paused) {
@@ -488,6 +502,12 @@ class Game {
   tickHuman(dt, input) {
     const sb = this.sandbox;
     if (this.relocating) return; // (the world's being built somewhere else)
+    // the story: a cutscene has the frame, or a quick-time event slows the world down
+    if (this.campaign) {
+      const r = this.campaign.frame(dt, input);
+      if (r === "cine") return;
+      if (r === "qte") { dt *= 0.3; input = quiet(input); }
+    }
     if (input.pause) {
       // Esc backs out of whatever's open first
       if (sb.lift) sb.closeLift();
@@ -591,8 +611,14 @@ class Game {
     const t0 = performance.now();
     this.renderer.render(this.scene, this.camera);
     this.perf = { calls: this.renderer.info.render.calls, tris: this.renderer.info.render.triangles, renderMs: performance.now() - t0 };
-    if (this.running && this.hud) this.hud.renderPooCam(this.renderer, this.scene);
+    if (this.running && this.hud && !this.cinema.active) this.hud.renderPooCam(this.renderer, this.scene);
   }
+}
+
+// (during a quick-time event the keys are the QTE's, not the game's)
+function quiet(input) {
+  const none = () => false;
+  return { ...input, down: none, hit: none, mouse: { dx: 0, dy: 0, left: false, right: false }, stick: null, pause: false, camera: false, zoom: 0, lookX: 0, lookY: 0 };
 }
 
 window.city = window.birdie = new Game(); // (birdie: the old name, tests use it)

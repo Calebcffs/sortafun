@@ -68,6 +68,8 @@ export class HumanPlayer {
     this.camTarget = new THREE.Vector3();
     this.id = "me";
     this.isPlayer = true; // (what hit code checks to know a shot was ours)
+    this.team = "us";     // (allies in the story don't shoot their own side)
+    this.carry = null;    // the story: something heavy in your arms (slow, no guns)
     this.ads = 0;         // 0..1 how far into aiming down the sights
     this.ladder = null;   // the ladder we're on
     // the gun you see in front of the camera when aiming down the sights
@@ -224,6 +226,7 @@ export class HumanPlayer {
   // ------------------------------------------------------------
   hurt(dmg, info = {}) {
     if (this.dead || this.sb.godT > 0 || this.g.relocating) return;
+    if (this.sb.story) { dmg *= this.sb.story.dmgMul(info); if (dmg <= 0) return; }
     if (info.remote) this.lastHitBy = info.remote;
     this.lastHurt = this.sb.time;
     this.g.sound.hurt();
@@ -338,7 +341,7 @@ export class HumanPlayer {
       if (input.hit("KeyG") && this.inv.grenades > 0) { const w = this.weapon; this.weapon = "grenade"; this.cool = 0; this.throwGrenade(); if (this.weapon === "grenade") this.weapon = w; }
       if (input.hit("KeyC") && !this.downed) this.crouch = !this.crouch;
     }
-    if (!this.sb.menuOpen && !this.ladder && !building) this.tryFire(input, dt);
+    if (!this.sb.menuOpen && !this.ladder && !building && !this.carry) this.tryFire(input, dt);
     else if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.finishReload(); }
 
     // on a ladder: that's all we do
@@ -359,7 +362,9 @@ export class HumanPlayer {
     const mx = sy * fz - cy * fx, mz = cy * fz + sy * fx;
     this.sprint = (input.down("ShiftLeft") || input.down("ShiftRight") || (input.stick && len > 0.95)) && !this.aiming && !this.crouch && !this.downed;
     if (this.sprint) this.crouch = false;
+    if (this.carry) this.sprint = false;
     let top = this.swim ? SWIM : this.crouch ? CROUCH : this.sprint ? RUN * (this.sb.perk("iron lungs") ? 1.15 : 1) : this.aiming ? WALK * 0.75 : WALK;
+    if (this.carry) top = WALK * 0.62;
     if (this.turned) top = this.sprint ? 8.2 : 3.8;
     if (this.downed) top = 0.9;
     const tvx = mx * top, tvz = mz * top;
@@ -390,10 +395,13 @@ export class HumanPlayer {
     const p = this.pos;
     const cx = Math.floor(p.x / 128), cz = Math.floor(p.z / 128);
     let best = null, bd = 1e9, top = false;
+    const lists = this.sb.extraLadders ? [this.sb.extraLadders] : [];
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
       const ch = this.g.world.chunks.get((cx + dx) + "," + (cz + dz));
-      if (!ch || !ch.ladders) continue;
-      for (const l of ch.ladders) {
+      if (ch && ch.ladders) lists.push(ch.ladders);
+    }
+    for (const list of lists) {
+      for (const l of list) {
         const rx = p.x - l.x, rz = p.z - l.z;
         const out = rx * l.nx + rz * l.nz, side = Math.abs(-rx * l.nz + rz * l.nx);
         if (side > 0.7) continue;

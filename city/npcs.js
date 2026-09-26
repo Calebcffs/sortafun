@@ -99,7 +99,7 @@ export class Npcs {
     const T = ZTYPES[type];
     const zid = (this.zseq++ % 46656).toString(36);
     const n = this.make(lookFor(zid), x, y, z);
-    n.zombie = true; n.type = type; n.zid = zid; n.hp = T.hp; n.T = T;
+    n.zombie = true; n.type = type; n.zid = zid; n.hp = T.hp * (this.sb.story ? this.sb.story.zombieHp() : 1); n.T = T;
     n.speed = T.wander[0] + Math.random() * (T.wander[1] - T.wander[0]);
     n.chaseSpeed = T.speed[0] + Math.random() * (T.speed[1] - T.speed[0]);
     n.avatar.zombie = true; n.avatar.ztint = T.tint; n.avatar.zombify();
@@ -162,13 +162,14 @@ export class Npcs {
   target(n) {
     const T = n.T || { r: 0.36, h: HEIGHT };
     return {
-      id: n.id, kind: n.cop ? "cop" : n.zombie ? "zombie" : "npc", dead: n.dead, x: n.pos.x, y: n.pos.y, z: n.pos.z, r: T.r, h: n.sleep ? 0.5 : T.h,
+      id: n.id, kind: n.cop ? "cop" : n.zombie ? "zombie" : "npc", dead: n.dead, x: n.pos.x, y: n.pos.y, z: n.pos.z, r: T.r, h: n.sleep || n.downed ? 0.5 : T.h, team: n.team,
       hit: (dmg, info) => this.hurt(n, dmg, info),
     };
   }
 
   hurt(n, dmg, info = {}) {
     if (n.dead) return;
+    if (n.onHurt && n.onHurt(n, dmg, info)) return; // (the story's people: cast.js)
     if (info.point) n.fleeFrom = info.point.clone();
     const byMe = info.by && info.by.isPlayer;
     if (n.zombie) {
@@ -213,7 +214,13 @@ export class Npcs {
     if (!n.sleep) return;
     n.sleep = false; n.zstate = "m";
     n.hunt = null;
+    n.wakeT = 0;
     if (n.pos.distanceTo(this.g.camera.position) < 25) this.g.sound.groan(1.2);
+    // (the story: one waking up wakes the rest of the room, a beat later)
+    if (this.sb.story && this.sb.story.chainWake) {
+      for (const o of this.list) if (o.sleep && !o.wakeT && o.pos.distanceTo(n.pos) < this.sb.story.chainWake) o.wakeT = 0.6 + Math.random() * 1.4;
+      this.sb.story.onWake && this.sb.story.onWake(n);
+    }
   }
 
   // something loud happened at p: wardens nearby come and look if you're
@@ -263,7 +270,7 @@ export class Npcs {
   living() {
     const out = [];
     const me = this.sb.player;
-    if (!me.dead && !me.vehicle && !me.turned && this.sb.godT <= 0 && !this.g.relocating) out.push({ kind: "me", pos: me.pos, torch: me.torchOn, quiet: this.sb.perk("quiet feet"), owl: this.sb.perk("night owl") });
+    if (!me.dead && !me.vehicle && !me.turned && this.sb.godT <= 0 && !this.g.relocating) out.push({ kind: "me", pos: me.pos, torch: me.torchOn, quiet: this.sb.perk("quiet feet"), owl: this.sb.perk("night owl"), crouch: me.crouch, sprint: me.sprint && me.speed > 4 });
     const net = this.g.net;
     if (net) for (const p of net.players.values()) {
       if (p.kind !== "h" || p.dead || p.turned || !p.s || p.s.mode === "v" || performance.now() - p.heard > 8000) continue;
@@ -279,6 +286,7 @@ export class Npcs {
     const night = this.sb.clock.night;
     this.living_ = this.living();
     this.spawnT -= dt;
+    if (this.sb.story) this.spawnT = 1; // (the story puts every zombie where it wants it)
     if (this.spawnT <= 0) {
       this.spawnT = night ? 0.6 : 1;
       const near = [];
@@ -307,8 +315,10 @@ export class Npcs {
       // let go of zombies nobody's near
       let far = d > 240;
       if (n.zombie && far) far = d > 300 || !others.some((p) => p.pos.distanceTo(n.pos) < 120);
-      if (far || (n.dead && n.deadT > 25) || (n.survivor && n.panic <= 0 && d > 40)) { this.remove(i); continue; }
+      if (n.keep) far = false;
+      if (far || (n.dead && n.deadT > (n.keep ? 60 : 25)) || (n.survivor && n.panic <= 0 && d > 40)) { this.remove(i); continue; }
       if (n.dead) this.updateDead(n, dt);
+      else if (n.brain) n.brain(n, dt, d); // (the story's people: cast.js)
       else if (n.zombie) this.updateZombie(n, dt, d);
       else if (n.cop && n.chase && this.sb.wanted > 0 && !me.dead) this.updateCop(n, dt, d);
       else if (n.cop && this.copVsZombies(n, dt)) { /* busy */ }
@@ -317,7 +327,7 @@ export class Npcs {
       n.animT = (n.animT || 0) + dt;
       const every = d < 40 ? 0 : d < 90 ? 1 / 15 : 1 / 6;
       if (n.animT >= every) {
-        n.avatar.update(n.animT, { speed: n.sleep || n.zstate === "s" ? 0 : n.curSpeed, dead: n.dead || n.sleep, aimPitch: 0 });
+        n.avatar.update(n.animT, { speed: n.sleep || n.zstate === "s" ? 0 : n.curSpeed, dead: n.dead || n.sleep, aimPitch: 0, down: n.downed || n.sit, crouch: n.crouch, drive: n.driving });
         n.animT = 0;
       }
       n.avatar.root.position.copy(n.pos);
@@ -365,18 +375,19 @@ export class Npcs {
     for (const L of this.living_) {
       if (Math.abs(L.pos.y - n.pos.y) > 12) continue;
       const d = L.pos.distanceTo(n.pos);
-      let aggro = T.aggro * (night ? (L.owl ? 1.1 : 1.4) : 1) * (L.quiet ? 0.65 : 1) * (L.torch && !L.owl ? 1.3 : 1);
+      let aggro = T.aggro * (night ? (L.owl ? 1.1 : 1.4) : 1) * (L.quiet ? 0.65 : 1) * (L.torch && !L.owl ? 1.3 : 1) * (L.crouch && this.sb.story ? 0.55 : 1);
       const hunting = n.hunt && (n.hunt.kind === L.kind && (L.kind === "me" || n.hunt.uid === L.p.uid));
       if (hunting) aggro = Math.max(aggro, GIVE_UP);
       if (d > aggro || d >= best) continue;
+      if (this.sb.story && this.sb.story.hiddenFrom && this.sb.story.hiddenFrom(L, d)) continue; // (crouched in the corn)
       // up close it just knows; further off it has to see you (at night it's hunting anyway)
       if (d > SEE_FREE && !hunting && !night && !this.canSee(n, L.pos, L.kind === "me" ? "me" : L.p.uid)) continue;
       prey = L; best = d;
     }
     for (const c of this.list) {
-      if (!c.cop || c.dead) continue;
+      if (!(c.cop || c.edible) || c.dead || c.downed || c.hidden) continue;
       const d = c.pos.distanceTo(n.pos);
-      if (d < best && d < T.aggro * 0.8) { prey = { kind: "cop", pos: c.pos, n: c }; best = d; }
+      if (d < best && d < T.aggro * 0.8 && Math.abs(c.pos.y - n.pos.y) < 6) { prey = { kind: "cop", pos: c.pos, n: c }; best = d; }
     }
     return prey;
   }
@@ -408,7 +419,12 @@ export class Npcs {
     // sleepers: lie still until someone's close
     if (n.sleep) {
       n.curSpeed = 0;
-      for (const L of this.living_) if (L.pos.distanceTo(n.pos) < 5 && Math.abs(L.pos.y - n.pos.y) < 2) { this.wake(n); n.hunt = L.kind === "me" ? { kind: "me" } : { kind: "remote", uid: L.p.uid }; }
+      if (n.wakeT > 0) { n.wakeT -= dt; if (n.wakeT <= 0) { n.wakeT = 0; this.wake(n); n.hunt = { kind: "me" }; } return; }
+      for (const L of this.living_) {
+        // (the story: creep past crouched and they sleep on; run and they don't)
+        const r = this.sb.story && L.kind === "me" ? (L.crouch ? 2 : L.sprint ? 8 : 3.5) : 5;
+        if (L.pos.distanceTo(n.pos) < r && Math.abs(L.pos.y - n.pos.y) < 2) { this.wake(n); n.hunt = L.kind === "me" ? { kind: "me" } : { kind: "remote", uid: L.p.uid }; }
+      }
       return;
     }
     n.groanT -= dt;
@@ -420,12 +436,14 @@ export class Npcs {
     if (!prey) {
       n.hunt = null;
       // at night, drift towards whoever's around
-      const target = n.lure || (this.sb.clock.night ? (this.nearestLiving(n, DRIFT) || {}).pos : null) || (n.raid && n.raid.pos);
+      const target = n.lure || (this.sb.clock.night && !this.sb.story ? (this.nearestLiving(n, DRIFT) || {}).pos : null) || (n.raid && n.raid.pos) || (n.goal && n.goal.pos);
       if (target) {
         if (n.lure && Math.hypot(n.lure.x - n.pos.x, n.lure.z - n.pos.z) < 2) n.lure = null;
         else {
           // a raid on a safehouse beacon: go at it
           if (n.raid && !n.lure && Math.hypot(n.raid.pos.x - n.pos.x, n.raid.pos.z - n.pos.z) < 1.8 + T.r) { this.clawAt(n, null, n.raid); return; }
+          // (the story: something to get at, like a barn door)
+          if (n.goal && !n.lure && !n.raid && Math.hypot(n.goal.pos.x - n.pos.x, n.goal.pos.z - n.pos.z) < (n.goal.r || 1.5) + T.r) { this.clawAt(n, null, null, n.goal); return; }
           this.stepTowards(n, target.x, target.z, n.lure ? n.speed * 1.4 : Math.max(n.speed * 1.3, this.sb.clock.night ? n.chaseSpeed * 0.55 : 0), dt);
           return;
         }
@@ -446,7 +464,7 @@ export class Npcs {
     this.stepTowards(n, prey.pos.x, prey.pos.z, n.chaseSpeed * (n.slowT > 0 ? 0.4 : 1), dt);
   }
 
-  clawAt(n, prey, raid) {
+  clawAt(n, prey, raid, goal) {
     n.curSpeed = 0;
     n.zstate = "a";
     if (n.clawT > 0) return;
@@ -456,6 +474,7 @@ export class Npcs {
     const dMe = n.pos.distanceTo(this.sb.player.pos);
     if (dMe < 40) this.g.sound.punch();
     if (raid) { this.sb.defences.damage(raid, T.claw * (T.smash || 1)); return; }
+    if (goal) { goal.hit(T.claw * (T.smash || 1), n); return; }
     if (prey.kind === "me") this.sb.player.hurt(T.claw, { zombie: true, point: n.pos.clone() });
     else if (prey.kind === "remote") { if (this.g.net) this.g.net.hitPlayer(prey.p, T.claw, "zombie"); }
     else this.hurt(prey.n, T.claw * 1.5, { by: { id: n.id }, point: n.pos.clone() });
@@ -471,11 +490,12 @@ export class Npcs {
     const hunt = prey.kind === "me" ? { kind: "me" } : { kind: "remote", uid: prey.p.uid };
     for (const o of this.list) if (o.zombie && !o.dead && o !== n && o.pos.distanceTo(n.pos) < 70) { if (o.sleep) this.wake(o); o.hunt = hunt; o.lure = prey.pos.clone(); }
     // at night it brings friends
-    if (this.sb.clock.night) {
+    if (this.sb.clock.night && !this.sb.story) {
       const near = [...this.g.world.chunks.values()].filter((ch) => Math.hypot(ch.x0 + CHUNK / 2 - n.pos.x, ch.z0 + CHUNK / 2 - n.pos.z) < 150);
       for (let i = 0; i < 2; i++) { const r = near.length && this.spawnWalker(near, "zombie", { type: "runner", awake: true, min: 35, max: 90 }); if (r) { r.hunt = hunt; r.lure = prey.pos.clone(); } }
     }
-    if (prey.kind === "me") this.sb.hud.toast("a screamer's seen you. they're all coming.", "bad");
+    if (prey.kind === "me" && !this.sb.story) this.sb.hud.toast("a screamer's seen you. they're all coming.", "bad");
+    if (this.sb.story && this.sb.story.onScream) this.sb.story.onScream(n, prey);
   }
 
   // head straight for (x, z); walls make it feel its way round, a

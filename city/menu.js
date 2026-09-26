@@ -13,6 +13,8 @@ import { SPECIES, SPECIES_ORDER, FOOD, gameScale } from "./species.js";
 import { countOnline, cleanName, MAX_PLAYERS } from "./net.js";
 import { Avatar, OUTFITS } from "./avatar.js";
 import { loadSave, money } from "./shop.js";
+import { loadStory, saveStory, DIFFS } from "./campaign.js";
+import { MISSIONS } from "./story.js";
 
 function load(key, def) { try { const v = localStorage.getItem(key); return v == null ? def : v; } catch (e) { return def; } }
 function save(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
@@ -21,7 +23,7 @@ export class Menu {
   constructor(game) {
     this.g = game;
     this.root = document.getElementById("menu");
-    this.screens = { title: document.getElementById("m-title"), loading: document.getElementById("m-loading"), pause: document.getElementById("m-pause"), over: document.getElementById("m-over") };
+    this.screens = { title: document.getElementById("m-title"), loading: document.getElementById("m-loading"), pause: document.getElementById("m-pause"), over: document.getElementById("m-over"), story: document.getElementById("m-story"), fail: document.getElementById("m-fail"), done: document.getElementById("m-done") };
     this.visible = true;
     this.species = load("birdie-species", "pigeon");
     if (!SPECIES[this.species]) this.species = "pigeon";
@@ -50,6 +52,27 @@ export class Menu {
     document.getElementById("resume").addEventListener("click", () => this.g.setPaused(false));
     document.getElementById("endflight").addEventListener("click", () => { this.g.paused = false; this.g.gameOver(this.g.sandbox ? "you called it a day. post your cash to the board?" : "you ended the flight."); });
     const toTitle = () => { this.g.stop(); this.g.hud.hide(); this.showTitle(); };
+    // the story (campaign.js): the chapter panel, failing, finishing
+    document.getElementById("story").addEventListener("click", () => { this.g.sound.ensure(); this.showStory(); });
+    document.getElementById("st-back").addEventListener("click", () => this.showTitle());
+    document.getElementById("st-continue").addEventListener("click", () => { const s = loadStory(); const c = s.cur || { m: Math.min(s.unlocked, MISSIONS.length - 1), s: 0 }; this.playStory(c.m, c.s); });
+    document.getElementById("st-new").addEventListener("click", () => {
+      const s = loadStory();
+      if ((s.cur || s.unlocked > 0) && !confirm("start the story again from the beginning? (chapters you've finished stay unlocked)")) return;
+      s.cur = null; saveStory(s);
+      try { localStorage.removeItem("city-seen-launch"); } catch (e) {}
+      this.playStory(0, 0);
+    });
+    for (const b of document.querySelectorAll("#st-diff button")) b.addEventListener("click", () => { const s = loadStory(); s.diff = b.dataset.d; saveStory(s); this.markDiff(); });
+    const toStory = () => { this.g.stop(); this.g.hud.hide(); this.showStory(); };
+    document.getElementById("f-retry").addEventListener("click", () => { if (this.g.campaign) this.g.campaign.retry(); });
+    document.getElementById("f-restart").addEventListener("click", () => { if (this.g.campaign) this.g.campaign.restartMission(); });
+    document.getElementById("f-quit").addEventListener("click", toStory);
+    document.getElementById("p-retry").addEventListener("click", () => { if (this.g.campaign) { this.g.paused = false; this.g.campaign.retry(); } });
+    document.getElementById("p-restart").addEventListener("click", () => { if (this.g.campaign) { this.g.paused = false; this.g.campaign.restartMission(); } });
+    document.getElementById("p-quit").addEventListener("click", toStory);
+    document.getElementById("d-next").addEventListener("click", () => { if (this.doneLast) toStory(); else if (this.g.campaign) this.g.campaign.next(); });
+    document.getElementById("d-quit").addEventListener("click", toStory);
     document.getElementById("newbird").addEventListener("click", toTitle);
     document.getElementById("again2").addEventListener("click", toTitle);
     document.getElementById("again").addEventListener("click", () => this.play());
@@ -68,7 +91,8 @@ export class Menu {
     document.getElementById("birdbox").hidden = human;
     document.getElementById("keys-human").hidden = !human;
     document.getElementById("keys-bird").hidden = human;
-    document.getElementById("play").innerHTML = human ? "PLAY! &#9654;" : "FLY! &#9654;";
+    document.getElementById("play").innerHTML = human ? "<b>ONLINE</b><small>one city, everyone in it</small>" : "<b>FLY!</b><small>you found the birds</small>";
+    document.getElementById("story").hidden = !human;
     if (!human && this.previewRenderer) { this.buildBirdList(); this.selectBird(this.species); }
   }
 
@@ -294,6 +318,63 @@ export class Menu {
     } else go();
   }
 
+  // ---------------- the story: chapters ----------------
+  showStory() {
+    this.show("story");
+    const s = loadStory();
+    const cont = document.getElementById("st-continue");
+    const c = s.cur;
+    cont.textContent = c ? "continue: " + MISSIONS[c.m].n + ". " + MISSIONS[c.m].title + (c.s ? " (" + (MISSIONS[c.m].sections[c.s].name || "checkpoint") + ")" : "") : s.unlocked > 0 ? "play: " + MISSIONS[s.unlocked].n + ". " + MISSIONS[s.unlocked].title : "start the story";
+    this.markDiff();
+    const list = document.getElementById("st-list");
+    list.innerHTML = "";
+    let act = "";
+    MISSIONS.forEach((M, i) => {
+      if (M.act !== act) { act = M.act; const h = document.createElement("div"); h.className = "st-ch act"; h.textContent = { "act 1": "act one: the quiet", "act 2": "act two: out there", "act 3": "act three: signal" }[act] || act; list.appendChild(h); }
+      const d = document.createElement("div");
+      const open = i <= s.unlocked;
+      d.className = "st-ch" + (open ? "" : " locked");
+      d.innerHTML = "<i></i><b></b><small></small><em></em>";
+      d.querySelector("i").textContent = M.n;
+      d.querySelector("b").textContent = open ? M.title : "locked";
+      d.querySelector("small").textContent = open ? M.when + ". " + M.blurb : "finish chapter " + (M.n - 1) + " to open this";
+      const best = s.best[M.id];
+      d.querySelector("em").textContent = best ? "done " + Math.floor(best / 60) + ":" + String(best % 60).padStart(2, "0") : "";
+      if (open) d.addEventListener("click", () => this.playStory(i, 0));
+      list.appendChild(d);
+    });
+  }
+
+  markDiff() { const d = loadStory().diff; for (const b of document.querySelectorAll("#st-diff button")) b.classList.toggle("on", b.dataset.d === d); }
+
+  playStory(mi, si) {
+    this.g.sound.ensure();
+    let name = cleanName(this.nameEl.value);
+    if (!name) { name = "survivor" + Math.floor(100 + Math.random() * 900); this.nameEl.value = name; }
+    save("sortafun-name", name);
+    const diff = loadStory().diff;
+    this.g.hud.hide();
+    this.show("loading");
+    document.getElementById("loadmsg").textContent = "finding the story...";
+    setTimeout(() => this.g.start({ quality: this.quality, invert: this.invert, online: false, name, kind: "human", story: { mission: mi, section: si, diff } }), 30);
+  }
+
+  showFail(why, M, section) {
+    this.show("fail");
+    document.getElementById("failwhy").textContent = why + (M ? "  (" + M.n + ". " + M.title + (section ? ": " + section : "") + ")" : "");
+  }
+
+  showDone(M, secs, pay, last) {
+    this.show("done");
+    this.doneLast = last;
+    document.getElementById("donetitle").textContent = last ? "the end" : "chapter complete";
+    document.getElementById("donewhat").textContent = M.n + ". " + M.title;
+    const t = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0");
+    const next = MISSIONS[M.n];
+    document.getElementById("donestats").innerHTML = "done in <b>" + t + "</b>" + (pay ? "<br>+" + money(pay) + " paid into your online cash" : "") + (last ? "<br>you survived Halcyon. online, the warden uniform is yours." : next ? "<br>next: " + next.n + ". " + next.title : "");
+    document.getElementById("d-next").innerHTML = last ? "back to the chapters" : "next chapter &#9654;";
+  }
+
   loading(p, msg) {
     document.getElementById("loadfill").style.width = Math.round(p * 100) + "%";
     if (msg) document.getElementById("loadmsg").textContent = msg;
@@ -301,9 +382,20 @@ export class Menu {
 
   showPause() {
     this.show("pause");
+    const story = !!this.g.campaign;
+    document.getElementById("pause-story").hidden = !story;
+    document.getElementById("pause-online").hidden = story;
     document.getElementById("resume").textContent = this.g.sandbox ? "keep playing" : "keep flying";
     const s = this.g.rules.summary();
-    document.getElementById("pausestats").innerHTML = s.human ? humanStats(s) : statsHtml(s);
+    const cp = this.g.campaign;
+    if (cp) {
+      const M = cp.mission, t = Math.floor(cp.missionT);
+      const el = document.getElementById("pausestats");
+      el.innerHTML = "<b></b><br><span></span><br><small></small>";
+      el.querySelector("b").textContent = "chapter " + M.n + ": " + M.title;
+      el.querySelector("span").textContent = (cp.sectionName ? "checkpoint: " + cp.sectionName + " · " : "") + (cp.obj ? cp.obj.text : "");
+      el.querySelector("small").textContent = Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0") + " into the chapter · " + cp.diff.label;
+    } else document.getElementById("pausestats").innerHTML = s.human ? humanStats(s) : statsHtml(s);
     document.getElementById("daylock").checked = this.g.sky.frozen;
   }
 
@@ -323,7 +415,7 @@ export class Menu {
     this.visible = true;
     this.root.hidden = false;
     for (const k in this.screens) this.screens[k].hidden = k !== name;
-    this.g.input.enabled = name !== "title";
+    this.g.input.enabled = name !== "title" && name !== "story";
   }
   hide() {
     this.visible = false;

@@ -36,6 +36,9 @@ export class Hub {
     this.map = new WorldMap(game, sandbox, this.el.querySelector('[data-pane="map"]'));
     for (const b of this.el.querySelectorAll(".hub-tabs button")) b.onclick = () => this.show(b.dataset.tab);
     this.el.querySelector(".hub-close").onclick = () => this.close();
+    // the story: just your stuff and the map (no shop, no crews)
+    for (const b of this.el.querySelectorAll(".hub-tabs button")) b.hidden = !!sandbox.story && (b.dataset.tab === "shop" || b.dataset.tab === "crew");
+    if (sandbox.story) this.tab = "inv";
   }
 
   get isOpen() { return !this.el.hidden; }
@@ -103,7 +106,8 @@ export class Hub {
     const lvl = document.createElement("div");
     lvl.className = "inv-level";
     lvl.innerHTML = "<b>level " + P.level + "</b><i><u style='width:" + Math.round((inv.xp - xpFor(P.level)) / (xpFor(P.level + 1) - xpFor(P.level)) * 100) + "%'></u></i><small>" + (xpFor(P.level + 1) - inv.xp) + " xp to the next</small>";
-    top.appendChild(lvl);
+    if (!sb.story) top.appendChild(lvl);
+    else { const ch = document.createElement("div"); ch.className = "inv-level"; const M = sb.story.mission; ch.innerHTML = "<b></b><small></small>"; ch.querySelector("b").textContent = "chapter " + M.n + ": " + M.title; ch.querySelector("small").textContent = sb.story.obj ? sb.story.obj.text : ""; top.appendChild(ch); }
     if (inv.fuel) { const f = document.createElement("div"); f.className = "inv-fuel"; f.textContent = "fuel: " + inv.fuel + "/" + sb.fuelCap(); top.appendChild(f); }
     top.querySelector(".hp b").style.width = Math.round(Math.max(0, me.health)) + "%";
     top.querySelector(".ar b").style.width = Math.round(me.armor) + "%";
@@ -114,7 +118,7 @@ export class Hub {
       return g;
     };
     // a perk to pick
-    const offer = P.offer();
+    const offer = sb.story ? [] : P.offer();
     if (offer.length) {
       const g = section("pick a perk!");
       g.classList.add("perks");
@@ -133,7 +137,7 @@ export class Hub {
     jobs.className = "inv-jobs";
     jobs.innerHTML = "<h4>jobs</h4>" + inv.contracts.map((c) => "<div><span></span><i><u style='width:" + Math.round(c.n / c.goal * 100) + "%'></u></i><em>" + c.n + "/" + c.goal + "  " + money(c.cash) + " + " + c.xp + " xp</em></div>").join("");
     [...jobs.querySelectorAll("span")].forEach((s, i) => { s.textContent = inv.contracts[i].text; });
-    el.appendChild(jobs);
+    if (!sb.story) el.appendChild(jobs);
     if (inv.perks.length) {
       const pk = document.createElement("p");
       pk.className = "inv-foot";

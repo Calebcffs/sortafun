@@ -145,7 +145,7 @@ export class Defences {
     this.tmp = new THREE.Vector3();
     this.g_ = {};
     // offline builds come back from this browser (online ones come from net.js)
-    this.loadLocal();
+    if (!sandbox.story) this.loadLocal();
   }
 
   get inv() { return this.sb.inv; }
@@ -368,7 +368,7 @@ export class Defences {
   // offline: keep them in this browser
   // ------------------------------------------------------------
   saveLocal() {
-    if (this.g.net && this.g.net.live) return;
+    if ((this.g.net && this.g.net.live) || this.sb.story) return;
     const out = [];
     for (const [id, d] of this.list) if (d.mine) out.push({ id, ty: d.type, x: d.x, y: d.y, z: d.z, r: d.yaw, by: "me", t: d.t, cr: d.cr });
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(out)); } catch (e) {}

@@ -50,7 +50,7 @@ function cyl(g, r0, r1, h, x, y, z, m, axis = "y", seg = 14) {
   o.position.set(x, y, z); o.castShadow = true; g.add(o); return o;
 }
 
-function makeBike() {
+export function makeBike() {
   const g = new THREE.Group();
   const red = mat(0xd8342c), dark = mat(0x26262c), chrome = mat(0xc9ccd4, { metalness: 0.7, roughness: 0.3 }), tyre = mat(0x151515, { roughness: 0.9 });
   const wheels = [];
@@ -83,7 +83,7 @@ function makeBike() {
   return { g, wheels, front: [wheels[0]] };
 }
 
-function makePlane() {
+export function makePlane() {
   const g = new THREE.Group();
   const white = mat(0xf2f2ee), red = mat(0xd8342c), dark = mat(0x2a2d34), glass = mat(0x7fb6e6, { metalness: 0.4, roughness: 0.15 }), tyre = mat(0x151515);
   // fuselage along +z
@@ -697,6 +697,7 @@ export class VehicleManager {
     this.taken = new Set();    // ids someone online is driving
     this.traffic = [];
     this.police = [];
+    this.story = [];           // the story's own cars (campaign / cast.js): chasers, convoys, props
     this.scanT = 0;
     this.trafficT = 0;
     this.time = 0;
@@ -706,6 +707,7 @@ export class VehicleManager {
     for (const v of this.parked.values()) yield v;
     for (const v of this.traffic) yield v;
     for (const v of this.police) yield v;
+    for (const v of this.story) yield v;
   }
 
   // the top of any vehicle roof under (x, z) (so you can stand on cars)
@@ -777,6 +779,7 @@ export class VehicleManager {
 
   // somebody (maybe us) left a car here
   leave(v) {
+    if (this.story.includes(v)) return;
     this.moved.set(v.id, { type: v.type, x: v.pos.x, y: v.pos.y, z: v.pos.z, yaw: v.yaw, wreck: v.wreck });
   }
 
@@ -914,7 +917,7 @@ export class VehicleManager {
     const me = this.sb.player;
     const s = this.g.world.terrain.sample(me.pos.x, me.pos.z);
     // only a few survivors still driving about (not down in the metro)
-    const wantCars = me.pos.y < -100 ? 0 : Math.round(s.w.city * 5 + s.w.industry * 2);
+    const wantCars = me.pos.y < -100 || this.sb.story ? 0 : Math.round(s.w.city * 5 + s.w.industry * 2);
     if (this.trafficT <= 0) {
       this.trafficT = 0.6;
       const near = this.traffic.filter((c) => c.pos.distanceTo(me.pos) < 230).length;
@@ -935,6 +938,13 @@ export class VehicleManager {
       else v.drive(dt, { throttle: 0, steer: 0, handbrake: 1 });
       v.update(dt);
       if (v.pos.distanceTo(me.pos) > 320) { v.dispose(); this.police.splice(i, 1); }
+    }
+    // the story's cars drive themselves (v.brain), or roll to a stop
+    for (const v of this.story) {
+      if (v === me.vehicle) continue; // (sandbox.js drives and draws that one)
+      if (v.brain && !v.dead) v.brain(v, dt);
+      else v.drive(dt, { throttle: 0, steer: 0, handbrake: Math.abs(v.speed) < 3 ? 1 : 0 });
+      v.update(dt);
     }
     for (const v of this.parked.values()) {
       if (!isFinite(v.pos.x + v.pos.y + v.pos.z)) { v.pos.copy(v.home ? new THREE.Vector3(v.home.x, v.home.y, v.home.z) : me.pos); v.speed = 0; v.vy = 0; }
@@ -978,7 +988,7 @@ export class VehicleManager {
   nearest(p, maxD) {
     let best = null, bd = maxD;
     for (const v of this.all()) {
-      if (v.dead) continue;
+      if (v.dead || v.locked) continue;
       const d = Math.hypot(v.pos.x - p.x, v.pos.z - p.z) - Math.max(v.hx, v.hz * 0.5);
       if (d < bd && Math.abs(v.pos.y - p.y) < 3) { bd = d; best = v; }
     }
@@ -987,7 +997,7 @@ export class VehicleManager {
 
   dispose() {
     for (const v of this.all()) v.dispose();
-    this.parked.clear(); this.traffic = []; this.police = [];
+    this.parked.clear(); this.traffic = []; this.police = []; this.story = [];
   }
 }
 

@@ -126,6 +126,7 @@ export class World {
       paths: [], bins: [], smoke: [], lanes: [], lights: [], hunters: [], tourists: [],
       parking: [], // parked vehicles (City Sandbox): {id, type, x, y, z, yaw}
       ladders: [], portals: [], // (structures.js)
+      sheds: [], // warehouses you can walk into (the story mode looks for them)
     };
     this.buildTerrain(ch);
     this.populate(ch);
@@ -975,6 +976,7 @@ export class World {
         bigDoor: { w: 8, h: 6.5, sides: [0, 1] }, clerestory: true,
       }, rnd);
       ch.spots.inside.push(...furnish(this, ctx, room, "warehouse", rnd));
+      ch.sheds.push({ x, z, y: room.fy, w, d });
       for (let k = 0; k < 3; k++) {
         const vx = x - w / 3 + k * w / 3;
         b.cyl(vx, room.roofTop, z, 0.8, 1.2, 8, L.WHITE, [0.6, 0.6, 0.62], { r1: 0.5 });

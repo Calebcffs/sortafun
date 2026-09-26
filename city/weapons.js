@@ -215,7 +215,7 @@ export class Gunfire {
     const w = this.g.world.raycast(o, d, range, this.hitOut);
     let bestT = w ? w.t : range, best = null, head = false;
     for (const t of this.targets()) {
-      if (t.id === shooter.id || t.dead) continue;
+      if (t.id === shooter.id || t.dead || (t.team && t.team === shooter.team)) continue;
       let h = null;
       if (t.obox) h = rayOBox(o, d, t.obox, bestT);
       else h = rayCylinder(o, d, t.x, t.y, t.z, t.r, t.h, bestT);
@@ -232,7 +232,7 @@ export class Gunfire {
     const hits = [];
     let best = null, bestD = W.range;
     for (const t of this.targets()) {
-      if (t.id === shooter.id || t.dead || t.obox || (opts.skip && opts.skip(t))) continue;
+      if (t.id === shooter.id || t.dead || t.obox || (opts.skip && opts.skip(t)) || (t.team && t.team === shooter.team)) continue;
       const dx = t.x - from.x, dz = t.z - from.z;
       const dist = Math.hypot(dx, dz) - t.r;
       if (dist > bestD) continue;
@@ -313,6 +313,7 @@ export class Gunfire {
     if (opts.visualOnly) return;
     for (const t of this.targets()) {
       if (t.dead || (opts.spare && opts.spare(t))) continue;
+      if (t.team && shooter && t.team === shooter.team && t.id !== shooter.id) continue; // (the story: no blowing up your friends)
       const cx = t.obox ? t.obox.x : t.x, cy = t.obox ? (t.obox.y0 + t.obox.y1) / 2 : t.y + t.h / 2, cz = t.obox ? t.obox.z : t.z;
       const dist = Math.hypot(cx - p.x, cy - p.y, cz - p.z);
       if (dist > R) continue;

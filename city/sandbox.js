@@ -55,7 +55,10 @@ export class Sandbox {
     game.sandbox = this;
     this.scene = game.scene;
     this.world = game.world;
-    this.inv = loadSave(opts.outfit);
+    // the story (campaign.js) brings its own everything: inventory, clock,
+    // what's in the world. Nothing it does touches your multiplayer save.
+    this.story = opts.story || null;
+    this.inv = this.story ? this.story.inv : loadSave(opts.outfit);
     if (opts.outfit && this.inv.outfits.includes(opts.outfit)) this.inv.outfit = opts.outfit;
     this.time = 0;
     this.wanted = 0;
@@ -65,7 +68,7 @@ export class Sandbox {
     this.godT = 3;
     this.deadT = 0;
     this.bubbles = [];
-    this.clock = new WorldClock(() => this.now());
+    this.clock = this.story ? this.story.clock : new WorldClock(() => this.now());
     this.phase = this.clock.phase;
     this.crew = null; this.evac = null; // (set up below once the rest exists)
     this.progress = new Progress(game, this);
@@ -81,8 +84,7 @@ export class Sandbox {
     this.shop = this.hub.shop;
     this.liftEl = document.getElementById("lift");
     this.horde = new RemoteHorde(game, this);
-    this.crew = new Crew(game, this);
-    this.evac = new Evac(game, this);
+    if (!this.story) { this.crew = new Crew(game, this); this.evac = new Evac(game, this); }
     this.hold = null; this.holdT = 0;
     this.wild = new WildBirds(game, { low: 3, med: 6, high: 8 }[game.quality] || 5);
     // what net.js needs to draw other players' poo (the birds online)
@@ -99,14 +101,14 @@ export class Sandbox {
     if (start !== "fists") this.player.select(start);
     this.hud.weapon();
     // draw the shop's pictures in the background once things have settled
-    this.thumbTimer = setTimeout(() => { if (this.g.sandbox === this) this.shop.makeThumbs(); }, 6000);
+    if (!this.story) this.thumbTimer = setTimeout(() => { if (this.g.sandbox === this) this.shop.makeThumbs(); }, 6000);
   }
 
   now() { return this.g.net && this.g.net.c ? this.g.net.c.now() : Date.now(); }
   perk(name) { return this.progress.has(PERK_NAMES[name] || name); }
   maxHealth() { return this.player.turned ? 150 : 100 + (this.perk("tough") ? 30 : 0); }
-  event(kind, d) { this.progress.event(kind, d); }
-  save() { this.inv.lastWeapon = this.player.weapon; writeSave(this.inv); }
+  event(kind, d) { if (!this.story) this.progress.event(kind, d); }
+  save() { this.inv.lastWeapon = this.player.weapon; if (!this.story) writeSave(this.inv); }
 
   // ------------------------------------------------------------
   // who can be shot
@@ -119,7 +121,7 @@ export class Sandbox {
       if (me.vehicle && !me.vehicle.showRider) {
         // inside a car: the car takes the hits (you get a bit of it)
       } else {
-        out.push({ id: "me", kind: "me", x: me.pos.x, y: me.pos.y, z: me.pos.z, r: 0.36, h: me.downed ? 0.9 : me.crouch ? 1.2 : 1.72, hit: (dmg, info) => me.hurt(dmg, info) });
+        out.push({ id: "me", kind: "me", team: "us", x: me.pos.x, y: me.pos.y, z: me.pos.z, r: 0.36, h: me.downed ? 0.9 : me.crouch ? 1.2 : 1.72, hit: (dmg, info) => me.hurt(dmg, info) });
       }
     }
     for (const v of this.vehicles.all()) {
@@ -156,6 +158,7 @@ export class Sandbox {
   // crime and punishment
   // ------------------------------------------------------------
   addWanted(n, pos) {
+    if (this.story) return; // (no wanted level in the story: the wardens are the story's)
     const before = this.wanted;
     this.wanted = clamp(this.wanted + n, 0, 5);
     this.unseenT = 0;
@@ -272,6 +275,7 @@ export class Sandbox {
   action() {
     const me = this.player;
     if (me.dead || this.menuOpen || me.turned) return null;
+    if (this.story) { const a = this.story.action(me); if (a) return a; }
     if (me.downed) {
       const free = this.perk("second wind") && this.inv.windUsed !== this.clock.nightNo;
       if (this.inv.medkits > 0 || free) return { label: free ? "get yourself up (second wind)" : "use a medkit to get up", hold: 4, go: () => this.selfRevive(free) };
@@ -329,6 +333,7 @@ export class Sandbox {
     this.hub.close(); this.closeLift(); this.defences.stopPlacing();
     this.g.sound.crash();
     const help = this.g.net && [...this.g.net.players.values()].some((p) => p.kind === "h" && p.pos.distanceTo(me.pos) < 200);
+    if (this.story) return this.story.onPlayerDown(info);
     this.hud.toast(this.inv.medkits > 0 ? "hold F to patch yourself up with a medkit" + (help ? ", or wait for someone to pick you up" : "") : help ? "hang on, someone can pick you up (they hold F by you)" : "no medkits. crawl somewhere safe and hope.", "bad");
     if (this.g.net) this.g.net.sendT = 99;
   }
@@ -514,19 +519,22 @@ export class Sandbox {
       this.player.camYaw = t.yaw;
       this.g.sound.door();
       if (t.y < UNDER_LINE) this.event("station");
-      if (t.y < UNDER_LINE && !this.toldMetro) { this.toldMetro = true; this.hud.toast("the metro. tunnels run under every third road, with a station where two lines cross. the stairs take you back up.", ""); }
+      if (this.story && this.story.onPortal) this.story.onPortal(q);
+      if (t.y < UNDER_LINE && !this.toldMetro && !this.story) { this.toldMetro = true; this.hud.toast("the metro. tunnels run under every third road, with a station where two lines cross. the stairs take you back up.", ""); }
     });
   }
 
   // the lift's buttons: every stop but this one (keys 1-3 or click)
   openLift(q) {
+    if (this.story && this.story.liftBlocked && this.story.liftBlocked(q)) return;
     this.lift = q;
     const box = this.liftEl.querySelector(".lift-btns");
     box.innerHTML = "";
+    const allowed = this.story && this.story.liftStops ? this.story.liftStops(q) : null;
     q.stops.forEach((s, i) => {
       const b = document.createElement("button");
       b.textContent = (i + 1) + ". " + s.name;
-      b.disabled = s.name === q.here;
+      b.disabled = s.name === q.here || (allowed && !allowed.includes(s.name));
       b.onclick = () => this.rideLift(s);
       box.appendChild(b);
     });
@@ -547,12 +555,13 @@ export class Sandbox {
   }
   rideLift(s) {
     this.closeLift();
+    if (this.story && this.story.onLift && this.story.onLift(s)) return;
     this.g.fade(() => {
       this.player.place(s.x, s.y, s.z, s.yaw);
       this.player.camYaw = s.yaw;
       this.g.sound.lift();
       if (s.name === "roof") this.event("lift");
-      if (s.name === "penthouse" && !this.toldPent) { this.toldPent = true; this.hud.toast("the penthouse. rich people keep strongboxes up here.", "good"); }
+      if (s.name === "penthouse" && !this.toldPent && !this.story) { this.toldPent = true; this.hud.toast("the penthouse. rich people keep strongboxes up here.", "good"); }
     }, 0.5);
   }
 
@@ -576,8 +585,8 @@ export class Sandbox {
     this.g.sound.door();
     this.chute.visible = false; me.parachute = false;
     const hint = v.plane ? "W/S throttle, down arrow to climb, up arrow to dive, A/D to bank. get fast on a long road, then pull up." : v.bike ? "W/S go and brake, A/D lean. space is the handbrake." : "W/S drive, A/D steer, space handbrake, H horn. F gets you out.";
-    if (!this.hinted || !this.hinted[v.type]) { this.hinted = this.hinted || {}; this.hinted[v.type] = true; this.hud.toast(hint, ""); }
-    if (v.plane && !this.inv.garage.includes("plane") && !this.planeFound) { this.planeFound = true; this.hud.big("YOU FOUND THE SECRET PLANE!", "good"); }
+    if ((!this.hinted || !this.hinted[v.type]) && !(this.story && this.story.quietHints)) { this.hinted = this.hinted || {}; this.hinted[v.type] = true; this.hud.toast(hint, ""); }
+    if (v.plane && !this.inv.garage.includes("plane") && !this.planeFound && !this.story) { this.planeFound = true; this.hud.big("YOU FOUND THE SECRET PLANE!", "good"); }
     if (this.g.net) this.g.net.enteredVehicle(v);
   }
 
@@ -628,6 +637,7 @@ export class Sandbox {
     this.deadT = 4;
     this.hub.close(); this.closeLift(); this.defences.stopPlacing();
     this.g.input.unlock();
+    if (this.story) { this.deadT = 1e9; this.story.onPlayerDeath(info); return; }
     // at night you can come back as one of them
     this.choosing = this.clock.night;
     if (this.choosing) { this.deadT = 10; this.hud.deathChoice(true); }
@@ -712,6 +722,7 @@ export class Sandbox {
     if (this.g.net) for (const t of this.g.net.radar()) out.push(t);
     // (crewmates, anyone down, the mast and drops first, then the nearest)
     if (this.evac) for (const t of this.evac.radar(me)) out.push(t);
+    if (this.story) for (const t of this.story.radar(me)) out.push(t);
     return out.sort((a, b) => (b.pri ? 1 : 0) - (a.pri ? 1 : 0) || a.d - b.d).slice(0, 16);
   }
   targetsForHud() { return this.radarTargets(); }
@@ -726,11 +737,12 @@ export class Sandbox {
     // keys: E the menu (B on the shop, M on the map), F does things, T builds
     if (this.lift) {
       const stops = this.lift.stops, here = this.lift.here;
-      for (let i = 0; i < stops.length; i++) if (input.hit("Digit" + (i + 1)) && stops[i].name !== here) { this.rideLift(stops[i]); break; }
+      const allowed = this.story && this.story.liftStops ? this.story.liftStops(this.lift) : null;
+      for (let i = 0; i < stops.length; i++) if (input.hit("Digit" + (i + 1)) && stops[i].name !== here && (!allowed || allowed.includes(stops[i].name))) { this.rideLift(stops[i]); break; }
       if (this.lift && (input.hit("KeyE") || input.hit("KeyF"))) this.closeLift();
     } else {
       if (input.hit("KeyE") || input.hit("Tab") || input.hit("Touch:menu")) this.hub.toggle();
-      if (input.hit("KeyB")) this.hub.toggle("shop");
+      if (input.hit("KeyB") && !this.story) this.hub.toggle("shop");
       if (input.hit("KeyM")) this.hub.toggle("map");
     }
     if (input.hit("KeyH") && !me.vehicle && !this.menuOpen && !me.downed && !me.turned) this.useMedkit();
@@ -814,6 +826,7 @@ export class Sandbox {
     this.hud.prompt(matchMedia("(pointer: coarse)").matches ? prompt.replace(/\[[^\]]*\] ?/g, "") : prompt);
     this.hud.update(dt);
     this.score = this.inv.money;
+    if (this.story) this.story.update(dt, input);
   }
 
   // traffic and police cars knock you over if you stand in the road
@@ -866,6 +879,7 @@ export class Sandbox {
   updateClock(dt) {
     const c = this.clock.update();
     const me = this.player;
+    if (this.story) this.phase = c.phase; // (the story says when it's night)
     if (c.phase !== this.phase) {
       const was = this.phase;
       this.phase = c.phase;
@@ -915,6 +929,7 @@ export class Sandbox {
     this.loot.dispose();
     this.defences.dispose();
     this.hub.dispose();
+    this.closeLift();
     this.liftEl.hidden = true;
     this.wild.dispose();
     this.g.gunfire.dispose();
