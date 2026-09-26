@@ -76,6 +76,7 @@ export class HumanPlayer {
     game.scene.add(this.view);
     this.viewGun = null; this.viewKey = null;
     this.downed = false; this.bleedT = 0;
+    this.seat = 0; // in a vehicle: 0 = driving, 1+ = a passenger (sandbox.rideWith)
     this.turned = false;
     // the torch
     this.torch = new THREE.SpotLight(0xfff0d8, 0, 55, 0.42, 0.55, 1.4);
@@ -307,6 +308,18 @@ export class HumanPlayer {
       this.bleedT -= dt;
       if (this.bleedT <= 0) { this.die({ bled: true }); return; }
     }
+    if (this.vehicle && this.seat > 0) {
+      // riding along: you can still change guns and shoot out of it (from the hip)
+      this.mode = "drive";
+      if (!this.sb.menuOpen) {
+        for (let i = 1; i <= 9; i++) if (input.hit("Digit" + i)) { const list = this.owned(); if (list[i - 1]) this.select(list[i - 1]); }
+        if (input.zoom) this.cycle(input.zoom > 0 ? 1 : -1);
+        if (input.hit("KeyR")) this.startReload();
+        if (!this.W.melee && !this.W.thrown) this.tryFire(input, dt);
+      }
+      this.avatarUpdate(dt);
+      return;
+    }
     if (this.vehicle) { this.mode = "drive"; this.avatarUpdate(dt); return; }
     if (this.dead) { this.avatar.update(dt, { dead: true }); this.avatar.root.position.copy(this.pos); return; }
 
@@ -450,8 +463,8 @@ export class HumanPlayer {
     if (this.vehicle) {
       const v = this.vehicle;
       a.root.visible = v.showRider;
-      if (v.showRider) { v.seatWorld(a.root.position); a.root.rotation.set(v.pitch, v.yaw, v.roll * 0.6, "YXZ"); }
-      a.update(dt, { drive: true });
+      if (v.showRider) { v.seatWorld(a.root.position, this.seat); a.root.rotation.set(v.pitch, v.yaw, v.roll * 0.6, "YXZ"); }
+      a.update(dt, { drive: this.seat === 0, down: this.seat > 0 });
       this.pos.copy(v.pos);
       return;
     }

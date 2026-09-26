@@ -283,6 +283,10 @@ export class Sandbox {
     }
     if (this.evac) { const a = this.evac.action(me.pos); if (a) return a; }
     if (this.crew) { const a = this.crew.action(me.pos); if (a) return a; }
+    if (me.vehicle && me.seat > 0) return { label: "get out", go: () => this.exitRide() };
+    // someone else's car with room in it: ride along
+    const host = !me.vehicle && this.rideable(me.pos);
+    if (host) return { label: "ride with " + host.name + " (" + host.free + (host.free === 1 ? " seat" : " seats") + " left)", go: () => this.rideWith(host.p) };
     if (me.vehicle) {
       const v = me.vehicle;
       if (Math.abs(v.speed) > 12 && !v.bike && !(v.plane && !v.onGround)) return null;
@@ -398,6 +402,80 @@ export class Sandbox {
   }
   onClaw() { this.infected = (this.infected || 0) + 1; }
 
+  // ------------------------------------------------------------
+  // riding along in someone else's vehicle (vehicles.js seats; net.js tells
+  // everyone which vehicle and seat, field se)
+  // ------------------------------------------------------------
+  // a car another player is driving, close enough to get in, with room
+  rideable(pos) {
+    const net = this.g.net;
+    if (!net) return null;
+    for (const p of net.players.values()) {
+      if (p.kind !== "h" || p.seat > 0 || !p.car || !p.s || p.s.mode !== "v") continue;
+      const c = p.car;
+      if (Math.hypot(c.pos.x - pos.x, c.pos.z - pos.z) > c.hz + 2.2 || Math.abs(c.pos.y - pos.y) > 2.5) continue;
+      if (Math.abs(c.speed) > 6 && !(c.bike && Math.abs(c.speed) < 9)) continue;
+      const free = c.seats - 1 - this.takenSeats(p.vid).length;
+      if (free > 0) return { p, name: p.name, free };
+    }
+    return null;
+  }
+  takenSeats(vid) {
+    const out = [];
+    if (this.g.net) for (const q of this.g.net.players.values()) if (q.vid === vid && q.seat > 0 && q.s && q.s.mode === "v") out.push(q.seat);
+    return out;
+  }
+  rideWith(p) {
+    const me = this.player, c = p.car;
+    if (!c) return;
+    const taken = this.takenSeats(p.vid);
+    let seat = 0;
+    for (let k = 1; k < c.seats; k++) if (!taken.includes(k)) { seat = k; break; }
+    if (!seat) return this.hud.toast("it's full", "warn");
+    me.vehicle = c; me.seat = seat; me.rideUid = p.uid; me.rideVid = p.vid;
+    me.crouch = false; me.ladder = null;
+    this.g.sound.door();
+    this.hud.toast("you're riding with " + p.name + (c.bike ? (seat === 2 ? " (in the sidecar)" : " (on the back)") : "") + ". F gets you out. you can shoot from here.", "good");
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+  exitRide(why) {
+    const me = this.player, c = me.vehicle;
+    if (!c || !me.seat) return;
+    const side = me.seat % 2 ? 1 : -1;
+    const r = new THREE.Vector3(-Math.cos(c.yaw), 0, Math.sin(c.yaw));
+    const p = c.pos.clone().addScaledVector(r, side * (c.hx + 0.8));
+    const g = this.world.groundAt(p.x, p.z, c.pos.y + 2, {});
+    me.vehicle = null; me.seat = 0; me.rideUid = null; me.rideVid = null;
+    me.place(p.x, Math.max(g.y, c.pos.y - 0.5), p.z, c.yaw);
+    me.camYaw = c.yaw;
+    if (Math.abs(c.speed) > 8) { me.vel.copy(c.forward().multiplyScalar(c.speed * 0.4)); me.vel.y = 3; me.hurt(Math.abs(c.speed) * 1.2, { fall: true }); }
+    this.g.sound.door();
+    if (why) this.hud.toast(why, "warn");
+    if (this.g.net) this.g.net.sendT = 99;
+  }
+  // the driver got out, drove off out of range, or left: so do we
+  checkRide() {
+    const me = this.player;
+    if (!me.vehicle || !me.seat) return;
+    const p = this.g.net && this.g.net.players.get(me.rideUid);
+    // (a moment's grace: a late update or a car being redrawn isn't the driver leaving)
+    const ok = p && p.s && p.s.mode === "v" && p.vid === me.rideVid;
+    if (ok && p.car && p.car !== me.vehicle) me.vehicle = p.car;
+    this.rideLostT = ok && p.car ? 0 : (this.rideLostT || 0) + 1 / 60;
+    // two of us grabbed the same seat at once: the later id moves along one
+    const net = this.g.net;
+    if (ok && net && net.uid) for (const q of net.players.values()) {
+      if (q.vid !== me.rideVid || q.seat !== me.seat || !q.s || q.s.mode !== "v" || q.uid > net.uid) continue;
+      const taken = this.takenSeats(me.rideVid);
+      let seat = 0;
+      for (let k = 1; k < me.vehicle.seats; k++) if (!taken.includes(k)) { seat = k; break; }
+      if (!seat) return this.exitRide("it's full");
+      me.seat = seat; net.sendT = 99;
+      break;
+    }
+    if (this.rideLostT > 1.5) this.exitRide(ok ? "lost the car" : "the driver got out");
+  }
+
   // on the pad when the chopper lifted off
   escape() {
     const s = this.inv.stats;
@@ -506,6 +584,7 @@ export class Sandbox {
   exitVehicle(forced) {
     const me = this.player, v = me.vehicle;
     if (!v) return;
+    if (me.seat > 0) return this.exitRide();
     const air = v.plane && !v.onGround;
     if (!forced && !air && Math.abs(v.speed) > 12 && !v.bike) return this.hud.toast("slow down first (or jump out on a bike)", "warn");
     const p = air ? v.pos.clone().add(new THREE.Vector3(0, -3, 0)) : v.exitPoint();
@@ -667,8 +746,12 @@ export class Sandbox {
       if (k) this.defences.startPlacing(k); else this.hud.toast("nothing to build. the shop has barricades, traps and turrets (E).", "warn");
     } else if (!this.menuOpen) this.defences.updatePlacing(input);
     // you
+    this.checkRide();
     me.update(dt, input);
-    if (me.vehicle) {
+    if (me.vehicle && me.seat > 0) {
+      const v = me.vehicle;
+      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : "car", clamp(Math.abs(v.speed) / v.def.top, 0, 1));
+    } else if (me.vehicle) {
       const v = me.vehicle;
       const up = input.down("KeyW") || input.down("ArrowUp") && !v.plane, dn = input.down("KeyS") || input.down("ArrowDown") && !v.plane;
       let steer = (input.down("KeyD") || (!v.plane && input.down("ArrowRight")) ? 1 : 0) - (input.down("KeyA") || (!v.plane && input.down("ArrowLeft")) ? 1 : 0);

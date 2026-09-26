@@ -20,6 +20,7 @@
           "sc": { ".validate": "newData.isNumber()" },
           "t": { ".validate": "newData.isNumber() && newData.val() <= now" },
           "z": { ".validate": "newData.isString() && newData.val().length <= 1400" },
+          "se": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8" },
           "tn": { ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)" },
           "lv": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 999" },
           "cr": { ".validate": "newData.isString() && newData.val().length <= 24" },

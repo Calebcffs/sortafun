@@ -17,7 +17,8 @@
 //   city/cars/<id>  = {ty, x, y, z, yaw, by: uid driving or "", t, wr: wrecked}
 //   city/loot/<id>  = server time it was opened
 //   city/feed/<id>  = {k: killer, v: victim, w: weapon, by: killer uid, vu: victim uid, t}
-//   people also carry: z (their zombies, horde.js), tn (turned 1/0), lv
+//   people also carry: se (seat: 0 driving, 1+ a passenger in vehicle vi),
+//     z (their zombies, horde.js), tn (turned 1/0), lv
 //     (level), cr / cn (crew id / name), pg (a ping), qc (quick chat)
 //   city/zhits/<owner>/<id> = {by, n, z: zombie id, d: damage, h: headshot, t}
 //   city/builds/<id> = {ty: barricade|wall|spikes|mine|turret, x, y, z, r: yaw, by: uid, t}
@@ -216,7 +217,7 @@ export class Net {
     this.lastBeat = performance.now();
     this.sentPc = 0; this.sentCc = 0;
     const rec = { n: this.name, k: this.human ? "h" : "b", s: this.human ? this.g.sandbox.inv.outfit : this.g.speciesKey, st: this.lastSent, pc: 0, cc: 0, sc: 0, t: db.serverTimestamp() };
-    if (this.human) { const sb = this.g.sandbox; rec.w = sb.player.weapon; rec.v = ""; rec.vi = ""; rec.hp = 100; rec.lv = sb.progress.level; rec.tn = 0; rec.z = ""; rec.cr = sb.crew ? sb.crew.id : ""; rec.cn = sb.crew ? sb.crew.name : ""; }
+    if (this.human) { const sb = this.g.sandbox; rec.se = 0; rec.w = sb.player.weapon; rec.v = ""; rec.vi = ""; rec.hp = 100; rec.lv = sb.progress.level; rec.tn = 0; rec.z = ""; rec.cr = sb.crew ? sb.crew.id : ""; rec.cn = sb.crew ? sb.crew.name : ""; }
     await db.set(this.me, rec);
     if (this.closed) { db.remove(this.me); return "closed"; }
     this.live = true;
@@ -283,6 +284,11 @@ export class Net {
     p.vtype = v.v || "";
     p.vid = v.vi || "";
     p.hp = v.hp == null ? 100 : v.hp;
+    const seat = v.se || 0;
+    // someone climbing into the vehicle we're driving
+    const mine = this.g.sandbox && this.g.sandbox.player.vehicle;
+    if (seat > 0 && (seat !== p.seat || p.vid !== (v.vi || "")) && mine && !this.g.sandbox.player.seat && mine.id === (v.vi || "") && !added) this.g.hud.toast(cleanName(v.n) + " hopped in", "good");
+    p.seat = seat;
     p.lv = v.lv || 1;
     p.cr = v.cr || ""; p.cn = cleanName(v.cn || "");
     const turned = !!v.tn;
@@ -353,7 +359,7 @@ export class Net {
     const sb = this.g.sandbox;
     const w = sb ? sb.player.weapon : null;
     const veh = sb && sb.player.vehicle;
-    const vt = veh ? veh.type : "", vi = veh ? veh.id : "";
+    const vt = veh ? veh.type : "", vi = veh ? (sb.player.seat > 0 ? sb.player.rideVid : veh.id) : "";
     const outfit = sb ? sb.inv.outfit : null;
     const fx = this.fxPending;
     const hp = sb ? Math.round(clamp(sb.player.health / sb.maxHealth() * 100, 0, 100) / 10) * 10 : null;
@@ -363,6 +369,7 @@ export class Net {
       extra.z = sb.npcs.packMine();
       extra.tn = sb.player.turned ? 1 : 0;
       extra.lv = sb.progress.level;
+      extra.se = sb.player.vehicle ? sb.player.seat : 0;
       extra.cr = sb.crew ? sb.crew.id : ""; extra.cn = sb.crew ? sb.crew.name : "";
       if (sb.crew) { extra.pg = sb.crew.pingOut; extra.qc = sb.crew.chatOut; }
     }
@@ -536,6 +543,9 @@ export class Net {
         this.hitPlayer(p, p.car ? dmg * 0.3 : dmg, info.key || (this.g.sandbox ? this.g.sandbox.player.weapon : "?"));
         this.g.gunfire.sprite(this.g.gunfire.popMat, info.point || p.pos, 0.5, 0.15, { grow: 2 });
       };
+      const sb = this.g.sandbox;
+      if (sb && sb.player.vehicle && (p.car === sb.player.vehicle || p.host === sb.player.vehicle)) continue; // (our own ride)
+      if (p.seat > 0 && p.s && p.s.mode === "v") { if (p.host && p.host.showRider && p.model) out.push({ id: "p:" + p.uid, kind: "player", x: p.model.root.position.x, y: p.model.root.position.y - 0.3, z: p.model.root.position.z, r: 0.34, h: 1.3, hit }); continue; }
       if (p.car) out.push({ id: "p:" + p.uid, kind: "player", obox: p.car.obox, hit });
       else if (p.kind === "h") out.push({ id: "p:" + p.uid, kind: p.turned ? "zombie-player" : "player", x: p.pos.x, y: p.pos.y, z: p.pos.z, r: 0.36, h: p.down ? 0.9 : HEIGHT, hit });
       else {
@@ -606,7 +616,7 @@ export class Net {
       tag.visible = !quiet && d < TAG_RANGE;
       if (tag.visible) {
         let lift = 0.6;
-        if (p.kind === "h") lift = inCar ? (p.car ? p.car.h + 0.6 : 2.2) : HEIGHT + 0.35;
+        if (p.kind === "h") lift = inCar ? (p.car ? p.car.h + 0.6 : p.host ? p.host.h + 0.6 + p.seat * 0.3 : 2.2) : HEIGHT + 0.35;
         else if (p.model) lift = (p.model.standHeight + 0.15) * gameScale(SPECIES[p.look]) + 0.25;
         tag.position.set(p.pos.x, p.pos.y + lift, p.pos.z);
         if (relabel || !p.tag.text) {
@@ -624,7 +634,7 @@ export class Net {
     const budget = this.g.quality === "low" ? ANIM_BUDGET - 1 : ANIM_BUDGET;
     for (const { p } of this.due.slice(0, budget)) {
       const s = p.s;
-      if (p.kind === "h") p.model.update(p.animT, { speed: s.mode === "o" ? 0 : s.speed, down: s.mode === "o", air: s.mode === "a", vy: 0, crouch: s.flap > 0.5, swim: s.mode === "w", dead: s.mode === "x", drive: s.mode === "v", aimPitch: s.pitch });
+      if (p.kind === "h") p.model.update(p.animT, { speed: s.mode === "o" ? 0 : s.speed, down: s.mode === "o" || (s.mode === "v" && p.seat > 0), air: s.mode === "a", vy: 0, crouch: s.flap > 0.5, swim: s.mode === "w", dead: s.mode === "x", drive: s.mode === "v" && !(p.seat > 0), aimPitch: s.pitch });
       else p.model.update(p.animT, { mode: BIRD_MODE[s.mode] || "air", flap: s.flap, dive: s.dive, flare: s.flare, bank: s.bank, walk: s.walk, turn: s.turn, speed: s.speed, call: false });
       p.animT = 0;
     }
@@ -649,6 +659,21 @@ export class Net {
 
   placeHuman(p, s, near, inCar, dt) {
     const a = p.model;
+    // a passenger: sits in the driver's vehicle (ours, or another player's)
+    if (inCar && p.seat > 0) {
+      if (p.car) { p.car.dispose(); p.car = null; }
+      const host = this.hostOf(p);
+      p.host = host;
+      if (a) {
+        a.root.visible = near && !!host && host.showRider;
+        if (host && host.showRider) { host.seatWorld(a.root.position, p.seat); a.root.rotation.set(host.pitch, host.yaw, host.roll * 0.6, "YXZ"); }
+        if (p.shownWeapon !== p.weapon && a.bones) { p.shownWeapon = p.weapon; a.setWeapon(p.weapon === "fists" || p.weapon === "grenade" || p.weapon === "claw" ? null : p.weapon); }
+        p.animT += dt;
+        if (near && p.animT > 1 / 10) this.due.push({ p, due: p.animT * 10 });
+      }
+      return;
+    }
+    p.host = null;
     // their vehicle
     if (inCar && near) {
       if (!p.car || p.car.type !== p.vtype) {
@@ -692,6 +717,16 @@ export class Net {
     if (p.animT / every >= 1) this.due.push({ p, due: p.animT / every });
   }
 
+  // the vehicle a passenger's riding in: ours if we're driving it, or the one
+  // its driver's drawn in
+  hostOf(p) {
+    const sb = this.g.sandbox;
+    const mine = sb && sb.player.vehicle;
+    if (mine && !sb.player.seat && mine.id === p.vid) return mine;
+    for (const q of this.players.values()) if (q !== p && q.seat === 0 && q.vid === p.vid && q.car) return q.car;
+    return null;
+  }
+
   // where a remote player is at time t: between the two updates either side
   // of it, or carried on a little past the newest one
   sample(p, t) {
@@ -702,8 +737,10 @@ export class Net {
       if (t >= a.at && t <= b.at) return this.mix(a.s, b.s, (t - a.at) / Math.max(1, b.at - a.at), p);
     }
     const a = S[S.length - 2], b = S[S.length - 1];
-    const span = Math.max(1, b.at - a.at);
-    return this.mix(a.s, b.s, 1 + Math.min(t - b.at, 400) / span, p);
+    // (two updates can arrive almost together: don't carry on at the speed
+    // that implies, or people and their cars leap ahead)
+    const span = Math.max(150, b.at - a.at);
+    return this.mix(a.s, b.s, Math.min(1.6, 1 + Math.min(t - b.at, 400) / span), p);
   }
   mix(a, b, k, p) {
     // a teleport (respawn): don't slide across the map

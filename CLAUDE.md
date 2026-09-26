@@ -583,6 +583,18 @@ emulators. A background tab is throttled to about 1 fps, so judge network
 effects from the foreground page or pump `city.simulate` yourself.
 Evac/escape timings run on real server time, not simulated time.
 
+**Passengers (2026-09-26):** every vehicle takes at least 2 passengers
+(`Vehicle.seats`: cars 4, bike 3 with a pillion seat and a sidecar, plane 3).
+F by a car another player is driving = "ride with NAME" (`sandbox.rideable`
+/ `rideWith`): you set `me.vehicle` to your copy of their car (net.js
+`p.car`), `me.seat` 1+, and send `se` + `vi` (their vehicle id). Other
+screens seat you in that car (`net.hostOf`, visible on bikes only).
+Passengers can switch guns and shoot from the hip; their shots skip the car
+they're in. If the driver leaves (or their car isn't seen for 1.5s)
+passengers are dropped beside it (`checkRide`); two claiming one seat: the
+higher uid moves along. net.js `sample()` caps extrapolation (bursty updates
+used to fling remote cars 700m and drop passengers).
+
 **The intro (`city/intro.js`, 2026-09-26):** PLAY (as a person) runs a
 ~90s cinematic before the game loads, skippable (button, Space, Enter, Esc).
 It builds its own World (same seed) + SkySystem and films real places:

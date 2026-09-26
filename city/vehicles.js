@@ -70,6 +70,16 @@ function makeBike() {
   cyl(g, 0.025, 0.025, 0.7, 0, 1.0, 0.48, dark, "x");   // handlebar
   const lamp = cyl(g, 0.1, 0.1, 0.08, 0, 0.9, 0.62, mat(0xfff4c0, { emissive: 0x665522 }), "z");
   lamp.userData.lamp = true;
+  // a pillion grab rail, and a sidecar on the left for a third rider
+  box(g, 0.34, 0.05, 0.05, 0, 0.9, -0.9, chrome);
+  const car = new THREE.Group(); car.position.set(0.82, 0, -0.1); g.add(car);
+  box(car, 0.62, 0.42, 1.25, 0, 0.42, 0, red);                    // the tub
+  box(car, 0.5, 0.1, 0.9, 0, 0.64, -0.12, dark);                  // seat
+  box(car, 0.64, 0.2, 0.34, 0, 0.72, 0.5, red, -0.4);             // nose
+  box(car, 0.5, 0.05, 0.05, -0.45, 0.4, 0.3, chrome); box(car, 0.5, 0.05, 0.05, -0.45, 0.4, -0.3, chrome); // struts
+  const sw = new THREE.Group(); sw.position.set(0.32, 0.26, 0); car.add(sw);
+  const st = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.07, 8, 16), tyre); st.rotation.y = Math.PI / 2; sw.add(st);
+  wheels.push(sw);
   return { g, wheels, front: [wheels[0]] };
 }
 
@@ -127,7 +137,8 @@ export class Vehicle {
     this.plane = !!this.def.plane;
     this.showRider = this.bike;
     this.len = this.def.len;
-    this.hx = this.bike ? 0.45 : this.plane ? 1.2 : 1.0; this.hz = this.len / 2; this.h = this.bike ? 1.3 : this.plane ? 2.6 : 1.6;
+    // (the bike's sidecar makes it wide)
+    this.hx = this.bike ? 0.8 : this.plane ? 1.2 : 1.0; this.hz = this.len / 2; this.h = this.bike ? 1.3 : this.plane ? 2.6 : 1.6;
     this.camHeight = this.plane ? 3 : this.bike ? 1.6 : 2.0;
     this.camDist = this.plane ? 15 : this.bike ? 4.5 : Math.max(6.5, this.len * 1.45);
     this.air = false; this.onGround = true;
@@ -169,11 +180,19 @@ export class Vehicle {
   upgrade() { if (this.full || this.bike || this.plane || this.wantFull) return; this.wantFull = true; this.load(); }
 
   // where a rider sits (bikes)
-  seatWorld(out) {
-    const f = this.forward();
-    out.copy(this.pos).addScaledVector(f, this.bike ? -0.28 : 0);
-    out.y += this.bike ? 0.28 : 0.4;
-    return out;
+  // seats: 0 is the driver. Every vehicle takes at least two passengers
+  // (the bike: one on the back and one in the sidecar; the plane: two in the
+  // back seats; cars: three)
+  get seats() { return this.def.seats || (this.bike || this.plane ? 3 : 4); }
+  seatWorld(out, seat = 0) {
+    if (!this.bike) {
+      out.copy(this.pos);
+      out.y += 0.4;
+      return out;
+    }
+    const L = [[0, 0.28, -0.28], [0, 0.36, -0.64], [0.82, 0.02, -0.12]][seat] || [0, 0.28, -0.28];
+    this.root.updateMatrixWorld();
+    return this.root.localToWorld(out.set(L[0], L[1], L[2]));
   }
   forward(out = new THREE.Vector3()) { return out.set(Math.sin(this.yaw) * Math.cos(this.pitch), -Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch)); }
   camYawFor() { return this.speed < -2 && !this.plane ? this.yaw + Math.PI : this.yaw; }
