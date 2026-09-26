@@ -23,7 +23,7 @@ function launchNight(m, route) {
   shots.push({ card: "88.4  rhys fm", black: true, at: [city.plaza.x, city.plaza.z], time: GOLD, dur: 5,
     cam: cam.fixed(V(city.plaza.x, 60, city.plaza.z + 90), city.plaza),
     lines: [[1.2, "rhys", "good evening, city. this is Lucan Rhys.", 3.6]],
-    sound: [[0, () => g.sound.static(3)]] });
+    sound: [[0, () => g.sound.tune()]] });
   // 2. the islands at golden hour, low over the sea towards the volcano
   if (I) {
     const top = I.top, bch = I.beach;
@@ -120,7 +120,7 @@ function launchNight(m, route) {
     cast: (c) => { r7 = rideCast(c, (t) => ride(t + 8)); },
     update: (t) => moveRide(r7, (tt) => ride(tt + 8), t),
     lines: [[1.4, "phone", "RUSH. Rhys Tower lobby. before 8:00pm. do not open. do not be late.", 5]],
-    sound: [[1.2, () => g.sound.tone && g.sound.ensure() && g.sound.tone("sine", 900, 900, 0.12, 0.08)], [1.5, () => g.sound.ensure() && g.sound.tone("sine", 900, 900, 0.12, 0.08)]] });
+    sound: [[0, () => g.sound.engine("bike", 0.55)]] });
   // 8. Broadcast Plaza: crowds, stage lights, Mari at a barrier looking at a photo
   const mast = city.mast, pad = city.pad;
   shots.push({ at: [city.plaza.x, city.plaza.z], time: GOLD + 0.012, dur: 9,
@@ -129,7 +129,8 @@ function launchNight(m, route) {
       for (let i = 0; i < 22; i++) { const a = Math.random() * 6.28, r = 8 + Math.random() * 16; const p = V(pad.x + Math.cos(a) * r, mast.y, pad.z + Math.sin(a) * r * 0.6); c.actor({ look: ["male-a", "female-b", "male-b", "female-f", "male-d", "female-e", "male-f", "female-c"][i % 8], at: p, idle: i % 3 > 0, to: along(p, a, 3), speed: 0.4, face: mast }); }
       c.actor({ who: "mari", at: V(mast.x + 16, mast.y, mast.z + 20), idle: true, face: V(mast.x + 17, mast.y, mast.z + 23), aim: -0.6 });
     },
-    lines: [[3.4, "mari", "come on, Dee. you said you'd be here.", 4.5]] });
+    lines: [[3.4, "mari", "come on, Dee. you said you'd be here.", 4.5]], amb: { crowd: 1 },
+    sound: [[0, () => g.sound.engine(null)]] });
   // 9. the Canopy: Nana Pru watering her tomatoes, the radio on a crate
   const G = garden(m.cast, C);
   shots.push({ at: [C.x, C.z], time: GOLD + 0.014, dur: 9,
@@ -155,7 +156,7 @@ function launchNight(m, route) {
         const L = new THREE.PointLight(0x9fd8ff, 16, 7, 1.6); L.position.set(pp.x + 0.5, py + 1.1, pp.z - 0.5); c.mesh(L);
       },
       lines: [[1.6, "teo", "please don't. oh, please don't turn it on.", 5]],
-      sound: [[0, () => g.sound.heartbeat(0.3)], [4, () => g.sound.heartbeat(0.3)]] });
+      sound: [[0, () => g.sound.tickTock(16)], [3.5, () => g.sound.heartbeat(0.3)]] });
   }
   // 11. Rhys Tower from the street: all the way up to one lit window
   const out = outside(R, 26);
@@ -172,7 +173,7 @@ function launchNight(m, route) {
     cast: (c) => { r12 = rideCast(c, ride2); },
     update: (t, dt, c) => { moveRide(r12, ride2, t); if (t > 2.5 && !c.titled) { c.titled = true; c.title("chapter 1", "last delivery", 5); } },
     caption: [[0.4, "7:57pm"]] });
-  return { shots, back: true };
+  return { music: "ominous", shots, back: true };
 }
 
 // ------------------------------------------------------------------
@@ -185,6 +186,7 @@ const lastDelivery = {
   sections: [
     {
       name: "the delivery",
+      music: "chase",
       start: (m) => roadRoute(m.g, roadIn(m.places.get("towers").rhys)).S,
       async setup(m) {
         const R = m.places.get("towers").rhys;
@@ -214,6 +216,7 @@ const lastDelivery = {
     },
     {
       name: "signed for",
+      music: "action",
       start: (m) => atLift(m.places.get("towers").rhys, "lobby", 6),
       async setup(m) {
         const R = m.places.get("towers").rhys;
@@ -225,7 +228,7 @@ const lastDelivery = {
         const g = m.g, R = m.places.get("towers").rhys, ST = m.places.get("stations").rhys;
         const L = atLift(R, "lobby", 0.5), y = L.y;
         const you = m.inv.outfit;
-        await m.cut({ shots: [
+        await m.cut({ music: "ominous", shots: [
           { time: GOLD + 0.012, dur: 11,
             cam: cam.dolly(V(L.x + 4.5, y + 1.7, L.z + 9), V(L.x + 3.2, y + 1.6, L.z + 7.2), V(L.x, y + 1.3, L.z + 2), null, 50),
             cast: (c) => {
@@ -242,6 +245,7 @@ const lastDelivery = {
               c.lis.a.root.visible = t > 3.2 && t < 10.4;
               c.box.visible = t < 10.4;
             },
+            sound: [[0, () => g.sound.ring(1)], [3.1, () => g.sound.liftDoor()], [9.8, () => g.sound.liftDoor()]],
             lines: [[0.4, "receptionist", "you're cutting it fine. sign there.", 3], [4.2, "listener", "that's the core? I'll take it from here.", 3], [7.4, "listener", "Mr Rhys says thank you. you've no idea what you just carried.", 3.4]] },
           { time: GOLD + 0.013, dur: 9, tint: "sick",
             cam: cam.dolly(V(L.x + 0.3, y + 1.75, L.z + 7.4), V(L.x - 0.3, y + 1.65, L.z + 6.4), V(L.x - 2.2, y + 1.35, L.z + 3.4), null, 44),
@@ -278,7 +282,7 @@ const lastDelivery = {
         m.say("radio", "...this is not a drill. stay in your homes. stay away from...", 4);
         m.g.hud.toast("you've only got your fists. don't fight them all: run (shift).", "bad");
         await m.reach(b, 3.2, "get to the metro", { onFoot: true });
-        await m.cut({ shots: [
+        await m.cut({ music: "action", shots: [
           { time: GOLD + 0.016, dur: 6.5, dark: 0.2,
             cam: cam.dolly(V(b.x - 6.5, b.y + 2, b.z + 3.5), V(b.x - 5, b.y + 1.8, b.z + 2.6), V(b.x - 0.6, b.y + 1.2, b.z), null, 50),
             cast: (c) => {
@@ -313,6 +317,7 @@ const under = {
   sections: [
     {
       name: "the tunnel",
+      music: "dread",
       start: (m) => m.places.get("stations").rhys.kiosk,
       async setup(m) {
         const ST = m.places.get("stations");
@@ -328,7 +333,7 @@ const under = {
         const hall = a.hall;
         if (!m.seen.has("rookie")) {
           m.seen.add("rookie");
-          await m.cut({ shots: [{ under: true, dur: 13,
+          await m.cut({ music: "dread", shots: [{ under: true, dur: 13,
             cam: cam.dolly(V(hall.x + 2.4, UNDER + 1.8, hall.z + 13), V(hall.x + 3.2, UNDER + 1.7, hall.z + 12.2), V(hall.x + 6.3, UNDER + 1.3, hall.z + 9.2), null, 48),
             cast: (c) => {
               c.actor({ who: "mari", at: V(hall.x + 5.2, UNDER, hall.z + 8.4), idle: true, face: V(hall.x + 7.4, UNDER, hall.z + 10), weapon: "pistol" });
@@ -356,6 +361,7 @@ const under = {
     },
     {
       name: "the next station",
+      music: "action",
       start: (m) => m.places.get("stations").next.kiosk,
       async setup(m) {
         const ST = m.places.get("stations");
@@ -412,7 +418,7 @@ const under = {
         });
         m.objective("finish them");
         await m.until(() => !m.sb.npcs.list.some((z) => z.zombie && !z.dead && z.pos.distanceTo(m.me.pos) < 40));
-        await m.cut({ shots: [{ under: true, dur: 16,
+        await m.cut({ music: "sad", shots: [{ under: true, dur: 16,
           cam: cam.dolly(V(hall.x - 3, UNDER + 1.7, hall.z + 2), V(hall.x - 1.5, UNDER + 1.6, hall.z + 3), V(hall.x + 2, UNDER + 1.3, hall.z + 6), null, 46),
           cast: (c) => {
             c.actor({ who: "mari", at: V(hall.x + 2, UNDER, hall.z + 6), idle: true, face: V(hall.x - 1, UNDER, hall.z + 2), aim: -0.3 });
@@ -437,6 +443,7 @@ const canopy = {
   sections: [
     {
       name: "the lobby",
+      music: "stealth",
       start: (m) => outside(m.places.get("towers").canopy, 6),
       async setup(m) {
         const C = m.places.get("towers").canopy;
@@ -466,6 +473,7 @@ const canopy = {
     },
     {
       name: "the penthouse",
+      music: "tension",
       start: (m) => atLift(m.places.get("towers").canopy, "pent", 1),
       async setup(m) {
         const C = m.places.get("towers").canopy;
@@ -485,7 +493,7 @@ const canopy = {
         const foes = [];
         for (let i = 0; i < 4; i++) foes.push(m.cast.foe(V(box.x + 1.6 + (i % 2) * 1.6, y, box.z + 1.2 + (i >> 1) * 1.8), { calm: true, weapon: i === 0 ? "smg" : "pistol", hold: null }));
         const lp = atLift(C, "pent", 1);
-        await m.cut({ shots: [{ time: NIGHT, dark: 0.6, dur: 9,
+        await m.cut({ music: "tension", shots: [{ time: NIGHT, dark: 0.6, dur: 9,
           cam: cam.dolly(V(box.x + 6, y + 1.8, box.z + 7), V(box.x + 5, y + 1.6, box.z + 5.4), V(box.x + 1, y + 0.9, box.z + 1), null, 50),
           cast: (c) => {
             c.actor({ who: "listener", at: V(box.x + 1.1, y, box.z + 0.9), idle: true, crouch: true, face: box });
@@ -511,6 +519,7 @@ const canopy = {
     },
     {
       name: "the roof",
+      music: "title",
       start: (m) => atLift(m.places.get("towers").canopy, "roof", 1),
       async setup(m) {
         const C = m.places.get("towers").canopy;
@@ -524,7 +533,7 @@ const canopy = {
         const L = atLift(C, "roof", 1.2);
         const sp = roofSpots(C, 12, 2.5);
         const extras = (c, turn) => sp.forEach((p, i) => c.actor({ look: ["male-b", "female-e", "male-a", "female-b", "male-f", "female-a", "male-d", "female-c", "male-b", "female-f", "male-a", "female-e"][i], at: p, idle: true, sit: !turn && i % 3 === 0, face: turn ? L : V(C.x, y, C.z + 9) }));
-        await m.cut({ shots: [
+        await m.cut({ music: "ominous", shots: [
           { time: NIGHT, dark: 0.7, dur: 10,
             cam: cam.dolly(V(L.x - 3, y + 1.7, L.z + 1), V(L.x - 2, y + 1.7, L.z + 2.2), V(L.x + 1, y + 1.4, L.z + 7), null, 48),
             cast: (c) => {

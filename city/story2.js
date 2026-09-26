@@ -16,6 +16,7 @@ function canopyScene(m, lines, o = {}) {
   const who = o.who || ["nana", "teo", "mari"];
   const spots = [V(L.x + 1.6, y, L.z + 4.6), V(L.x - 1.8, y, L.z + 4.2), V(L.x + 3.2, y, L.z + 2.4), V(L.x - 3, y, L.z + 2)];
   return {
+    music: o.music || "title",
     shots: [{ time: o.time ?? MORNING, dark: o.dark ?? 0, dur: o.dur || lines.reduce((a, l) => Math.max(a, l[0] + (l[3] || 3.5)), 0) + 1,
       cam: o.cam || cam.orbit(V(L.x, y, L.z + 3), 8.5, 2.2, 3.5, 4.1, 1.2, 50),
       cast: (c) => {
@@ -60,11 +61,12 @@ const rushHour = {
           [10.8, "mari", "might?", 1.6],
           [12.6, "teo", "might. I need a transmitter coil. the power station in the yards kept spares.", 4.4],
           [17.4, "nana", "take my van. and bring it back with less blood on it than it's got now.", 4.2],
-        ]));
+        ], { music: "explore" }));
       },
     },
     {
       name: "the drive",
+      music: "chase",
       start: (m) => roadIn(m.places.get("towers").canopy),
       async setup(m) {
         const C = m.places.get("towers").canopy;
@@ -127,6 +129,7 @@ const rushHour = {
     },
     {
       name: "the detour",
+      music: "chase",
       start: (m) => yardGoal(m),
       async setup(m) {
         const g = m.g, goal = yardGoal(m);
@@ -166,7 +169,7 @@ const rushHour = {
         await m.reach(goal, 12, "get to the cooling towers");
         await m.until(() => Math.abs(m.van.speed) < 5);
         const Y = m.places.get("yards"), t0 = Y.towers[0] || { x: goal.x + 80, z: goal.z };
-        await m.cut({ shots: [{ time: GOLD - 0.02, dur: 8,
+        await m.cut({ music: "tension", shots: [{ time: GOLD - 0.02, dur: 8,
           cam: cam.dolly(along(V(goal.x, goal.y + 5, goal.z), dirYaw(goal, t0), -9, 3), along(V(goal.x, goal.y + 9, goal.z), dirYaw(goal, t0), -7, 2), V(t0.x, goal.y + 50, t0.z), V(t0.x, goal.y + 65, t0.z), 60),
           cast: (c) => { c.car("van", V(goal.x, goal.y, goal.z), dirYaw(goal, t0)); c.actor({ who: "mari", at: along(goal, dirYaw(goal, t0), 1, -2), idle: true, face: t0 }); },
           lines: [[1, "mari", "we've got till the sun goes down. after that we're a buffet.", 4]] }] });
@@ -182,6 +185,9 @@ function shed(m, i) {
   const Y = m.places.get("yards");
   return Y.sheds[i % Math.max(1, Y.sheds.length)] || { x: Y.x + i * 40, z: Y.z, y: Y.y, w: 40, d: 26 };
 }
+// the open floor inside a shed, between the ends of the pallet racks (which
+// run down the middle) and the big loading door on the +z side
+function floorOf(h, dx = 0, dz = 0) { return V(h.x + dx, h.y, h.z + h.d * 0.33 + dz); }
 const coolingTowers = {
   id: "m5", n: 5, title: "cooling towers", act: "act 2", when: "dusk 2", reward: 5000,
   blurb: "three warehouses, one coil, then barricades, mines, a turret and four waves.",
@@ -189,6 +195,7 @@ const coolingTowers = {
   sections: [
     {
       name: "find the coil",
+      music: "tension",
       start: (m) => { const s = shed(m, 0); return V(s.x, s.y, s.z + s.d / 2 + 6); },
       async setup(m) {
         const s = shed(m, 0);
@@ -199,10 +206,10 @@ const coolingTowers = {
         m.failIf(() => m.mari.dead, "Mari didn't make it");
         for (let i = 0; i < 3; i++) {
           const h = shed(m, i);
-          m.cast.zombie("walker", V(h.x - 6, h.y, h.z - 3), { sleep: i === 0 });
-          m.cast.zombie("walker", V(h.x + 7, h.y, h.z + 2), {});
-          m.cast.zombie("screamer", V(h.x, h.y, h.z - 6), {});
-          if (i === 2) m.cast.zombie("runner", V(h.x + 4, h.y, h.z - 8), { sleep: true });
+          m.cast.zombie("walker", floorOf(h, -6, 0), { sleep: i === 0 });
+          m.cast.zombie("walker", floorOf(h, 7, 1), {});
+          m.cast.zombie("screamer", floorOf(h, 1, -1), {});
+          if (i === 2) m.cast.zombie("runner", floorOf(h, -3, 2.5), { sleep: true });
         }
       },
       async run(m) {
@@ -210,11 +217,12 @@ const coolingTowers = {
         m.say("mari", "three sheds. the coil's in one of them. screamers too, probably. shoot those first.");
         for (let i = 0; i < 3; i++) {
           const h = shed(m, i);
-          await m.reach(V(h.x, h.y, h.z), 7, "search the warehouses (" + (i + 1) + " / 3)");
+          await m.reach(floorOf(h), 7, "search the warehouses (" + (i + 1) + " / 3)");
           if (i < 2) { m.say(i ? "mari" : "teo", i ? "nothing. empty racks and a vending machine. next." : "(radio) anything? no? the next one, then. it'll be in a crate marked T-40.", 3.5); continue; }
-          const c = coilMesh(); c.position.set(h.x, h.y + 1.2, h.z); m.cast.add(c);
-          m.cast.solid(h.x - 0.6, h.y, h.z - 0.6, h.x + 0.6, h.y + 0.9, h.z + 0.6, { color: 0x8a6a3c, kind: "crate" });
-          await m.pressF(V(h.x, h.y, h.z + 0.9), 1.9, "take the coil");
+          const cp = floorOf(h, 2, 0);
+          const c = coilMesh(); c.position.set(cp.x, cp.y + 1.2, cp.z); m.cast.add(c);
+          m.cast.solid(cp.x - 0.6, cp.y, cp.z - 0.6, cp.x + 0.6, cp.y + 0.9, cp.z + 0.6, { color: 0x8a6a3c, kind: "crate" });
+          await m.pressF(V(cp.x, cp.y, cp.z + 0.9), 1.9, "take the coil");
           c.visible = false;
           g.sound.pickup();
           m.say("teo", "(radio) T-40! that's it! that's the one! don't drop it.");
@@ -223,7 +231,7 @@ const coolingTowers = {
         const city = m.places.get("city");
         const out = dryNear(g, h.x, h.z + h.d / 2 + 14);
         const toward = dirYaw(out, city.mast);
-        await m.cut({ shots: [
+        await m.cut({ music: "ominous", shots: [
           { time: DUSK, dark: 0.45, dur: 9, tint: "red",
             cam: cam.dolly(along(V(out.x, out.y + 3, out.z), toward, -8), along(V(out.x, out.y + 6, out.z), toward, -6), along(V(out.x, out.y + 2, out.z), toward, 20), V(city.mast.x, 60, city.mast.z), 45),
             cast: (c) => { for (let i = 0; i < 7; i++) { const p = along(out, toward + (i - 3) * 0.3, 10 + i * 3); p.y = gy(g, p.x, p.z); c.actor({ look: ["male-a", "female-b", "male-b", "female-e", "male-f", "female-c", "male-d"][i], zombie: true, at: p, idle: true, face: along(p, toward + 2.2, 5), pose: (a, t) => { if (t > 3 + i * 0.2) a.yaw += (toward - a.yaw) * 0.08; } }); } },
@@ -235,20 +243,21 @@ const coolingTowers = {
     },
     {
       name: "hold the warehouse",
-      start: (m) => { const s = shed(m, 2); return V(s.x, s.y, s.z); },
+      music: "action",
+      start: (m) => floorOf(shed(m, 2), 0, 2),
       async setup(m) {
         const s = shed(m, 2);
         m.time(DUSK, 0.5, "dusk 2 · 7:10pm");
         m.timeTo(NIGHT, 1, 150);
         m.loadout({ guns: { pistol: 48, rifle: 240, shotgun: 30 }, medkits: 2, grenades: 2, builds: { barricade: 4, mine: 3, turret: 1 } });
-        await m.put(V(s.x, s.y, s.z + 3), 0);
-        m.mari = m.cast.ally("mari", V(s.x + 2, s.y, s.z - 2), { weapon: "rifle", bleed: 20 });
-        m.mari.hold = V(s.x + 2, s.y, s.z - 2);
+        await m.put(floorOf(s, 0, 2.2), 0);
+        m.mari = m.cast.ally("mari", floorOf(s, 3, -1), { weapon: "rifle", bleed: 20 });
+        m.mari.hold = floorOf(s, 3, -1);
         m.failIf(() => m.mari.dead, "Mari didn't make it");
       },
       async run(m) {
         const g = m.g, s = shed(m, 2);
-        const coil = V(s.x, s.y, s.z);
+        const coil = floorOf(s);
         const c = coilMesh(); c.position.set(coil.x, coil.y + 1.2, coil.z); m.cast.add(c);
         m.cast.solid(coil.x - 0.6, coil.y, coil.z - 0.6, coil.x + 0.6, coil.y + 0.9, coil.z + 0.6, { color: 0x8a6a3c, kind: "crate" });
         m.say("mari", "they're coming here. doors! barricades on the doors, mines outside, the turret in the middle.");
@@ -260,7 +269,7 @@ const coolingTowers = {
         m.sb.defences.stopPlacing();
         // the coil: if they get round it for five seconds, it's theirs
         let hp = 100, over = 0;
-        const goal = { pos: coil, r: 1.4, hit: (d) => { hp -= d * 0.35; m.bar("coil", "the coil", hp / 100, "#ffb347"); } };
+        const goal = { pos: coil, r: 1.4, hit: (d) => { hp -= d * 0.35 * Math.min(1, m.diff.dmg); m.bar("coil", "the coil", hp / 100, "#ffb347"); } };
         m.bar("coil", "the coil", 1, "#ffb347");
         m.failIf(() => hp <= 0, "they overran the warehouse");
         const watch = setInterval(() => {
@@ -290,7 +299,7 @@ const coolingTowers = {
         } finally { clearInterval(watch); }
         m.bar("coil", null);
         const city = m.places.get("city");
-        await m.cut({ shots: [
+        await m.cut({ music: "tension", shots: [
           { time: NIGHT, dark: 0.9, dur: 8,
             cam: cam.dolly(V(s.x + 10, s.y + 2, s.z + s.d / 2 + 16), V(s.x + 6, s.y + 1.8, s.z + s.d / 2 + 10), V(s.x, s.y + 1.2, s.z + s.d / 2 + 2), null, 50),
             cast: (c) => {
@@ -355,11 +364,12 @@ const longShot = {
           [5.4, "nana", "there's a man out in the snow. used to shoot for the country. hits a tin can at a thousand metres.", 5],
           [10.8, "mari", "does he like visitors?", 2.2],
           [13.2, "nana", "no. take him eggs.", 2.6],
-        ], { time: NOON - 0.05, nanaSits: true }));
+        ], { time: NOON - 0.05, nanaSits: true, music: "explore" }));
       },
     },
     {
       name: "the drive",
+      music: "explore",
       start: (m) => { const S = m.places.get("snow"); const c = m.places.get("city"); return along(V(S.barn.x, 0, S.barn.z), dirYaw(V(S.barn.x, 0, S.barn.z), c.plaza), 650); },
       async setup(m) {
         const g = m.g, S = m.places.get("snow"), c = m.places.get("city");
@@ -375,6 +385,7 @@ const longShot = {
         m.mari = m.cast.ally("mari", along(at, yaw, -3, 2), { weapon: "rifle", bleed: 20 });
         m.cast.board(m.mari, m.suv, 1); m.mari.stay = true;
         m.failIf(() => m.mari.dead, "Mari didn't make it");
+        m.failIf(() => m.suv.dead, "you wrecked the 4x4");
         m.quietHints = true;
         m.at0 = at;
       },
@@ -398,6 +409,7 @@ const longShot = {
     },
     {
       name: "the vigil",
+      music: "tension",
       start: (m) => vigil(m).look,
       async setup(m) {
         const v = vigil(m);
@@ -407,7 +419,7 @@ const longShot = {
         const yaw = dirYaw(v.look, v.K);
         await m.put(V(v.look.x - 1, v.top, v.look.z), yaw);
         m.kofi = m.cast.ally("kofi", V(v.look.x + 1.2, v.top, v.look.z - 0.6), { weapon: "sniper", follow: false, range: 260, canDie: false });
-        m.kofi.hold = V(v.look.x + 1.2, v.top, v.look.z - 0.6); m.kofi.headshots = true; m.kofi.slow = 1.3; m.kofi.noRevive = true;
+        m.kofi.hold = V(v.look.x + 1.2, v.top, v.look.z - 0.6); m.kofi.headshots = true; m.kofi.slow = 1.3; m.kofi.noRevive = true; m.kofi.vRange = 40;
         // Kofi takes the right: anything on his side of the line from here to the lake
         const lx = Math.sin(v.yBK + 1.25 + Math.PI), lz = Math.cos(v.yBK + 1.25 + Math.PI);
         m.kofi.pick = (z) => { const dx = z.pos.x - v.look.x, dz = z.pos.z - v.look.z; return (dx * -lz + dz * lx) > 0 || z.pos.distanceTo(v.door) < 12; };
@@ -419,7 +431,7 @@ const longShot = {
         const g = m.g, v = vigil(m);
         if (!m.seen.has("kofi")) {
           m.seen.add("kofi");
-          await m.cut({ shots: [{ time: NOON + 0.03, dur: 13, tint: "cold",
+          await m.cut({ music: "title", shots: [{ time: NOON + 0.03, dur: 13, tint: "cold",
             cam: cam.dolly(along(V(v.look.x, v.top + 0.6, v.look.z), dirYaw(v.look, v.K), 7, 1.5), along(V(v.look.x, v.top + 0.9, v.look.z), dirYaw(v.look, v.K), 5.5, 1), V(v.look.x, v.top + 1.4, v.look.z), null, 48),
             cast: (c) => {
               c.actor({ who: "kofi", at: V(v.look.x + 1.2, v.top, v.look.z - 0.6), idle: true, face: v.K, weapon: "sniper" });
@@ -428,7 +440,7 @@ const longShot = {
             lines: [[0.3, "kofi", "you're late.", 1.8], [2.4, "mari", "(from below) we brought eggs?", 2.2], [4.8, "kofi", "put them down. pick that up.", 2.6], [7.8, "kofi", "they cross the ice every afternoon. for the barn. left side's yours.", 4.4]] }] });
         }
         let hp = 100;
-        const goal = { pos: v.door, r: 2.2, hit: (d) => { hp -= d * 0.3; m.bar("barn", "the barn", hp / 100, "#c9a26b"); } };
+        const goal = { pos: v.door, r: 2.2, hit: (d) => { hp -= d * 0.16 * m.diff.dmg; m.bar("barn", "the barn", hp / 100, "#c9a26b"); } };
         m.bar("barn", "the barn", 1, "#c9a26b");
         m.failIf(() => hp <= 0, "they got into the barn");
         g.hud.toast("right click to scope in. hold your breath: the scope doesn't sway, but they move.", "");
@@ -449,6 +461,7 @@ const longShot = {
     },
     {
       name: "the door",
+      music: "action",
       start: (m) => vigil(m).look,
       async setup(m) {
         const v = vigil(m);
@@ -457,12 +470,12 @@ const longShot = {
         lookout(m, v);
         await m.put(V(v.look.x - 1, v.top, v.look.z), dirYaw(v.look, v.door));
         m.kofi = m.cast.ally("kofi", V(v.look.x + 1.2, v.top, v.look.z - 0.6), { weapon: "sniper", follow: false, range: 260, canDie: false });
-        m.kofi.hold = m.kofi.pos.clone(); m.kofi.headshots = true; m.kofi.slow = 2; m.kofi.noRevive = true;
+        m.kofi.hold = m.kofi.pos.clone(); m.kofi.headshots = true; m.kofi.slow = 2; m.kofi.noRevive = true; m.kofi.vRange = 40;
       },
       async run(m) {
         const g = m.g, v = vigil(m);
         let hp = Math.min(60, m.flags.barn || 60);
-        const goal = { pos: v.door, r: 2.4, hit: (d) => { hp -= d * 0.3; m.bar("barn", "the barn door", hp / 100, "#c9a26b"); } };
+        const goal = { pos: v.door, r: 2.4, hit: (d, z) => { hp -= d * (z && z.type === "brute" ? 0.035 : 0.12) * m.diff.dmg; m.bar("barn", "the barn door", hp / 100, "#c9a26b"); } };
         m.bar("barn", "the barn door", hp / 100, "#c9a26b");
         m.failIf(() => hp <= 0, "it smashed the barn door in");
         const brute = m.cast.zombie("brute", along(v.door, v.yBK, 4), { goal });
@@ -484,7 +497,7 @@ const longShot = {
         const S = m.places.get("snow"), B = V(S.barn.x, S.barn.y, S.barn.z);
         const F = frameOf(B.x, B.z, S.barn.rot);
         const inside = (lx, lz) => { const [x, z] = F.at(lx, lz); return V(x, gy(g, x, z, B.y + 1.5), z); };
-        await m.cut({ shots: [
+        await m.cut({ music: "sad", shots: [
           { time: NOON + 0.05, dark: 0.3, dur: 16, tint: "cold",
             cam: cam.dolly(inside(4, 3.2).add(V(0, 1.8, 0)), inside(3, 2.4).add(V(0, 1.6, 0)), inside(0.8, -0.9).add(V(0, 0.9, 0)), null, 48),
             cast: (c) => {
@@ -534,11 +547,12 @@ const whatTeoDid = {
           [5, "teo", "there's a farm in the hills. I used to rent the barn. the notes are there. a spare coil too.", 5],
           [10.4, "mari", "you rented a barn. for science.", 2.6],
           [13.2, "teo", "for... privacy. I'll come. you won't find anything without me.", 3.8],
-        ], { time: NIGHT, dark: 0.8, who: ["teo", "mari", "nana"] }));
+        ], { time: NIGHT, dark: 0.8, who: ["teo", "mari", "nana"], music: "dread" }));
       },
     },
     {
       name: "the ride out",
+      music: "tension",
       start: (m) => farm(m).start,
       async setup(m) {
         const g = m.g, F = farm(m);
@@ -551,6 +565,7 @@ const whatTeoDid = {
         m.mari = m.cast.ally("mari", along(F.start, yaw, -2, -2), { weapon: "pistol", bleed: 20 });
         m.cast.board(m.teo, m.bike, 2); m.teo.stay = true;
         m.cast.board(m.mari, m.bike, 1); m.mari.stay = true;
+        m.failIf(() => m.bike.dead, "you wrecked the bike");
         m.failIf(() => m.teo.dead, "Teo didn't make it");
         m.failIf(() => m.mari.dead, "Mari didn't make it");
         m.quietHints = true;
@@ -569,6 +584,7 @@ const whatTeoDid = {
     },
     {
       name: "the corn",
+      music: "stealth",
       start: (m) => farm(m).edge,
       async setup(m) {
         const g = m.g, F = farm(m);
@@ -607,13 +623,14 @@ const whatTeoDid = {
     },
     {
       name: "the lab",
+      music: "dread",
       start: (m) => farm(m).door,
       async setup(m) {
         const F = farm(m);
         m.time(NIGHT, 1, "night 2 · 10:40pm");
         m.loadout({ guns: { pistol: 48, shotgun: 18 }, medkits: 2 });
-        const inside = F.at(0, 2.5);
-        await m.put(inside, dirYaw(F.at(0, 2.5), F.at(0, -2)));
+        const inside = F.at(0, 4.3);
+        await m.put(inside, dirYaw(F.at(0, 4.3), F.at(0, -2)));
         m.teo = m.cast.ally("teo", F.at(1.5, 3.5), { weapon: null, bleed: 25 });
         m.mari = m.cast.ally("mari", F.at(-1.5, 3.5), { weapon: "pistol", bleed: 20 });
         m.teo.noRide = m.mari.noRide = true;
@@ -643,7 +660,7 @@ const whatTeoDid = {
         const desk = F.at(-5.5, 2.8);
         const lap = V(desk.x, desk.y + 1.02, desk.z);
         const seat = F.at(-4.2, 2.8), over = F.at(-3, 3.5);
-        await m.cut({ shots: [
+        await m.cut({ music: "ominous", shots: [
           { time: NIGHT, dark: 1, dur: 14, tint: "night",
             cam: cam.dolly(V(over.x, over.y + 2, over.z), V(over.x + (seat.x - over.x) * 0.3, over.y + 1.85, over.z + (seat.z - over.z) * 0.3), lap, null, 42),
             cast: (c) => {
@@ -667,6 +684,7 @@ const whatTeoDid = {
     },
     {
       name: "out",
+      music: "chase",
       start: (m) => farm(m).door,
       async setup(m) {
         const g = m.g, F = farm(m);
@@ -679,6 +697,7 @@ const whatTeoDid = {
         m.failIf(() => m.mari.dead, "Mari didn't make it");
         const yaw = dirYaw(F.edge, F.door);
         m.bike = m.cast.car("bike", along(F.edge, yaw, -4, 3), yaw, { hp: 500 });
+        m.failIf(() => m.bike.dead, "you wrecked the bike");
       },
       async run(m) {
         const g = m.g, F = farm(m);
@@ -687,7 +706,7 @@ const whatTeoDid = {
         const ok = await m.qte({ kind: "mash", key: "KeyF", n: 10, time: 3, label: "the loft door's giving way! pull Teo clear" });
         m.teo.frozen = false;
         if (!ok) { m.teo.hp = 30; g.hud.toast("they got a hand on him. he's hurt, but you've got him.", "bad"); }
-        for (let i = 0; i < 11; i++) { const p = F.at(-5 + (i % 6) * 2, -3.5 + (i > 5 ? 1.5 : 0)); m.cast.zombie(i === 3 || i === 8 ? "runner" : "walker", p, { hunt: true }); }
+        for (let i = 0; i < 11; i++) { const p = F.at(-5 + (i % 6) * 2, i > 5 ? 0.1 : -1.4); m.cast.zombie(i === 3 || i === 8 ? "runner" : "walker", p, { hunt: true }); }
         m.say("mari", "GO. back to the bike. go go go!");
         await m.reach(m.bike.pos, 3.5, "get back to the bike");
         m.objective("get on the bike (F), and wait for them to get on");
@@ -742,6 +761,7 @@ const wings = {
     },
     {
       name: "take off",
+      music: "explore",
       start: (m) => hangarAt(m).p,
       async setup(m) {
         const H = hangarAt(m);
@@ -749,6 +769,7 @@ const wings = {
         m.loadout({ guns: { pistol: 48 }, medkits: 2 });
         await m.put(along(H.p, H.yaw, 0, 3.5), H.yaw);
         m.plane = m.cast.car("plane", H.p, H.yaw, { hp: 160 });
+        m.failIf(() => m.plane.dead, "you wrecked the plane");
         m.quietHints = true;
       },
       async run(m) {
@@ -766,6 +787,7 @@ const wings = {
     },
     {
       name: "the crossing",
+      music: "explore",
       start: (m) => hangarAt(m).out,
       async setup(m) {
         const I = m.places.get("island"), H = hangarAt(m);
@@ -778,7 +800,7 @@ const wings = {
           m.plane = airStart(m, p, yaw);
           await m.drive(m.plane);
         }
-        m.failIf(() => m.plane.dead && m.me.vehicle === m.plane, "the plane came down");
+        m.failIf(() => m.plane.dead || m.me.vehicle !== m.plane, "the plane came down");
         m.quietHints = true;
       },
       async run(m) {
@@ -793,6 +815,7 @@ const wings = {
     },
     {
       name: "land",
+      music: "tension",
       start: (m) => { const I = m.places.get("island"); return V(I.beach.x, 0, I.beach.z); },
       async setup(m) {
         const I = m.places.get("island");
@@ -830,6 +853,7 @@ const wings = {
     },
     {
       name: "the relay",
+      music: "action",
       start: (m) => { const I = m.places.get("island"); return V(I.beach.x, 0, I.beach.z); },
       async setup(m) {
         const g = m.g, I = m.places.get("island");
@@ -864,7 +888,7 @@ const wings = {
         m.dishObj.userData.led.material.color.setHex(0x5cf08e);
         // they stop. they sit. they're still.
         for (const n of m.sb.npcs.list) if (n.zombie && !n.dead) { n.brain = (z, dt) => { z.curSpeed = 0; z.sit = true; }; n.harmless = true; }
-        await m.cut({ shots: [
+        await m.cut({ music: "hope", shots: [
           { time: DAWN + 0.07, dur: 9, tint: "dream",
             cam: cam.orbit(top, 26, 12, 0.3, 1.0, 0, 50),
             cast: (c) => { for (let i = 0; i < 9; i++) { const a = i * 0.7, p = V(top.x + Math.cos(a) * (8 + i * 1.6), 0, top.z + Math.sin(a) * (8 + i * 1.6)); p.y = gy(g, p.x, p.z); c.actor({ look: ["male-a", "female-b", "male-b", "female-e", "male-f", "female-c", "male-d", "female-a", "male-e"][i], zombie: true, at: p, to: along(p, a + 3.14, 2), speed: 0.6, pose: (A, t) => { if (t > 3 + i * 0.3) { A.o.sit = true; } } }); } c.actor({ look: m.inv.outfit, at: V(top.x + 1.4, top.y, top.z + 0.6), idle: true, face: along(top, 0, 20) }); },

@@ -268,16 +268,23 @@ export class Vehicle {
     if (this.u == null) this.u = 0;
     this.lat = this.lat || 0; this.w = this.w || 0;
     const prev = this.pos.clone();
-    // steering: keyboards are all-or-nothing, so the wheel turns at a rate,
-    // and there's less lock at speed (like a real rack plus a steady hand)
-    const lock = (this.bike ? 0.5 : 0.62) / (1 + Math.max(0, Math.abs(this.u) - 6) * 0.045);
+    const mu = this.surfaceGrip() * (this.sunk ? 0.2 : 1) * S.mu;
+    // steering: keyboards are all-or-nothing, so full lock has to mean "as
+    // hard as the tyres can take" rather than "as far as the wheel turns".
+    // At walking pace that's the whole lock; at speed it's the angle that
+    // gives about 0.95 g of cornering on this surface (the corner's radius
+    // from the wheelbase, plus the little slip angle the tyres need). So
+    // holding a key turns you as tight as you can without sliding, and the
+    // handbrake is how you slide on purpose.
+    const au0 = Math.max(Math.abs(this.u), 1);
+    const gripLock = Math.atan(S.L * 0.95 * 9.81 * mu / (au0 * au0)) + (this.bike ? 0.015 : 0.04) * mu;
+    const lock = Math.min(this.bike ? 0.55 : 0.62, gripLock * (c.handbrake ? 1.6 : 1));
     const want = clamp(c.steer || 0, -1, 1) * lock;
     this.steer += clamp(want - this.steer, -3.2 * dt, 3.2 * dt);
-    const mu = this.surfaceGrip() * (this.sunk ? 0.2 : 1) * S.mu;
     const n = Math.max(1, Math.ceil(dt / (1 / 120)));
     const h = dt / n;
     let ax = 0;
-    for (let i = 0; i < n; i++) ax = this.tyreStep(h, c, S, mu);
+    for (let i = 0; i < n; i++) ax = this.bike ? this.bikeStep(h, c, S, mu) : this.tyreStep(h, c, S, mu);
     // what the engine note should do: rev through the gears
     const gearTop = this.def.top / S.gears;
     const au = Math.abs(this.u);
@@ -288,6 +295,62 @@ export class Vehicle {
     this.bodyPitch = damp(this.bodyPitch || 0, clamp(ax * 0.012, -0.08, 0.08), 6, dt);
     this.bodyRoll = damp(this.bodyRoll || 0, clamp(this.u * this.w * (this.bike ? 0 : 0.012), -0.09, 0.09), 6, dt);
     this.ground(dt, prev);
+  }
+
+  // one small step for a motorbike. A bike on the road goes where it's
+  // pointed: it turns at the rate its steering and speed give (speed x
+  // tan(steer) / wheelbase), capped by what the tyres can hold, and it
+  // leans into the turn by exactly the angle that balances it (ground()).
+  // It hardly slides sideways, unless you lock the back wheel (handbrake) or
+  // the ground's slippery, and then it drifts and tucks back in when you
+  // let go. Returns forward acceleration.
+  bikeStep(h, c, S, mu) {
+    const g = 9.81, m = S.mass;
+    const air = !this.onGround;
+    let u = this.u, v = this.lat, w = this.w;
+    const thr = clamp(c.throttle || 0, -1, 1);
+    const hb = c.handbrake ? 1 : 0;
+    let drive = 0, brake = 0;
+    if (thr > 0) { if (u < -0.5) brake = thr; else drive = thr; }
+    else if (thr < 0) { if (u > 0.5) brake = -thr; else drive = thr; }
+    const sgn = Math.sign(u) || 0;
+    // along: the engine (power-limited), brakes, the back brake on the
+    // handbrake, drag, rolling, and engine braking when coasting
+    let f = 0;
+    if (drive > 0) f = Math.min(S.fMax, S.power / Math.max(Math.abs(u), 3)) * drive * (u > this.def.top ? 0 : 1);
+    else if (drive < 0) f = u > -S.reverse ? S.fMax * 0.45 * drive : 0;
+    f -= (brake * S.brake + hb * 0.45) * mu * m * g * sgn;
+    f -= S.drag * u * Math.abs(u) + S.roll * Math.tanh(u * 2) * 0.5;
+    if (!drive && !brake) f -= (m * 0.5 + S.drag * u * u * 0.3) * sgn;
+    // (grip shared between turning and braking / accelerating)
+    const aLong = clamp(f / m, -mu * g * 1.05, mu * g * 1.05);
+    // turning: the rate the geometry asks for, as much as the grip gives
+    const aMax = mu * g * (hb ? 0.75 : 1.05);
+    const want = u * Math.tan(this.steer) / S.L;
+    const cap = Math.sqrt(Math.max(0, aMax * aMax - aLong * aLong * 0.6)) / Math.max(Math.abs(u), 0.5);
+    const wT = clamp(want, -cap, cap) * (hb ? 1.5 : 1);
+    let du = aLong + v * w, dv = 0, dw = 0;
+    if (air) { du = 0; dw = -w * 0.5; }
+    else {
+      // the frame follows the front wheel quickly: a bike doesn't yaw on its own
+      dw = (wT - w) * 9;
+      // sideways: anything asked of the tyres beyond the limit becomes a
+      // slide; the slide dies away quickly (slowly on the handbrake / ice)
+      const over = Math.abs(u * w) - mu * g * 1.1;
+      // (on the back brake, turning, the tail steps out: a skid you can hold)
+      const kick = hb && Math.abs(u) > 4 ? -Math.sign(u * w) * Math.min(Math.abs(u) * 0.28, 7) * Math.min(1, Math.abs(this.steer) * 8) : 0;
+      dv = (over > 0 ? -Math.sign(u * w) * over * 0.6 : 0) + (kick - v) * (hb ? 3 : 4 + mu * 6);
+    }
+    u += du * h; v += dv * h; w += dw * h;
+    if (!drive && (brake || hb || Math.abs(u) < 0.25) && Math.abs(u) < 0.25 && Math.abs(v) < 0.3) { u = 0; v = 0; w *= 0.8; }
+    if (!drive && !brake && !hb && Math.abs(u) < 0.08 && Math.abs(v) < 0.08) { u = 0; v = 0; }
+    this.u = u; this.lat = v; this.w = w;
+    this.lastAx = damp(this.lastAx || 0, aLong, 20, h);
+    this.yaw -= w * h;
+    const fx0 = Math.sin(this.yaw), fz0 = Math.cos(this.yaw);
+    this.pos.x += (fx0 * u - fz0 * v) * h;
+    this.pos.z += (fz0 * u + fx0 * v) * h;
+    return aLong;
   }
 
   // one small step of the tyre physics; returns forward acceleration
@@ -402,7 +465,9 @@ export class Vehicle {
       this.pitch = damp(this.pitch, -tp, 10, dt);
     }
     // bikes lean into the turn (the lean a real bike needs for the corner)
-    this.roll = this.bike ? damp(this.roll, clamp(-Math.atan(this.u * this.w / 9.81), -0.8, 0.8), 8, dt) : damp(this.roll, -tr, 10, dt);
+    // (a positive roll drops the right-hand side: turning right, w > 0, that's
+    // the way a bike leans, into the corner)
+    this.roll = this.bike ? damp(this.roll, clamp(Math.atan(this.u * this.w / 9.81), -0.75, 0.75), 7, dt) : damp(this.roll, -tr, 10, dt);
     // deep water: the car sinks, the engine dies
     this.sunk = water >= 3 && world.terrain.height(this.pos.x, this.pos.z) < SEA - 1.2;
     if (this.sunk) { this.u = damp(this.u, 0, 2, dt); this.sinkT = (this.sinkT || 0) + dt; if (this.sinkT > 6 && !this.dead) this.damage(1000, null); } else this.sinkT = 0;
@@ -532,6 +597,11 @@ export class Vehicle {
       const liftDir = up.clone().addScaledVector(vd, -up.dot(vd)).normalize();
       force.addScaledVector(liftDir, q * S * CL);
       force.addScaledVector(vd, -q * S * CD);
+      // (arcade help: in a banked turn with your hands off the elevator, it
+      // makes up the height the tilted lift loses, so turning isn't diving)
+      if (!this.onGround && !c.pitch && sp > 22 && Math.abs(alpha) < stall) {
+        force.y += clamp(q * S * CL * (1 - Math.cos(this.roll)), 0, M * g * 0.7);
+      }
     }
     force.y -= M * g;
     // on the ground: wheels, rolling friction, brakes, no sliding sideways
@@ -554,8 +624,8 @@ export class Vehicle {
     // controls: stronger the more air flows over them
     const auth = clamp(sp / 30, 0.1, 1.3);
     if (!this.onGround) {
-      this.roll = clamp(this.roll + c.steer * 1.9 * auth * h, -1.2, 1.2);
-      if (!c.steer) this.roll = damp(this.roll, 0, 0.35, h);
+      // hold A / D to bank to about 45 degrees; let go and it levels itself
+      this.roll = damp(this.roll, clamp(c.steer, -1, 1) * 0.8, (c.steer ? 1.8 : 1.2) * Math.min(1, auth), h);
       // elevator pitches the nose (down arrow = +pitch = nose up)
       this.pitch = clamp(this.pitch + c.pitch * 1.1 * auth * h, -1.3, 1.3);
       // the tail keeps the nose pointing into the airflow, a little above
@@ -564,8 +634,9 @@ export class Vehicle {
       if (sp > 5) {
         const vd = v.clone().normalize();
         const wantYaw = Math.atan2(vd.x, vd.z);
-        const trim = clamp(((M * g * Math.cos(this.roll)) / Math.max(1, q * S) - 0.25) / 5, -0.04, 0.2);
-        const wantPitch = -Math.asin(clamp(vd.y, -1, 1)) - (c.pitch ? 0 : trim);
+        const trim = clamp(((M * g / Math.max(0.55, Math.cos(this.roll))) / Math.max(1, q * S) - 0.25) / 5, -0.04, 0.2); // (a banked wing has to lift harder to hold height)
+        // (hands off, the nose eases back towards the horizon: climbs and dives level out)
+        const wantPitch = c.pitch ? -Math.asin(clamp(vd.y, -1, 1)) : -Math.asin(clamp(vd.y, -1, 1)) * 0.35 - trim;
         this.yaw = dampAngle(this.yaw, wantYaw, 2.5 * auth, h);
         if (Math.abs(alpha) > stall || sp < 18) {
           // stalled: the nose drops and it falls until there's air again
@@ -650,8 +721,10 @@ export class Vehicle {
     if (this.body && !this.bike && !this.plane) { this.body.rotation.x = -(this.bodyPitch || 0); this.body.rotation.z = -(this.bodyRoll || 0); }
     this.wheelSpin += (this.speed * dt) / 0.38;
     for (const w of this.wheels) w.rotation.x = this.wheelSpin;
-    for (const w of this.front) w.rotation.y = this.bike ? this.steer : this.steer;
-    if (this.bike && this.front[0]) { this.front[0].rotation.set(this.wheelSpin, this.steer, 0, "YXZ"); }
+    // (the model's +x is the left-hand side, so a turn to the right, steer
+    // > 0, turns the wheels the negative way round)
+    for (const w of this.front) w.rotation.y = -this.steer;
+    if (this.bike && this.front[0]) { this.front[0].rotation.set(this.wheelSpin, -this.steer * 1.4, 0, "YXZ"); }
     if (this.def.siren && (this.ai && this.ai.chase || this.sirenOn)) {
       this.sirenT += dt;
       if (!this.siren) this.makeSiren();

@@ -4,7 +4,8 @@
 // Nana's garden).
 
 import * as THREE from "three";
-import { CITY_PERIOD, CITY_H, SEA } from "./terrain.js";
+import { CITY_PERIOD, IND_PERIOD, CITY_H, SEA } from "./terrain.js";
+const IP = IND_PERIOD;
 import { ease } from "./cinema.js";
 import { storyMat } from "./cast.js";
 
@@ -100,11 +101,28 @@ export function spreadGates(g, pts, n, r = 6, up = 2.6) {
     let i = 0;
     while (i < legs.length - 1 && d > legs[i]) { d -= legs[i]; i++; }
     const a = pts[i], b = pts[i + 1], t = d / legs[i];
-    const x = a.x + (b.x - a.x) * t, z = a.z + (b.z - a.z) * t;
+    let x = a.x + (b.x - a.x) * t, z = a.z + (b.z - a.z) * t;
+    // in town, on the road: snap to the nearest road through the grid (the
+    // city's roads every P, the yards' every IP), then nudge it off anything solid
+    const s = g.world.terrain.sample(x, z);
+    const grid = s.built > 0.9 ? (s.w.city > 0.5 ? P : s.w.industry > 0.5 ? IP : 0) : 0;
+    if (grid && up < 10) {
+      const sx = Math.round(x / grid) * grid, sz = Math.round(z / grid) * grid;
+      if (Math.abs(sx - x) < Math.abs(sz - z)) x = sx; else z = sz;
+    }
+    if (up < 10) { const q = clearSpot(g, x, z); x = q.x; z = q.z; }
     out.push({ p: V(x, Math.max(SEA, gy(g, x, z, 400)) + up, z), yaw: dirYaw(a, b), r });
   }
   return out;
 }
+// (x, z), or the nearest spot to it with nothing solid in the way (for a gate)
+function clearSpot(g, x, z) {
+  const free = (px, pz) => { let hit = false; const y = gy(g, px, pz, 400); g.world.collideSphere(V(px, y + 1.6, pz), 2.6, (n, d, c) => { if (c && c.kind !== "canopy" && c.t !== "seg") hit = true; }); return !hit; };
+  if (free(x, z)) return { x, z };
+  for (let r = 4; r <= 40; r += 4) for (let a = 0; a < 6.28; a += 0.5) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (free(px, pz)) return { x: px, z: pz }; }
+  return { x, z };
+}
+
 // the nearest dry, flat, open spot to (x, z)
 export function dryNear(g, x, z, yMax = 400) {
   for (let i = 0; i < 160; i++) {
@@ -195,6 +213,7 @@ export function garden(cast, t, opts = {}) {
     const side = i % 2 ? 1 : -1;
     const x = t.x + side * Math.min(w / 2 - 3, 6 + (i >> 1) * 0.5), z = t.z - d / 2 + 3 + (i >> 1) * Math.max(3, (d - 6) / 3);
     if (Math.abs(x - t.x) < 3 && Math.abs(z - t.z) < 3.5) continue;
+    if (![[-1.5, 0], [1.5, 0], [0, 0]].every(([ox, oz]) => clearAt(x + ox, y, z + oz))) continue; // (something's already there)
     const pr = cast.solid(x - 1.6, y, z - 0.7, x + 1.6, y + 0.6, z + 0.7, { color: 0x7a5234, kind: "planter" });
     const plants = new THREE.Group();
     for (let k = 0; k < 5; k++) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.32 + Math.random() * 0.15, 7, 5), storyMat(green[k % 3], { roughness: 1 })); s.position.set(x - 1.2 + k * 0.6, y + 0.8 + Math.random() * 0.15, z + (Math.random() - 0.5) * 0.4); plants.add(s); }
@@ -222,21 +241,33 @@ export function garden(cast, t, opts = {}) {
   return { beds, tents, y, w, d };
 }
 
-// spots on a roof, clear of the lift housing
+// (the game, for the spot pickers below to check they're not in furniture)
+let G = null;
+export function useGame(g) { G = g; }
+function clearAt(x, y, z) {
+  if (!G || !G.world) return true;
+  let hit = false;
+  G.world.collideSphere(V(x, y + 0.9, z), 0.55, (n, d, c) => { if (c && c.kind !== "canopy" && c.t !== "seg") hit = true; });
+  return !hit;
+}
+// spots on a roof, clear of the lift housing and anything on it
 export function roofSpots(t, n, margin = 2) {
   const b = t.box, y = t.roof.y, out = [];
-  for (let i = 0; i < n * 8 && out.length < n; i++) {
+  for (let i = 0; i < n * 12 && out.length < n; i++) {
     const x = b.x0 + margin + Math.random() * (b.x1 - b.x0 - margin * 2), z = b.z0 + margin + Math.random() * (b.z1 - b.z0 - margin * 2);
     if (Math.abs(x - t.x) < 2.5 && Math.abs(z - t.z) < 3.5) continue;
+    if (!clearAt(x, y, z) && i < n * 10) continue;
     out.push(V(x, y, z));
   }
   return out;
 }
+// spots on a floor of a tower (lobby, penthouse), clear of the furniture
 export function inBox(t, n, y, margin = 2) {
   const b = t.base || t.box, out = [];
-  for (let i = 0; i < n * 8 && out.length < n; i++) {
+  for (let i = 0; i < n * 12 && out.length < n; i++) {
     const x = b.x0 + margin + Math.random() * (b.x1 - b.x0 - margin * 2), z = b.z0 + margin + Math.random() * (b.z1 - b.z0 - margin * 2);
     if (Math.abs(x - t.x) < 2.5 && Math.abs(z - t.z) < 3.5) continue;
+    if (!clearAt(x, y, z) && i < n * 10) continue;
     out.push(V(x, y, z));
   }
   return out;

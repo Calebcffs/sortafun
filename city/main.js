@@ -17,7 +17,7 @@
 //   input.js     keyboard / touch / gamepad
 //   game.js      food, people, cars, poo, nests, lives and score
 //   hud.js       poo-cam, poo-o-meter, lives, messages
-//   audio.js     synthesised sound
+//   audio.js     synthesised sound (music.js the score, voice.js the voices)
 //   menu.js      title screen, bird picker, pause / game over
 //   net.js       online play: everyone, birds and people, in one shared world
 //   campaign.js  the story, "Halcyon" (story.js + story1-3.js the missions,
@@ -35,6 +35,8 @@ import { UNDER_LINE } from "./structures.js";
 import { TELEPORT_EVERY } from "./map.js";
 import { Intro } from "./intro.js";
 import { Cinema } from "./cinema.js";
+import { Music } from "./music.js";
+import { Voice } from "./voice.js";
 import { Campaign } from "./campaign.js";
 import { Bird } from "./model.js";
 import { SPECIES, gameScale } from "./species.js";
@@ -81,8 +83,20 @@ class Game {
     this.camera = new THREE.PerspectiveCamera(62, 16 / 9, 0.05, 4000);
     this.input = new Input(this.canvas);
     this.sound = new Sound();
+    this.music = new Music(this.sound);
+    this.voice = new Voice(this.sound, this.music);
+    // browsers hold audio back until you click or press something: go on
+    // the first one (and start the title music if we're on the title)
+    const wake = () => {
+      if (!this.sound.ensure()) return;
+      if (this.sound.ctx.state === "suspended") this.sound.ctx.resume();
+      if (this.menu && this.menu.visible && !this.running && !this.intro.active) this.music.play("title");
+    };
+    window.addEventListener("pointerdown", wake);
+    window.addEventListener("keydown", wake);
     this.hud = new Hud(this);
     this.menu = new Menu(this);
+    this.sound.setListener(this.camera);
     this.intro = new Intro(this);
     this.cinema = new Cinema(this);
     this.clock = new THREE.Clock();
@@ -327,6 +341,8 @@ class Game {
 
   stop() {
     this.running = false;
+    if (this.voice) this.voice.stop();
+    if (this.music) this.music.play("none", { fast: true });
     this.relocating = false;
     document.getElementById("fade").classList.remove("on");
     if (this.net) { this.net.close(); this.net = null; }
@@ -404,8 +420,8 @@ class Game {
     if (!this.running) return;
     this.paused = p;
     if (p) this.input.unlock();
-    if (p) { this.menu.showPause(); this.sound.suspend(); }
-    else { this.menu.hide(); this.sound.resume(); this.clock.getDelta(); this.stage.focus(); }
+    if (p) { this.menu.showPause(); this.sound.suspend(); try { window.speechSynthesis && speechSynthesis.pause(); } catch (e) {} }
+    else { this.menu.hide(); this.sound.resume(); try { window.speechSynthesis && speechSynthesis.resume(); } catch (e) {} this.clock.getDelta(); this.stage.focus(); }
   }
 
   gameOver(why) {
@@ -543,6 +559,53 @@ class Game {
     this.snow.update(dt, this.camera.position, under ? 0 : clamp((s.w.snow - 0.4) * 1.7, 0, 1), this.sky.wind);
     this.hud.update(dt);
     this.sound.update(dt, v ? { vel, mode: v.plane && !v.onGround ? "air" : "ground", pos: f.pos } : f, this.sky.night);
+    this.soundscape(this.camera.position, dark, under, dt);
+    if (!this.campaign) this.scoreOnline(dt);
+  }
+
+  // the ambience for where the camera is: the city's hum, the yards'
+  // machinery, wind up high and on the snow, the sea, birds by day and
+  // crickets by night, the metro's rumble; and how much echo (tunnels,
+  // inside buildings)
+  soundscape(p, dark, under, dt, extra = {}, world = this.world) {
+    const S = this.sound;
+    if (!S.ctx || !world) return;
+    this.scapeT = (this.scapeT || 0) - dt;
+    if (this.scapeT <= 0) {
+      this.scapeT = 0.25;
+      const mix = { ...extra };
+      if (under) { mix.under = 1; S.setSpace(0.55); }
+      else {
+        const s = world.terrain.sample(p.x, p.z), w = s.w;
+        const height = Math.max(0, p.y - Math.max(s.h, 0));
+        const wild = w.hills + w.island * 0.6 + w.city * 0.15 + w.snow * 0.1;
+        mix.city = (mix.city ?? w.city * (1 - dark * 0.5)) * (height > 60 ? 0.5 : 1);
+        mix.industry = mix.industry ?? w.industry;
+        mix.wind = mix.wind ?? Math.min(1, w.snow * 0.9 + w.hills * 0.25 + Math.max(0, height - 25) / 60);
+        mix.sea = mix.sea ?? Math.min(1, w.island + (s.h < 3 ? 0.5 : 0));
+        mix.birds = mix.birds ?? wild * (1 - dark);
+        mix.crickets = mix.crickets ?? wild * dark;
+        const roof = world.ceilingAt(p.x, p.y + 0.5, p.z);
+        S.setSpace(roof < p.y + 7 ? 0.22 : 0);
+      }
+      this.scapeMix = mix;
+    }
+    S.ambience(this.scapeMix, dt);
+  }
+
+  // online, the music follows the night and the fighting
+  scoreOnline(dt) {
+    this.scoreT = (this.scoreT || 0) - dt;
+    if (this.scoreT > 0) return;
+    this.scoreT = 0.6;
+    const sb = this.sandbox, me = sb.player;
+    let threat = 0;
+    for (const n of sb.npcs.list) if (n.zombie && !n.dead && n.hunt && n.hunt.kind === "me" && n.pos.distanceTo(me.pos) < 35) threat += n.type === "brute" ? 3 : 1;
+    threat += sb.wanted * 1.5;
+    const night = sb.clock.dark > 0.5, under = me.pos.y < UNDER_LINE;
+    const mood = me.dead ? "dread" : threat >= 2 ? (me.vehicle ? "chase" : "action") : under ? "stealth" : night ? "night" : sb.clock.phase === "dusk" ? "tension" : "explore";
+    this.music.intensity = clamp(threat / 6, 0.2, 1);
+    this.music.play(mood);
   }
 
   updateCamera(dt, input) {

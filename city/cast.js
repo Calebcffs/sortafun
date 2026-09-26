@@ -365,7 +365,7 @@ export class Cast {
         if (!hostile) continue;
         if (n.pick && !n.pick(o)) continue;
         const d = o.pos.distanceTo(n.pos);
-        if (d >= best || Math.abs(o.pos.y - n.pos.y) > 8) continue;
+        if (d >= best || Math.abs(o.pos.y - n.pos.y) > (n.vRange || 8)) continue;
         if (!this.sees(n, o.pos, 1.2)) continue;
         best = d; n.target = o;
       }
@@ -436,7 +436,7 @@ export class Cast {
     const v = n.rideV, me = this.sb.player;
     if (v.dead || (!n.stay && me.vehicle !== v)) { this.unboard(n); return; }
     v.seatWorld(n.pos, n.seat);
-    if (v.showRider) n.avatar.root.rotation.set(v.pitch, v.yaw, v.roll * 0.6, "YXZ");
+    if (v.showRider) n.avatar.root.rotation.set(v.pitch, v.yaw, v.roll, "YXZ");
     n.yaw = v.yaw; n.curSpeed = 0; n.sit = true;
     n.avatar.root.visible = !!v.showRider;
     // shoot out of the window

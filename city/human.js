@@ -377,6 +377,7 @@ export class HumanPlayer {
     const n = Math.ceil(dt / (1 / 90));
     for (let i = 0; i < n; i++) this.step(dt / n);
     this.speed = Math.hypot(this.vel.x, this.vel.z);
+    this.footsteps(dt);
 
     // facing: where we're going, or where we're aiming
     const shooting = input.mouse.left && !W.melee;
@@ -384,6 +385,37 @@ export class HumanPlayer {
     else if (len > 0.1) this.yaw = dampAngle(this.yaw, Math.atan2(mx, mz), 10, dt);
     this.mode = this.swim ? "water" : this.onGround ? "ground" : "air";
     this.avatarUpdate(dt);
+  }
+
+  // ------------------------------------------------------------
+  // footsteps: one every stride, the sound of whatever's underfoot
+  // ------------------------------------------------------------
+  surface() {
+    const k = this.g_.kind;
+    if (this.swim || this.g_.water) return "water";
+    if (this.pos.y < UNDER_LINE) return "concrete";
+    if (k === "ground" || k === "void") {
+      const s = this.g.world.terrain.sample(this.pos.x, this.pos.z);
+      if (s.ice) return "snow";
+      if (s.built > 0.9) return "concrete";
+      if (s.w.snow > 0.5) return "snow";
+      if (s.beach > 0.4) return "sand";
+      return "grass";
+    }
+    if (k === "floor" || k === "dock" || k === "lookout" || k === "furniture" || k === "planter") return "wood";
+    if (k === "platform" || k === "rail" || k === "cradle" || k === "mast" || k === "vehicle" || k === "container") return "metal";
+    return "concrete";
+  }
+  footsteps(dt) {
+    if (!this.onGround && !this.swim) { this.stepD = 0.5; return; }
+    const sp = this.speed;
+    if (sp < 0.4) { this.stepD = Math.min(this.stepD || 0, 0.3); return; }
+    const stride = this.crouch ? 0.55 : this.sprint ? 1.25 : 0.85;
+    this.stepD = (this.stepD || 0) + sp * dt;
+    if (this.stepD < stride) return;
+    this.stepD = 0;
+    const vol = this.crouch ? 0.18 : this.downed ? 0.15 : this.sprint ? 0.6 : 0.4;
+    this.g.sound.step(this.surface(), vol, this.turned ? 0.5 : 0);
   }
 
   // ------------------------------------------------------------
@@ -443,6 +475,9 @@ export class HumanPlayer {
     this.yaw = Math.atan2(-l.nx, -l.nz);
     this.pos.y += up * 3.4 * dt;
     this.vel.set(0, up * 3.4, 0);
+    // a clank for every rung
+    this.rungD = (this.rungD || 0) + Math.abs(up) * 3.4 * dt;
+    if (this.rungD > 0.36) { this.rungD = 0; this.g.sound.rung(0.8); }
     this.speed = Math.abs(up) * 2;
     this.onGround = false;
     this.mode = "ground";
@@ -471,7 +506,7 @@ export class HumanPlayer {
     if (this.vehicle) {
       const v = this.vehicle;
       a.root.visible = v.showRider;
-      if (v.showRider) { v.seatWorld(a.root.position, this.seat); a.root.rotation.set(v.pitch, v.yaw, v.roll * 0.6, "YXZ"); }
+      if (v.showRider) { v.seatWorld(a.root.position, this.seat); a.root.rotation.set(v.pitch, v.yaw, v.roll, "YXZ"); } // (leaning with the bike)
       a.update(dt, { drive: this.seat === 0, down: this.seat > 0 });
       this.pos.copy(v.pos);
       return;
@@ -532,7 +567,7 @@ export class HumanPlayer {
     }
     if (p.y <= floor + 0.001 && v.y <= 0.01) {
       if (!this.onGround && this.fallV < -15) this.hurt((-this.fallV - 15) * 9, { fall: true });
-      if (!this.onGround && this.fallV < -4) this.g.sound.land && this.g.sound.land();
+      if (!this.onGround && this.fallV < -4) this.g.sound.step(this.surface(), clamp(-this.fallV / 12, 0.4, 1), 1);
       p.y = floor; v.y = 0; this.onGround = true; this.fallV = 0;
     } else if (this.onGround && p.y - floor < 0.6 && v.y <= 0) {
       // walking down a step or slope: stay on the ground

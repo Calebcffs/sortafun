@@ -75,6 +75,8 @@ export class Cinema {
       this.el.className = "cine on";
       g.stage.classList.add("cine-on");
       this.hideRadio();
+      g.sound.cineIn && g.sound.cineIn();
+      if (g.music) g.music.play(cut.music || MOOD_BY_TINT[(cut.shots[0] || {}).tint] || "title", { intensity: 0.5 });
       sb.player.avatar.root.visible = false;
       sb.player.view.visible = false;
       sb.player.torch.intensity = 0;
@@ -91,6 +93,9 @@ export class Cinema {
       }
     } catch (e) { console.warn("cutscene:", e); }
     try {
+      if (g.voice) g.voice.stop();
+      g.sound.engine && g.sound.engine(null);
+      g.sound.drone && g.sound.drone(false);
       this.say(null);
       this.caption("");
       this.clearCast();
@@ -116,6 +121,7 @@ export class Cinema {
   skip() {
     if (!this.active || this.skipped) return;
     this.skipped = true;
+    if (this.g.voice) this.g.voice.stop();
     for (const w of this.waiters) w.res();
     this.waiters = [];
   }
@@ -176,6 +182,7 @@ export class Cinema {
     if (!text) { c.classList.remove("on"); return; }
     c.classList.add("on");
     typeOut(c, text, 0.035);
+    if (this.g.voice && !this.skipped) this.g.voice.speak("narrator", text, 4);
   }
 
   flash() { const f = this.q(".cn-flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
@@ -227,6 +234,7 @@ export class Cinema {
     this.fill(box, who, text);
     box.classList.add("on");
     this.talkEnd = this.clock + (secs || lineTime(text));
+    this.voiceLine(who, text, secs || lineTime(text));
   }
 
   fill(box, who, text) {
@@ -244,7 +252,15 @@ export class Cinema {
     typeOut(span, text, C.rate || 0.03, (i) => { if (i % 2 === 0) this.blip(C); });
   }
 
+  // a line said out loud (the phone buzzes instead)
+  voiceLine(who, text, secs) {
+    if (who === "phone") { this.g.sound.phoneBuzz && this.g.sound.phoneBuzz(); return; }
+    if (this.g.voice) this.g.voice.speak(who, text, secs);
+  }
+
   blip(C) {
+    // (the blips are quieter when there's a real voice doing the talking)
+    if (this.g.voice && this.g.voice.enabled && this.g.voice.available && !C.text) return;
     const s = this.g.sound;
     if (!s.ensure || !s.ensure()) return;
     const f = C.pitch * (0.92 + Math.random() * 0.16);
@@ -266,6 +282,7 @@ export class Cinema {
     this.radioEl.hidden = false;
     this.fill(this.radioEl, r.who, r.text);
     this.radioEl.classList.add("on");
+    this.voiceLine(r.who, r.text, r.secs);
     const C = CHARS[r.who];
     if (C && C.crackle && this.g.sound.static) this.g.sound.noiseBurst(0.18, "bandpass", 2600, 0.6, 0.05);
     r.left = r.secs;
@@ -315,6 +332,7 @@ export class Cinema {
   }
   showKey() {
     const st = this.qteState, s = st.spec;
+    this.g.sound.qteTick && this.g.sound.qteTick(Math.min(8, st.count || st.step || 0));
     const k = s.kind === "sequence" ? s.steps[st.step].key : s.kind === "alternate" ? st.next : s.key;
     const kb = this.qteEl.querySelector(".qte-key");
     kb.textContent = s.kind === "choice" ? "" : KEYNAME[k] || k;
@@ -329,7 +347,7 @@ export class Cinema {
     this.qteEl.className = "qte " + (result === false ? "fail" : "win");
     setTimeout(() => { if (!this.qteState) this.qteEl.hidden = true; }, 450);
     const s = this.g.sound;
-    if (result === false) s.hurt && s.hurt(); else s.pickup && s.pickup();
+    if (result === false) { s.hurt && s.hurt(); s.qteBad && s.qteBad(); } else s.qteGood && s.qteGood();
     st.res(result);
   }
   updateQte(dt, input) {
@@ -379,6 +397,7 @@ export class Cinema {
   // the end
   // ------------------------------------------------------------
   async credits(lines, secs = 40) {
+    if (this.g.music) this.g.music.play("hope");
     const el = this.q(".cn-credits");
     el.innerHTML = "";
     const inner = document.createElement("div");
@@ -569,6 +588,30 @@ export class Cinema {
     g.world.uniforms.uNight.value = under ? 1 : Math.max(sky.night, 0.35);
     sky.updateSmoke(dt);
     if (g.snow) g.snow.update(dt, cam.position, under ? 0 : clamp((w.snow - 0.4) * 1.7, 0, 1), sky.wind);
+    if (g.soundscape) g.soundscape(cam.position, dark, under, dt, { ...(s.amb || {}), ...(this.props.some((p) => p.fire) ? { fire: 1 } : {}) });
+    this.foley(dt, cam);
+  }
+
+  // the cast's sounds: footsteps, zombies moaning, cars going past
+  foley(dt, cam) {
+    const S = this.g.sound;
+    if (!S.at) return;
+    let steps = 0;
+    for (const a of this.actors) {
+      const d = a.pos.distanceTo(cam.position);
+      if (a.moving && d < 16) {
+        a.stepD = (a.stepD || 0) + (a.o.speed || 1.4) * dt;
+        if (a.stepD > (a.o.speed > 4 ? 1.2 : 0.8) && steps++ < 4) { a.stepD = 0; S.at(a.pos, 16, () => (a.o.zombie ? S.shuffle(0.8) : S.step(a.pos.y < UNDER_LINE ? "concrete" : a.o.ground ? "grass" : "concrete", 0.5))); }
+      }
+      if (a.o.zombie && !a.o.dead && d < 26) {
+        a.moanT = (a.moanT ?? Math.random() * 4) - dt;
+        if (a.moanT <= 0) { a.moanT = 3 + Math.random() * 6; S.at(a.pos, 26, () => S.moan(0.8, Math.floor(a.pos.x * 7))); }
+      }
+    }
+    for (const p of this.props) if (p.o && p.o.move && p.g) {
+      const d = p.g.position.distanceTo(cam.position);
+      if (d < 18 && !p.passed) { p.passed = true; S.at(p.g.position, 40, () => S.carPass(1)); }
+    }
   }
 
   moveActor(a, dt) {
@@ -587,12 +630,16 @@ export class Cinema {
     }
     if (o.face && speed === 0) a.yaw = Math.atan2(o.face.x - a.pos.x, o.face.z - a.pos.z);
     if (o.visibleAt != null) a.a.root.visible = this.t >= o.visibleAt && (o.hideAt == null || this.t < o.hideAt);
+    a.moving = speed > 0;
     a.a.root.position.copy(a.pos);
     a.a.root.rotation.y = a.yaw;
     if (o.pose) o.pose(a, this.t);
     a.a.update(dt, { speed: speed * (o.run ? 1 : 1), dead: !!o.dead, down: !!o.sit, crouch: !!o.crouch, drive: !!o.drive, aimPitch: o.aim || 0 });
   }
 }
+
+// the music for a cut, if it doesn't say (from how its first shot looks)
+const MOOD_BY_TINT = { sick: "ominous", red: "tension", night: "dread", dream: "hope", cold: "sad", warm: "title" };
 
 const TINTS = {
   warm: "contrast(1.06) saturate(1.1)",

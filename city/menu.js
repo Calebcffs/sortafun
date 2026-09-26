@@ -46,6 +46,11 @@ export class Menu {
     sound.checked = !this.g.sound.muted;
     sound.addEventListener("change", () => this.g.sound.setMuted(!sound.checked));
     window.addEventListener("sortafun-sound", (e) => { sound.checked = e.detail.on; });
+    // music and voices, each remembered
+    const mus = [document.getElementById("musicon"), document.getElementById("musicon2")];
+    const voi = [document.getElementById("voiceson"), document.getElementById("voiceson2")];
+    for (const b of mus) { b.checked = this.g.music.enabled; b.addEventListener("change", () => { this.g.music.setEnabled(b.checked); for (const o of mus) o.checked = b.checked; }); }
+    for (const b of voi) { b.checked = this.g.voice.enabled; b.addEventListener("change", () => { this.g.voice.setEnabled(b.checked); for (const o of voi) o.checked = b.checked; }); }
     document.getElementById("daylock").addEventListener("change", (e) => { if (this.g.sky) this.g.sky.frozen = e.target.checked; });
 
     document.getElementById("play").addEventListener("click", () => this.play());
@@ -165,6 +170,7 @@ export class Menu {
   // ---------------- title ----------------
   showTitle() {
     this.show("title");
+    if (this.g.sound.ctx && this.g.music) this.g.music.play("title");
     this.headCount();
     this.ensurePreview();
     this.buildBirdList();
@@ -321,6 +327,7 @@ export class Menu {
   // ---------------- the story: chapters ----------------
   showStory() {
     this.show("story");
+    if (this.g.sound.ctx && this.g.music) this.g.music.play("ominous");
     const s = loadStory();
     const cont = document.getElementById("st-continue");
     const c = s.cur;

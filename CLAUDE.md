@@ -548,6 +548,47 @@ and one barricade.
   `Vehicle` headless with `ground`/`surfaceGrip` stubbed flat (see
   git history for the d1/d2 numbers).
 
+**Driving rework 2 (2026-09-27, Caleb: "the bike leans the wrong way, the
+wheel turns the wrong way, it spins out on every corner"):** two sign bugs
+(front wheels were drawn turning opposite the steer; the bike's roll leaned
+out of the corner: +roll drops the right-hand side, turning right is
+w > 0) and a steering fix: full keyboard lock now means "as hard as the
+tyres can take" (`gripLock`: the angle for ~0.95 g on this surface from the
+wheelbase, plus a little slip), full lock only at walking pace, x1.6 on the
+handbrake. Cars keep the tyre model (`tyreStep`). Bikes have their own
+(`bikeStep`): yaw rate goes to speed x tan(steer) / wheelbase capped by grip,
+barely any side slip, the back steps out on the handbrake, lean =
+atan(u w / g) with the rider leaning with it. The plane got the same
+treatment: A / D bank to ~45 degrees and it levels itself when you let go,
+a banked turn tops up the lift it loses so turning isn't diving (the old
+auto-trim multiplied by cos(bank) instead of dividing), and hands off the
+elevator the nose eases back to the horizon (levels in ~3-4 s). Controls:
+ArrowDown = c.pitch -1 = nose up; negative `pitch` is nose up. Bench: `scratchpad/sim`
+copies vehicles.js next to a stub assets.js and drives it in node (three from
+npm): bike ~1.05 g at 8-35 m/s with 0 slip, cars 0.8-1.4 g, no spins.
+
+**Sound overhaul (2026-09-27):** city.html has `data-nomusic` (no site
+jingle). `audio.js` is one mix: master (sfx) with a reverb send
+(`setSpace`: tunnels 0.55, under a roof 0.22) -> main (mute) -> compressor;
+`at(pos, range, fn)` plays anything positionally (pan + distance + duller far
+off). New: footsteps per surface (human.js `surface()`), rungs, zombie moans
+(`voiceNote`: sawtooth through sliding formants, a voice per zombie seed),
+hurt / die / attack / shriek / roar, skid, siren loop, radio click / bed /
+chatter, phone buzz, stings (checkpoint, fanfare, fail, QTE), and
+`ambience(mix)` beds (city, industry, wind, sea + gulls, birds / crickets,
+the metro's rumble and drips, crowd, fire) mixed by `main.soundscape()`.
+`music.js`: an adaptive synth score, moods title / ominous / dread / tension
+/ stealth / action / chase / boss / sad / hope / explore / night,
+crossfading; online picks by threat and night (`main.scoreOnline`), the story
+by section `music:` plus threat (`campaign.score`), cuts by `cut.music`.
+`voice.js`: every line spoken with the Web Speech API, a cast per character
+(accent / sex preference, pitch, rate), a narrator for captions and the intro
+cards, static under radio voices, music ducked while talking. Title and
+pause have music / voices switches (localStorage `city-music`,
+`city-voices`). Headless Chrome has no speech voices: test that `speak()`
+gets called, and render levels offline (OfflineAudioContext) as in the
+scratchpad's aud1.mjs.
+
 **2026-09-26 purpose update (read `city/ROADMAP.md`):** Caleb asked for the
 sandbox to have a point: co-op against zombies, horror at night, a goal. Five
 systems, all in ROADMAP.md with how they work over the network:

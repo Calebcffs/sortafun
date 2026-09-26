@@ -207,6 +207,17 @@ export class Gunfire {
       if (muzzle && (n === 1 || i % 3 === 0) && Math.random() < (key === "minigun" ? 0.5 : 1)) this.tracer(muzzle, end);
     }
     for (const hit of hits) hit.target.hit(hit.dmg, { by: shooter, key, head: hit.head, point: hit.point, dir: dir.clone() });
+    // sound: someone else's shot going past your ear, your own casings
+    const S = this.g.sound, cam = this.g.camera;
+    if (!shooter.isPlayer && cam) {
+      const ox = cam.position.x - eye.x, oy = cam.position.y - eye.y, oz = cam.position.z - eye.z;
+      const along = ox * dir.x + oy * dir.y + oz * dir.z;
+      if (along > 3 && along < 80) {
+        const px = eye.x + dir.x * along - cam.position.x, py = eye.y + dir.y * along - cam.position.y, pz = eye.z + dir.z * along - cam.position.z;
+        const miss = Math.hypot(px, py, pz);
+        if (miss < 3) S.whiz && S.whiz(1 - miss / 3);
+      }
+    } else if (shooter.isPlayer && !W.melee && (key !== "minigun" || Math.random() < 0.2)) S.casing && S.casing(0.8);
     return hits;
   }
 
@@ -256,6 +267,7 @@ export class Gunfire {
 
   impact(p, n, water) {
     if (water) { this.sprite(this.dustMat, p, 0.9, 0.5, { grow: 1.5, rise: 0.8 }); return; }
+    if (Math.random() < 0.18 && this.g.sound.at) this.g.sound.at(p, 30, () => this.g.sound.ricochet(1));
     this.sprite(this.sparkMat, p, 0.3, 0.12, { grow: 2 });
     this.sprite(this.dustMat, p, 0.35, 0.45, { grow: 2.5, rise: 0.5 });
     // a bullet hole, flat on the surface

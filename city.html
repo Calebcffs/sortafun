@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-nomusic>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -13,12 +13,12 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./city/ambient.js": "./city/ambient.js?v=5c3282d0",
   "./city/assets.js": "./city/assets.js?v=d2a6be3b",
-  "./city/audio.js": "./city/audio.js?v=4b5fadab",
+  "./city/audio.js": "./city/audio.js?v=e6686cdf",
   "./city/avatar.js": "./city/avatar.js?v=8eba6d58",
   "./city/builders.js": "./city/builders.js?v=9442795c",
-  "./city/campaign.js": "./city/campaign.js?v=4a0d02e8",
-  "./city/cast.js": "./city/cast.js?v=0204663b",
-  "./city/cinema.js": "./city/cinema.js?v=d644d58f",
+  "./city/campaign.js": "./city/campaign.js?v=b359da03",
+  "./city/cast.js": "./city/cast.js?v=7180c414",
+  "./city/cinema.js": "./city/cinema.js?v=b3d75643",
   "./city/cityhud.js": "./city/cityhud.js?v=bd63f29f",
   "./city/clock.js": "./city/clock.js?v=f1fa9ee7",
   "./city/crew.js": "./city/crew.js?v=06331265",
@@ -30,35 +30,37 @@
   "./city/horde.js": "./city/horde.js?v=f6ce343b",
   "./city/hub.js": "./city/hub.js?v=57b51ced",
   "./city/hud.js": "./city/hud.js?v=a5424e21",
-  "./city/human.js": "./city/human.js?v=1eed73c7",
+  "./city/human.js": "./city/human.js?v=6c25ec58",
   "./city/input.js": "./city/input.js?v=9bb5d5f5",
   "./city/interiors.js": "./city/interiors.js?v=57ac6952",
-  "./city/intro.js": "./city/intro.js?v=e98dbe44",
+  "./city/intro.js": "./city/intro.js?v=80f6f017",
   "./city/items.js": "./city/items.js?v=3d33fe6d",
   "./city/loot.js": "./city/loot.js?v=816dd7c8",
-  "./city/main.js": "./city/main.js?v=94ca946a",
+  "./city/main.js": "./city/main.js?v=11ae9bc9",
   "./city/map.js": "./city/map.js?v=324f6b13",
-  "./city/menu.js": "./city/menu.js?v=0cf2d03d",
+  "./city/menu.js": "./city/menu.js?v=55648bcb",
   "./city/model.js": "./city/model.js?v=e063d2e0",
-  "./city/net.js": "./city/net.js?v=d49fce07",
+  "./city/music.js": "./city/music.js?v=5c0d39f9",
+  "./city/net.js": "./city/net.js?v=a4b2a9c3",
   "./city/noise.js": "./city/noise.js?v=eb132f6e",
-  "./city/npcs.js": "./city/npcs.js?v=dcbddacd",
+  "./city/npcs.js": "./city/npcs.js?v=767d3832",
   "./city/people.js": "./city/people.js?v=d3359f9c",
   "./city/progress.js": "./city/progress.js?v=08b41d6b",
-  "./city/sandbox.js": "./city/sandbox.js?v=dd6f6e27",
+  "./city/sandbox.js": "./city/sandbox.js?v=3a5fff2f",
   "./city/shop.js": "./city/shop.js?v=f9f9997e",
   "./city/sky.js": "./city/sky.js?v=f44f2eeb",
   "./city/species.js": "./city/species.js?v=32bd7215",
   "./city/story.js": "./city/story.js?v=28c6d57e",
-  "./city/story1.js": "./city/story1.js?v=097b6263",
-  "./city/story2.js": "./city/story2.js?v=2cbb8b82",
-  "./city/story3.js": "./city/story3.js?v=2cfa4fa5",
-  "./city/storykit.js": "./city/storykit.js?v=d25085eb",
+  "./city/story1.js": "./city/story1.js?v=e1b81498",
+  "./city/story2.js": "./city/story2.js?v=76edd08b",
+  "./city/story3.js": "./city/story3.js?v=ae509c09",
+  "./city/storykit.js": "./city/storykit.js?v=128216a6",
   "./city/structures.js": "./city/structures.js?v=082556a1",
   "./city/terrain.js": "./city/terrain.js?v=9a0cfd9a",
   "./city/textures.js": "./city/textures.js?v=0aa51510",
-  "./city/vehicles.js": "./city/vehicles.js?v=6a9574f6",
-  "./city/weapons.js": "./city/weapons.js?v=e7b5503a",
+  "./city/vehicles.js": "./city/vehicles.js?v=0003be99",
+  "./city/voice.js": "./city/voice.js?v=cd7bd1d9",
+  "./city/weapons.js": "./city/weapons.js?v=f3ab7ad8",
   "./city/world.js": "./city/world.js?v=6186aa28"
 } }
 </script>
@@ -131,6 +133,8 @@
             <div class="m-row center m-settings">
               <label class="m-opt">graphics <select id="quality"><option value="low">low</option><option value="med">medium</option><option value="high">high</option></select></label>
               <label class="m-opt"><input id="invert" type="checkbox"> invert up/down</label>
+              <label class="m-opt"><input id="musicon" type="checkbox" checked> music</label>
+              <label class="m-opt"><input id="voiceson" type="checkbox" checked> voices</label>
             </div>
           </div>
           <div class="m-col preview-col">
@@ -196,6 +200,8 @@
         <div class="m-row center">
           <label class="m-opt"><input id="invert2" type="checkbox"> invert up/down</label>
           <label class="m-opt"><input id="sound" type="checkbox" checked> sound</label>
+          <label class="m-opt"><input id="musicon2" type="checkbox" checked> music</label>
+          <label class="m-opt"><input id="voiceson2" type="checkbox" checked> voices</label>
           <label class="m-opt"><input id="daylock" type="checkbox"> stop the clock</label>
         </div>
         <div class="m-row center" id="pause-online">
@@ -297,7 +303,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=0c8ecaf4"></script>
-<script type="module" src="city/main.js?v=94ca946a"></script>
+<script type="module" src="city/main.js?v=11ae9bc9"></script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

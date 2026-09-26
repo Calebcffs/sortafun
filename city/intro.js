@@ -84,6 +84,7 @@ export class Intro {
     this.q(".in-skip").textContent = "skip intro ▸";
     this.grain();
     g.hud.hide();
+    if (g.music) g.music.play("ominous");
     try {
       this.card("");
       this.setup(quality);
@@ -309,7 +310,7 @@ export class Intro {
     if (text === null) { c.classList.remove("on"); return; }
     c.classList.add("on");
     c.textContent = "";
-    if (text) this.type(c, text, 0.045);
+    if (text) { this.type(c, text, 0.045); if (this.g.voice && !this.skipped) this.g.voice.speak("narrator", text, 2.4); }
   }
 
   // type text out a letter at a time
@@ -320,7 +321,13 @@ export class Intro {
     const step = () => { if (el._tid !== id) return; el.textContent = text.slice(0, ++i); if (i < text.length) setTimeout(step, per * 1000); };
     step();
   }
-  caption(text) { const c = this.q(".in-cap"); if (!text) { c.classList.remove("on"); return; } c.classList.add("on"); this.type(c, text, 0.035); }
+  caption(text) {
+    const c = this.q(".in-cap");
+    if (!text) { c.classList.remove("on"); return; }
+    c.classList.add("on"); this.type(c, text, 0.035);
+    // the narrator reads it
+    if (this.g.voice && !this.skipped) this.g.voice.speak("narrator", text, 4);
+  }
   flash() { const f = this.q(".in-flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
 
   guide() {
@@ -511,10 +518,12 @@ export class Intro {
     if (s.fog && !s.under) { this.scene.fog.near = s.fog[0]; this.scene.fog.far = s.fog[1]; }
     this.world.uniforms.uNight.value = s.under ? 1 : Math.max(sky.night, 0.35);
     sky.updateSmoke(dt);
+    this.g.soundscape(cam.position, s.night ? 0.9 : 0, !!s.under, dt, {}, this.world);
     this.g.renderer.render(this.scene, cam);
   }
 
   cleanup() {
+    if (this.g.voice) this.g.voice.stop();
     this.clearCast();
     this.g.sound.drone(false);
     if (this.world) this.world.dispose();

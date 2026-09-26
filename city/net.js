@@ -666,7 +666,7 @@ export class Net {
       p.host = host;
       if (a) {
         a.root.visible = near && !!host && host.showRider;
-        if (host && host.showRider) { host.seatWorld(a.root.position, p.seat); a.root.rotation.set(host.pitch, host.yaw, host.roll * 0.6, "YXZ"); }
+        if (host && host.showRider) { host.seatWorld(a.root.position, p.seat); a.root.rotation.set(host.pitch, host.yaw, host.roll, "YXZ"); }
         if (p.shownWeapon !== p.weapon && a.bones) { p.shownWeapon = p.weapon; a.setWeapon(p.weapon === "fists" || p.weapon === "grenade" || p.weapon === "claw" ? null : p.weapon); }
         p.animT += dt;
         if (near && p.animT > 1 / 10) this.due.push({ p, due: p.animT * 10 });
@@ -688,7 +688,7 @@ export class Net {
       // bikes show the rider
       if (a) {
         a.root.visible = c.showRider;
-        if (c.showRider) { c.seatWorld(a.root.position); a.root.rotation.set(c.pitch, c.yaw, c.roll * 0.6, "YXZ"); }
+        if (c.showRider) { c.seatWorld(a.root.position); a.root.rotation.set(c.pitch, c.yaw, c.roll, "YXZ"); }
       }
       const d = p.pos.distanceTo(this.g.camera.position);
       if (d < 60 && Math.abs(s.speed) > 2) { /* (engine sounds for others would get noisy; skip) */ }

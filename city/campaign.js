@@ -33,6 +33,7 @@ import { WEAPONS, AMMO } from "./weapons.js";
 import { loadSave, writeSave, money } from "./shop.js";
 import { clamp } from "./noise.js";
 import { MISSIONS } from "./story.js";
+import { useGame } from "./storykit.js";
 
 export const ABORT = { abort: true };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -120,6 +121,7 @@ export class Campaign {
     this.beam = makeBeam();
     this.tmp = V(0, 0, 0);
     game.campaign = this;
+    useGame(game);
   }
 
   get mission() { return MISSIONS[this.mi]; }
@@ -172,12 +174,13 @@ export class Campaign {
     this.save.cur = { m: this.mi, s: this.si };
     saveStory(this.save);
     this.sectionName = S.name || "";
+    this.baseMood = S.music || null;
     try {
       this.settingUp = true;
       if (S.setup) await S.setup(this);
       this.settingUp = false;
       if (run !== this.runId) return;
-      if (this.sectionsRun++ > 0 && S.name) this.g.hud.toast("checkpoint: " + S.name, "good");
+      if (this.sectionsRun++ > 0 && S.name) { this.g.hud.toast("checkpoint: " + S.name, "good"); this.g.sound.checkpoint && this.g.sound.checkpoint(); }
       else if (this.si === 0 && M.n > 1) this.title("chapter " + M.n, M.title);
       if (S.run) await S.run(this);
       if (run !== this.runId) return;
@@ -217,6 +220,7 @@ export class Campaign {
     this.quietHints = false;
     this.onChaserStopped = null;
     this.hold = null;
+    this.baseMood = null;
     this.q(".sh-meter").hidden = true;
     this.q(".sh-count").textContent = "";
     if (sb) {
@@ -229,6 +233,7 @@ export class Campaign {
       sb.deadT = 0; sb.hud.wasted(false);
       sb.hud.health();
       sb.defences.stopPlacing();
+      sb.closeLift(); sb.hub.close();
       for (const d of [...sb.defences.list.keys()]) sb.defences.remove(d);
       // anything the world left lying about from last time
       for (let i = sb.npcs.list.length - 1; i >= 0; i--) sb.npcs.remove(i);
@@ -257,7 +262,9 @@ export class Campaign {
     if (this.failing) return;
     this.failing = true;
     this.abort();
-    this.g.sound.crash && this.g.sound.crash();
+    this.g.sound.failSting && this.g.sound.failSting();
+    if (this.g.music) this.g.music.play("dread", { fast: true });
+    if (this.g.voice) this.g.voice.stop();
     this.sb.hud.wasted(true);
     setTimeout(() => {
       if (this.g.campaign !== this) return;
@@ -292,6 +299,8 @@ export class Campaign {
     saveStory(s);
     this.g.running = false;
     this.g.input.unlock();
+    this.g.sound.fanfare && this.g.sound.fanfare();
+    if (this.g.music) this.g.music.play(last ? "hope" : "title");
     this.g.menu.showDone(M, secs, pay, last);
   }
 
@@ -355,6 +364,34 @@ export class Campaign {
     }
     if (this.stealthOn) this.stealth(dt);
     this.updateMarker();
+    this.score(dt);
+  }
+
+  // the music during play: what the section asked for (m.mood), or quiet
+  // by day and uneasy at night; and the drums whenever they're on you
+  mood(name) { this.baseMood = name; this.scoreT = 0; }
+  score(dt) {
+    const g = this.g;
+    if (!g.music || this.cine.active || this.failing) return;
+    this.scoreT = (this.scoreT || 0) - dt;
+    if (this.scoreT > 0) return;
+    this.scoreT = 0.6;
+    const me = this.me;
+    let threat = 0;
+    for (const n of this.sb.npcs.list) {
+      if (n.dead || n.harmless) continue;
+      const d = n.pos.distanceTo(me.pos);
+      if (n.zombie && n.hunt && (n.hunt.kind === "me" || n.hunt.kind === "cop") && d < 35) threat += n.type === "brute" ? 3 : 1;
+      else if ((n.foe && !n.calm) || (n.guard && n.alert)) { if (d < 45) threat += 1.5; }
+    }
+    for (const v of this.cast.cars) if (v.team === "them" && !v.dead && v.pos.distanceTo(me.pos) < 70) threat += 2;
+    const base = this.baseMood || (this.clock.night ? "tension" : "explore");
+    const calm = ["explore", "tension", "stealth", "dread", "night", "title"].includes(base);
+    let mood = base;
+    if (calm && threat >= 2) mood = me.vehicle ? "chase" : "action";
+    if (this.stealthOn && this.stealthOn.meter > 0.4 && mood === "stealth") mood = "tension";
+    g.music.intensity = clamp(0.25 + threat / 8, 0.25, 1);
+    g.music.play(mood);
   }
 
   // ------------------------------------------------------------
@@ -539,14 +576,40 @@ export class Campaign {
   async reach(p, r, text, opts = {}) {
     if (text) this.objective(text);
     this.marker(p, opts.label);
+    let wrong = null;
     await this.until(() => {
       const me = this.me, q = me.vehicle ? me.vehicle.pos : me.pos;
+      // on the wrong level (it's in the metro and you're up on the street, or
+      // the other way round): point at the nearest stairs until you're back
+      if ((p.y < UNDER_LINE) !== (q.y < UNDER_LINE)) {
+        const st = this.nearestStairs(q);
+        if (!wrong) this.objective(p.y < UNDER_LINE ? "get back down into the metro (F)" : "get back up to the street (F)");
+        if (st && st !== wrong) this.marker(new THREE.Vector3(st.x, st.y, st.z));
+        wrong = st || wrong || true;
+        return false;
+      }
+      if (wrong) { wrong = null; if (text) this.objective(text); this.marker(p, opts.label); }
       if (opts.onFoot && me.vehicle) return false;
       if (opts.inCar && !me.vehicle) return false;
       return Math.hypot(q.x - p.x, q.z - p.z) < r && Math.abs(q.y - p.y) < (opts.dy || 6);
     });
     this.marker(null);
     this.g.sound.pickup && this.g.sound.pickup();
+  }
+
+  // the nearest metro stairs on your level (a portal from structures.js)
+  nearestStairs(q) {
+    const W = this.g.world, cx = Math.floor(q.x / 128), cz = Math.floor(q.z / 128);
+    let best = null, bd = 1e9;
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+      const ch = W.chunks.get((cx + dx) + "," + (cz + dz));
+      if (ch && ch.portals) for (const o of ch.portals) {
+        if (o.kind !== "metro" || Math.abs(o.y - q.y) > 12) continue;
+        const d = Math.hypot(o.x - q.x, o.z - q.z);
+        if (d < bd) { bd = d; best = o; }
+      }
+    }
+    return best;
   }
 
   // drive / fly through gates in order. gates: [{p, yaw, r}]; opts: {time,

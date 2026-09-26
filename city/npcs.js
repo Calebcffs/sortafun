@@ -99,7 +99,7 @@ export class Npcs {
     const T = ZTYPES[type];
     const zid = (this.zseq++ % 46656).toString(36);
     const n = this.make(lookFor(zid), x, y, z);
-    n.zombie = true; n.type = type; n.zid = zid; n.hp = T.hp * (this.sb.story ? this.sb.story.zombieHp() : 1); n.T = T;
+    n.zombie = true; n.type = type; n.zid = zid; n.seed = parseInt(zid, 36) || 0; n.hp = T.hp * (this.sb.story ? this.sb.story.zombieHp() : 1); n.T = T;
     n.speed = T.wander[0] + Math.random() * (T.wander[1] - T.wander[0]);
     n.chaseSpeed = T.speed[0] + Math.random() * (T.speed[1] - T.speed[0]);
     n.avatar.zombie = true; n.avatar.ztint = T.tint; n.avatar.zombify();
@@ -176,6 +176,7 @@ export class Npcs {
       // (hits from another player's screen are already worked out there)
       const d = info.remote ? dmg : zombieDamage(n.type, dmg, !!info.head, byMe && this.sb.perk("deadeye"));
       n.hp -= d;
+      if (n.hp > 0 && (n.hurtSndT || 0) < this.sb.time) { n.hurtSndT = this.sb.time + 0.5; this.sfx(n, 35, (S) => S.zombieHurt(n.type === "brute" ? 0.6 : 1)); }
       if (n.sleep) this.wake(n);
       // it knows where you are now
       if (byMe && !this.sb.player.dead && !this.sb.player.turned) n.hunt = { kind: "me" };
@@ -193,6 +194,7 @@ export class Npcs {
 
   kill(n, info, byMe) {
     n.dead = true; n.deadT = 0;
+    this.sfx(n, 45, (S) => { if (n.zombie) S.zombieDie(n.type === "brute" ? 1.3 : 1); else S.thud(0.8); });
     n.zstate = "d";
     n.avatar.pulse = null;
     if (info.dir) { n.fling = info.dir.clone().setY(0).normalize().multiplyScalar(info.blast ? 7 : info.melee ? 2.5 : 1.2); n.vy = info.blast ? 5 : info.melee ? 1.5 : 0; }
@@ -215,7 +217,7 @@ export class Npcs {
     n.sleep = false; n.zstate = "m";
     n.hunt = null;
     n.wakeT = 0;
-    if (n.pos.distanceTo(this.g.camera.position) < 25) this.g.sound.groan(1.2);
+    this.sfx(n, 30, (S) => S.moan(1.2, n.seed));
     // (the story: one waking up wakes the rest of the room, a beat later)
     if (this.sb.story && this.sb.story.chainWake) {
       for (const o of this.list) if (o.sleep && !o.wakeT && o.pos.distanceTo(n.pos) < this.sb.story.chainWake) o.wakeT = 0.6 + Math.random() * 1.4;
@@ -251,13 +253,13 @@ export class Npcs {
     const o = v.obox;
     const cs = Math.cos(o.yaw), sn = Math.sin(o.yaw);
     for (const n of this.list) {
-      if (n.dead) continue;
+      if (n.dead || n.rideV) continue; // (not the people riding in it)
       const dx = n.pos.x - o.x, dz = n.pos.z - o.z;
       if (Math.abs(dx) > o.hz + 2 || Math.abs(dz) > o.hz + 2) continue;
       const lx = dx * cs - dz * sn, lz = dx * sn + dz * cs;
       if (Math.abs(lx) < o.hx + 0.3 && Math.abs(lz) < o.hz + 0.3 && Math.abs(n.pos.y - v.pos.y) < 1.5) {
         const dir = new THREE.Vector3(Math.sin(v.yaw), 0, Math.cos(v.yaw)).multiplyScalar(Math.sign(v.speed));
-        this.hurt(n, sp * (n.type === "brute" ? 3 : 7), { by: v.driver === "me" ? { id: "me", isPlayer: true } : { id: "car" }, dir: dir.add(new THREE.Vector3(0, 0.4, 0)), blast: sp > 14, point: n.pos.clone() });
+        this.hurt(n, sp * (n.type === "brute" ? 3 : 7), { by: v.driver === "me" ? { id: "me", isPlayer: true, team: "us" } : { id: "car" }, dir: dir.add(new THREE.Vector3(0, 0.4, 0)), blast: sp > 14, point: n.pos.clone() });
         if (n.dead) { n.fling = dir.clone().setY(0).multiplyScalar(sp * 0.8); n.vy = sp * 0.35; }
         if (v.driver === "me") this.g.sound.punch();
       }
@@ -279,8 +281,12 @@ export class Npcs {
     return out;
   }
 
+  // a sound from where n is (panned, quieter with distance)
+  sfx(n, range, fn) { const S = this.g.sound; if (S.at) S.at(n.pos, range, () => fn(S)); }
+
   // ------------------------------------------------------------
   update(dt) {
+    this.stepsThisFrame = 0;
     const me = this.sb.player;
     const under = me.pos.y < UNDER_LINE;
     const night = this.sb.clock.night;
@@ -323,6 +329,11 @@ export class Npcs {
       else if (n.cop && n.chase && this.sb.wanted > 0 && !me.dead) this.updateCop(n, dt, d);
       else if (n.cop && this.copVsZombies(n, dt)) { /* busy */ }
       else this.updateWalk(n, dt);
+      // people's footsteps nearby, and wardens' radios
+      if (!n.zombie && !n.dead && !n.hidden && !n.rideV) {
+        if (n.curSpeed > 0.4 && d < 16) { n.stepD = (n.stepD || 0) + n.curSpeed * dt; if (n.stepD > (n.curSpeed > 4 ? 1.2 : 0.8)) { n.stepD = 0; if (this.stepsThisFrame++ < 4) this.sfx(n, 16, (S) => S.step(n.pos.y < UNDER_LINE ? "concrete" : "concrete", 0.45)); } }
+        if ((n.cop || n.guard || n.key === "warden") && d < 45) { n.chatT = (n.chatT ?? 6 + Math.random() * 10) - dt; if (n.chatT <= 0) { n.chatT = 12 + Math.random() * 18; this.sfx(n, 45, (S) => S.chatter(0.9)); } }
+      }
       // cheap far away: animate less
       n.animT = (n.animT || 0) + dt;
       const every = d < 40 ? 0 : d < 90 ? 1 / 15 : 1 / 6;
@@ -428,7 +439,9 @@ export class Npcs {
       return;
     }
     n.groanT -= dt;
-    if (n.groanT <= 0) { n.groanT = 4 + Math.random() * 9; if (dMe < 45) this.g.sound.groan(this.g.sound.near(dMe, 45) * (n.hunt ? 1 : 0.6)); }
+    if (n.groanT <= 0) { n.groanT = (n.hunt ? 2.5 : 5) + Math.random() * 7; this.sfx(n, 45, (S) => S.moan(n.hunt ? 1 : 0.65, n.seed)); }
+    // feet dragging, when it's close
+    if (n.curSpeed > 0.3 && dMe < 18) { n.stepD = (n.stepD || 0) + n.curSpeed * dt; if (n.stepD > (n.type === "runner" ? 1.2 : 0.8)) { n.stepD = 0; if (this.stepsThisFrame++ < 3) this.sfx(n, 18, (S) => n.type === "brute" ? S.step("concrete", 0.7, 1) : S.shuffle(0.8)); } }
     // a screamer mid-scream stands still
     if (n.screamT > 0) { n.screamT -= dt; n.curSpeed = 0; if (n.screamT <= 0) n.zstate = "m"; return; }
     n.zstate = "m";
@@ -443,13 +456,30 @@ export class Npcs {
           // a raid on a safehouse beacon: go at it
           if (n.raid && !n.lure && Math.hypot(n.raid.pos.x - n.pos.x, n.raid.pos.z - n.pos.z) < 1.8 + T.r) { this.clawAt(n, null, n.raid); return; }
           // (the story: something to get at, like a barn door)
-          if (n.goal && !n.lure && !n.raid && Math.hypot(n.goal.pos.x - n.pos.x, n.goal.pos.z - n.pos.z) < (n.goal.r || 1.5) + T.r) { this.clawAt(n, null, null, n.goal); return; }
+          if (n.goal && !n.lure && !n.raid) {
+            const gd = Math.hypot(n.goal.pos.x - n.pos.x, n.goal.pos.z - n.pos.z), gr = (n.goal.r || 1.5) + T.r;
+            if (gd < gr) { this.clawAt(n, null, null, n.goal); return; }
+            // (up against a wall or a crate just short of it and getting no closer: that'll do)
+            if (n.goalBest == null || gd < n.goalBest - 0.1) { n.goalBest = gd; n.goalStall = 0; }
+            else {
+              n.goalStall = (n.goalStall || 0) + dt;
+              if (gd < gr + 3.5 && n.goalStall > 1.2) { this.clawAt(n, null, null, n.goal); return; }
+              // (hung up on a rock or a ledge way out: nobody's watching, shuffle it along)
+              if (n.goalStall > 8 && n.pos.distanceTo(this.sb.player.pos) > 30) {
+                const l = gd || 1;
+                n.pos.x += (n.goal.pos.x - n.pos.x) / l * 2; n.pos.z += (n.goal.pos.z - n.pos.z) / l * 2;
+                n.pos.y = this.g.world.groundAt(n.pos.x, n.pos.z, n.pos.y + 3, this.g_).y;
+                n.goalStall = 6;
+              }
+            }
+          }
           this.stepTowards(n, target.x, target.z, n.lure ? n.speed * 1.4 : Math.max(n.speed * 1.3, this.sb.clock.night ? n.chaseSpeed * 0.55 : 0), dt);
           return;
         }
       }
       return this.updateWalk(n, dt);
     }
+    if (!n.hunt && prey.kind === "me") { if (n.type === "runner") this.sfx(n, 60, (S) => S.shriek(1)); else if (n.type === "brute") this.sfx(n, 80, (S) => S.roar(1)); }
     n.hunt = prey.kind === "me" ? { kind: "me" } : prey.kind === "remote" ? { kind: "remote", uid: prey.p.uid } : { kind: "cop" };
     n.lure = null;
     // screamers scream when they first catch sight of someone
@@ -473,6 +503,7 @@ export class Npcs {
     n.avatar.pulseUpper(Math.random() < 0.5 ? "attack-melee-right" : "attack-melee-left", 0.45);
     const dMe = n.pos.distanceTo(this.sb.player.pos);
     if (dMe < 40) this.g.sound.punch();
+    if (Math.random() < 0.45) this.sfx(n, 30, (S) => S.zombieAttack(1));
     if (raid) { this.sb.defences.damage(raid, T.claw * (T.smash || 1)); return; }
     if (goal) { goal.hit(T.claw * (T.smash || 1), n); return; }
     if (prey.kind === "me") this.sb.player.hurt(T.claw, { zombie: true, point: n.pos.clone() });
@@ -485,7 +516,7 @@ export class Npcs {
     n.screamT = 1.6; n.zstate = "s"; n.curSpeed = 0;
     n.yaw = Math.atan2(prey.pos.x - n.pos.x, prey.pos.z - n.pos.z);
     const d = n.pos.distanceTo(this.g.camera.position);
-    if (d < 110) this.g.sound.scream(this.g.sound.near(d, 110));
+    this.sfx(n, 110, (S) => S.scream(1.3));
     if (d < 60) this.sb.shout(n, "AAAAAAHH!");
     const hunt = prey.kind === "me" ? { kind: "me" } : { kind: "remote", uid: prey.p.uid };
     for (const o of this.list) if (o.zombie && !o.dead && o !== n && o.pos.distanceTo(n.pos) < 70) { if (o.sleep) this.wake(o); o.hunt = hunt; o.lure = prey.pos.clone(); }
@@ -584,7 +615,7 @@ export class Npcs {
     if (blocked) { if (!keepYaw) n.yaw += (Math.random() < 0.5 ? 1 : -1) * 0.8; else if (!(this.hitC && this.hitC.defence)) n.yaw += (Math.random() < 0.5 ? 1 : -1) * 1.1; return false; }
     const g = this.g.world.groundAt(x, z, n.pos.y + 0.6, this.g_);
     if (g.water) { n.yaw += Math.PI * 0.7; return false; }
-    if (g.y < n.pos.y - 1.2) { n.yaw += Math.PI * 0.6; return false; } // don't walk off edges
+    if (g.y < n.pos.y - (n.goal ? 8 : 1.2)) { n.yaw += Math.PI * 0.6; return false; } // don't walk off edges (unless there's somewhere to be)
     n.pos.x = x; n.pos.z = z; n.pos.y = damp(n.pos.y, g.y, 15, 1 / 60);
     // traps on the ground (defences.js)
     if (n.zombie || n.cop) this.sb.defences.stepOn(n);

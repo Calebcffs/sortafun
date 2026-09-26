@@ -71,7 +71,7 @@ const canopyFalls = {
         const g = m.g, C = m.places.get("towers").canopy, y = C.roof.y, L = atLift(C, "roof", 1.4);
         const b = C.box;
         const edge = V(b.x1 - 1, y, (b.z0 + b.z1) / 2);
-        await m.cut({ shots: [
+        await m.cut({ music: "ominous", shots: [
           { time: DUSK, dark: 0.35, dur: 12,
             cam: cam.orbit(V(L.x, y, L.z + 3), 7, 2.9, 5.8, 6.3, 1.2, 48),
             cast: (c) => {
@@ -99,6 +99,7 @@ const canopyFalls = {
     },
     {
       name: "hold the roof",
+      music: "action",
       start: (m) => atLift(m.places.get("towers").canopy, "roof", 1.6),
       async setup(m) {
         const R = roofPlaces(m);
@@ -106,8 +107,8 @@ const canopyFalls = {
         m.timeTo(NIGHT, 1, 120, "night 3 · 8:10pm");
         m.loadout({ guns: { pistol: 60, rifle: 300, shotgun: 36 }, medkits: 3, grenades: 3, builds: { barricade: 3, wall: 2, mine: 4, turret: 2 } });
         await m.put(atLift(R.C, "roof", 2), 0);
-        garden(m.cast, R.C);
         stairHut(m, R);
+        garden(m.cast, R.C);
         roofCrew(m, R);
         m.noLift = "the lift's how they're coming up. you're not going down it.";
       },
@@ -143,14 +144,15 @@ const canopyFalls = {
     },
     {
       name: "evacuate",
+      music: "action",
       start: (m) => atLift(m.places.get("towers").canopy, "roof", 1.6),
       async setup(m) {
         const R = roofPlaces(m);
         m.time(NIGHT, 1, "night 3 · 8:30pm");
         m.loadout({ guns: { pistol: 60, rifle: 240, shotgun: 30 }, medkits: 2, grenades: 2, builds: { barricade: 2, turret: 1 } });
         await m.put(atLift(R.C, "roof", 2.5), 0);
-        garden(m.cast, R.C);
         stairHut(m, R);
+        garden(m.cast, R.C);
         roofCrew(m, R);
         m.noLift = "the survivors go first.";
       },
@@ -188,7 +190,7 @@ const canopyFalls = {
         m.count("");
         m.bar("saved", null);
         const L = R.lift;
-        await m.cut({ shots: [
+        await m.cut({ music: "sad", shots: [
           { time: NIGHT, dark: 0.8, dur: 10, tint: "night",
             cam: cam.dolly(lerpV(L, R.stairDoor, 0.4).add(V(0, 1.7, 0)), lerpV(L, R.stairDoor, 0.3).add(V(0, 1.6, 0)), V(L.x, L.y + 1.2, L.z + 0.2), null, 46),
             cast: (c) => {
@@ -239,7 +241,7 @@ const downTheLine = {
       },
       async run(m) {
         const g = m.g, C = m.places.get("towers").canopy, o = outside(C, 8);
-        await m.cut({ shots: [{ time: NIGHT, dark: 0.9, dur: 15, tint: "night",
+        await m.cut({ music: "dread", shots: [{ time: NIGHT, dark: 0.9, dur: 15, tint: "night",
           cam: cam.orbit(o, 5.5, 1.6, 2.4, 2.9, 1.3, 46),
           cast: (c) => {
             c.actor({ who: "teo", at: along(o, 0, 1.2, 0.8), idle: true, face: o });
@@ -251,6 +253,7 @@ const downTheLine = {
     },
     {
       name: "down",
+      music: "stealth",
       start: (m) => line(m).a.kiosk,
       async setup(m) {
         const T = line(m);
@@ -273,6 +276,7 @@ const downTheLine = {
     },
     {
       name: "the station",
+      music: "stealth",
       start: (m) => line(m).hall,
       async setup(m) {
         const T = line(m), h = T.hall;
@@ -303,7 +307,7 @@ const downTheLine = {
         m.cageObj.open();
         m.stealthOn = null;
         m.q(".sh-meter").hidden = true;
-        await m.cut({ shots: [
+        await m.cut({ music: "tension", shots: [
           { under: true, dur: 11,
             cam: cam.dolly(V(h.x - 2.5, UNDER + 2.2, h.z - 6.5), V(h.x - 3.5, UNDER + 2, h.z - 6), V(h.x - 8.5, UNDER + 1.2, h.z - 3), null, 56),
             cast: (c) => {
@@ -323,6 +327,7 @@ const downTheLine = {
     },
     {
       name: "the chase",
+      music: "chase",
       start: (m) => line(m).hall,
       async setup(m) {
         const T = line(m), h = T.hall;
@@ -357,7 +362,7 @@ const downTheLine = {
           if (!ok) { m.mari.hp = 25; g.hud.toast("it bit her. she's up, just about.", "bad"); }
         }
         await m.reach(T.at(T.L - 210), 6, "keep running");
-        await m.cut({ shots: [{ under: true, dur: 17,
+        await m.cut({ music: "sad", shots: [{ under: true, dur: 17,
           cam: cam.dolly(T.at(T.L - 214, 1).add(V(0, 1.6, 0)), T.at(T.L - 212, 0.6).add(V(0, 1.6, 0)), T.at(T.L - 208, -0.8).add(V(0, 1.3, 0)), null, 46),
           cast: (c) => {
             c.actor({ who: "mari", at: T.at(T.L - 208, -0.8), idle: true, sit: true, face: T.at(T.L - 212, 0.6) });
@@ -387,6 +392,7 @@ const rhysTower = {
   sections: [
     {
       name: "the convoy",
+      music: "chase",
       start: (m) => roadRoute(m.g, roadIn(m.places.get("towers").rhys), 6, 4).S,
       async setup(m) {
         const g = m.g, R = m.places.get("towers").rhys;
@@ -426,6 +432,7 @@ const rhysTower = {
     },
     {
       name: "the lobby",
+      music: "action",
       start: (m) => outside(m.places.get("towers").rhys, 8),
       async setup(m) {
         const R = m.places.get("towers").rhys;
@@ -444,9 +451,11 @@ const rhysTower = {
         const g = m.g, R = m.places.get("towers").rhys;
         m.say("varga", "(radio) wardens, with me. clear the lobby.");
         m.objective("clear the lobby");
-        await m.untilDead(m.foes, "Listeners left");
         const L = atLift(R, "lobby", 0.6);
-        await m.cut({ shots: [
+        m.marker(atLift(R, "lobby", 4));
+        await m.untilDead(m.foes, "Listeners left");
+        m.marker(null);
+        await m.cut({ music: "boss", shots: [
           { time: NIGHT, dark: 0.7, dur: 7,
             cam: cam.dolly(V(L.x - 3.2, L.y + 1.8, L.z + 5.5), V(L.x - 2.6, L.y + 1.7, L.z + 4.6), V(L.x + 0.5, L.y + 1.3, L.z + 1.5), null, 50),
             cast: (c) => {
@@ -467,6 +476,7 @@ const rhysTower = {
     },
     {
       name: "the climb",
+      music: "tension",
       start: (m) => { const c = cradle(m); return V(c.x + 1, 0, c.z); },
       async setup(m) {
         const c = cradle(m);
@@ -490,6 +500,7 @@ const rhysTower = {
     },
     {
       name: "the penthouse",
+      music: "boss",
       start: (m) => atLift(m.places.get("towers").rhys, "pent", 2),
       async setup(m) {
         const c = cradle(m), R = c.R;
@@ -511,7 +522,7 @@ const rhysTower = {
         await m.untilDead(m.foes, "left");
         const roof = atLift(R, "roof", 4);
         const pp = atLift(R, "pent", 5);
-        await m.cut({ shots: [
+        await m.cut({ music: "sad", shots: [
           { time: NIGHT + 0.1, dark: 0.8, dur: 10,
             cam: cam.dolly(V(roof.x + 14, roof.y + 3, roof.z + 12), V(roof.x + 18, roof.y + 8, roof.z + 16), V(roof.x, roof.y + 4, roof.z), V(roof.x, roof.y + 22, roof.z), 50),
             cast: (c2) => {
@@ -592,7 +603,7 @@ const killSignal = {
       },
       async run(m) {
         const g = m.g, Z = plaza(m), c = Z.c;
-        await m.cut({ shots: [
+        await m.cut({ music: "boss", shots: [
           { time: 0.19, dark: 0.6, dur: 9, tint: "sick", fill: 1,
             cam: cam.orbit(V(Z.c.plaza.x, Z.y, Z.c.plaza.z), 52, 20, 0.2, 0.8, 2, 58),
             cast: (cc) => { for (let i = 0; i < 44; i++) { const a = (i / 44) * 6.28 + Math.random() * 0.1, r = 34 + Math.random() * 26; const p = V(c.plaza.x + Math.cos(a) * r, Z.y, c.plaza.z + Math.sin(a) * r); cc.actor({ look: ["male-a", "female-b", "male-b", "female-e", "male-f", "female-c", "male-d", "female-a"][i % 8], zombie: true, at: p, idle: true, face: Z.mast }); } },
@@ -627,6 +638,7 @@ const killSignal = {
     },
     {
       name: "fuel",
+      music: "action",
       start: (m) => plaza(m).south,
       async setup(m) {
         const g = m.g, Z = plaza(m);
@@ -676,6 +688,7 @@ const killSignal = {
     },
     {
       name: "the console",
+      music: "boss",
       start: (m) => plaza(m).con,
       async setup(m) {
         const Z = plaza(m);
@@ -698,7 +711,7 @@ const killSignal = {
               if (t > 28 && !gateDone) {
                 gateDone = true;
                 const G = Z.gate;
-                m.cut({ shots: [
+                m.cut({ music: "sad", shots: [
                   { time: 0.2, dark: 0.85, dur: 12, tint: "red",
                     cam: cam.dolly(along(G, -Math.PI / 2, -9, 5).add(V(0, 2.2, 0)), along(G, -Math.PI / 2, -8, 4).add(V(0, 2.6, 0)), G.clone().add(V(0, 1.2, 0)), null, 48),
                     cast: (cc) => {
@@ -726,6 +739,7 @@ const killSignal = {
     },
     {
       name: "the climb",
+      music: "boss",
       start: (m) => plaza(m).mast,
       async setup(m) {
         const g = m.g, Z = plaza(m);
@@ -751,6 +765,7 @@ const killSignal = {
     },
     {
       name: "the duel",
+      music: "boss",
       start: (m) => plaza(m).mast,
       async setup(m) {
         const Z = plaza(m);
@@ -765,7 +780,7 @@ const killSignal = {
         const g = m.g, Z = plaza(m), T = Z.top;
         const cityDir = 0;
         m.rhys.avatar.root.visible = true;
-        await m.cut({ shots: [
+        await m.cut({ music: "boss", shots: [
           { time: DAWN - 0.006, dark: 0.3, dur: 16,
             cam: cam.orbit(T, 3.4, 2.7, 0.4, 1.1, 1.1, 50),
             cast: (cc) => {
@@ -872,7 +887,7 @@ function dawn(m, choice) {
     cam: cam.dolly(V(Z.mast.x - 200, 160, Z.mast.z + 220), V(Z.mast.x - 120, 190, Z.mast.z + 280), V(Z.mast.x, 30, Z.mast.z), V(Z.mast.x + 100, 20, Z.mast.z - 100), 55),
     caption: [[2, "the city had one good summer left."], [6.5, "we're going to make it two."]],
     sound: [[6, () => g.sound.stinger()]] });
-  return { shots, back: false };
+  return { music: "hope", shots, back: false };
 }
 
 const CREDITS = [

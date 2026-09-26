@@ -513,7 +513,11 @@ export class Sandbox {
 
   usePortal(q) {
     if (q.kind === "lift") return this.openLift(q);
+    // (a second F press, or one held through the fade, shouldn't send you straight back)
+    if (this.time < (this.portalCool || 0)) return;
+    this.portalCool = this.time + 5;
     this.g.fade(() => {
+      this.portalCool = this.time + 1.2;
       const t = q.to;
       this.player.place(t.x, t.y, t.z, t.yaw);
       this.player.camYaw = t.yaw;
@@ -531,6 +535,7 @@ export class Sandbox {
     const box = this.liftEl.querySelector(".lift-btns");
     box.innerHTML = "";
     const allowed = this.story && this.story.liftStops ? this.story.liftStops(q) : null;
+    if (allowed && !q.stops.some((s) => s.name !== q.here && allowed.includes(s.name))) { this.lift = null; this.hud.toast("the lift's not going anywhere right now", "warn"); return; }
     q.stops.forEach((s, i) => {
       const b = document.createElement("button");
       b.textContent = (i + 1) + ". " + s.name;
@@ -762,7 +767,7 @@ export class Sandbox {
     me.update(dt, input);
     if (me.vehicle && me.seat > 0) {
       const v = me.vehicle;
-      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : "car", clamp(Math.abs(v.speed) / v.def.top, 0, 1));
+      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : v.len > 5.4 ? "truck" : "car", clamp(Math.abs(v.speed) / v.def.top, 0, 1));
     } else if (me.vehicle) {
       const v = me.vehicle;
       const up = input.down("KeyW") || input.down("ArrowUp") && !v.plane, dn = input.down("KeyS") || input.down("ArrowDown") && !v.plane;
@@ -781,9 +786,23 @@ export class Sandbox {
       v.drive(dt, { throttle: thr, steer, handbrake: input.down("Space") ? 1 : 0, pitch });
       v.update(dt);
       this.npcs.runOver(v);
-      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : "car", clamp(v.rpm != null ? v.rpm : Math.abs(v.speed) / v.def.top, 0, 1));
+      this.g.sound.engine(v.plane ? "plane" : v.bike ? "bike" : v.len > 5.4 ? "truck" : "car", clamp(v.rpm != null ? v.rpm : Math.abs(v.speed) / v.def.top, 0, 1));
       if (v.sunk && !v.plane) { this.exitVehicle(true); this.hud.toast("your car sank!", "bad"); }
-    } else this.g.sound.engine(null);
+      // tyres squealing when it slides (or the handbrake's on at speed)
+      const slip = v.plane || !v.onGround ? 0 : Math.abs(v.lat || 0) / (Math.abs(v.speed) + 2);
+      this.g.sound.skid(Math.max(clamp((slip - 0.1) * 4, 0, 1), input.down("Space") && Math.abs(v.speed) > 6 && !v.plane ? 0.7 : 0));
+      if (this.lastSpeed != null && this.lastSpeed - Math.abs(v.speed) > 0.35 && Math.abs(v.speed) > 8) this.g.sound.brakes(0.6);
+      this.lastSpeed = Math.abs(v.speed);
+    } else { this.g.sound.engine(null); this.g.sound.skid(0); }
+    // the nearest siren (police chasing you, the story's convoy)
+    let siren = 0, sPan = 0;
+    for (const sv of this.vehicles.all()) {
+      if (sv.dead || !(sv.sirenOn || (sv.ai && sv.ai.chase && this.wanted > 0))) continue;
+      const d = sv.pos.distanceTo(this.g.camera.position);
+      const k = Math.max(0, 1 - d / 220) * (sv === me.vehicle ? 0.8 : 1);
+      if (k > siren) { siren = k; const e = this.g.camera.matrixWorld.elements; sPan = ((sv.pos.x - this.g.camera.position.x) * e[0] + (sv.pos.z - this.g.camera.position.z) * e[2]) / Math.max(1, d); }
+    }
+    this.g.sound.sirenLoop(siren, sPan);
     // the parachute
     if (me.parachute) {
       if (me.vel.y < -5) me.vel.y = -5;
