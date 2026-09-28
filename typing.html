@@ -22,7 +22,8 @@
   /* fade the chrome once the test is running */
   .tt.typing .sub,
   .tt.typing .diffbar,
-  .tt.typing #diffnote { opacity: .15; pointer-events: none; }
+  .tt.typing #diffnote,
+  .tt.typing #lb { opacity: .15; pointer-events: none; }
 
   .screen {
     background: #323437;
@@ -132,7 +133,7 @@
   .tt #restart { margin-top: 4px; }
 </style>
 <script src="sfx.js?v=95063f31"></script>
-<script src="feedback.js?v=ca80ef11"></script>
+<script src="feedback.js?v=42ecaa3e"></script>
 </head>
 <body class="k-word tt">
 <header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -183,7 +184,7 @@
 
 <script src="words.js?v=838e70bc"></script>
 <script src="firebase-config.js?v=ff02e94a"></script>
-<script src="leaderboard.js?v=3522a4a7"></script>
+<script src="leaderboard.js?v=277a9229"></script>
 <script>
 "use strict";
 
@@ -697,6 +698,8 @@ diffBtns.forEach(function (b) {
 document.getElementById("restart").addEventListener("click", reset);
 reset();
 </script>
+<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), function () { return gameKey(); });</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

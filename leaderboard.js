@@ -527,7 +527,12 @@
   function mountPanel(target, game, opts) {
     opts = opts || {};
     var g = GAMES[game];
+    // one board per spot: a finished round's panel replaces the standing one
+    Array.prototype.slice.call(target.children).forEach(function (c) {
+      if (c.classList.contains("lb")) c.remove();
+    });
     var root = el("div", "lb");
+    if (opts.score == null) root.setAttribute("data-idle", "");
     root.innerHTML =
       '<div class="lb-head">' +
         '<b>leaderboard</b>' +
@@ -546,6 +551,7 @@
     var tabs = root.querySelectorAll(".lb-tabs button");
     var period = "day";
     var justSent = null;
+    var triedAll = false;
 
     function render(rows, worst) {
       listEl.innerHTML = "";
@@ -557,7 +563,15 @@
         justSent = null;
       }
       if (!rows.length) {
-        msgEl.textContent = "nobody yet. be the first.";
+        // standing board with nobody on it today: show the all-time board instead
+        if (period === "day" && opts.score == null && !triedAll) {
+          triedAll = true;
+          tabs.forEach(function (x) { x.classList.toggle("on", x.dataset.p === "all"); });
+          period = "all";
+          load();
+          return;
+        }
+        msgEl.textContent = period === "day" ? "nobody yet today. be the first." : "nobody yet. be the first.";
         return;
       }
       msgEl.textContent = "";
@@ -567,7 +581,7 @@
         line.appendChild(el("span", "lb-name", r.name));
         line.appendChild(el("span", "lb-score", fmtScore(g, r.score)));
         li.appendChild(line);
-        var when = fmtWhen(r.ts);
+        var when = fmtNice(r.ts);
         if (when) li.appendChild(el("div", "lb-when", when));
         if (worst && r.name === worst.name && r.score === worst.score) {
           li.classList.add("lb-last");
@@ -619,9 +633,13 @@
       var go = form.querySelector(".lb-go");
       try { input.value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
 
+      input.addEventListener("keydown", function (e) {
+        e.stopPropagation(); // typing a name isn't playing the game
+        if (e.key === "Enter") { e.preventDefault(); go.click(); }
+      });
       go.addEventListener("click", function () {
         var name = input.value.trim();
-        if (!name) { input.focus(); return; }
+        if (!name) { msgEl.textContent = "type a name first"; input.focus(); return; }
         go.disabled = true;
         go.textContent = "sending...";
         try { localStorage.setItem("sortafun-name", name); } catch (e) {}
@@ -635,6 +653,9 @@
         }).catch(function (e) {
           go.disabled = false;
           go.textContent = "try again";
+          msgEl.textContent = state.offline ? "leaderboard offline, score not saved"
+            : /permission/i.test(String(e && (e.code || e.message))) ? "the board refused that score (tell us with the feedback button)"
+            : "couldn't save, check your connection and try again";
           console.warn("[leaderboard] submit failed", e);
         });
       });
@@ -642,6 +663,38 @@
 
     load();
     return root;
+  }
+
+  // "28 Sep 2026, 9:37pm" in Singapore time, for the board rows
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function fmtNice(ts) {
+    var d = null;
+    if (ts && typeof ts.toDate === "function") d = ts.toDate();
+    else if (ts instanceof Date) d = ts;
+    if (!d || isNaN(d.getTime())) return "";
+    var s = new Date(d.getTime() + SG_OFFSET_MS);
+    var h = s.getUTCHours(), m = String(s.getUTCMinutes()).padStart(2, "0");
+    return s.getUTCDate() + " " + MONTHS[s.getUTCMonth()] + " " + s.getUTCFullYear() + ", " +
+      ((h % 12) || 12) + ":" + m + (h < 12 ? "am" : "pm");
+  }
+
+  // The standing board under a game: shown from page load, replaced by the
+  // submit panel when a round ends (mountPanel with a score), and put back
+  // whenever the game empties the spot again (new board / restart). game is
+  // a key, or a function returning one (typing switches between two boards).
+  function keepBoard(target, game) {
+    if (!target) return;
+    var key = typeof game === "function" ? game : function () { return game; };
+    function fill() {
+      if (target.children.length || target.textContent.trim()) return;
+      if (!GAMES[key()]) return;
+      mountPanel(target, key());
+    }
+    fill();
+    new MutationObserver(function () {
+      // after the game's own synchronous clear-then-mount has finished
+      Promise.resolve().then(fill);
+    }).observe(target, { childList: true });
   }
 
   function injectStyle() {
@@ -722,5 +775,6 @@
     ANIM_MAX_BYTES: ANIM_MAX_BYTES,
     animEstimateBytes: animEstimateBytes,
     mountPanel: mountPanel,
+    keepBoard: keepBoard,
   };
 })();

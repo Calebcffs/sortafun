@@ -143,6 +143,15 @@
         "padding:10px 14px;background:#fff5f8;border:2px dashed #ffb3c6;border-radius:12px;font-size:13px;color:#4a4760;}",
       ".fb-strip b{font:400 17px/1 var(--fb-chunky);color:var(--fb-ink);}",
       ".fb-strip .fb-stars{display:inline-flex;gap:2px;}",
+      ".fb-root .fb-star svg *{pointer-events:none;}",
+      ".fb-root .fb-star .fb-sb{fill:#fff;transition:fill .08s;}",
+      ".fb-root .fb-star .fb-sg{opacity:0;}",
+      ".fb-root .fb-star.on .fb-sb{fill:#ffd43b;}",
+      ".fb-root .fb-star.on .fb-sg{opacity:.8;}",
+      "@media (hover:hover){",
+        ".fb-root .fb-starset:has(.fb-star:hover) .fb-star .fb-sb{fill:#ffd43b;}",
+        ".fb-root .fb-starset .fb-star:hover ~ .fb-star .fb-sb{fill:#fff;}",
+        ".fb-root .fb-starset .fb-star:hover ~ .fb-star .fb-sg{opacity:0;}}",
       ".fb-strip .fb-star{width:30px;height:30px;padding:0;border:0;background:none;box-shadow:none;cursor:pointer;border-radius:6px;}",
       ".fb-strip .fb-star:hover,.fb-strip .fb-star:focus-visible{background:none;transform:scale(1.15);outline:none;}",
       ".fb-strip .fb-star svg{width:100%;height:100%;display:block;}",
@@ -212,10 +221,19 @@
   }
 
   /* ---------------- little svgs ---------------- */
-  function starSvg(on) {
-    return '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3.5l5.1 10.6 11.6 1.6-8.5 8.1 2.1 11.5L20 29.8 9.7 35.3l2.1-11.5-8.5-8.1 11.6-1.6z" ' +
-      'fill="' + (on ? "#ffd43b" : "#fff") + '" stroke="#1d1b2e" stroke-width="3" stroke-linejoin="round"/>' +
-      (on ? '<path d="M14 15.5l3.5-.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>' : "") + "</svg>";
+  // Stars are drawn once and never re-rendered: lit / unlit is the .on class,
+  // the hover preview is pure CSS. (Swapping the svg under the pointer on
+  // mouseover detached the node mid-click, so clicks never landed, and iOS
+  // treats a hover that changes content as "not a tap yet".)
+  var STAR_SVG = '<svg viewBox="0 0 40 40" aria-hidden="true"><path class="fb-sb" d="M20 3.5l5.1 10.6 11.6 1.6-8.5 8.1 2.1 11.5L20 29.8 9.7 35.3l2.1-11.5-8.5-8.1 11.6-1.6z" ' +
+    'stroke="#1d1b2e" stroke-width="3" stroke-linejoin="round"/>' +
+    '<path class="fb-sg" d="M14 15.5l3.5-.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>';
+  function lightStars(set, n) {
+    Array.prototype.forEach.call(set.querySelectorAll(".fb-star"), function (b) {
+      var v = Number(b.dataset.v);
+      b.classList.toggle("on", n != null && v <= n);
+      if (b.getAttribute("role") === "radio") b.setAttribute("aria-checked", String(n === v));
+    });
   }
   var ICON_CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' +
     '<path d="M4 5h16v11H10l-5 4v-4H4z" fill="#fff" stroke="#1d1b2e"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01" stroke="#1d1b2e" stroke-width="3"/></svg>';
@@ -275,7 +293,7 @@
         '<div class="fb-body">' +
           '<div class="fb-row"><label class="fb-lbl" for="fb-about">about</label><select id="fb-about">' + options + "</select></div>" +
           '<div class="fb-row"><span class="fb-lbl" id="fb-rl">stars <i>optional. tap the same star again to clear</i></span>' +
-            '<div class="fb-rate" role="radiogroup" aria-labelledby="fb-rl"></div><div class="fb-rateword" aria-live="polite"></div></div>' +
+            '<div class="fb-rate fb-starset" role="radiogroup" aria-labelledby="fb-rl"></div><div class="fb-rateword" aria-live="polite"></div></div>' +
           '<div class="fb-row"><span class="fb-lbl" id="fb-kl">this is...</span><div class="fb-kinds" role="radiogroup" aria-labelledby="fb-kl">' +
             KINDS.map(function (k) {
               return '<button type="button" class="fb-kind" role="radio" data-k="' + k.k + '">' + KIND_ICON[k.k] + k.label + "</button>";
@@ -309,14 +327,16 @@
     overlay.addEventListener("mousedown", function (e) { if (e.target === overlay) close(); });
     overlay.querySelector(".fb-x").addEventListener("click", close);
 
+    var h = "";
+    for (var i = 1; i <= 5; i++) {
+      h += '<button type="button" class="fb-star" role="radio" data-v="' + i + '" aria-checked="false" aria-label="' + i + (i === 1 ? " star" : " stars") + '">' + STAR_SVG + "</button>";
+    }
+    h += '<button type="button" class="fb-zero" role="radio" data-v="0" aria-checked="false">0 stars</button>';
+    rateEl.innerHTML = h;
+    var zeroBtn = rateEl.querySelector(".fb-zero");
     function drawStars() {
-      var h = "";
-      for (var i = 1; i <= 5; i++) {
-        h += '<button type="button" class="fb-star" role="radio" data-v="' + i + '" aria-checked="' + (rating === i) + '" aria-label="' + i + (i === 1 ? " star" : " stars") + '">' +
-          starSvg(rating != null && i <= rating) + "</button>";
-      }
-      h += '<button type="button" class="fb-zero" role="radio" data-v="0" aria-checked="' + (rating === 0) + '">0 stars</button>';
-      rateEl.innerHTML = h;
+      lightStars(rateEl, rating);
+      zeroBtn.setAttribute("aria-checked", String(rating === 0));
       rateWord.textContent = rating == null ? "no stars picked" : STAR_WORDS[rating];
     }
     rateEl.addEventListener("click", function (e) {
@@ -326,19 +346,15 @@
       rating = rating === v ? null : v;
       sfx(rating == null ? "tick" : rating >= 4 ? "good" : "pop");
       drawStars();
-      var again = rateEl.querySelector('[data-v="' + v + '"]');
-      if (again) again.focus();
     });
-    rateEl.addEventListener("mouseover", function (e) {
-      var b = e.target.closest(".fb-star");
-      if (!b) return;
-      var v = Number(b.dataset.v);
-      Array.prototype.forEach.call(rateEl.querySelectorAll(".fb-star"), function (s) {
-        s.innerHTML = starSvg(Number(s.dataset.v) <= v);
+    // the word under the stars follows the mouse (text only, never the stars themselves)
+    if (window.matchMedia && matchMedia("(hover: hover)").matches) {
+      rateEl.addEventListener("mouseover", function (e) {
+        var b = e.target.closest(".fb-star");
+        if (b) rateWord.textContent = STAR_WORDS[Number(b.dataset.v)];
       });
-      rateWord.textContent = STAR_WORDS[v];
-    });
-    rateEl.addEventListener("mouseleave", drawStars);
+      rateEl.addEventListener("mouseleave", drawStars);
+    }
 
     function drawKinds() {
       Array.prototype.forEach.call(overlay.querySelectorAll(".fb-kind"), function (b) {
@@ -406,6 +422,7 @@
     overlay.remove();
     overlay = null;
     openState = false;
+    refreshStrips(); // back to what you actually sent
     if (lastFocus && lastFocus.focus && document.contains(lastFocus)) {
       try { lastFocus.focus({ preventScroll: true }); } catch (e) {}
     }
@@ -417,9 +434,7 @@
     strips.forEach(function (s) {
       var mine = ls(KEY_RATED + here.id);
       s.querySelector(".fb-mine").textContent = mine != null ? "you gave it " + mine + (mine === "1" ? " star" : " stars") + ". tap to rate again" : "";
-      Array.prototype.forEach.call(s.querySelectorAll(".fb-star"), function (b) {
-        b.innerHTML = starSvg(mine != null && Number(b.dataset.v) <= Number(mine));
-      });
+      lightStars(s, mine == null ? null : Number(mine));
     });
   }
   function addStrip() {
@@ -429,19 +444,18 @@
     var strip = document.createElement("div");
     strip.className = "fb-root fb-strip";
     var stars = "";
-    for (var i = 1; i <= 5; i++) stars += '<button type="button" class="fb-star" data-v="' + i + '" aria-label="rate it ' + i + ' out of 5">' + starSvg(false) + "</button>";
-    strip.innerHTML = "<b>how was it?</b><span class=\"fb-stars\">" + stars + "</span>" +
+    for (var i = 1; i <= 5; i++) stars += '<button type="button" class="fb-star" data-v="' + i + '" aria-label="rate it ' + i + ' out of 5">' + STAR_SVG + "</button>";
+    strip.innerHTML = "<b>how was it?</b><span class=\"fb-stars fb-starset\">" + stars + "</span>" +
       '<button type="button" class="fb-report">report a bug / idea</button><span class="fb-mine"></span>';
+    // tap a star: it lights up here and the form opens with that many picked
     strip.querySelector(".fb-stars").addEventListener("click", function (e) {
       var b = e.target.closest(".fb-star");
-      if (b) open({ rating: Number(b.dataset.v) });
-    });
-    strip.querySelector(".fb-stars").addEventListener("mouseover", function (e) {
-      var b = e.target.closest(".fb-star");
       if (!b) return;
-      Array.prototype.forEach.call(strip.querySelectorAll(".fb-star"), function (s) { s.innerHTML = starSvg(Number(s.dataset.v) <= Number(b.dataset.v)); });
+      var v = Number(b.dataset.v);
+      lightStars(strip, v);
+      sfx(v >= 4 ? "good" : "pop");
+      open({ rating: v });
     });
-    strip.querySelector(".fb-stars").addEventListener("mouseleave", refreshStrips);
     strip.querySelector(".fb-report").addEventListener("click", function () { open({ kind: "bug" }); });
     var back = wrap.querySelector(":scope > .back");
     if (back) wrap.insertBefore(strip, back);

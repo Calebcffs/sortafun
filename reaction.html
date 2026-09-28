@@ -35,7 +35,7 @@
   .rounds { font-size: 15px; color: #333; letter-spacing: 2px; min-height: 20px; }
 </style>
 <script src="sfx.js?v=95063f31"></script>
-<script src="feedback.js?v=ca80ef11"></script>
+<script src="feedback.js?v=42ecaa3e"></script>
 </head>
 <body class="k-skill">
 <header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -61,7 +61,7 @@
 </div>
 
 <script src="firebase-config.js?v=ff02e94a"></script>
-<script src="leaderboard.js?v=3522a4a7"></script>
+<script src="leaderboard.js?v=277a9229"></script>
 <script>
 "use strict";
 
@@ -160,6 +160,8 @@ window.addEventListener("keydown", function (e) {
 document.getElementById("restart").addEventListener("click", reset);
 reset();
 </script>
+<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "reaction");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

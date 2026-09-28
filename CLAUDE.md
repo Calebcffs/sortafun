@@ -336,7 +336,16 @@ not touch Firestore.
 Games: `reaction.html` `maze.html` `aim.html` `stopbar.html` `mines.html`, the
 word games `ladder.html` `anagram.html` (word hive) `five.html` `sides.html`
 `grab.html`, and the basement `minute.html` `callit.html` `watch.html`. Each
-mounts `SortafunLB.mountPanel(el, key, {score})` on finish. `mines.html`,
+mounts `SortafunLB.mountPanel(el, key, {score})` on finish. **The board is
+also on screen from page load**: every scored game ends with
+`SortafunLB.keepBoard(document.getElementById("lb"), key)` (a small script
+just before the footer; typing passes a function for its two boards, city
+uses a separate `#lb-city` under the stage). keepBoard mounts a no-score
+panel and a MutationObserver puts it back whenever the game empties `#lb`
+(new board / restart); a scored `mountPanel` replaces it. A standing board
+with nobody on it today flips to all time. Rows show when each score was set
+(`fmtNice`, Singapore time). The name box submits on Enter, and a failed
+save says why in the panel. A new game needs the keepBoard line too. `mines.html`,
 `maze.html` and `reaction.html` submit ms. `watch.html` is the anti-game: it
 accrues seconds while `document.hidden`, persists to `localStorage`
 (`sortafun-watch-rested`), and you press "log it" to submit. The fermi quiz

@@ -65,7 +65,7 @@
 } }
 </script>
 <script src="sfx.js?v=95063f31"></script>
-<script src="feedback.js?v=ca80ef11"></script>
+<script src="feedback.js?v=42ecaa3e"></script>
 </head>
 <body class="k-skill">
 <header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
@@ -289,6 +289,9 @@
     <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
   </div>
 
+  <!-- the standing city board, always on under the game (the game-over screen has its own for submitting) -->
+  <div id="lb-city" class="lb-city"></div>
+
   <div class="birdie-help">
     <div><b>story mode:</b> "Halcyon", twelve chapters over three nights, played on your own in the same city. you're the courier who delivered the part that switched on the broadcast. with Mari, Teo, Nana, Kofi and (eventually) Captain Varga, you've got until dawn after the third night to switch it off. checkpoints in every chapter, easy / normal / hard, and every chapter you finish pays into your online cash.</div>
     <div><b>the goal:</b> get out. everyone online shares one evacuation: fuel the radio mast at Broadcast Plaza (the red R on the map) with 12 fuel cans, then hold its console while the noise brings the horde, and a helicopter comes. be on the helipad when it leaves and you escape: $20,000 and a fresh start. then the mast needs fuel again.</div>
@@ -303,8 +306,9 @@
 </div>
 
 <script src="firebase-config.js?v=ff02e94a"></script>
-<script src="leaderboard.js?v=3522a4a7"></script>
+<script src="leaderboard.js?v=277a9229"></script>
 <script type="module" src="city/main.js?v=2cd505ad"></script>
+<script>if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb-city"), "city");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>
