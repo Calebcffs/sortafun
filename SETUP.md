@@ -132,6 +132,27 @@ Both sort by `rankValue` descending. The tile slider's daily puzzle is seeded
 from this same day string, so its scramble and its leaderboard always roll
 over together, at midnight Singapore time.
 
+### Feedback
+
+`feedback.js` (the pink bubble / "Rate" button / star strip on every page)
+writes collection `feedback`, one doc per note:
+
+| field    | type   | notes                                                        |
+|----------|--------|--------------------------------------------------------------|
+| `game`   | string | page id slug (`five`, `city`, `site` = whole site...), `[a-z0-9-]{1,30}` |
+| `rating` | int or null | 0 to 5 stars; `null` = didn't rate (0 is a real answer) |
+| `kind`   | string | `bug` / `change` / `general`                                 |
+| `msg`    | string | 0 to 1000 chars (a rating or a message is required)         |
+| `name`   | string | 0 to 20, optional                                            |
+| `page`   | string | the path it was sent from                                    |
+| `day`    | string | `YYYY-MM-DD` Singapore time                                  |
+| `ts`     | timestamp | server time                                               |
+
+It is **create only and not readable from the site** (rules: `read: false`).
+Read it in the Firebase console: **Firestore Database > Data > feedback**
+(sort or filter by `game`, `kind` or `ts` there). `game` is checked by a
+regex, not an enum, so new games need no rules change. No index needed.
+
 ### Animation gallery
 
 Collection `animations`, one document per posted flipbook:

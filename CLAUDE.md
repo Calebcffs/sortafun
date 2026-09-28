@@ -348,7 +348,7 @@ match `firestore.rules` `isValidScore` / `isLowGame` and `leaderboard.js`
 (it auto-deploys on push, see above); no new indexes needed. Retired keys get
 `retired: true` in `GAMES` so `passport.html` doesn't count them toward "the
 lot" stamp. A new game also needs a row + `THUMB` in `index.html`, a row in
-`leaderboards.html` ORDER and `daily.html` GAMES, and the `.homebar` div.
+`leaderboards.html` ORDER and `daily.html` GAMES, a row in `feedback.js` ITEMS (`game: true`), and the `.homebar` div.
 
 ### The dictionary (`dict.js`)
 
@@ -725,6 +725,47 @@ green light or anything in the minute game while it counts: a cue would help
 you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
 checks (keep sfx peaks under ~0.35).
 
+### Feedback (`feedback.js`)
+
+Sortafun is badged **alpha** (logo is "Sortafun (Alpha)" everywhere: the
+`.hb-logo` on every page and the homepage `<h1>`). Every page loads
+`feedback.js` in `<head>` right after `sfx.js` (`/feedback.js` on the 404), and
+every page also loads `firebase-config.js` + `leaderboard.js` so it can send.
+It adds, on DOMContentLoaded:
+
+- a pink "Rate" (game pages) / "Feedback" button in `.homebar .hb-nav` (or the
+  homepage `nav.nav`, before the search box)
+- a floating speech bubble, bottom right. The homepage always shows it; other
+  pages only when there is clear sky right of the `.wrap` / `.room` window
+  (so it never covers a game), and never in fullscreen / pointer lock or
+  while `body.typing`
+- on game pages (`game: true` in its `ITEMS`), a "how was it?" 5-star strip
+  inserted in `.wrap` just above `.back`; clicking a star opens the form with
+  that rating
+- the form: "about" picker (preset to this page), 0 to 5 stars (click the lit
+  star again to clear; a separate "0 stars" pill, because null = didn't rate
+  and 0 = rated zero), bug / change / general, message (1000), optional name
+  (shares `sortafun-name`). 20s cooldown per browser.
+
+Which page is which comes from `ITEMS` (filename to homepage tile id), or
+`<body data-fb="id">`. **A new game needs a row in `ITEMS`** (with
+`game: true`), otherwise it gets site-level feedback and no star strip.
+
+While the form is open it swallows `keydown`/`keypress` on `window` in the
+capture phase (that's why it loads in `<head>`, before any game's listeners),
+so typing in it never drives the game. `keyup` passes through on purpose (no
+stuck keys). Pointer lock is released on open. `SortafunFB.open(opts)`,
+`.close()`, `.nudge()` (the bubble waves; `leaderboard.js mountPanel` calls it
+at the end of every scored round).
+
+Sends via `SortafunLB.feedbackSend` to Firestore `feedback` (create only,
+**not readable from the site**; Caleb reads it in the Firebase console). Shape
+in `SETUP.md`. `game` is regex-checked, not an enum, so no rules change per game.
+Sending sets passport stamp `-feedback` ("alpha tester").
+
+The homepage also has an `.alphabar` under the ticker ("give feedback" opens
+the form) and a How It Works line that links to it.
+
 ### The meta pages
 
 `guestbook.html` (Firestore `guestbook`, append-only, own 2003 navy/Times
@@ -736,7 +777,7 @@ per-game stamps from the boards by name), `webring.html` (a loop-back bit),
 
 Stamp flags are set by: `leaderboard.js submit()` (`-scored`, `-game-<key>`),
 `index.html` (`-walked`, `-basement`), `gallery.html` (`-gallery`),
-`guestbook.html` (`-guestbook`), `passport.html` itself (`-night`).
+`guestbook.html` (`-guestbook`), `feedback.js` (`-feedback`), `passport.html` itself (`-night`).
 
 The hit counter (`#hits`, top-right of the homepage) reads/increments
 `stats/hits` via `SortafunLB.bumpHits`/`getHits`, once per browser session

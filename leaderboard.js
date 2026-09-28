@@ -342,6 +342,36 @@
     }).catch(function () { return null; });
   }
 
+  /* ---------- feedback (feedback.js is the widget) ----------
+   * collection "feedback", one doc per note: { game, rating, kind, msg, name,
+   * page, day, ts }. Create only, NOT world readable: Caleb reads it in the
+   * Firebase console (Firestore > feedback). rating is 0..5 or null (no
+   * rating given, which is different from a deliberate 0). Needs a rating or
+   * a message, same as the rules.
+   */
+  var FB_KINDS = ["bug", "change", "general"];
+  function feedbackSend(f) {
+    return init().then(function () {
+      var fs = state.fs;
+      var game = String(f.game || "site").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30) || "site";
+      var rating = f.rating == null ? null : Math.round(Number(f.rating));
+      if (rating != null && !(rating >= 0 && rating <= 5)) throw new Error("bad rating");
+      var kind = FB_KINDS.indexOf(f.kind) === -1 ? "general" : f.kind;
+      var msg = String(f.msg || "").trim().slice(0, 1000);
+      if (rating == null && !msg) throw new Error("say something or pick some stars");
+      return fs.addDoc(fs.collection(state.db, "feedback"), {
+        game: game,
+        rating: rating,
+        kind: kind,
+        msg: msg,
+        name: String(f.name || "").trim().slice(0, 20),
+        page: String(f.page || location.pathname || "/").slice(0, 80),
+        day: dayStr(),
+        ts: fs.serverTimestamp(),
+      });
+    });
+  }
+
   /* ---------- animation gallery ----------
    * Separate collections from the leaderboard, same client-only Firestore.
    *   animations       one doc per posted flipbook:
@@ -578,6 +608,8 @@
       // end of a round: a little "done" jingle, unless the game played its own
       var S = window.SortafunSFX;
       if (S && Date.now() - S.lastResultAt() > 2500) S.result("done");
+      // and the "rate this game" bubble gives a little wave (feedback.js)
+      if (window.SortafunFB) window.SortafunFB.nudge();
       var form = el("div", "lb-submit");
       form.innerHTML =
         '<input class="lb-input" maxlength="20" placeholder="your name" autocomplete="off" spellcheck="false">' +
@@ -679,6 +711,7 @@
     guestbookList: guestbookList,
     getHits: getHits,
     bumpHits: bumpHits,
+    feedbackSend: feedbackSend,
     animPublish: animPublish,
     animList: animList,
     animVote: animVote,

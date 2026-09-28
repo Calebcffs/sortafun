@@ -50,6 +50,14 @@ All the word games share `dict.js`, a 170k-word dictionary with no proper nouns
 - passport (`passport.html`) - stamps you collect by poking around (local only); can also sync per-game stamps from the boards by name.
 - the webring (`webring.html`) - a ring of mostly-imaginary affiliated sites that loops back here.
 
+### feedback (alpha)
+
+Every page has a pink **feedback** bubble (when there's room beside the game), a
+**Rate** / **Feedback** button in the nav bar, and every game has a "how was it?"
+star strip above its back button. 0 to 5 stars, bug / change / general, a message.
+It lands in Firestore `feedback`, which only Caleb can read (Firebase console).
+`feedback.js`, loaded in every page's `<head>`.
+
 ### hidden / other
 
 - art gallery (`gallery.html`) - Vietnam photos with illegible captions. Not linked: click the potted plant in the lobby's far corner.

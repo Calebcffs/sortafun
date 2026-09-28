@@ -51,6 +51,29 @@ service cloud.firestore {
         && d.ts == request.time;
     }
 
+    // --- feedback (feedback.js, the bubble on every page) : create only ---
+    // Not readable from the site: Caleb reads it in the Firebase console.
+    // game is a free-form slug (not an enum) so a new game never needs a
+    // rules change here. rating is 0..5, or null for "didn't rate" (a
+    // deliberate 0 is a real answer). Needs a rating or some words.
+    match /feedback/{id} {
+      allow read, update, delete: if false;
+      allow create: if isValidFeedback(request.resource.data);
+    }
+    function isValidFeedback(d) {
+      return d.keys().hasOnly(['game', 'rating', 'kind', 'msg', 'name', 'page', 'day', 'ts'])
+        && d.keys().hasAll(['game', 'rating', 'kind', 'msg', 'day', 'ts'])
+        && d.game is string && d.game.matches('[a-z0-9-]{1,30}')
+        && (d.rating == null || (d.rating is int && d.rating >= 0 && d.rating <= 5))
+        && d.kind in ['bug', 'change', 'general']
+        && d.msg is string && d.msg.size() <= 1000
+        && (d.rating != null || d.msg.size() >= 1)
+        && (!('name' in d) || (d.name is string && d.name.size() <= 20))
+        && (!('page' in d) || (d.page is string && d.page.size() <= 80))
+        && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.ts == request.time;
+    }
+
     // --- hit counter : one doc stats/hits, count only ever goes up by 1 ---
     match /stats/{id} {
       allow read: if true;

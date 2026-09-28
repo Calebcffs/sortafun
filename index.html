@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SORTAFUN.ORG - free games, no downloads!</title>
+<title>Sortafun (Alpha) - free games, no downloads!</title>
 <meta name="description" content="Sortafun. Free little browser games, no downloads, no sign-up. Crosswords, typing, a tile slider, racing, minesweeper, an animation studio, a forum, and a basement.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ffd43b' stroke='%231d1b2e' stroke-width='3'/%3E%3Ctext x='16' y='24' text-anchor='middle' font-family='Arial Black,sans-serif' font-size='20' fill='%231d1b2e'%3ES%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -83,11 +83,11 @@
     text-shadow: 0 5px 0 var(--ink);
     transform: rotate(-3deg);
   }
-  .logo h1 .dot { color: #fff; font-size: .55em; }
+  .logo h1 .alpha { color: #fff; font-size: .42em; letter-spacing: .5px; vertical-align: .55em; margin-left: .1em; -webkit-text-stroke-width: 2.5px; }
   .logo h1 span { display: inline-block; }
-  .logo h1 span:nth-child(2n) { transform: translateY(-3px) rotate(4deg); }
-  .logo h1 span:nth-child(3n) { transform: translateY(2px) rotate(-5deg); color: #ff8fc1; }
-  .logo h1 span:nth-child(5n) { color: #8ff0a4; }
+  .logo h1 span:not(.alpha):nth-child(2n) { transform: translateY(-3px) rotate(4deg); }
+  .logo h1 span:not(.alpha):nth-child(3n) { transform: translateY(2px) rotate(-5deg); color: #ff8fc1; }
+  .logo h1 span:not(.alpha):nth-child(5n) { color: #8ff0a4; }
 
   .mascot { width: 62px; height: 70px; flex: none; }
   .mascot .arm { transform-origin: 30px 30px; animation: wave 1.4s ease-in-out infinite; }
@@ -217,6 +217,55 @@
   .ticker .run span { margin-right: 46px; }
   .ticker .run b { color: var(--sun); }
   @keyframes tick { to { transform: translateX(-100%); } }
+
+  /* ================= alpha banner ================= */
+
+  .alphabar {
+    margin: 14px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: repeating-linear-gradient(-45deg, #fff5f8 0 14px, #fff 14px 28px);
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    box-shadow: 0 4px 0 rgba(0,0,0,.3);
+  }
+  .alphabar .tag {
+    flex: none;
+    font-family: var(--chunky);
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: #fff;
+    background: #ff2e63;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    padding: 4px 9px 3px;
+    transform: rotate(-4deg);
+    text-shadow: 0 1px 0 rgba(0,0,0,.3);
+  }
+  .alphabar p { margin: 0; flex: 1; font-size: 12.5px; }
+  .alpha-go {
+    flex: none;
+    font-family: var(--chunky);
+    font-size: 16px;
+    color: #fff;
+    background: linear-gradient(#ff6f91, #ff2e63);
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    padding: 6px 16px 5px;
+    cursor: pointer;
+    text-shadow: 0 2px 0 rgba(0,0,0,.3);
+    box-shadow: 0 3px 0 var(--ink);
+    white-space: nowrap;
+  }
+  .alpha-go:hover { background: linear-gradient(#ffe36e, #ffb300); color: var(--ink); text-shadow: none; }
+  .alpha-go:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+  @media (max-width: 640px) {
+    .alphabar { flex-wrap: wrap; gap: 8px 10px; }
+    .alphabar p { flex-basis: calc(100% - 90px); }
+    .alpha-go { flex: 1 1 100%; }
+  }
 
   /* ================= panels ================= */
 
@@ -625,11 +674,13 @@
     .site { padding: 0 10px 24px; }
     .top { gap: 8px; padding-top: 12px; }
     .mascot { width: 44px; height: 50px; }
-    .slogan { font-size: 15px; flex-basis: 100%; order: 3; }
-    .counter { margin-left: auto; }
+    .slogan { font-size: 14px; flex: 1 1 170px; order: 3; }
+    .counter { order: 4; margin-left: auto; padding: 5px 8px; }
+    .counter b { font-size: 16px; letter-spacing: 2px; }
     .nav { gap: 5px; padding: 6px; }
-    .nav a { font-size: 14px; padding: 6px 9px 5px; }
-    .search { flex: 1 1 100%; margin-left: 0; }
+    .nav a { font-size: 14px; padding: 6px 6px 5px; flex: 1 1 28%; text-align: center; }
+    .nav .fb-navbtn { justify-content: center; }
+    .search { flex: 1 1 150px; margin-left: 0; }
     .grid, .grid.small { grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .grid.two { grid-template-columns: 1fr; }
     .grid.two .tile { flex-direction: column; gap: 0; }
@@ -648,7 +699,8 @@
     .ticker .run { padding-left: 0; }
   }
 </style>
-<script src="sfx.js?v=fb4567ef"></script>
+<script src="sfx.js?v=95063f31"></script>
+<script src="feedback.js?v=6e4638ec"></script>
 </head>
 <body>
 <div class="site">
@@ -663,7 +715,7 @@
         <path d="M30 23v25M30 48l-9 18M30 48l9 18M30 30l-12 10"/>
         <path class="arm" d="M30 30l14-12"/>
       </svg>
-      <h1><span>S</span><span>O</span><span>R</span><span>T</span><span>A</span><span>F</span><span>U</span><span>N</span><span class="dot">.org</span></h1>
+      <h1><span>S</span><span>o</span><span>r</span><span>t</span><span>a</span><span>f</span><span>u</span><span>n</span> <span class="alpha">(Alpha)</span></h1>
     </a>
     <div class="slogan">free games! no downloads! no sign-up!<small>small games, smaller stakes. scores reset every day at midnight Singapore time.</small></div>
     <div class="counter" title="hits since the site went up">you are visitor no.<b id="hits">.......</b></div>
@@ -684,14 +736,21 @@
   <div class="ticker" aria-label="news ticker">
     <span class="lbl">NEWS</span>
     <div class="lane"><div class="run" id="tickrun">
-      <span><b>NEW LOOK!</b> the whole site got a fresh coat of paint. every game has its own picture now.</span>
-      <span><b>BIRDIE IS HERE!</b> a whole 3D bird game. ten birds, an endless world, and a lot of poo.</span>
+      <span><b>WE'RE IN ALPHA!</b> things will break. hit the pink <b>feedback</b> bubble and tell us what.</span>
+      <span><b>RATE EVERY GAME!</b> 0 to 5 stars, right on each game's page. be honest, we can take it.</span>
+      <span><b>CITY SANDBOX STORY MODE!</b> HALCYON: 12 chapters, three nights, one very tall ladder.</span>
       <span><b>THREE NEW WORD GAMES!</b> five letters, four sides and word grab. go go go.</span>
       <span>the word games use a <b>real dictionary</b> now. 170,000 words, no names.</span>
       <span>scores reset at <b>midnight Singapore time</b>. the leaderboards never sleep.</span>
       <span>collect stamps in your <b>passport</b> just by poking around.</span>
     </div></div>
   </div>
+
+  <aside class="alphabar" id="alphabar">
+    <span class="tag">ALPHA</span>
+    <p><b>sortafun is brand new and still being built.</b> something broken? a game you love, or one that stinks? rate it and tell us. every note gets read.</p>
+    <button class="alpha-go" type="button" id="alphago">give feedback &#9733;</button>
+  </aside>
 
   <p class="noresults" id="noresults">nothing found. try "word" or "race".</p>
 
@@ -783,16 +842,11 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
-        <li><span class="when">09-27</span> city sandbox has a story mode: HALCYON. 12 chapters, three nights, you're the courier who delivered the thing that ended the city. cutscenes, a sniper vigil, a plane, the metro, and a very tall ladder.</li>
-        <li><span class="when">09-26</span> city sandbox: ride with your friends. every car, bike (new sidecar!) and the plane takes passengers. walk up to someone driving and press F.</li>
-        <li><span class="when">09-26</span> city sandbox: a proper intro (how the city fell, and how to get out) and real driving physics for every car, bike and the plane.</li>
-        <li><span class="when">09-26</span> city sandbox has a point now: nights, crews, safehouses, supply drops and a helicopter out. fuel the radio mast together.</li>
-        <li><span class="when">09-26</span> city sandbox has zombies now. plus an E menu with a map you can teleport from, lifts up the towers, a metro under the streets, barricades and landmines, and headshots.</li>
-        <li><span class="when">09-25</span> birdie grew up: it's CITY SANDBOX now. walk, loot, drive, fly and shoot round the city with up to 50 people. you can still be a bird.</li>
-        <li><span class="when">09-25</span> birdie is online! fly in one shared world with up to 50 other birds, names over their heads. poo on your friends.</li>
-        <li><span class="when">09-25</span> word hive has a rank meter now, with bee ranks from wannabee to queen bee. harder letters, easier ranks.</li>
-        <li><span class="when">09-25</span> the site makes noise now! clicks, dings, fanfares and a little 8-bit tune on this page. the speaker button turns it off.</li>
-        <li><span class="when">09-25</span> birdie update: fly in through the windows, land on any roof, new controls (up = go fast) and a slower poo-o-meter.</li>
+        <li><span class="when">09-28</span> sortafun is officially in <b>alpha</b>. every game has a feedback bubble now: rate it 0 to 5 stars, report a bug, or pitch an idea.</li>
+        <li><span class="when">09-27</span> city sandbox has a story mode: HALCYON. 12 chapters, three nights, cutscenes, a sniper vigil, a plane, the metro, and a very tall ladder.</li>
+        <li><span class="when">09-26</span> city sandbox: zombies, nights, crews, safehouses and a helicopter out. ride with friends in any car, bike or the plane.</li>
+        <li><span class="when">09-25</span> birdie grew up into CITY SANDBOX. walk, loot, drive, fly and shoot round the city with up to 50 people. you can still be a bird.</li>
+        <li><span class="when">09-25</span> the site makes noise now! clicks, dings and a little 8-bit tune. the speaker button turns it off.</li>
         <li><span class="when">09-24</span> three new daily word games: five letters, four sides and word grab.</li>
       </ul>
     </section>
@@ -802,6 +856,7 @@
         <li>pick a game. they all run right here in your browser.</li>
         <li>type a name when you finish to put your score on the board. no account needed.</li>
         <li>the daily boards wipe at midnight Singapore time. all-time boards stay forever.</li>
+        <li>something off? hit <a href="#feedback" class="fb-link">feedback</a> (or the pink bubble on any game) and rate it. we're in alpha, it all helps.</li>
       </ol>
     </section>
   </div>
@@ -820,8 +875,8 @@
 
 </div>
 
-<script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=0c8ecaf4"></script>
+<script src="firebase-config.js?v=ff02e94a"></script>
+<script src="leaderboard.js?v=3522a4a7"></script>
 <script>
 "use strict";
 
@@ -1423,6 +1478,12 @@ document.getElementById("q").addEventListener("keydown", function (e) {
     var panel = first && first.closest(".panel");
     if (first && panel && panel.style.display !== "none") window.location.href = first.href;
   }
+});
+
+/* the alpha banner and the how-it-works link open the feedback form (feedback.js) */
+document.getElementById("alphago").addEventListener("click", function () { if (window.SortafunFB) SortafunFB.open(); });
+document.querySelector(".fb-link").addEventListener("click", function (e) {
+  if (window.SortafunFB) { e.preventDefault(); SortafunFB.open(); }
 });
 
 /* ------------------------------------------------------------------ *
