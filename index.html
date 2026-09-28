@@ -572,6 +572,32 @@
     text-shadow: 0 2px 0 rgba(0,0,0,.35);
   }
 
+  /* ================= coming soon ================= */
+
+  .h-soon {
+    background:
+      repeating-linear-gradient(-45deg, rgba(0,0,0,.14) 0 12px, transparent 12px 24px),
+      linear-gradient(#ffd43b, #ffb300);
+    color: var(--ink);
+  }
+  .h-soon h2 { color: #fff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--ink); }
+  .h-soon p { font-weight: 700; }
+  .tile.soon { cursor: default; }
+  .tile.soon:hover { transform: none; box-shadow: 0 4px 0 var(--ink); }
+  .tile.soon .thumb { position: relative; }
+  .tile.soon .thumb::after {
+    content: "WORK IN PROGRESS";
+    position: absolute; top: 14px; left: -38px; width: 150px;
+    transform: rotate(-35deg);
+    font: 400 9px/1 var(--chunky); letter-spacing: .5px; text-align: center; color: var(--ink);
+    padding: 4px 0 3px;
+    background: repeating-linear-gradient(-45deg, #ffd43b 0 10px, #1d1b2e 10px 20px);
+    border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+    text-shadow: 0 0 3px #ffd43b, 0 0 3px #ffd43b, 0 0 3px #ffd43b;
+  }
+  .b-wip { background: #1d1b2e; color: #ffd43b; }
+  .c-soon { background: #8a879c; }
+
   /* ================= basement ================= */
 
   .base-panel { background: #221f33; color: #d8d4f0; }
@@ -809,6 +835,12 @@
     <div class="panel-body"><div class="grid" id="gamegrid"></div></div>
   </section>
 
+  <!-- ================= COMING SOON ================= -->
+  <section class="panel" id="soon">
+    <div class="panel-head h-soon"><h2>Coming Soon</h2><p>being built right now. nothing to click yet, but tell us which one you want first (feedback bubble).</p></div>
+    <div class="panel-body"><div class="grid" id="soongrid"></div></div>
+  </section>
+
   <!-- ================= ART ================= -->
   <section class="panel" id="art">
     <div class="panel-head h-art"><h2>Art</h2><p>draw a flipbook by hand, then go see what everyone else made.</p></div>
@@ -933,8 +965,18 @@ var BASEMENT = [
   { id: "watch",  name: "Watch the Guy",        url: "watch.html",  cat: "base", key: "watch",  blurb: "the anti-game. it scores you for looking away." }
 ];
 
-var CAT_LABEL = { online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout", base: "basement" };
-var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY" };
+// not built yet: tiles in the "Coming Soon" panel, not clickable. The plans
+// live in UPCOMING.md; when one ships, move its row up into GAMES
+var SOON = [
+  { id: "slack",  name: "SFSG Slacking Simulator",   cat: "soon", blurb: "the office, rebuilt in 3D. alt-tab before the manager walks past, answer Teams in time, and sneak down to Starbucks." },
+  { id: "hotdog", name: "Hot Dog Bush",              cat: "soon", blurb: "the old political hot dog stand. grill it, dress it, serve it before the queue loses its patience." },
+  { id: "sushi",  name: "Sushi Go Round",            cat: "soon", blurb: "roll sushi from the recipe book, send it round the belt, and don't run out of salmon." },
+  { id: "taka",   name: "Taka-san Dinner Simulator", cat: "soon", blurb: "the company dinner. keep the glasses full, nail the kanpai, and catch the last train." },
+  { id: "pets",   name: "Frontier Pets",             cat: "soon", blurb: "adopt a pet and build it a home out of modular units. feed it with points from every game on the site." }
+];
+
+var CAT_LABEL = { soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout", base: "basement" };
+var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY", wip: "WIP" };
 
 /* ------------------------------------------------------------------ *
  * Thumbnails. Hand-drawn inline SVG on a 160x120 board, thick dark
@@ -1041,6 +1083,94 @@ var THUMB = {
       '<circle cx="-4" cy="-12" r="1.8" fill="' + K + '"/><circle cx="4" cy="-12" r="1.8" fill="' + K + '"/>' +
       '<rect x="4" y="2" width="20" height="6" rx="2" fill="#ff9a3c" stroke="' + K + '" stroke-width="2"/><rect x="8" y="7" width="4" height="6" fill="#555" stroke="' + K + '" stroke-width="1.5"/></g>' +
       '<g transform="translate(22 104)"><rect x="-10" y="-9" width="20" height="12" rx="2" fill="#c47a3a" stroke="' + K + '" stroke-width="2"/><path d="M-10 -4 h20" stroke="' + K + '" stroke-width="2"/><rect x="-2" y="-6" width="4" height="4" fill="#ffd43b" stroke="' + K + '" stroke-width="1"/></g>';
+  },
+  slack: function () {
+    // an office desk: you, a monitor with a game on it, the manager's head over the partition
+    return bg("#cfe3f5") +
+      '<rect x="0" y="0" width="160" height="30" fill="#e9f2fb"/>' +
+      [8, 44, 80, 116].map(function (x) { return '<rect x="' + x + '" y="4" width="30" height="18" fill="#fff" stroke="#b9cde0" stroke-width="2"/>'; }).join("") +
+      // partition + the manager peeking over it
+      '<rect x="96" y="38" width="64" height="40" fill="#8fa3b8"' + S + '/>' +
+      '<circle cx="128" cy="36" r="10" fill="#ffd8b0"' + S + '/>' +
+      '<path d="M123 35h.1M133 35h.1" stroke="' + K + '" stroke-width="3.5" stroke-linecap="round"/>' +
+      '<path d="M118 28 q10 -9 20 0" fill="#4a3728"' + S + '/>' +
+      '<path d="M122 16 l2 5 M128 14 v6 M134 16 l-2 5" stroke="#e03131" stroke-width="2.5" stroke-linecap="round"/>' +
+      // desk + monitor showing a game
+      '<rect x="4" y="86" width="152" height="10" fill="#c49a6c"' + S + '/>' +
+      '<rect x="20" y="42" width="58" height="38" rx="3" fill="#1d1b2e"' + S + '/>' +
+      '<rect x="25" y="47" width="48" height="28" fill="#2f9bff"/>' +
+      '<rect x="31" y="63" width="12" height="12" fill="#ffd43b" stroke="' + K + '" stroke-width="1.5"/>' +
+      '<rect x="47" y="57" width="12" height="18" fill="#1fb85a" stroke="' + K + '" stroke-width="1.5"/>' +
+      '<rect x="44" y="80" width="10" height="7" fill="#8a879c"' + S + '/>' +
+      // snack + hunger bar
+      '<rect x="84" y="72" width="12" height="14" rx="2" fill="#ff7a1a"' + S + '/>' +
+      '<rect x="8" y="104" width="64" height="10" rx="4" fill="#fff"' + S + '/>' +
+      '<rect x="10" y="106" width="22" height="6" rx="2" fill="#e03131"/>' +
+      txt(96, 113, "hunger", 10, K);
+  },
+  hotdog: function () {
+    // the stand: umbrella, grill, one perfect hot dog
+    return bg("#ffe3a3") + '<circle cx="140" cy="16" r="16" fill="#ffd43b"' + S + '/>' +
+      '<path d="M24 38 Q80 -2 136 38 Z" fill="#e03131"' + S + '/>' +
+      '<path d="M52 38 Q80 8 108 38" fill="#fff" stroke="' + K + '" stroke-width="2"/>' +
+      '<path d="M80 38 V60" stroke="' + K + '" stroke-width="3"/>' +
+      '<rect x="22" y="60" width="116" height="44" rx="4" fill="#1d8fe8"' + S + '/>' +
+      '<rect x="22" y="60" width="116" height="10" fill="#fff" stroke="' + K + '" stroke-width="2.5"/>' +
+      '<circle cx="42" cy="108" r="7" fill="#555"' + S + '/><circle cx="118" cy="108" r="7" fill="#555"' + S + '/>' +
+      // the dog
+      '<path d="M46 82 q34 -12 68 0 q-34 16 -68 0z" fill="#f2c27b"' + S + '/>' +
+      '<rect x="44" y="76" width="72" height="9" rx="4.5" fill="#c0392b"' + S + '/>' +
+      '<path d="M50 80 q5 -4 10 0 q5 4 10 0 q5 -4 10 0 q5 4 10 0 q5 -4 10 0 q5 4 10 0" fill="none" stroke="#ffd43b" stroke-width="2.5" stroke-linecap="round"/>' +
+      outlined(126, 56, "$", 20, "#1fb85a");
+  },
+  sushi: function () {
+    // the conveyor belt with plates going round
+    var plates = "";
+    [[28, "#e03131"], [66, "#ff922b"], [104, "#ffd43b"], [142, "#e03131"]].forEach(function (p, i) {
+      plates += '<ellipse cx="' + p[0] + '" cy="84" rx="15" ry="6" fill="#fff"' + S + '/>' +
+        '<rect x="' + (p[0] - 9) + '" y="72" width="18" height="10" rx="3" fill="#1d1b2e"/>' +
+        '<ellipse cx="' + p[0] + '" cy="72" rx="9" ry="4" fill="#fff" stroke="' + K + '" stroke-width="2"/>' +
+        '<ellipse cx="' + p[0] + '" cy="72" rx="4" ry="2" fill="' + p[1] + '"/>';
+    });
+    return bg("#fff0e0") + '<rect x="0" y="0" width="160" height="50" fill="#b5462c"/>' +
+      '<path d="M10 14h40M10 22h40M110 14h40M110 22h40" stroke="#ffd9a8" stroke-width="3"/>' +
+      '<circle cx="80" cy="24" r="16" fill="#fff"' + S + '/>' + txt(80, 30, "sushi", 10, "#b5462c") +
+      '<rect x="0" y="88" width="160" height="14" fill="#8a879c"' + S + '/>' +
+      '<path d="M8 95h14M36 95h14M64 95h14M92 95h14M120 95h14M148 95h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' +
+      plates + '<rect x="0" y="102" width="160" height="18" fill="#c49a6c"/>';
+  },
+  taka: function () {
+    // the dinner table: two beers mid-kanpai, plates, chopsticks
+    return bg("#3a2a4a") + '<circle cx="80" cy="-20" r="70" fill="#ffd28a" opacity=".35"/>' +
+      '<path d="M40 0 L80 26 L120 0" fill="#ffd28a" opacity=".25"/>' +
+      '<ellipse cx="80" cy="104" rx="90" ry="30" fill="#8b5a2b"' + S + '/>' +
+      '<ellipse cx="44" cy="100" rx="18" ry="7" fill="#fff"' + S + '/><ellipse cx="116" cy="100" rx="18" ry="7" fill="#fff"' + S + '/>' +
+      '<path d="M38 98 q6 -6 12 0" fill="#ff922b" stroke="' + K + '" stroke-width="2"/>' +
+      '<path d="M108 97 h16" stroke="#1fb85a" stroke-width="5" stroke-linecap="round"/>' +
+      '<path d="M130 86 l20 -10 M132 90 l20 -10" stroke="' + K + '" stroke-width="2.5" stroke-linecap="round"/>' +
+      // clinking glasses
+      '<g transform="rotate(-14 62 62)"><rect x="52" y="42" width="20" height="36" rx="3" fill="#ffc21a"' + S + '/><rect x="52" y="38" width="20" height="9" rx="3" fill="#fff"' + S + '/></g>' +
+      '<g transform="rotate(14 98 62)"><rect x="88" y="42" width="20" height="36" rx="3" fill="#ffc21a"' + S + '/><rect x="88" y="38" width="20" height="9" rx="3" fill="#fff"' + S + '/></g>' +
+      '<path d="M80 30 v-8 M72 32 l-5 -6 M88 32 l5 -6" stroke="#ffd43b" stroke-width="3" stroke-linecap="round"/>' +
+      outlined(80, 18, "kanpai!", 15, "#fff");
+  },
+  pets: function () {
+    // a little pet in front of its stacked modular units, with a crane
+    return bg("#a5d8ff") + '<circle cx="136" cy="18" r="11" fill="#ffd43b"' + S + '/>' +
+      '<rect x="0" y="100" width="160" height="20" fill="#69db7c"/>' +
+      // crane
+      '<path d="M18 100 V16 H70 M18 16 L30 28 M70 16 V34" fill="none" stroke="#ff922b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<rect x="62" y="34" width="16" height="9" fill="#fff"' + S + '/>' +
+      // modular units, stacked
+      '<rect x="84" y="58" width="60" height="22" fill="#fff"' + S + '/><rect x="84" y="80" width="60" height="22" fill="#e6eaf6"' + S + '/>' +
+      '<rect x="92" y="64" width="14" height="10" fill="#74c0fc" stroke="' + K + '" stroke-width="2"/><rect x="120" y="64" width="14" height="10" fill="#74c0fc" stroke="' + K + '" stroke-width="2"/>' +
+      '<rect x="92" y="86" width="12" height="16" fill="#ff922b" stroke="' + K + '" stroke-width="2"/>' +
+      '<rect x="112" y="86" width="22" height="9" fill="#74c0fc" stroke="' + K + '" stroke-width="2"/>' +
+      // the pet (a round blob in a hard hat)
+      '<ellipse cx="50" cy="94" rx="20" ry="17" fill="#b197fc"' + S + '/>' +
+      '<path d="M32 82 q18 -22 36 0 z" fill="#ffd43b"' + S + '/><path d="M28 82 h44" stroke="' + K + '" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle cx="43" cy="92" r="3" fill="' + K + '"/><circle cx="57" cy="92" r="3" fill="' + K + '"/>' +
+      '<path d="M45 100 q5 4 10 0" fill="none" stroke="' + K + '" stroke-width="2.5" stroke-linecap="round"/>';
   },
   draw: function () {
     var bubble = function (x, y, w, t, fill, col) {
@@ -1418,12 +1548,27 @@ function tile(item, badge) {
   return a;
 }
 
+function soonTile(item) {
+  var d = document.createElement("div");
+  d.className = "tile soon";
+  d.dataset.cat = item.cat;
+  d.dataset.find = (item.name + " " + item.blurb + " coming soon").toLowerCase();
+  d.innerHTML =
+    '<span class="badge b-wip">WIP</span>' +
+    '<span class="thumb">' + thumb(item.id) + "</span>" +
+    '<span class="txt"><span class="name">' + esc(item.name) + "</span>" +
+    '<span class="blurb">' + esc(item.blurb) + "</span>" +
+    '<span class="foot"><span class="cat c-soon">coming soon</span></span></span>';
+  return d;
+}
+
 function fill(elId, list) {
   var el = document.getElementById(elId);
   list.forEach(function (item) { el.appendChild(tile(item)); });
 }
 
 fill("gamegrid", GAMES);
+SOON.forEach(function (item) { document.getElementById("soongrid").appendChild(soonTile(item)); });
 fill("artgrid", ART);
 fill("hanggrid", HANGOUT);
 fill("basegrid", BASEMENT);
@@ -1499,7 +1644,7 @@ document.getElementById("chips").addEventListener("click", function (e) {
 document.getElementById("q").addEventListener("input", applyFilters);
 document.getElementById("q").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
-    var first = document.querySelector(".tile:not([hidden])");
+    var first = document.querySelector("a.tile:not([hidden])");
     var panel = first && first.closest(".panel");
     if (first && panel && panel.style.display !== "none") window.location.href = first.href;
   }

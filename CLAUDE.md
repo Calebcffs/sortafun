@@ -853,6 +853,12 @@ Thumbnails: `THUMB[id]()` returns SVG markup for a 160x120 board (wrapped by
 built with helpers `bg`, `txt`, `outlined`, `stick` (tiny stick guy), `hex`.
 Keep them readable at ~150px wide and obvious about what the game is.
 
+**Coming Soon** (2026-09-28): a panel after Games built from the `SOON`
+array (`{ id, name, blurb, cat: "soon" }` + a `THUMB` each), rendered as
+non-clickable `div.tile.soon` with a WIP sash. The plans for each live in
+`UPCOMING.md`. When one ships, move its row into `GAMES` and drop its section
+there.
+
 Game of the Day = `GAMES[day % 12]` on the Singapore date. Search filters every
 `.tile` by name/blurb/category and opens the basement only if a basement game
 matches. `index.html#basement` opens the door too.
