@@ -45,9 +45,9 @@
     grab:     { label: "word grab",      unit: "pts",   better: "high" },
     birdie:   { label: "birdie",         unit: "pts",   better: "high" },
     city:     { label: "city sandbox",   unit: "cash",  better: "high", format: function (v) { return "$" + Number(v).toLocaleString("en-US"); } },
-    minute:   { label: "how long is a minute", unit: "ms", better: "low", format: fmtMsOff },
-    callit:   { label: "call it",        unit: "streak", better: "high" },
-    watch:    { label: "watch the guy",  unit: "s",     better: "high" },
+    minute:   { label: "how long is a minute", unit: "ms", better: "low", format: fmtMsOff, retired: true }, // basement removed 2026-09-28
+    callit:   { label: "call it",        unit: "streak", better: "high", retired: true },
+    watch:    { label: "watch the guy",  unit: "s",     better: "high", retired: true },
   };
 
   var SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
@@ -106,7 +106,8 @@
       import(SDK + "firebase-firestore.js"),
     ]).then(function (mods) {
       var appMod = mods[0], fs = mods[1];
-      var app = appMod.initializeApp(cfg);
+      // chat.js may already have made the default app from the same config
+      var app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(cfg);
       state.db = fs.getFirestore(app);
       state.fs = fs;
       return true;

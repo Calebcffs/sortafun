@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sortafun (Alpha) - free games, no downloads!</title>
-<meta name="description" content="Sortafun. Free little browser games, no downloads, no sign-up. Crosswords, typing, a tile slider, racing, minesweeper, an animation studio, a forum, and a basement.">
+<meta name="description" content="Sortafun. Free little browser games, no downloads, no sign-up. Crosswords, typing, a tile slider, racing, minesweeper, an animation studio, a forum and a live chatroom.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ffd43b' stroke='%231d1b2e' stroke-width='3'/%3E%3Ctext x='16' y='24' text-anchor='middle' font-family='Arial Black,sans-serif' font-size='20' fill='%231d1b2e'%3ES%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +23,6 @@
     --online: #12a8a0;
     --art: #ff3d8b;
     --hang: #1d8fe8;
-    --base: #3a3550;
     --chunky: "Lilita One", "Arial Black", "Trebuchet MS", Verdana, sans-serif;
     --body: Verdana, Tahoma, "DejaVu Sans", Geneva, sans-serif;
   }
@@ -163,7 +162,6 @@
   .nav .n-games  { background: var(--word); }
   .nav .n-art    { background: var(--art); }
   .nav .n-hang   { background: var(--hang); }
-  .nav .n-base   { background: var(--base); }
 
   .search {
     margin-left: auto;
@@ -302,7 +300,6 @@
   .h-games { background: linear-gradient(#ff9a3c, var(--word)); }
   .h-art   { background: linear-gradient(#ff72ab, var(--art)); }
   .h-hang  { background: linear-gradient(#4db0ff, var(--hang)); }
-  .h-base  { background: linear-gradient(#5a5475, var(--base)); }
   .h-news  { background: linear-gradient(#56d98a, var(--skill)); }
   .h-live  { background: linear-gradient(#ff5a5a, #e02828); }
 
@@ -444,13 +441,12 @@
     vertical-align: -1px;
   }
 
+  /* compact tiles: a picture and a name. the blurb is the hover tooltip */
   .grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 12px 10px;
   }
-  .grid.two { grid-template-columns: repeat(2, 1fr); }
-  .grid.five { grid-template-columns: repeat(4, 1fr); }
 
   .tile {
     position: relative;
@@ -459,90 +455,87 @@
     text-decoration: none;
     background: #fff;
     border: 3px solid var(--ink);
-    border-radius: 12px;
-    padding: 7px 7px 9px;
-    box-shadow: 0 4px 0 var(--ink);
+    border-radius: 10px;
+    padding: 5px 5px 6px;
+    box-shadow: 0 3px 0 var(--ink);
     transition: transform .1s, box-shadow .1s;
     min-width: 0;
   }
   .tile:hover, .tile:focus-visible {
-    transform: translateY(-4px) rotate(-1deg);
-    box-shadow: 0 8px 0 var(--ink);
+    transform: translateY(-3px) rotate(-1deg);
+    box-shadow: 0 6px 0 var(--ink);
     outline: none;
   }
-  .tile:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
+  .tile:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
   .tile[hidden] { display: none; }
 
   .thumb {
     display: block;
+    position: relative;
     border: 3px solid var(--ink);
     border-radius: 8px;
     overflow: hidden;
     aspect-ratio: 4 / 3;
     background: #ddd;
   }
+  .tile .thumb { border-width: 2px; border-radius: 6px; }
   .thumb svg { display: block; width: 100%; height: 100%; }
   .tile:hover .thumb svg { animation: jiggle .35s ease-in-out; }
   @keyframes jiggle { 30% { transform: scale(1.06) rotate(-1.5deg); } 70% { transform: scale(1.04) rotate(1deg); } }
-
-  .tile > .txt { display: flex; flex-direction: column; flex: 1; }
-  .tile .name, .tile .blurb { display: block; }
-  .tile .name {
-    margin: 8px 2px 2px;
+  /* PLAY pops up over the picture on hover */
+  .tile .thumb::after {
+    content: attr(data-go) " \25B6";
+    position: absolute;
+    left: 50%; bottom: 6px;
+    transform: translateX(-50%) scale(.6);
+    opacity: 0;
     font-family: var(--chunky);
-    font-size: 19px;
-    line-height: 1.05;
-  }
-  .tile .blurb { margin: 0 2px; font-size: 11.5px; color: #4a4760; flex: 1; }
-  .tile .foot {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 8px 2px 0;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .cat {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    color: #fff;
-    padding: 2px 7px;
-    border-radius: 999px;
+    font-size: 13px;
+    color: var(--ink);
+    background: linear-gradient(#ffe36e, #ffb300);
     border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 2px 9px 1px;
+    white-space: nowrap;
+    transition: transform .12s, opacity .12s;
+  }
+  .tile:hover .thumb::after, .tile:focus-visible .thumb::after { opacity: 1; transform: translateX(-50%) scale(1); }
+
+  .tile .name {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 5px 1px 0;
+    font-family: var(--chunky);
+    font-size: 14px;
+    line-height: 1.1;
+    align-items: flex-start;
+  }
+  .tile .name i {
+    flex: none;
+    width: 9px; height: 9px;
+    margin-top: 2px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink);
   }
   .c-word   { background: var(--word); }
   .c-puzzle { background: var(--puzzle); }
   .c-skill  { background: var(--skill); }
-  .c-online { background: var(--online); }
   .c-art    { background: var(--art); }
   .c-hang   { background: var(--hang); }
-  .c-base   { background: var(--base); }
-  .play {
-    font-family: var(--chunky);
-    font-size: 14px;
-    color: #fff;
-    background: linear-gradient(#5cf08e, #18a84b);
-    border: 2px solid var(--ink);
-    border-radius: 999px;
-    padding: 3px 11px 2px;
-    text-shadow: 0 1px 0 rgba(0,0,0,.35);
-    white-space: nowrap;
-  }
-  .tile:hover .play { background: linear-gradient(#ffe36e, #ffb300); color: var(--ink); text-shadow: none; }
+  .c-online { background: var(--online); }
 
   .badge {
     position: absolute;
-    top: -10px;
-    right: -8px;
+    top: -9px;
+    right: -7px;
     z-index: 2;
     font-family: var(--chunky);
-    font-size: 13px;
+    font-size: 11px;
     color: #fff;
-    padding: 4px 8px 3px;
+    padding: 3px 6px 2px;
     border: 2px solid var(--ink);
-    border-radius: 8px;
+    border-radius: 7px;
     transform: rotate(8deg);
     box-shadow: 0 2px 0 var(--ink);
   }
@@ -552,15 +545,100 @@
   .b-pick  { background: #8a4dff; }
   @keyframes pulse { 50% { transform: rotate(8deg) scale(1.12); } }
 
-  /* smaller tiles for the hangout */
-  .grid.small { grid-template-columns: repeat(4, 1fr); }
-  .grid.small .tile .name { font-size: 17px; }
+  /* art + hangout share a row: two art tiles on the left, the chatroom on the right */
+  .clubrow {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 18px;
+  }
+  .clubrow > .panel { margin-top: 18px; }
+  .clubrow .grid { grid-template-columns: 1fr 1fr; }
+  .hang-body { display: grid; grid-template-columns: 1fr 190px; gap: 14px; padding: 14px; }
+  .hang-links { display: flex; flex-direction: column; gap: 8px; }
+  .hang-links .tile { flex-direction: row; align-items: center; gap: 8px; padding: 4px; }
+  .hang-links .tile .thumb { width: 58px; flex: none; }
+  .hang-links .tile .thumb::after { display: none; }
+  .hang-links .tile .name { margin: 0; font-size: 15px; align-items: center; }
+  .hang-links .tile .name i { margin-top: 0; }
 
-  /* art tiles lay out wide */
-  .grid.two .tile { flex-direction: row; gap: 12px; align-items: stretch; }
-  .grid.two .thumb { width: 48%; flex: none; }
-  .grid.two .tile .name { font-size: 24px; margin-top: 4px; }
-  .grid.two .tile .blurb { font-size: 12.5px; }
+  /* ================= chatroom (chat.js) ================= */
+  .chat {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 3px solid var(--ink);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .chat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    background: var(--soft);
+    border-bottom: 2px solid var(--ink);
+  }
+  .chat-top b { font-family: var(--chunky); font-weight: 400; font-size: 16px; }
+  .chat-here { font-size: 11px; color: #666; cursor: pointer; }
+  .chat-here::before {
+    content: "";
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #aaa;
+    margin-right: 5px;
+    vertical-align: 0;
+  }
+  .chat-here.on { color: var(--ink); cursor: default; }
+  .chat-here.on::before { background: #2fd05f; box-shadow: 0 0 5px #2fd05f; }
+  .chat-log {
+    list-style: none;
+    margin: 0;
+    padding: 6px 10px;
+    height: 250px;
+    overflow-y: auto;
+    font-size: 12.5px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .chat-log li { padding: 1px 0; }
+  .chat-log li.me { background: #fff8d9; margin: 0 -10px; padding: 1px 10px; }
+  .chat-log .chat-t { color: #9a97ad; font-size: 10.5px; }
+  .chat-log .chat-sys { color: #8a87a0; font-style: italic; }
+  .chat-form {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    border-top: 2px solid var(--ink);
+    background: var(--soft);
+  }
+  .chat-form input {
+    min-width: 0;
+    font: 13px var(--body);
+    padding: 6px 8px;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .chat-form .chat-name { flex: 0 1 110px; }
+  .chat-form .chat-name.want { background: #ffe3e3; }
+  .chat-form .chat-msg { flex: 1 1 auto; }
+  .chat-form button {
+    flex: none;
+    font-family: var(--chunky);
+    font-size: 14px;
+    color: #fff;
+    background: linear-gradient(#4db0ff, var(--hang));
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    padding: 4px 12px 3px;
+    cursor: pointer;
+    text-shadow: 0 1px 0 rgba(0,0,0,.3);
+  }
+  .chat-form button:disabled { opacity: .6; cursor: default; }
 
   .noresults {
     display: none;
@@ -583,9 +661,10 @@
   .h-soon h2 { color: #fff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--ink); }
   .h-soon p { font-weight: 700; }
   .tile.soon { cursor: default; }
-  .tile.soon:hover { transform: none; box-shadow: 0 4px 0 var(--ink); }
-  .tile.soon .thumb { position: relative; }
+  .tile.soon:hover { transform: none; box-shadow: 0 3px 0 var(--ink); }
+  .tile.soon:hover .thumb svg { animation: none; }
   .tile.soon .thumb::after {
+    opacity: 1; bottom: auto; border-radius: 0; border-left: 0; border-right: 0;
     content: "WORK IN PROGRESS";
     position: absolute; top: 14px; left: -38px; width: 150px;
     transform: rotate(-35deg);
@@ -597,45 +676,6 @@
   }
   .b-wip { background: #1d1b2e; color: #ffd43b; }
   .c-soon { background: #8a879c; }
-
-  /* ================= basement ================= */
-
-  .base-panel { background: #221f33; color: #d8d4f0; }
-  .base-panel summary {
-    list-style: none;
-    cursor: pointer;
-  }
-  .base-panel summary::-webkit-details-marker { display: none; }
-  .door-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-  }
-  .door-row svg { width: 74px; height: 96px; flex: none; }
-  .door-row b {
-    display: block;
-    font-family: var(--chunky);
-    font-weight: 400;
-    font-size: 22px;
-    color: var(--sun);
-  }
-  .door-row .hint {
-    display: inline-block;
-    margin-top: 8px;
-    font-weight: 700;
-    color: #fff;
-    background: #ff2e63;
-    border: 2px solid #000;
-    border-radius: 8px;
-    padding: 4px 10px;
-  }
-  .door-row .shut { display: none; }
-  details[open] .door-row .hint { background: #555; }
-  details[open] .door-row .open { display: none; }
-  details[open] .door-row .shut { display: inline; }
-  .base-panel .grid { padding: 0 14px 16px; }
-  .base-panel .tile { background: #fbfaff; color: var(--ink); }
 
   /* ================= news + footer ================= */
 
@@ -693,7 +733,8 @@
 
   @media (max-width: 860px) {
     .hero { grid-template-columns: 1fr; gap: 0; }
-    .grid, .grid.small { grid-template-columns: repeat(3, 1fr); }
+    .clubrow { grid-template-columns: 1fr; gap: 0; }
+    .clubrow .grid { grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); }
     .newsrow { grid-template-columns: 1fr; gap: 0; }
   }
   @media (max-width: 640px) {
@@ -709,16 +750,16 @@
     .nav a { font-size: 14px; padding: 6px 6px 5px; flex: 1 1 28%; text-align: center; }
     .nav .fb-navbtn { justify-content: center; }
     .search { flex: 1 1 150px; margin-left: 0; }
-    .grid, .grid.small { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .grid.two { grid-template-columns: 1fr; }
-    .grid.two .tile { flex-direction: column; gap: 0; }
-    .grid.two .thumb { width: 100%; }
-    .grid.two .tile .name { font-size: 20px; margin-top: 8px; }
-    .cat { font-size: 9px; padding: 2px 5px; }
+    .grid, .clubrow .grid { grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); gap: 10px 8px; }
+    .panel-body { padding: 10px; }
+    .hang-body { grid-template-columns: 1fr; padding: 10px; }
+    .hang-links { display: grid; grid-template-columns: 1fr 1fr; }
+    .chat-log { height: 220px; }
+    .chat-form { flex-wrap: wrap; }
+    .chat-form .chat-name { flex: 1 1 100%; }
     .gotd-body { flex-direction: column; text-align: center; }
     .gotd-body .thumb { width: 100%; }
-    .tile .name { font-size: 16px; }
-    .tile .blurb { font-size: 11px; }
+    .tile .name { font-size: 13px; }
     .panel-head h2 { font-size: 22px; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -727,8 +768,8 @@
     .ticker .run { padding-left: 0; }
   }
 </style>
-<script src="sfx.js?v=95063f31"></script>
-<script src="feedback.js?v=d90de861"></script>
+<script src="sfx.js?v=bef8d726"></script>
+<script src="feedback.js?v=50f0f078"></script>
 </head>
 <body>
 <div class="site">
@@ -754,7 +795,6 @@
     <a class="n-games" href="#games">Games</a>
     <a class="n-art" href="#art">Art</a>
     <a class="n-hang" href="#hangout">Hangout</a>
-    <a class="n-base" href="#basement">Basement</a>
     <label class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="#1d1b2e" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
       <input id="q" type="search" placeholder="find a game..." autocomplete="off" aria-label="find a game">
@@ -841,49 +881,31 @@
     <div class="panel-body"><div class="grid" id="soongrid"></div></div>
   </section>
 
-  <!-- ================= ART ================= -->
-  <section class="panel" id="art">
-    <div class="panel-head h-art"><h2>Art</h2><p>draw a flipbook by hand, then go see what everyone else made.</p></div>
-    <div class="panel-body"><div class="grid two" id="artgrid"></div></div>
-  </section>
+  <!-- ================= ART + HANGOUT ================= -->
+  <div class="clubrow">
+    <section class="panel" id="art">
+      <div class="panel-head h-art"><h2>Art</h2><p>draw a flipbook, see everyone else's.</p></div>
+      <div class="panel-body"><div class="grid" id="artgrid"></div></div>
+    </section>
 
-  <!-- ================= HANGOUT ================= -->
-  <section class="panel" id="hangout">
-    <div class="panel-head h-hang"><h2>Hangout</h2><p>not games exactly. the forum, the scoreboards, and the rest of the clubhouse.</p></div>
-    <div class="panel-body"><div class="grid small" id="hanggrid"></div></div>
-  </section>
-
-  <!-- ================= BASEMENT ================= -->
-  <section class="panel base-panel" id="basement">
-    <div class="panel-head h-base"><h2>The Basement</h2><p>three weird little not-quite-games. the lights are off down here.</p></div>
-    <details id="late">
-      <summary class="door-row">
-        <svg viewBox="0 0 74 96" aria-hidden="true">
-          <rect x="4" y="4" width="66" height="90" rx="4" fill="#5c3d23" stroke="#000" stroke-width="4"/>
-          <rect x="13" y="14" width="48" height="30" rx="3" fill="#6f4a2b" stroke="#000" stroke-width="2.5"/>
-          <rect x="13" y="52" width="48" height="34" rx="3" fill="#6f4a2b" stroke="#000" stroke-width="2.5"/>
-          <circle cx="58" cy="50" r="4.5" fill="#ffd43b" stroke="#000" stroke-width="2"/>
-          <path d="M20 26h34M22 33h30" stroke="#ffd43b" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-        <span><b>there's a door down here.</b>
-          you probably shouldn't open it. the games behind it are strange and one of them scores you for leaving.<br>
-          <span class="hint"><span class="open">click to open the door</span><span class="shut">ok it's open. click again to shut it</span></span></span>
-      </summary>
-      <div class="grid" id="basegrid"></div>
-    </details>
-  </section>
+    <section class="panel" id="hangout">
+      <div class="panel-head h-hang"><h2>Hangout</h2><p>talk to whoever else is on the site right now.</p></div>
+      <div class="hang-body">
+        <div id="chat"></div>
+        <div class="hang-links" id="hanggrid"></div>
+      </div>
+    </section>
+  </div>
 
   <!-- ================= WHAT'S NEW + HOW TO ================= -->
   <div class="newsrow">
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-28</span> tidied the place up. smaller game tiles so they all fit, a live chatroom in the hangout, and the music stays off till you press the note button. the basement got bricked up.</li>
         <li><span class="when">09-28</span> NEW: <b>draw and guess</b>. make a room, send your friends the link, one draws and everyone else guesses in the chat. our first party game.</li>
         <li><span class="when">09-28</span> sortafun is officially in <b>alpha</b>. every game has a feedback bubble now: rate it 0 to 5 stars, report a bug, or pitch an idea.</li>
         <li><span class="when">09-27</span> city sandbox has a story mode: HALCYON. 12 chapters, three nights, cutscenes, a sniper vigil, a plane, the metro, and a very tall ladder.</li>
-        <li><span class="when">09-26</span> city sandbox: zombies, nights, crews, safehouses and a helicopter out. ride with friends in any car, bike or the plane.</li>
-        <li><span class="when">09-25</span> birdie grew up into CITY SANDBOX. walk, loot, drive, fly and shoot round the city with up to 50 people. you can still be a bird.</li>
-        <li><span class="when">09-25</span> the site makes noise now! clicks, dings and a little 8-bit tune. the speaker button turns it off.</li>
       </ul>
     </section>
     <section class="panel howto">
@@ -902,7 +924,6 @@
       <span class="b88" style="background:#ffd43b">best viewed<br>800 x 600</span>
       <span class="b88" style="background:#000;color:#7cff6b">made with<br>notepad</span>
       <span class="b88" style="background:#ff8fc1">no cookies<br>no tracking</span>
-      <a class="b88" style="background:#8ff0a4" href="webring.html">sortafun<br>webring</a>
       <a class="b88" style="background:#b8d7ff" href="guestbook.html">sign my<br>guestbook!</a>
     </div>
     <p>&copy; 2026 sortafun.org &middot; all games free forever &middot; made by Caleb
@@ -911,15 +932,16 @@
 
 </div>
 
-<script src="firebase-config.js?v=ff02e94a"></script>
-<script src="leaderboard.js?v=277a9229"></script>
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=fc67ec2e"></script>
+<script src="chat.js?v=2d14dd27"></script>
 <script>
 "use strict";
 
 /* ------------------------------------------------------------------ *
  * Everything on the front page comes from these lists.
  * Each row: { id, name, url, blurb, cat, key?, badge? }
- *   cat   = word | puzzle | skill (games), art, hang, base
+ *   cat   = word | puzzle | skill (games), art, hang
  *   key   = leaderboard key, so "just played" can link a score to its page
  *   badge = new | daily | hot (the little sticker in the corner)
  * id picks the thumbnail from THUMB below. Order in each list is fixed.
@@ -952,17 +974,8 @@ var ART = [
 var HANGOUT = [
   { id: "forum",   name: "The Forum",      url: "forum.html",          cat: "hang", blurb: "a message board that has been arguing since 2003." },
   { id: "boards",  name: "Leaderboards",   url: "leaderboards.html",   cat: "hang", blurb: "every game's top scores, today and all time." },
-  { id: "daily",   name: "Daily Champs",   url: "daily.html",          cat: "hang", blurb: "who's number one in each game right now." },
   { id: "guest",   name: "Guestbook",      url: "guestbook.html",      cat: "hang", blurb: "sign it! no take-backs, it's written in pen." },
-  { id: "passport",name: "Passport",       url: "passport.html",       cat: "hang", blurb: "stamps you earn just by poking around the site." },
-  { id: "archive", name: "Slider Archive", url: "puzzle-archive.html", cat: "hang", blurb: "replay any past day's tile slider board." },
-  { id: "webring", name: "The Webring",    url: "webring.html",        cat: "hang", blurb: "a door out to the next site and a door back in." }
-];
-
-var BASEMENT = [
-  { id: "minute", name: "How Long Is a Minute", url: "minute.html", cat: "base", key: "minute", blurb: "no clock on screen. stop it when you think sixty seconds are up." },
-  { id: "callit", name: "Call It",              url: "callit.html", cat: "base", key: "callit", blurb: "heads or tails, again and again. how long a streak can you call?" },
-  { id: "watch",  name: "Watch the Guy",        url: "watch.html",  cat: "base", key: "watch",  blurb: "the anti-game. it scores you for looking away." }
+  { id: "passport",name: "Passport",       url: "passport.html",       cat: "hang", blurb: "stamps you earn just by poking around the site." }
 ];
 
 // not built yet: tiles in the "Coming Soon" panel, not clickable. The plans
@@ -975,7 +988,7 @@ var SOON = [
   { id: "pets",   name: "Frontier Pets",             cat: "soon", blurb: "adopt a pet and build it a home out of modular units. feed it with points from every game on the site." }
 ];
 
-var CAT_LABEL = { soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout", base: "basement" };
+var CAT_LABEL = { soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout" };
 var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY", wip: "WIP" };
 
 /* ------------------------------------------------------------------ *
@@ -1431,15 +1444,6 @@ var THUMB = {
       '<path d="M80 46v8M70 56h20" stroke="' + K + '" stroke-width="3.5" stroke-linecap="round"/>' +
       '<path d="M72 22v8" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>';
   },
-  daily: function () {
-    return bg("#ff922b") + '<circle cx="10" cy="10" r="40" fill="#ffa94d"/><circle cx="150" cy="120" r="44" fill="#fd7e14"/>' +
-      '<rect x="36" y="16" width="88" height="92" rx="8" fill="#fff"' + S + '/>' +
-      '<path d="M36 24q0-8 8-8h72q8 0 8 8v14H36z" fill="#fa5252"' + S + '/>' +
-      '<path d="M56 8v16M104 8v16" stroke="' + K + '" stroke-width="5" stroke-linecap="round"/>' +
-      txt(80, 34, "TODAY", 14, "#fff") +
-      '<path d="M80 48l7 14 15 2-11 10 3 15-14-7-14 7 3-15-11-10 15-2z" fill="#ffd43b" stroke="' + K + '" stroke-width="2.5" stroke-linejoin="round"/>' +
-      txt(80, 102, "no.1", 12, K);
-  },
   guest: function () {
     var lines = "";
     for (var i = 0; i < 5; i++) {
@@ -1460,61 +1464,6 @@ var THUMB = {
       '<g transform="rotate(-14 118 40)"><circle cx="118" cy="40" r="20" fill="#fff" fill-opacity=".85" stroke="#e03131" stroke-width="3" stroke-dasharray="5 2"/>' + txt(118, 45, "OK!", 13, "#e03131") + '</g>' +
       '<g transform="rotate(10 124 88)"><rect x="104" y="72" width="40" height="30" rx="3" fill="#fff" fill-opacity=".85" stroke="#1c7ed6" stroke-width="3"/>' + txt(124, 92, "VISIT", 11, "#1c7ed6") + '</g>';
   },
-  archive: function () {
-    function board(x, y, rot, col) {
-      var s = '<g transform="rotate(' + rot + ' ' + (x + 26) + ' ' + (y + 26) + ')"><rect x="' + x + '" y="' + y + '" width="52" height="52" rx="6" fill="' + col + '"' + S + '/>';
-      for (var i = 0; i < 8; i++) {
-        s += '<rect x="' + (x + 5 + (i % 3) * 14.5) + '" y="' + (y + 5 + Math.floor(i / 3) * 14.5) + '" width="12.5" height="12.5" rx="2" fill="#fff" stroke="' + K + '" stroke-width="1.5"/>';
-      }
-      return s + '</g>';
-    }
-    return bg("#b197fc") + '<circle cx="150" cy="10" r="40" fill="#d0bfff"/>' +
-      board(18, 44, -12, "#845ef7") + board(54, 30, 4, "#7048e8") + board(92, 42, 14, "#5f3dc4") +
-      '<rect x="44" y="96" width="72" height="18" rx="4" fill="#fff"' + S + '/>' + txt(80, 110, "YESTERDAY", 11, K);
-  },
-  webring: function () {
-    var g = "", cols = ["#ff6b6b", "#ffd43b", "#69db7c", "#4dabf7", "#f783ac", "#b197fc"];
-    for (var i = 0; i < 6; i++) {
-      var a = Math.PI / 3 * i - Math.PI / 2;
-      var x = 80 + 40 * Math.cos(a), y = 60 + 40 * Math.sin(a);
-      g += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="11" fill="' + cols[i] + '" stroke="#fff" stroke-width="2.5"/>';
-      g += '<path d="M' + (x - 7).toFixed(1) + ' ' + y.toFixed(1) + 'h14M' + x.toFixed(1) + ' ' + (y - 11).toFixed(1) + 'q-6 11 0 22q6-11 0-22" fill="none" stroke="#fff" stroke-width="1.5"/>';
-    }
-    return bg("#0b0b1e") +
-      '<g fill="#fff"><circle cx="12" cy="14" r="1.2"/><circle cx="148" cy="22" r="1.5"/><circle cx="140" cy="104" r="1"/><circle cx="20" cy="100" r="1.4"/><circle cx="70" cy="8" r="1"/></g>' +
-      '<circle cx="80" cy="60" r="40" fill="none" stroke="#7cff6b" stroke-width="3" stroke-dasharray="7 6"/>' + g +
-      txt(80, 66, "&lt; &gt;", 18, "#7cff6b");
-  },
-  minute: function () {
-    return bg("#343a40") + '<circle cx="80" cy="64" r="60" fill="#3d444b"/>' +
-      '<rect x="72" y="6" width="16" height="10" rx="3" fill="#adb5bd"' + S + '/>' +
-      '<path d="M112 26l8-8" stroke="' + K + '" stroke-width="6" stroke-linecap="round"/>' +
-      '<circle cx="80" cy="64" r="44" fill="#f1f3f5"' + S + '/>' +
-      '<circle cx="80" cy="64" r="36" fill="#fff" stroke="#ced4da" stroke-width="2"/>' +
-      '<g stroke="' + K + '" stroke-width="3" stroke-linecap="round"><path d="M80 32v6M80 90v6M48 64h6M106 64h6"/></g>' +
-      txt(80, 76, "??", 34, "#868e96") +
-      '<path d="M80 64l-14-18" stroke="#e03131" stroke-width="3" stroke-linecap="round"/>' +
-      '<circle cx="80" cy="64" r="3.5" fill="' + K + '"/>';
-  },
-  callit: function () {
-    return bg("#0b7285") + '<circle cx="150" cy="120" r="50" fill="#0c8599"/>' +
-      '<circle cx="56" cy="64" r="34" fill="#fcc419"' + S + '/>' +
-      '<circle cx="56" cy="64" r="26" fill="none" stroke="#e8a900" stroke-width="3"/>' +
-      txt(56, 78, "H", 36, "#a86e00") +
-      '<ellipse cx="124" cy="40" rx="10" ry="24" fill="#fcc419" stroke="' + K + '" stroke-width="3" transform="rotate(30 124 40)"/>' +
-      '<path d="M100 76q10 10 22 6M104 86q10 8 20 4" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>' +
-      outlined(124, 106, "x7", 22, "#fff");
-  },
-  watch: function () {
-    return bg("#111") +
-      '<rect x="22" y="10" width="116" height="84" rx="10" fill="#495057"' + S + '/>' +
-      '<rect x="32" y="18" width="96" height="66" rx="6" fill="#1b4332"/>' +
-      '<g opacity=".5">' + '<path d="M32 30h96M32 42h96M32 54h96M32 66h96M32 78h96" stroke="#2d6a4f" stroke-width="1"/>' + '</g>' +
-      stick(80, 76, .9, "stand").replace(/#1d1b2e/g, "#95d5b2").replace('fill="#fff"', 'fill="#1b4332"') +
-      '<path d="M66 94l-6 16h40l-6-16" fill="#495057"' + S + '/>' +
-      txt(116, 36, "z", 12, "#95d5b2") + txt(124, 28, "z", 15, "#95d5b2") +
-      '<circle cx="124" cy="88" r="3" fill="#ff6b6b"/>';
-  }
 };
 
 function thumb(id) {
@@ -1534,31 +1483,28 @@ function tile(item, badge) {
   var a = document.createElement("a");
   a.className = "tile";
   a.href = item.url;
+  a.title = item.name + ": " + item.blurb;
   a.dataset.cat = item.cat;
   a.dataset.find = (item.name + " " + item.blurb + " " + CAT_LABEL[item.cat]).toLowerCase();
   var b = badge || item.badge;
-  var isGame = /^(online|word|puzzle|skill|base)$/.test(item.cat);
+  var isGame = /^(online|word|puzzle|skill)$/.test(item.cat);
   a.innerHTML =
     (b ? '<span class="badge b-' + b + '">' + BADGE_LABEL[b] + "</span>" : "") +
-    '<span class="thumb">' + thumb(item.id) + "</span>" +
-    '<span class="txt"><span class="name">' + esc(item.name) + "</span>" +
-    '<span class="blurb">' + esc(item.blurb) + "</span>" +
-    '<span class="foot"><span class="cat c-' + item.cat + '">' + CAT_LABEL[item.cat] + "</span>" +
-    '<span class="play">' + (isGame ? "PLAY" : "GO") + " &#9654;</span></span></span>";
+    '<span class="thumb" data-go="' + (isGame ? "PLAY" : "GO") + '">' + thumb(item.id) + "</span>" +
+    '<span class="name"><i class="c-' + item.cat + '"></i>' + esc(item.name) + "</span>";
   return a;
 }
 
 function soonTile(item) {
   var d = document.createElement("div");
   d.className = "tile soon";
+  d.title = item.name + ": " + item.blurb;
   d.dataset.cat = item.cat;
   d.dataset.find = (item.name + " " + item.blurb + " coming soon").toLowerCase();
   d.innerHTML =
     '<span class="badge b-wip">WIP</span>' +
     '<span class="thumb">' + thumb(item.id) + "</span>" +
-    '<span class="txt"><span class="name">' + esc(item.name) + "</span>" +
-    '<span class="blurb">' + esc(item.blurb) + "</span>" +
-    '<span class="foot"><span class="cat c-soon">coming soon</span></span></span>';
+    '<span class="name"><i class="c-soon"></i>' + esc(item.name) + "</span>";
   return d;
 }
 
@@ -1571,7 +1517,7 @@ fill("gamegrid", GAMES);
 SOON.forEach(function (item) { document.getElementById("soongrid").appendChild(soonTile(item)); });
 fill("artgrid", ART);
 fill("hanggrid", HANGOUT);
-fill("basegrid", BASEMENT);
+if (window.SortafunChat) SortafunChat.mount(document.getElementById("chat"));
 
 /* ------------------------------------------------------------------ *
  * game of the day: same pick for everyone, flips at Singapore midnight
@@ -1607,11 +1553,6 @@ var chipCat = "all";
 function applyFilters() {
   var q = document.getElementById("q").value.trim().toLowerCase();
   var anyShown = false;
-  // while searching, open the basement if one of its games matches
-  if (q) {
-    var baseHit = BASEMENT.some(function (g) { return (g.name + " " + g.blurb).toLowerCase().indexOf(q) !== -1; });
-    if (baseHit) document.getElementById("late").open = true;
-  }
 
   Array.prototype.forEach.call(document.querySelectorAll(".panel[id]"), function (panel) {
     var tiles = panel.querySelectorAll(".tile");
@@ -1678,7 +1619,7 @@ document.querySelector(".fb-link").addEventListener("click", function (e) {
 (function () {
   var list = document.getElementById("livelist");
   var byKey = {};
-  GAMES.concat(BASEMENT).forEach(function (g) { if (g.key) byKey[g.key] = g; });
+  GAMES.forEach(function (g) { if (g.key) byKey[g.key] = g; });
   byKey.typing1000 = byKey.typing;
   byKey.birdie = byKey.city; // birdie grew up into city sandbox
 
@@ -1707,15 +1648,8 @@ document.querySelector(".fb-link").addEventListener("click", function (e) {
   }).catch(quiet);
 })();
 
-/* ------------------------------------------------------------------ *
- * passport stamps: scroll to the very bottom = the long walk,
- * open the basement door = spelunker
- * ------------------------------------------------------------------ */
+/* passport stamp: scroll to the very bottom = the long walk */
 function stamp(k) { try { localStorage.setItem("sortafun-stamp-" + k, "1"); } catch (e) {} }
-
-document.getElementById("late").addEventListener("toggle", function () {
-  if (this.open) stamp("basement");
-});
 
 (function () {
   var foot = document.getElementById("foot");
@@ -1726,21 +1660,8 @@ document.getElementById("late").addEventListener("toggle", function () {
   io.observe(foot);
 })();
 
-/* a basement link from anywhere (the nav tab, or index.html#basement) opens the door */
-function openIfBasement() {
-  if (location.hash === "#basement") document.getElementById("late").open = true;
-}
-window.addEventListener("hashchange", openIfBasement);
-openIfBasement();
-
-/* sound: the tune is loudest on the homepage (starts on your first click or key, see sfx.js),
- * and the basement door creaks */
-if (window.SortafunSFX) {
-  SortafunSFX.music.auto(1); // full volume here, half on every other page
-  document.getElementById("late").addEventListener("toggle", function () {
-    if (this.open) SortafunSFX.play("door");
-  });
-}
+/* sound: the tune is off until you press the note button (sfx.js), and loudest here when it's on */
+if (window.SortafunSFX) SortafunSFX.music.auto(1);
 </script>
 </body>
 </html>

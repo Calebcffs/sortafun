@@ -4,9 +4,10 @@
 //   - ticks when the mouse goes over a button / link / tile and blips on click
 //   - puts a speaker button in the nav bar (.homebar, or .nav on the homepage)
 //     that turns all of it off, remembered in localStorage "sortafun-sound"
-//   - plays a little 8-bit loop (SortafunSFX.music) on every page, loudest on
-//     the homepage and half volume elsewhere, carrying on where it left off
-//     from page to page; its own button, remembered in "sortafun-music"
+//   - has a little 8-bit loop (SortafunSFX.music), OFF until you press its
+//     button; then it plays on every page, loudest on the homepage and half
+//     volume elsewhere, carrying on where it left off from page to page;
+//     remembered in "sortafun-music"
 //
 // Games call SortafunSFX.play(name) for their own moments:
 //   tick click back good great bad coin win lose done start beep go pop type
@@ -29,7 +30,7 @@
   function writeFlag(k, v) { try { localStorage.setItem(k, v ? "1" : "0"); } catch (e) {} }
 
   var soundOn = readFlag(LS_S, true);
-  var musicOn = readFlag(LS_M, true);
+  var musicOn = readFlag(LS_M, false); // off until you turn it on (2026-09-28)
   var ctx = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null;
   var unlocked = false;
   var SFX_VOL = 1.4, MUSIC_VOL = 0.45; // checked by rendering: sfx peak ~0.1-0.5, tune rms ~0.05

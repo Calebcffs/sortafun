@@ -253,7 +253,7 @@ guestbook and gallery included now):
 
 - `<body class="k-...">` picks the section colour for the window's title band
   and highlights the nav tab: `k-word`, `k-puzzle`, `k-skill`, `k-art`,
-  `k-hang`, `k-base`. Match the homepage category.
+  `k-hang` (`k-base` is left over from the basement, unused). Match the homepage category.
 - Straight after `<body>`: the `<header class="homebar">` nav bar (copy it
   from any page). Before `</body>`: `<footer class="sitefoot">`.
 - `.wrap` is the window; its first `h1` becomes the coloured title band
@@ -335,7 +335,7 @@ not touch Firestore.
 
 Games: `reaction.html` `maze.html` `aim.html` `stopbar.html` `mines.html`, the
 word games `ladder.html` `anagram.html` (word hive) `five.html` `sides.html`
-`grab.html`, and the basement `minute.html` `callit.html` `watch.html`. Each
+`grab.html`. Each
 mounts `SortafunLB.mountPanel(el, key, {score})` on finish. **The board is
 also on screen from page load**: every scored game ends with
 `SortafunLB.keepBoard(document.getElementById("lb"), key)` (a small script
@@ -346,10 +346,12 @@ panel and a MutationObserver puts it back whenever the game empties `#lb`
 with nobody on it today flips to all time. Rows show when each score was set
 (`fmtNice`, Singapore time). The name box submits on Enter, and a failed
 save says why in the panel. A new game needs the keepBoard line too. `mines.html`,
-`maze.html` and `reaction.html` submit ms. `watch.html` is the anti-game: it
-accrues seconds while `document.hidden`, persists to `localStorage`
-(`sortafun-watch-rested`), and you press "log it" to submit. The fermi quiz
+`maze.html` and `reaction.html` submit ms. The fermi quiz
 was deleted 2026-09-24 (key `fermi` kept in `leaderboard.js` as `retired`).
+The basement (`minute.html` `callit.html` `watch.html`), `webring.html`,
+`daily.html` and `puzzle-archive.html` were deleted 2026-09-28 at Caleb's ask
+(keys `minute` `callit` `watch` kept as `retired`; puzzle.html still reads a
+`?date=` param but nothing links to it).
 
 Game keys + which are "low" (rank lowest best): see `SETUP.md`. The list must
 match `firestore.rules` `isValidScore` / `isLowGame` and `leaderboard.js`
@@ -357,7 +359,7 @@ match `firestore.rules` `isValidScore` / `isLowGame` and `leaderboard.js`
 (it auto-deploys on push, see above); no new indexes needed. Retired keys get
 `retired: true` in `GAMES` so `passport.html` doesn't count them toward "the
 lot" stamp. A new game also needs a row + `THUMB` in `index.html`, a row in
-`leaderboards.html` ORDER and `daily.html` GAMES, a row in `feedback.js` ITEMS (`game: true`), and the `.homebar` div.
+`leaderboards.html` ORDER, a row in `feedback.js` ITEMS (`game: true`), and the `.homebar` div.
 
 ### The dictionary (`dict.js`)
 
@@ -717,7 +719,9 @@ container turns that off, `data-sfx="coin"` swaps the click for another
 sound), and adds a speaker button to `.homebar` / the homepage `.nav`
 (localStorage `sortafun-sound`). The homepage also calls
 `SortafunSFX.music.auto(1)`: a 16-bar chiptune loop (the `SONG` table in
-`sfx.js`) with its own button (`sortafun-music`). Every other page plays it
+`sfx.js`) with its own button (`sortafun-music`). **Music is off by default
+(Caleb, 2026-09-28)**: it only plays once someone presses the note button
+(`readFlag(LS_M, false)`). When on, every other page plays it
 at half volume (`<html data-nomusic>` opts a page out) and it carries on from
 page to page (position in sessionStorage `sortafun-music-pos`). Browsers block audio until
 the first click or key, so nothing plays before that (`whenReady(fn)` queues
@@ -730,8 +734,7 @@ mounts a leaderboard panel with a score without calling `result` first,
 today's board plays "great" (or "highscore" for first place). Birdie and the
 circuit racer have their own synth audio but follow the speaker button (the
 `sortafun-sound` window event). Don't put a sound on the reaction test's
-green light or anything in the minute game while it counts: a cue would help
-you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
+green light: a cue would help you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
 checks (keep sfx peaks under ~0.35).
 
 ### Draw and Guess (`draw.html` + `draw-words.js`)
@@ -817,14 +820,13 @@ the form) and a How It Works line that links to it.
 ### The meta pages
 
 `guestbook.html` (Firestore `guestbook`, append-only, own 2003 navy/Times
-style), `daily.html` (today's #1 per game via `SortafunLB.top(g,"day")`),
-`profile.html?name=` (one name's history via new `SortafunLB.byName`),
+style), `profile.html?name=` (one name's history via new `SortafunLB.byName`),
 `passport.html` (stamps from `sortafun-stamp-*` localStorage flags; can sync
-per-game stamps from the boards by name), `webring.html` (a loop-back bit),
+per-game stamps from the boards by name),
 `404.html` (GitHub Pages custom 404, the guy falling off a floor).
 
 Stamp flags are set by: `leaderboard.js submit()` (`-scored`, `-game-<key>`),
-`index.html` (`-walked`, `-basement`), `gallery.html` (`-gallery`),
+`index.html` (`-walked`), `chat.js` (`-chat`, first message sent), `gallery.html` (`-gallery`),
 `guestbook.html` (`-guestbook`), `feedback.js` (`-feedback`), `passport.html` itself (`-night`).
 
 The hit counter (`#hits`, top-right of the homepage) reads/increments
@@ -838,12 +840,20 @@ replaced the canvas walk-around lobby). Styled after 2004-2009 flash game
 sites: tiled sky background, chunky "Lilita One" headings (Google Fonts),
 Verdana body, thick dark outlines, glossy buttons. Sticky nav (desktop only)
 with section tabs + a search box, a scrolling news ticker, a "Game of the Day"
-panel + "Just Played" feed, then four sections: `#games`, `#art`, `#hangout`,
-`#basement`.
+panel + "Just Played" feed, then `#games`, and a `.clubrow` with `#art`
+(narrow) beside `#hangout` (the live chatroom + four link tiles). The
+basement, webring, slider archive and daily champs were removed 2026-09-28.
 
-Content lives in four JS arrays of objects `{ id, name, url, blurb, cat, key?,
-badge? }`: `GAMES` (12; cat `word` | `puzzle` | `skill`, filtered by the chips),
-`ART`, `HANGOUT`, `BASEMENT` (inside `<details id="late">`, the door). `key` is
+**Compact tiles (2026-09-28, Caleb: the games were getting too many).** A
+tile is just the thumbnail + a coloured category dot + the name (wraps to
+two lines); the blurb is the hover `title` and still feeds search. PLAY pops
+over the picture on hover (`.thumb::after`, text from `data-go`). The grid is
+`auto-fill, minmax(104px, 1fr)`: 8 across on desktop, 3 on a phone. Keep
+new game names short enough for two lines at ~110px.
+
+Content lives in three JS arrays of objects `{ id, name, url, blurb, cat, key?,
+badge? }`: `GAMES` (15; cat `word` | `puzzle` | `skill`, filtered by the chips),
+`ART`, `HANGOUT`. `key` is
 the leaderboard key so "Just Played" rows link to the right page. `badge` is
 `new` | `daily` | `hot`. To add a game: push a row AND add a thumbnail function
 to `THUMB` under the same `id`.
@@ -859,9 +869,22 @@ non-clickable `div.tile.soon` with a WIP sash. The plans for each live in
 `UPCOMING.md`. When one ships, move its row into `GAMES` and drop its section
 there.
 
-Game of the Day = `GAMES[day % 12]` on the Singapore date. Search filters every
-`.tile` by name/blurb/category and opens the basement only if a basement game
-matches. `index.html#basement` opens the door too.
+Game of the Day = `GAMES[day % GAMES.length]` on the Singapore date. Search filters every
+`.tile` by name/blurb/category.
+
+**The chatroom (`chat.js`, 2026-09-28)**: `SortafunChat.mount(#chat)`. One
+room on the Realtime Database (the City Sandbox one) with anonymous auth:
+`chat/msgs` (push ids, `{u, n, m, t}`, last 60 shown), `chat/last/<uid>`
+(rules make messages 1.5s apart: the message and `last` go in one
+multi-path update and the message's rule checks `last` === now),
+`chat/online/<uid>` (onDisconnect remove, the "N here now" count). Anyone
+may delete a message older than a week; each sender tidies up to 5.
+**Spark allows 100 concurrent RTDB connections, shared with City Sandbox and Draw and Guess**,
+so the room only connects when it scrolls into view and hangs up after 60s
+hidden or 10 min idle (click in it to wake). Name = the leaderboards'
+`sortafun-name`. Test with the emulators: `index.html?emu` on localhost (if
+emulators are already running, load new rules with a `Bearer owner` PUT to
+`/.settings/rules.json?ns=sortafun-ba7cb-default-rtdb`).
 
 `gallery.html` is still an easter egg: the only link is the seedling emoji in
 the footer (`#plant`, `aria-hidden`, `tabindex="-1"`).
@@ -870,8 +893,8 @@ Carried over:
 - **Hit counter** -> `#hits` ("you are visitor no."), once per session
   (`sessionStorage sortafun-visited`, `SortafunLB.bumpHits` / `getHits`).
 - **Just Played** uses `SortafunLB.recent(6)`; the newest also goes on the ticker.
-- **Passport stamps**: `-walked` when the footer (`#foot`) scrolls into view,
-  `-basement` when `#late` is opened.
+- **Passport stamps**: `-walked` when the footer (`#foot`) scrolls into view.
+  The old `spelunker` (basement) stamp became `chatterbox` (`-chat`).
 - **What's New** panel is the changelog. ~3 short lines, newest first, plain ASCII.
 
 Game pages: `game.css` puts `.wrap` in a white rounded "window" on the same

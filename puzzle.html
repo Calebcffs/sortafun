@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tile slider &middot; SORTAFUN.ORG</title>
 <link rel="icon" href="favicon.ico">
-<link rel="stylesheet" href="game.css?v=11f5d647">
+<link rel="stylesheet" href="game.css?v=f59c62c1">
 <style>
   #board {
     width: 306px;
@@ -35,11 +35,11 @@
   .meta { margin-top: 12px; font-size: 15px; color: #333; }
   .controls { margin-top: 14px; display: flex; gap: 10px; justify-content: center; }
 </style>
-<script src="sfx.js?v=95063f31"></script>
-<script src="feedback.js?v=d90de861"></script>
+<script src="sfx.js?v=bef8d726"></script>
+<script src="feedback.js?v=50f0f078"></script>
 </head>
 <body class="k-puzzle">
-<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
 <div class="wrap">
   <h1>tile slider</h1>
   <p class="sub">slide the tiles into order. same scramble for everyone today. arrow keys or click.</p>
@@ -51,7 +51,6 @@
   <div class="controls">
     <button id="again">shuffle again</button>
     <button id="today">today's puzzle</button>
-    <a class="btn" href="puzzle-archive.html">archive</a>
   </div>
   <div class="status" id="status"></div>
 
@@ -239,8 +238,8 @@ if (viewDay !== today) {
 }
 scramble(seedFromDay(viewDay), viewDay === today);
 </script>
-<script src="firebase-config.js?v=ff02e94a"></script>
-<script src="leaderboard.js?v=277a9229"></script>
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=fc67ec2e"></script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
 if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "puzzle");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>

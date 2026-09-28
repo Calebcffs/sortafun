@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>leaderboards &middot; SORTAFUN.ORG</title>
 <link rel="icon" href="favicon.ico">
-<link rel="stylesheet" href="game.css?v=11f5d647">
+<link rel="stylesheet" href="game.css?v=f59c62c1">
 <style>
   .boards {
     display: flex;
@@ -28,11 +28,11 @@
     padding-top: 10px;
   }
 </style>
-<script src="sfx.js?v=95063f31"></script>
-<script src="feedback.js?v=d90de861"></script>
+<script src="sfx.js?v=bef8d726"></script>
+<script src="feedback.js?v=50f0f078"></script>
 </head>
 <body class="k-hang">
-<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
 <div class="wrap">
   <h1>leaderboards</h1>
   <p class="sub">top scores. today and all time. play a game, submit, come back and gloat.</p>
@@ -40,8 +40,7 @@
   <div class="boards" id="boards"></div>
 
   <p class="note">
-    every game with a score is here. see <a href="daily.html">today's leaders</a>
-    in one place, or look up one name's whole history on the
+    every game with a score is here. look up one name's whole history on the
     <a href="profile.html">profile page</a>. on any "all time" board the very
     last place glows gold, first from the bottom. crossword and the animation
     studio have nothing to rank, so they're not listed. scores are submitted
@@ -51,8 +50,8 @@
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
-<script src="firebase-config.js?v=ff02e94a"></script>
-<script src="leaderboard.js?v=277a9229"></script>
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=fc67ec2e"></script>
 <script>
   // order: the four originals, then the newer games
   var ORDER = [
@@ -72,9 +71,6 @@
     ["city",       "city sandbox - most cash"],
     ["birdie",     "birdie - most points"],
     ["mines",      "minesweeper - fastest clear"],
-    ["minute",     "how long is a minute - closest to 60s"],
-    ["callit",     "call it - longest streak"],
-    ["watch",      "watch the guy - most rest banked"],
   ];
   var boards = document.getElementById("boards");
   ORDER.forEach(function (row) {

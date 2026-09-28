@@ -8,15 +8,15 @@ meta pages) and **the Basement** (the joke games, behind a door you click
 open). There's a search box, a Game of the Day, a live "just played" feed and
 a hit counter. Every game page shares the same sky background and SORTAFUN bar
 via `game.css`. Every page also loads `sfx.js`, which makes all the
-sound (hover ticks, click blips, game dings and fanfares, and an 8-bit tune on
-the homepage) with WebAudio, no audio files, behind a speaker button.
+sound (hover ticks, click blips, game dings and fanfares, and an 8-bit tune that
+stays off until you press the note button) with WebAudio, no audio files, behind a speaker button.
 
 ### games
 
 - city sandbox (was birdie) - an online open world city for up to 50 players: play as a person (loot gun cases and chests, a shop, guns, cars, a motorbike, a plane in a secret hangar, wardens who chase you) or as a bird (the original poo game). Kenney CC0 models. `city.html` + `city/` (`birdie.html` redirects).
 
 - crossword - a 15x15 themeless ("SNACKY BUT THEMELESS", from `Crosswords/*.ipuz`); across/down nav, click-a-clue, check/reveal, progress saved per browser
-- tile slider - sliding 8-puzzle, seeded by the Singapore-time date, with an archive of past days
+- tile slider - sliding 8-puzzle, seeded by the Singapore-time date
 - circuit race - 3d, slowroads.io-ish closed-loop circuit; hit every checkpoint and cross the line for a lap time (three.js from a CDN)
 - typing game - 30-second test rebuilt as a monkeytype clone (own dark theme). Top 200 or top 1000 word list, each its own board.
 - reaction light - wait for the lamp, click. Five rounds, average ms.
@@ -35,22 +35,15 @@ All the word games share `dict.js`, a 170k-word dictionary with no proper nouns
 
 - draw and guess - skribbl-style party game, 2 to 8 players. Make a room, send the link, one draws while the rest guess in the chat. Realtime Database (`draw.html`, `draw-words.js`).
 
-### the basement (the joke games)
-
-- how long is a minute - press start, press stop at 60 seconds. No clock. Closest wins.
-- call it - coin-flip streak. Pure luck; the board is the joke.
-- watch the guy - he runs while the tab is visible and rests while it's hidden. Score is banked rest. Look away to win.
-
 ### art + hangout
 
 - animation studio (`flipbook.html`) - a tiny hand-drawn flipbook animator; frames autosave to `localStorage`, "post to gallery" shares it.
 - animation gallery (`anim-gallery.html`) - posted flipbooks, vote + comment. Firestore (`animations` + `anim_comments`).
+- chatroom (`chat.js`, on the homepage in the Hangout panel) - one live room, Firebase Realtime Database + anonymous sign-in. Messages over a week old get tidied away.
 - forum - a threaded 2003-vintage bulletin board, pre-seeded with a small argumentative community. Accounts + posts are `localStorage` only.
-- leaderboards - every game with a score, today + all time. Last place all time glows gold. Links to the daily board and profile pages.
+- leaderboards - every game with a score, today + all time. Last place all time glows gold. Links to the profile pages.
 - guestbook (`guestbook.html`) - sign it. Firestore `guestbook`, append-only.
-- daily board (`daily.html`) - today's number one on every game in one table.
 - passport (`passport.html`) - stamps you collect by poking around (local only); can also sync per-game stamps from the boards by name.
-- the webring (`webring.html`) - a ring of mostly-imaginary affiliated sites that loops back here.
 
 ### feedback (alpha)
 

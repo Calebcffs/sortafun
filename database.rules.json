@@ -1,5 +1,32 @@
 {
   "rules": {
+    "chat": {
+      "msgs": {
+        ".read": true,
+        "$id": {
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || (!newData.exists() && data.child('t').val() < now - 604800000))",
+          ".validate": "newData.hasChildren(['u', 'n', 'm', 't']) && newData.child('u').val() === auth.uid && newData.child('t').val() === now && newData.parent().parent().child('last/' + auth.uid).val() === now",
+          "u": { ".validate": true },
+          "n": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" },
+          "m": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200" },
+          "t": { ".validate": true },
+          "$other": { ".validate": false }
+        }
+      },
+      "last": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isNumber() && newData.val() === now && (!data.exists() || data.val() < now - 1500)"
+        }
+      },
+      "online": {
+        ".read": true,
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        }
+      }
+    },
     "city": {
       "players": {
         ".read": "auth != null",

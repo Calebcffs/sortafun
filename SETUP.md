@@ -53,18 +53,15 @@ Action's run log (repo → Actions tab) before assuming the rules are stale —
 that's the thing this used to silently get out of sync on.
 
 ### 5. Create the indexes
-The daily query, the all-time query, the tile slider archive calendar, and the
-animation gallery's comment query each need a composite index.
+The daily query, the all-time query and the animation gallery's comment query
+each need a composite index. (A fourth one for the old tile slider archive
+calendar may still exist in the console; the page is gone, it can stay.)
 
 **Easy way:** deploy, open `leaderboards.html`, open the browser console. The
 page fires all three "today" queries on load — Firestore prints an error with a
 direct link. Click it → **Create index** → wait ~1 minute. Then click an
-"all time" tab to get the console link for the second index. Then open
-`puzzle-archive.html` with the console open for the third (the archive
-calendar's range query) — it fails silently in the UI (blank calendar, no
-highlighted days) until that index exists, so check the console there even if
-nothing looks visibly broken. Finally open `anim-gallery.html`, post a test
-flipbook from `flipbook.html`, and open its comments — the fourth index
+"all time" tab to get the console link for the second index. Finally open `anim-gallery.html`, post a test
+flipbook from `flipbook.html`, and open its comments — the third index
 (`anim_comments`: `animId` asc, `createdAt` asc) prints its link in the console
 if it's missing. The gallery's own list (sorted by votes, or by newest) uses
 single-field indexes Firestore builds automatically — no action needed.
@@ -94,7 +91,8 @@ Collection `scores`, one document per submitted score:
 
 Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram` (retired, see
-`CLAUDE.md`), `mines`, `fermi` (retired), `minute`, `callit`, `watch`, `hive`,
+`CLAUDE.md`), `mines`, `fermi` (retired), `minute`, `callit`, `watch` (all three retired
+2026-09-28 with the basement), `hive`,
 `five`, `sides`, `grab`. The enum
 lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
