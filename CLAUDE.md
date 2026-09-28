@@ -733,26 +733,48 @@ three 0.160 via importmap; `tools/stamp.py` now stamps `deeptime/` modules
 into deeptime.html's import map like city/ (and always writes "/" paths).
 
 Rules that matter (tuned by numbers, change with care):
-- Parts: 8 of the 10 landmarks, one of 3 spots each, a blinking red LED so
-  you can spot them. E / click within 2.6m while looking at it.
+- Parts: the trailer (first lamp down the path from the gate) plus 7 random
+  landmarks, always at the landmark's lamp spot (`lampAt()` puts it first in
+  `spots`). Only landmarks with a part have their lamp lit; taking the part
+  makes it flicker out (the first one waits ~30s, see the Queen's cameo).
+  Caleb found the open-sandbox version "almost impossible" to navigate
+  (2026-09-28), so it's semi-guided like Slender: The Arrival: a dusk start
+  that darkens to night over 150s (30s once you have a part), lamp glows you
+  can see through the trees from far off (drawn over trunks, dimmed by
+  `occlusion()`), reflector posts along the trails (`markers()`).
+- Lamps: one per landmark (`LAMP_KINDS`: pole, street, bulb, red flare,
+  lantern). Only a pool of 2 PointLights exists; `tick()` hands them to the
+  nearest lit lamps. Never add per-object PointLights: every light costs
+  every lit pixel (15 lights made it crawl).
 - The Watcher: off until part 1 (or 10 minutes). Skips every 16s -> 4.5s,
   to 34m -> 7m, mostly behind you; creeps when unwatched, freezes when
-  watched. `G.seen()` (frustum, trunk occlusion, fog, flashlight) drives the
-  static: `look * (0.22 + 1.3 * close^2)` per second, plus a bit when it's
-  within 8m even unseen. Static 1 or 2.4m = caught.
-- The Queen: from part 4, walk-bys across your view at 18-30m. Suspicion
+  watched, and you hear its feet when it creeps. `G.seen()` (frustum, trunk
+  occlusion, fog, flashlight) drives the static: `look * (0.03 + 1.4 *
+  close^2)` per second with close = 1 - d/22, so far sightings barely
+  matter and near ones kill; plus a bit within 8m even unseen. The tape only
+  shows a light fizz until static ~0.55 (Caleb: the fuzz was too strong).
+  Static 1 or 2.4m = caught. Seeing it (or her) plays `Audio.boom()` + a
+  heartbeat surge, not a loud stinger. Its eyes are red, hers amber.
+- The Queen: after part 1 a calm cameo (`queen.cameo`): she walks through
+  the lit spot you just left while you're 14-34m away (Caleb never saw her
+  before this). From part 3, walk-bys across your view at 18-30m. Suspicion
   builds when you're running (speed > 3.2) or your beam is on her within
   ~40m; she roars (alert), then if you move or light her after 1s she
   charges (10.5 m/s, caught at 6.5m); freeze and go dark and she sniffs and
   leaves. Tested both ways headless.
-- Stamina regen drops 0.008/s per part; battery lasts 14 min of light.
+- Walk 2.9 m/s, run 5.8 (Caleb wanted ~15% faster than 2.5/5.2). Stamina
+  regen drops 0.008/s per part; battery lasts 14 min of light.
 - Score `parts * 10000 - seconds` (key `deeptime`, high); Dawn mode (unlocked
   by finishing, localStorage `deeptime-dawn`) never submits.
 
-Performance budget: ~400k tris / ~125 draw calls per frame including the
-flashlight's shadow pass. Night far plane is 72m (the fog hides everything
-past ~50m), trees are chunked 35m and distance-culled (`W.near`), clutter
-only draws within 52m. Anything instanced across the forest must stay tiny
+Performance (Caleb found v1 "very laggy"): lights are the big cost, so the
+scene has 5 (flashlight spot, hemi, moon, 2 pooled lamp lights); the
+flashlight shadow map is 512 and only reaches 24m; the ground is 8x8 tiles;
+every landmark mesh, tree chunk and clutter chunk is distance-culled via
+`W.near` (clutter 40m, trees 40m + chunk slop); night far plane 60m; the
+crater searchlight is a fake additive cone. The tape pass renders the scene
+at `tape.scale` (starts 0.62) and `frame()` lowers it to 0.36 when frames
+run over 22ms and raises it back when under 17ms. ~150-250k tris per frame. Anything instanced across the forest must stay tiny
 (fern ~1000 tris, shrub ~800, branches ~600). The Poly Haven chain-link
 fence GLB is a whole modular kit, never instance it (the fence is built in
 `fence()`).

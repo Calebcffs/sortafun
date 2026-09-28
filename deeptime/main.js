@@ -39,12 +39,14 @@ renderer.shadowMap.enabled = S.quality !== "low";
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 A.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(62, 16 / 9, 0.08, 72); // night fog hides everything past ~50m
+const camera = new THREE.PerspectiveCamera(62, 16 / 9, 0.08, 60); // night fog hides everything past ~45m
 scene.add(camera);
 const tape = new Tape(renderer);
 if (S.quality === "low") tape.scale = 0.55;
 
-const NIGHT = { fog: 0x10151a, density: 0.042, hemi: 0.14, moon: 0.16, exposure: 1.7, sky: [0x080b0e, 0x020304] };
+const NIGHT = { fog: 0x10151a, density: 0.044, hemi: 0.14, moon: 0.16, exposure: 1.7, sky: [0x080b0e, 0x020304] };
+// the start: the sun's just gone down the path in front of you (like Slender: The Arrival)
+const DUSK = { fog: 0x3b3440, density: 0.03, hemi: 0.55, moon: 0.9, exposure: 1.6, sky: [0x8a5f58, 0x252a3c] };
 const DAWN = { fog: 0x8d979c, density: 0.02, hemi: 0.9, moon: 1.6, exposure: 1.0, sky: [0x9aa4a8, 0x5d6f80] };
 const DEEP = { fog: 0xb09a6e, density: 0.03, hemi: 1.6, moon: 2.2, exposure: 1.0, sky: [0xd9c79a, 0xa38f66] };
 scene.fog = new THREE.FogExp2(NIGHT.fog, NIGHT.density);
@@ -84,13 +86,12 @@ function cookie() {
 }
 const flash = new THREE.SpotLight(0xfff0d8, 150, 48, 0.44, 0.55, 1.5); // gentler than inverse-square so the beam carries
 flash.castShadow = S.quality !== "low";
-flash.shadow.mapSize.set(1024, 1024);
-flash.shadow.camera.near = 0.3; flash.shadow.camera.far = 44;
+flash.shadow.mapSize.set(512, 512);
+flash.shadow.camera.near = 0.3; flash.shadow.camera.far = 24; // only near trunks throw shadows
 flash.shadow.bias = -0.0005; flash.shadow.normalBias = 0.03;
 flash.map = cookie();
 scene.add(flash, flash.target);
-const fill = new THREE.PointLight(0xffe8c8, 0.4, 6, 2); // a little bounce off the ground near you
-scene.add(fill);
+
 
 // ------------------------------------------------------------------
 // game state
@@ -120,7 +121,7 @@ const G = {
   state: "title", mode: "night", level: 0, parts: [], got: 0, time: 0, static: 0, fear: 0,
   player: new THREE.Vector3(), yaw: 0, pitch: 0, speed: 0, stamina: 1, exhausted: false, battery: 1, lightOn: true,
   zoom: 0, bob: 0, stepAcc: 0, shakeAmt: 0, inTunnel: false, watcherOn: false, queenOn: true,
-  flashPower: 240, lastSting: -10, ambT: 5, packT: 10, roarT: 0, thunderT: 40, noteT: 0, countT: 0, captionT: 0,
+  flashPower: 290, lastSting: -10, ambT: 5, packT: 10, roarT: 0, thunderT: 40, noteT: 0, countT: 0, captionT: 0,
 };
 let watcher, queen, loops = {};
 const keys = new Set();
@@ -157,10 +158,14 @@ function tagCanvas(n, note, big) {
 function layoutParts() {
   for (const p of G.parts) WD.W.root.remove(p.obj);
   G.parts = [];
-  const lms = WD.LANDMARKS.slice().sort(() => Math.random() - 0.5).slice(0, 8);
+  // the trailer (first lamp down the path from the gate) always has one
+  const rest = WD.LANDMARKS.filter((L) => L.id !== "trailer").sort(() => Math.random() - 0.5).slice(0, 7);
+  const lms = [WD.LANDMARKS.find((L) => L.id === "trailer"), ...rest];
+  for (const L of WD.W.lamps) { L.target = 0; L.on = 0; L.dying = false; }
   const models = PART_MODELS.slice().sort(() => Math.random() - 0.5);
   lms.forEach((L, i) => {
-    const s = L.spots[Math.floor(Math.random() * L.spots.length)];
+    const s = L.spots[0]; // the lamp spot
+    if (L.lamp) { L.lamp.target = G.mode === "dawn" ? 0.4 : 1; }
     const [name, label, sc] = models[i];
     const obj = new THREE.Group();
     const m = A.models[name].scene.clone(true);
@@ -179,11 +184,11 @@ function layoutParts() {
     const led = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a10 }));
     led.position.set(0, size.y + 0.02, 0);
     obj.add(led);
-    const glowL = new THREE.PointLight(0xff2a10, 0.6, 3.5, 2); glowL.position.copy(led.position); obj.add(glowL);
+
     obj.position.set(s.x, s.y, s.z);
     obj.rotation.y = s.ry;
     WD.W.root.add(obj);
-    G.parts.push({ obj, led, glowL, label, lm: L.id, center: new THREE.Vector3(s.x, s.y + size.y * 0.5, s.z), taken: false, phase: Math.random() * 3 });
+    G.parts.push({ obj, led, label, lm: L.id, center: new THREE.Vector3(s.x, s.y + size.y * 0.5, s.z), taken: false, phase: Math.random() * 3 });
   });
 }
 
@@ -198,12 +203,14 @@ function newRun(mode) {
   G.yaw = 0; G.pitch = -0.02; G.watcherOn = false; G.shakeAmt = 0; G.lastSting = -10;
   G.ambT = 4; G.packT = 12; G.roarT = 0; G.thunderT = 30 + Math.random() * 30; G.countT = 0; G.noteT = 0; G.captionT = 6;
   G.endT = 0; G.finaleT = 0;
+  G.dusk = mode === "night" ? 1 : 0; G.cameoDone = false; G.firstLamp = null; G.firstAt = 0;
   G.player.set(WD.GATE.x, 0, WD.GATE.z - 1.5);
   G.player.y = WD.floorAt(G.player.x, G.player.z);
   layoutParts();
   watcher.d.visible = false; watcher.timer = 8; watcher.pos.set(0, -50, 0);
   queen.state = "off"; queen.next = 25; queen.d.visible = false;
   setLook(mode === "dawn" ? DAWN : NIGHT, mode === "dawn");
+  if (mode === "night") { moon.position.set(0, 18, -120); blendLook(NIGHT, DUSK, 1); }
   WD.W.beam.visible = true;
   $("caption").textContent = "find all 8 parts";
   $("caption").hidden = false;
@@ -220,9 +227,19 @@ function setLook(L, dawn) {
   skyU.cLow.value.setHex(L.sky[0]); skyU.cHigh.value.setHex(L.sky[1]);
   tape.u.uDawn.value = dawn ? 1 : 0;
   tape.u.uExposure.value = L.exposure;
-  camera.far = dawn ? 150 : 72; camera.updateProjectionMatrix();
-  WD.W.nearDist = dawn ? 90 : 52;
+  camera.far = dawn ? 150 : 60; camera.updateProjectionMatrix();
+  WD.W.nearDist = dawn ? 90 : 40;
   sky.scale.setScalar(dawn ? 2.3 : 1);
+}
+
+const _c1 = new THREE.Color(), _c2 = new THREE.Color();
+function blendLook(A, B, t) {
+  const mix = (a, b) => a + (b - a) * t;
+  scene.fog.color.copy(_c1.setHex(A.fog).lerp(_c2.setHex(B.fog), t)); scene.fog.density = mix(A.density, B.density);
+  hemi.intensity = mix(A.hemi, B.hemi); moon.intensity = mix(A.moon, B.moon);
+  moon.color.copy(_c1.setHex(0x8ea4c8).lerp(_c2.setHex(0xff9a6a), t));
+  skyU.cLow.value.copy(_c1.setHex(A.sky[0]).lerp(_c2.setHex(B.sky[0]), t)); skyU.cHigh.value.copy(_c1.setHex(A.sky[1]).lerp(_c2.setHex(B.sky[1]), t));
+  tape.u.uExposure.value = mix(A.exposure, B.exposure);
 }
 
 function startLoops() {
@@ -252,8 +269,8 @@ const tmp3 = new THREE.Vector3(), tmp4 = new THREE.Vector3(), tmp5 = new THREE.V
 G.audio = Audio;
 
 // how much of the Watcher you can see right now, 0..1
-G.seen = (w) => {
-  const chest = tmp.copy(w.pos); chest.y += 1.3;
+G.seen = (w, up = 1.3) => {
+  const chest = tmp.copy(w.pos); chest.y += up;
   const v = tmp2.copy(chest).sub(camera.position);
   const d = v.length();
   if (d > 80) return 0;
@@ -290,12 +307,13 @@ G.litPoint = (p, maxD) => {
 };
 G.shake = (a) => { G.shakeAmt = Math.min(1.2, G.shakeAmt + a); };
 G.onSighting = (w, dist) => {
-  if (G.time - G.lastSting < 5) return;
+  if (G.time - G.lastSting < 6) return;
   G.lastSting = G.time;
-  Audio.oneShot("sting", { bus: "tape", vol: dist < 15 ? 1.1 : 0.75 });
-  tape.kick(0.45);
+  Audio.boom(dist < 15 ? 0.9 : 0.6);
+  G.fear = Math.max(G.fear, dist < 15 ? 0.9 : 0.6);
+  tape.kick(0.25);
 };
-G.onSkipSeen = () => { tape.kick(0.9); G.static = Math.min(0.95, G.static + 0.12); };
+G.onSkipSeen = () => { tape.kick(0.5); G.static = Math.min(0.9, G.static + 0.06); };
 G.onQueenArrive = (q) => { Audio.oneShot("rex_huff", { pos: q.d.headPos(), vol: 1.1, ref: 10, rate: 0.9 }); };
 G.onQueenStep = (q, dist) => {
   Audio.footfall(q.pos, clamp01(1.5 - dist / 55));
@@ -416,17 +434,20 @@ function tryPickup() {
   if (!p || G.state !== "play") return;
   p.taken = true;
   WD.W.root.remove(p.obj);
+  const lamp = WD.LANDMARKS.find((l) => l.id === p.lm).lamp;
+  if (lamp) { lamp.dying = true; lamp.dieAt = G.time + 1.4; }
   G.got++; G.level = G.got;
   Audio.oneShot("pickup", { vol: 0.9 });
   showNote(G.got, NOTES[G.got - 1]);
   G.countT = 4;
   $("count").textContent = `PARTS ${G.got}/8`;
   if (G.got === 1) {
-    G.watcherOn = true; watcher.timer = 3;
-    // she heard that
-    setTimeout(() => { if (G.state === "play") farRoar(0.9); }, 3200);
+    G.watcherOn = true; watcher.timer = 8;
+    G.firstLamp = lamp; G.firstAt = G.time;
+    if (lamp) lamp.dieAt = G.time + 32; // stays lit so you see her walk through it
+    G.roarT = 70;
   }
-  if (G.got === 4) queen.next = 20;
+  if (G.got === 3) queen.next = 25;
   if (G.got === 8) startFinale();
 }
 function showNote(n, text) {
@@ -561,23 +582,25 @@ function playIntro(mode) {
   Audio.restoreBuses();
   loops.introHiss = Audio.loop("tape_hiss", { bus: "tape", vol: 0.12 });
 }
+let tickTimer = null, tickHi = true;
 function showIntroCard() {
   const el = $("intro-text");
   const text = INTRO[introI];
-  el.textContent = "";
-  let i = 0;
-  clearInterval(introTimer);
-  Audio.oneShot("click", { i: 0, vol: 0.3, bus: "tape" });
-  introTimer = setInterval(() => {
-    i += 2; el.textContent = text.slice(0, i);
-    if (i >= text.length) {
-      clearInterval(introTimer);
-      introTimer = setTimeout(() => { introI++; if (introI < INTRO.length) showIntroCard(); else skipIntro(); }, 1700 + text.length * 18);
-    }
-  }, 30);
+  el.style.transition = "none"; el.style.opacity = 0; el.textContent = text;
+  void el.offsetWidth;
+  el.style.transition = "opacity 1.4s ease"; el.style.opacity = 1;
+  Audio.boom(0.75, "tape");
+  clearInterval(tickTimer);
+  tickTimer = setInterval(() => { Audio.tick(tickHi, 0.18); tickHi = !tickHi; }, 1000);
+  const hold = 3200 + text.length * 30;
+  clearTimeout(introTimer);
+  introTimer = setTimeout(() => {
+    el.style.transition = "opacity 1.1s ease"; el.style.opacity = 0;
+    introTimer = setTimeout(() => { introI++; if (introI < INTRO.length) showIntroCard(); else skipIntro(); }, 1300);
+  }, hold);
 }
 function skipIntro() {
-  clearInterval(introTimer); clearTimeout(introTimer);
+  clearInterval(tickTimer); clearTimeout(introTimer);
   $("intro").hidden = true;
   if (loops.introHiss) loops.introHiss.stop(0.2);
   tape.kick(1);
@@ -622,10 +645,25 @@ $("fsbtn").addEventListener("click", () => { if (document.fullscreenElement) doc
 // ------------------------------------------------------------------
 const clock = new THREE.Clock();
 let tAll = 0;
+const DYN = { ema: 1 / 60, t: 0, max: S.quality === "low" ? 0.5 : 0.72, min: 0.36 };
+tape.scale = S.quality === "low" ? 0.5 : 0.62;
 function frame() {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, clock.getDelta());
+  const raw = clock.getDelta();
+  const dt = Math.min(0.05, raw);
   step(dt);
+  // dynamic resolution: the tape is soft anyway, so drop pixels before frames
+  if (G.state === "play" && !window.deeptime.noPause) {
+    DYN.ema = DYN.ema * 0.93 + Math.min(raw, 0.2) * 0.07;
+    DYN.t += raw;
+    if (DYN.t > 1.2) {
+      DYN.t = 0;
+      const old = tape.scale;
+      if (DYN.ema > 1 / 45 && tape.scale > DYN.min) tape.scale = Math.max(DYN.min, tape.scale - 0.07);
+      else if (DYN.ema < 1 / 57 && tape.scale < DYN.max) tape.scale = Math.min(DYN.max, tape.scale + 0.04);
+      if (tape.scale !== old) resize();
+    }
+  }
 }
 function step(dt) {
   tAll += dt;
@@ -664,12 +702,24 @@ function placeCamera(dt) {
   if (on && G.battery < 0.15 && Math.random() < 0.08) I *= 0.2;
   if (on && G.static > 0.3 && Math.random() < G.static * 0.3) I *= Math.random(); // it messes with the light too
   flash.intensity = G.mode === "dawn" ? I * 0.3 : I;
-  fill.position.copy(camera.position); fill.position.y -= 0.8;
-  fill.intensity = on ? 0.4 : 0.05;
+
 }
 
 function tickPlay(dt) {
   G.time += dt;
+  if (G.mode === "night" && G.dusk > 0) {
+    G.dusk = Math.max(0, G.dusk - dt / (G.got ? 30 : 150));
+    blendLook(NIGHT, DUSK, G.dusk);
+    if (G.dusk === 0) moon.position.set(-60, 90, -40);
+  }
+  // lamps whose part you took flicker out
+  for (const L of WD.W.lamps) if (L.dying && G.time > L.dieAt) { L.target = 0; L.dying = false; }
+  // her first appearance: through the lamplight you just left
+  if (G.firstLamp && !G.cameoDone) {
+    const d = G.firstLamp.pos.distanceTo(G.player);
+    if (G.time - G.firstAt > 4 && d > 14 && d < 34 && queen.state === "off") { queen.cameo(G, G.firstLamp.pos); G.cameoDone = true; }
+    else if (G.time - G.firstAt > 75) G.cameoDone = true;
+  }
   // after 10 minutes it comes anyway
   if (!G.watcherOn && G.time > 600) { G.watcherOn = true; watcher.timer = 2; }
   // ---------- moving
@@ -683,7 +733,7 @@ function tickPlay(dt) {
   const len = Math.hypot(mx, mz);
   if (len > 1) { mx /= len; mz /= len; }
   const moving = len > 0.1;
-  const target = moving ? (run && mz < 0.3 ? 5.2 : 2.5) * Math.max(0.35, Math.min(1, len)) : 0;
+  const target = moving ? (run && mz < 0.3 ? 5.8 : 2.9) * Math.max(0.35, Math.min(1, len)) : 0;
   G.speed += (target - G.speed) * Math.min(1, dt * 6);
   const c = Math.cos(G.yaw), s = Math.sin(G.yaw);
   const vx = (mx * c + mz * s), vz = (-mx * s + mz * c);
@@ -708,13 +758,17 @@ function tickPlay(dt) {
   // ---------- steps
   G.bob += moved * (running ? 2.1 : 2.6);
   G.stepAcc += moved;
-  const stride = running ? 1.35 : 0.78;
+  const stride = running ? 1.45 : 0.86;
   if (G.stepAcc > stride) { G.stepAcc = 0; footstep(running); }
   // ---------- battery
   if (G.lightOn) G.battery = Math.max(0, G.battery - dt / (14 * 60));
   // ---------- the animals
   watcher.update(dt, G);
   queen.update(dt, G);
+  // ---------- seeing her: a boom, once per appearance
+  if (queen.d.visible && queen.state !== "finale") {
+    if (!queen.boomed && G.seen(queen, 3.5) > 0.12) { queen.boomed = true; Audio.boom(0.8); G.fear = Math.max(G.fear, 0.8); }
+  } else queen.boomed = false;
   // ---------- eyeshine: the eyes throw your light back, long before you can see the body
   for (const a of [watcher, queen]) {
     if (!a.d.visible) continue;
@@ -728,10 +782,10 @@ function tickPlay(dt) {
   // ---------- static and fear
   const wd = G.watcherOn && watcher.d.visible ? watcher.dist : 99;
   const look = watcher.look || 0;
-  const close = clamp01(1 - wd / 28);
-  if (look > 0.02) G.static += dt * look * (0.22 + 1.3 * close * close);
+  const close = clamp01(1 - wd / 22);
+  if (look > 0.02) G.static += dt * look * (0.03 + 1.4 * close * close);
   G.static += dt * clamp01(1 - wd / 8) * 0.35;
-  if (look <= 0.02 && wd > 8) G.static -= dt * 0.2;
+  if (look <= 0.02 && wd > 8) G.static -= dt * 0.25;
   G.static = clamp01(G.static);
   if (G.static >= 1) G.caught("watcher");
   const qd = queen.state !== "off" ? queen.dist : 99;
@@ -744,7 +798,7 @@ function tickPlay(dt) {
   for (const p of G.parts) {
     if (p.taken) continue;
     const on = ((tAll + p.phase) % 1.6) < 0.12;
-    p.led.visible = on; p.glowL.intensity = on ? 0.8 : 0;
+    p.led.visible = on;
   }
   const near = nearestPart();
   $("prompt").hidden = !near;
@@ -775,7 +829,7 @@ function ambience(dt, wd, qd, running) {
   loops.crickets.vol((night ? 0.34 : 0.08) * quiet * (G.inTunnel ? 0.4 : 1), 0.8);
   loops.wind.vol(0.2 * (G.inTunnel ? 0.3 : 1));
   loops.gusts.vol(0.1 + 0.08 * Math.sin(tAll * 0.13));
-  loops.static.vol(Math.pow(G.static, 1.3) * 0.55, 0.05);
+  loops.static.vol((0.1 * G.static + 0.55 * THREE.MathUtils.smoothstep(G.static, 0.55, 1)) * 0.9, 0.05);
   const exert = clamp01(1 - G.stamina);
   loops.run.vol(clamp01(exert * 1.3) * 0.5, 0.5);
   loops.scared.vol(clamp01(G.fear * 1.2) * 0.45, 0.6);
@@ -801,7 +855,7 @@ function ambience(dt, wd, qd, running) {
   G.thunderT -= dt;
   if (G.thunderT < 0) { G.thunderT = 80 + Math.random() * 90; Audio.oneShot("thunder", { bus: "amb", vol: 0.5, reverb: 0.4 }); }
   // the Queen far off, before she comes close
-  if (L >= 1 && L < 4) {
+  if (L >= 1 && L < 3 && G.cameoDone) {
     G.roarT -= dt;
     if (G.roarT < 0) { G.roarT = 45 + Math.random() * 40; farRoar(0.8); }
   }

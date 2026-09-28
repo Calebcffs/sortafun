@@ -53,7 +53,7 @@
   .sets select { font-family: "VT323", monospace; font-size: 18px; background: #000; color: #f2f2e8; border: 1px solid #f2f2e8; }
   .loadbar { width: min(60%, 420px); height: 10px; border: 2px solid #f2f2e8; }
   .loadbar div { height: 100%; width: 0; background: #f2f2e8; }
-  .intro-text { font-size: clamp(18px, 2.8vw, 32px); max-width: 860px; white-space: pre-wrap; text-align: left; min-height: 8em; line-height: 1.2; }
+  .intro-text { font-size: clamp(18px, 2.8vw, 32px); max-width: 860px; white-space: pre-wrap; text-align: center; line-height: 1.3; opacity: 0; }
   .skip { position: absolute; bottom: 5%; right: 4%; font-size: clamp(14px, 1.6vw, 20px); opacity: .5; }
   .end-body { font-size: clamp(17px, 2.2vw, 26px); max-width: 760px; line-height: 1.25; }
   .end-body .unlock { color: #ffd76a; }
@@ -73,11 +73,11 @@
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./deeptime/assets.js": "./deeptime/assets.js?v=451e2f86",
-  "./deeptime/audio.js": "./deeptime/audio.js?v=05d3c383",
-  "./deeptime/dinos.js": "./deeptime/dinos.js?v=38311c64",
-  "./deeptime/main.js": "./deeptime/main.js?v=bfbad992",
-  "./deeptime/tape.js": "./deeptime/tape.js?v=41c430bf",
-  "./deeptime/world.js": "./deeptime/world.js?v=aa0b75ab"
+  "./deeptime/audio.js": "./deeptime/audio.js?v=2d8a89e2",
+  "./deeptime/dinos.js": "./deeptime/dinos.js?v=704b4ddb",
+  "./deeptime/main.js": "./deeptime/main.js?v=28ba3224",
+  "./deeptime/tape.js": "./deeptime/tape.js?v=3b5e435f",
+  "./deeptime/world.js": "./deeptime/world.js?v=d2e0d274"
 } }
 </script>
 </head>
@@ -163,7 +163,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=f52f1ce8"></script>
-<script type="module" src="deeptime/main.js?v=bfbad992"></script>
+<script type="module" src="deeptime/main.js?v=28ba3224"></script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
 if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "deeptime");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>

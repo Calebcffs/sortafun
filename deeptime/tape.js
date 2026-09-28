@@ -33,7 +33,7 @@ void main() {
   float t = uTime;
   float line = floor(uv.y * uRes.y * 0.5);
   // tracking: slow wobble + bands that jump, worse with static/glitch
-  float trouble = uStatic * 0.9 + uGlitch;
+  float trouble = uStatic * 0.35 + uGlitch;
   float wob = (vn(uv.y * 6.0 + t * 1.3) - 0.5) * 0.0018;
   float band = step(0.985 - trouble * 0.25, vn(uv.y * 14.0 - t * 9.0)) * (h1(line + floor(t * 30.0)) - 0.5) * (0.015 + trouble * 0.09);
   // head switching tear at the bottom
@@ -58,13 +58,15 @@ void main() {
   col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), 0.18 - uDawn * 0.08);
   // grain + scanlines
   float g = h2(vUv * uRes + fract(t * 7.13) * 100.0) - 0.5;
-  col += g * (0.055 + uStatic * 0.2);
+  col += g * (0.055 + uStatic * 0.07);
   col *= 0.93 + 0.07 * sin(vUv.y * uRes.y * 1.5708);
   // static: snow and white bars
   float snow = h2(floor(vUv * uRes * 0.5) + floor(t * 50.0));
   float bars = step(0.9, vn(vUv.y * 40.0 + t * 20.0)) * 0.5;
   float s = clamp(uStatic, 0.0, 1.0);
-  col = mix(col, vec3(snow * 0.9 + bars * 0.3), clamp(s * s * 1.1 + uGlitch * 0.35, 0.0, 1.0));
+  // a light fizz while it builds, the full snow only right at the end
+  float sv = s * 0.12 + smoothstep(0.55, 1.0, s) * 0.95;
+  col = mix(col, vec3(snow * 0.9 + bars * 0.3), clamp(sv + uGlitch * 0.3, 0.0, 1.0));
   // vignette, off-screen edges black
   col *= smoothstep(0.95, 0.25, length(cc * vec2(1.15, 1.0)));
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) col = vec3(0.0);

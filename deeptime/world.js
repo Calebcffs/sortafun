@@ -323,30 +323,58 @@ function boxGeo(w, h, d, tile = 2) {
 // building it
 // ------------------------------------------------------------------
 export const W = {
-  near: [], nearDist: 52,
-  scene: null, root: null, spots: [], fern: null, lamps: [], blinkers: [], beam: null, parts: [],
+  near: [], nearDist: 40, lamps: [], lampGroup: null, pool: [],
+  scene: null, root: null, spots: [], fern: null, blinkers: [], beam: null, parts: [],
 };
 
 export function build(scene, opts = {}) {
   W.scene = scene;
   W.root = new THREE.Group();
   scene.add(W.root);
+  W.lampGroup = new THREE.Group();
+  W.root.add(W.lampGroup);
   const R = rng(opts.seed || 1987);
   terrain();
   landmarks(R);
   forest(R);
   clutter(R);
   fence();
+  markers();
+  // the pooled lights for the lamps
+  for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xffc98a, 0, 16, 1.7); scene.add(l); W.pool.push(l); }
+  // everything else (landmark meshes) only draws near you
+  const known = new Set(W.near.map((n) => n.mesh));
+  for (const c of W.root.children) {
+    if (known.has(c) || c === W.ground || c === W.lampGroup || c === W.fenceParts) continue;
+    const b = new THREE.Box3().setFromObject(c);
+    if (b.isEmpty()) continue;
+    const sp = b.getBoundingSphere(new THREE.Sphere());
+    if (sp.radius > 60) continue;
+    W.near.push({ mesh: c, x: sp.center.x, z: sp.center.z, extra: sp.radius });
+  }
   return W;
 }
 
-function terrain() {
-  const seg = 280;
-  const geo = new THREE.PlaneGeometry(HALF * 2, HALF * 2, seg, seg);
+// the ground, in 8x8 tiles so the ones behind you and past the fog aren't
+// drawn. normals come from height() so tiles meet without seams; uvs are
+// world-based so the texture runs straight across.
+function tileGeo(x0, z0, size, seg) {
+  const geo = new THREE.PlaneGeometry(size, size, seg, seg);
   geo.rotateX(-Math.PI / 2);
-  const p = geo.attributes.position;
-  for (let i = 0; i < p.count; i++) p.setY(i, height(p.getX(i), p.getZ(i)));
-  geo.computeVertexNormals();
+  geo.translate(x0 + size / 2, 0, z0 + size / 2);
+  const p = geo.attributes.position, n = geo.attributes.normal, uv = geo.attributes.uv;
+  const e = 0.6;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i);
+    p.setY(i, height(x, z));
+    const nx = height(x - e, z) - height(x + e, z), nz = height(x, z - e) - height(x, z + e);
+    const l = Math.hypot(nx, 2 * e, nz);
+    n.setXYZ(i, nx / l, (2 * e) / l, nz / l);
+    uv.setXY(i, (x + HALF) / (HALF * 2), 1 - (z + HALF) / (HALF * 2));
+  }
+  return geo;
+}
+function terrain() {
   const tile = (HALF * 2) / 3.2; // one texture tile per 3.2m
   const mat = pbrMat("forest_leaves_02", tile, { roughness: 1 });
   const maskTex = buildMask();
@@ -396,10 +424,17 @@ function terrain() {
         vec3 mapN = mix(mix(nL, nD, smoothstep(0.2, 0.8, M3.r)), nG, smoothstep(0.3, 0.8, M3.g)) * 2.0 - 1.0;`);
   };
   mat.normalScale.set(1.2, 1.2);
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.receiveShadow = true;
-  W.root.add(mesh);
-  W.ground = mesh;
+  const ground = new THREE.Group();
+  const N = 8, size = (HALF * 2) / N;
+  for (let ix = 0; ix < N; ix++) for (let iz = 0; iz < N; iz++) {
+    const x0 = -HALF + ix * size, z0 = -HALF + iz * size;
+    const m = new THREE.Mesh(tileGeo(x0, z0, size, 34), mat);
+    m.receiveShadow = true;
+    ground.add(m);
+    W.near.push({ mesh: m, x: x0 + size / 2, z: z0 + size / 2, extra: size * 0.72 });
+  }
+  W.root.add(ground);
+  W.ground = ground;
 }
 
 // ------------------------------------------------------------------
@@ -445,10 +480,10 @@ function trunkVariant(R, H) {
   tr.computeVertexNormals();
   bark.push(tr);
   // dead stubs on the lower trunk: the thing your light catches and you think it's an arm
-  const nStub = 7 + Math.floor(R() * 7);
+  const nStub = 5 + Math.floor(R() * 5);
   for (let s = 0; s < nStub; s++) {
     const y = 2.2 + R() * (H * 0.5), len = 0.4 + R() * 1.4, a = R() * Math.PI * 2;
-    const st = new THREE.CylinderGeometry(0.012, 0.05, len, 5, 1, true);
+    const st = new THREE.CylinderGeometry(0.012, 0.05, len, 4, 1, true);
     st.translate(0, len / 2, 0);
     st.rotateZ(-Math.PI / 2 + 0.25 + R() * 0.5); // out and a bit down
     st.rotateY(a);
@@ -459,9 +494,9 @@ function trunkVariant(R, H) {
   const barkGeo = mergeGeometries(bark.map((g) => g.toNonIndexed()));
   // the canopy: whorls of drooping boughs from ~55% of the height up
   const boughs = [];
-  for (let y = H * 0.55; y < H; y += 0.9 + R() * 0.6) {
+  for (let y = H * 0.55; y < H; y += 1.5 + R() * 0.9) {
     const k = 1 - (y - H * 0.55) / (H * 0.45);
-    const n = 4 + Math.floor(R() * 3), len = 0.8 + k * 2.6;
+    const n = 3 + Math.floor(R() * 2), len = 1 + k * 2.8;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + R();
       const q = new THREE.PlaneGeometry(len, len * 0.55);
@@ -664,6 +699,7 @@ function fence() {
     }
   }
   const panel = new THREE.Mesh(mergeGeometries(pieces), linkM);
+  W.fenceParts = panel;
   panel.receiveShadow = true;
   W.root.add(panel);
   const pg = new THREE.CylinderGeometry(0.035, 0.035, H + 0.55, 4); pg.translate(0, (H + 0.55) / 2, 0);
@@ -686,6 +722,33 @@ function fence() {
   const lock = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.09, 0.03), gm); lock.position.set(0.2, gy + 1, FENCE + 0.03); W.root.add(lock);
 }
 
+// reflector posts along the trails: a white band that lights up in your beam
+function markers() {
+  const pts = [];
+  for (const P of PATHS) {
+    for (let i = 0; i < P.length - 1; i++) {
+      const [x0, z0] = P[i], [x1, z1] = P[i + 1];
+      const len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(len / 13));
+      const nx = -(z1 - z0) / len, nz = (x1 - x0) / len;
+      for (let k = 0; k < n; k++) {
+        const a = (k + 0.5) / n, side = (k % 2 ? 1 : -1) * 1.9;
+        const x = x0 + (x1 - x0) * a + nx * side, z = z0 + (z1 - z0) * a + nz * side;
+        if (!inside(x, z) || Math.hypot(x, z) < CRATER.r + 2 || LANDMARKS.some((L) => Math.hypot(x - L.x, z - L.z) < 6)) continue;
+        pts.push([x, z]);
+      }
+    }
+  }
+  const post = new THREE.CylinderGeometry(0.05, 0.06, 1.0, 5); post.translate(0, 0.5, 0);
+  const band = new THREE.CylinderGeometry(0.062, 0.062, 0.12, 6); band.translate(0, 0.86, 0);
+  const pm = new THREE.InstancedMesh(post, new THREE.MeshStandardMaterial({ color: 0x5a4a34, roughness: 0.9 }), pts.length);
+  const bm = new THREE.InstancedMesh(band, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, emissive: 0x222222 }), pts.length);
+  const m = new THREE.Matrix4();
+  pts.forEach(([x, z], i) => { m.makeTranslation(x, height(x, z) - 0.05, z); pm.setMatrixAt(i, m); bm.setMatrixAt(i, m); });
+  pm.computeBoundingSphere(); bm.computeBoundingSphere();
+  W.root.add(pm, bm);
+  W.markerCount = pts.length;
+}
+
 // ------------------------------------------------------------------
 // the ten landmarks + the crater
 // ------------------------------------------------------------------
@@ -693,6 +756,64 @@ function local(L, lx, lz) {
   const c = Math.cos(L.ry), s = Math.sin(L.ry);
   return [L.x + lx * c + lz * s, L.z - lx * s + lz * c];
 }
+// a lamp at a landmark: the part (if this landmark gets one) sits in its light.
+// kind: pole (work light on a stand), street (the trailer's), bulb (hanging),
+// flare (red, on the ground), lantern (on the ground). the real light comes
+// from a pool of 2 PointLights that follow the nearest lit lamps (constant
+// light count, so no shader recompiles); from far off you see the halo.
+const LAMP_KINDS = {
+  pole: { color: 0xffd9a0, power: 26, range: 16 },
+  street: { color: 0xffc98a, power: 30, range: 18 },
+  bulb: { color: 0xffc070, power: 16, range: 11 },
+  flare: { color: 0xff3a1c, power: 22, range: 14 },
+  lantern: { color: 0xffa850, power: 14, range: 10 },
+};
+function lampAt(L, lx, lz, kind, h, yAbs) {
+  const [x, z] = local(L, lx, lz);
+  const y = (yAbs !== undefined ? yAbs : floorAt(x, z)) + h;
+  const K = LAMP_KINDS[kind];
+  const g = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0x3a3a38, metalness: 0.7, roughness: 0.5 });
+  if (kind === "pole") {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, h, 5), metal); pole.position.set(x, y - h / 2, z); g.add(pole);
+    for (let i = 0; i < 3; i++) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 4), metal); const a = i * 2.1; leg.position.set(x + Math.cos(a) * 0.3, y - h + 0.35, z + Math.sin(a) * 0.3); leg.rotation.set(Math.sin(a) * 0.6, 0, -Math.cos(a) * 0.6); g.add(leg); }
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.26, 0.16), metal); head.position.set(x, y + 0.05, z); head.lookAt(x, y - 2, z + 1); g.add(head);
+  } else if (kind === "bulb") {
+    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.5, 4), metal); wire.position.set(x, y + 0.3, z); g.add(wire);
+  } else if (kind === "flare") {
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.25, 6), new THREE.MeshStandardMaterial({ color: 0x8a1a10 })); stick.rotation.z = 1.4; stick.position.set(x, y - h + 0.02, z); g.add(stick);
+  } else if (kind === "lantern") {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.06, 8), metal); base.position.set(x, y - 0.13, z); g.add(base);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.08, 8), metal); cap.position.set(x, y + 0.15, z); g.add(cap);
+  }
+  const bulbM = new THREE.MeshBasicMaterial({ color: K.color });
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(kind === "flare" ? 0.035 : 0.06, 8, 6), bulbM);
+  bulb.position.set(x, y, z); g.add(bulb);
+  // the glow bleeds around trunks in the mist, so it's drawn over them and
+  // dimmed by how many trunks are in the way (tick)
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex(), color: K.color, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false, transparent: true, opacity: 0.7 }));
+  halo.renderOrder = 5;
+  halo.position.set(x, y, z); halo.scale.setScalar(2.5);
+  W.lampGroup.add(g); W.lampGroup.add(halo);
+  const lamp = { lm: L.id, pos: new THREE.Vector3(x, y, z), kind, K, g, bulb, halo, on: 0, target: 0, t: Math.random() * 3, flick: 1 };
+  W.lamps.push(lamp);
+  L.lamp = lamp;
+  // the lamp spot goes first: parts always sit in the light
+  const [sx, sz] = local(L, lx + 0.7, lz + 0.5);
+  L.spots.unshift({ x: sx, z: sz, y: (yAbs !== undefined ? yAbs : floorAt(sx, sz)) + 0.02, ry: L.ry + lx });
+  return lamp;
+}
+let haloT = null;
+function haloTex() {
+  if (haloT) return haloT;
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.12, "rgba(255,255,255,0.7)"); gr.addColorStop(0.4, "rgba(255,255,255,0.15)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  haloT = new THREE.CanvasTexture(c);
+  return haloT;
+}
+
 function spot(L, lx, lz, lift = 0, yAbs) {
   const [x, z] = local(L, lx, lz);
   L.spots.push({ x, z, y: yAbs !== undefined ? yAbs : floorAt(x, z) + lift, ry: L.ry + (lx * 7 + lz * 3) });
@@ -741,16 +862,13 @@ function landmarks(R) {
     place("street_lamp_01", lx, lz, l.ry + Math.PI, 1);
     circle(lx, lz, 0.2);
     const lampTop = bounds("street_lamp_01").max.y;
-    const pl = new THREE.PointLight(0xffc98a, 18, 24, 2);
-    pl.position.set(lx, floorAt(lx, lz) + lampTop - 0.4, lz);
-    W.root.add(pl);
-    W.lamps.push({ light: pl, base: 18, t: 0 });
     const [gx, gz] = local(l, -4, 3.4); place("portable_generator", gx, gz, l.ry + 0.4, 1, undefined, { collide: true });
     const [kx, kz] = local(l, 4.8, 3.3); place("old_military_crate", kx, kz, l.ry - 0.2, 1, undefined, { collide: true });
     const [bx, bz] = local(l, 6.5, 2.6); place("barrel_03", bx, bz, 0.3, 1, undefined, { collide: true });
     spot(l, 2.5, 2.2, 0.52);
     spot(l, 4.8, 3.3, 0.72);
     spot(l, -3, -2.6, 0.02);
+    lampAt(l, -6.5, 3.2, "street", lampTop - 0.4);
   }
 
   // 2. the truck, nosed into a pine
@@ -765,6 +883,7 @@ function landmarks(R) {
     spot(l, -2.4, 3.2, 0.02);
     spot(l, 2.6, 1.8, 0.02);
     spot(l, 0.5, -3.6, 0.02);
+    lampAt(l, -3.2, 2.2, "pole", 1.9);
   }
 
   // 3. the dig: the pit, grid strings, a tarp, a sifting screen, bones
@@ -815,6 +934,7 @@ function landmarks(R) {
     spot(l, -3.2, -2.4, 0, pitY + 0.02);
     spot(l, -DIG.w / 2 - 2.2, 2.4, 0, y + 0.97);
     spot(l, 7, -4, 0.8);
+    lampAt(l, -DIG.w / 2 - 0.8, -1.6, "pole", 2.1);
   }
 
   // 4. the culvert under the berm road
@@ -838,6 +958,7 @@ function landmarks(R) {
     spot(l, 0.6, 0.5, 0.02, fy + 0.08);
     spot(l, -1.9, len / 2 + 1.8, 0.02);
     spot(l, 1.6, -len / 2 - 2, 0.02);
+    lampAt(l, -0.8, 2.6, "flare", 0.05, fy + 0.06);
   }
 
   // 5. the water tower
@@ -871,6 +992,7 @@ function landmarks(R) {
     spot(l, spread + 0.2, -spread + 0.2, 0.02);
     spot(l, spread + 0.9, 0.9, 0.02);
     spot(l, -4.5, 3, 0.55);
+    lampAt(l, spread + 0.9, -spread + 1.2, "pole", 2.2);
   }
 
   // 6. the radio mast
@@ -896,8 +1018,9 @@ function landmarks(R) {
     // the red light on top, blinking
     const red = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2010 }));
     red.position.set(l.x, y + H + 0.2, l.z); W.root.add(red);
-    const rl = new THREE.PointLight(0xff2010, 0, 30, 2); rl.position.copy(red.position); W.root.add(rl);
-    W.blinkers.push({ mesh: red, light: rl });
+    const rh = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex(), color: 0xff2010, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0.8 }));
+    rh.position.copy(red.position); rh.scale.setScalar(3); W.lampGroup.add(rh);
+    W.blinkers.push({ mesh: red, halo: rh });
     // guy wires
     const wp = [];
     for (let s = 0; s < 3; s++) { const a = s * 2.09 + 0.4; const gx = l.x + Math.cos(a) * 14, gz = l.z + Math.sin(a) * 14; wp.push(new THREE.Vector3(l.x, y + H * 0.8, l.z), new THREE.Vector3(gx, height(gx, gz), gz)); }
@@ -914,6 +1037,7 @@ function landmarks(R) {
     spot(l, 3, 2.5, 0.02);
     spot(l, -3.5, 2.8, 1.42);
     spot(l, 0, -1.4, 0.02);
+    lampAt(l, 3.6, 0.6, "pole", 1.8);
   }
 
   // 7. the outhouses
@@ -943,6 +1067,7 @@ function landmarks(R) {
     spot(l, -1.3, -0.4, 0.52);
     spot(l, 3.6, -0.2, 0.3);
     spot(l, 1.3, -1.6, 0.02);
+    lampAt(l, -1.3, 1.0, "bulb", 2.45);
   }
 
   // 8. the nest
@@ -967,6 +1092,7 @@ function landmarks(R) {
     spot(l, 0.2, -0.3, 0.44);
     spot(l, -2.9, 2.6, 0.03);
     spot(l, 3.9, 1.6, 0.03);
+    lampAt(l, 0.9, 1.3, "flare", 0.05);
   }
 
   // 9. the rocks: an outcrop of big mossy boulders
@@ -980,6 +1106,7 @@ function landmarks(R) {
     spot(l, 1.6, 4.8, 0.02);
     spot(l, -5.6, 0.4, 0.02);
     spot(l, 4.2, -2.8, 0.02);
+    lampAt(l, 1.0, 4.4, "lantern", 0.16);
   }
 
   // 10. the grove: a giant dead tree ringed by ferns that shouldn't exist
@@ -1018,6 +1145,7 @@ function landmarks(R) {
     spot(l, 0, 2.3, 0.02);
     spot(l, -5.5, -4, 0.02);
     spot(l, 6, 3.5, 0.02);
+    lampAt(l, 0.9, 3.0, "lantern", 0.16);
   }
 
   // the Anchor crater: scorched bowl, the torn ring of the machine, a searchlight still burning
@@ -1035,10 +1163,13 @@ function landmarks(R) {
     place("vintage_video_camera", 1.8, 5.2, 2.6, 1);
     const sl = place("portable_searchlight", -4.5, 4.5, -0.9, 1.3);
     // its beam: a real spot light, lying on its side, pointing into the trees
-    const beam = new THREE.SpotLight(0xdde6ff, 60, 60, 0.28, 0.5, 2);
-    beam.position.set(-4.5, floorAt(-4.5, 4.5) + 0.9, 4.5);
-    beam.target.position.set(-24, floorAt(-24, 20) + 3, 20);
-    W.root.add(beam, beam.target);
+    // its beam: a soft additive cone into the trees (a real SpotLight costs every pixel)
+    const from = new THREE.Vector3(-4.5, floorAt(-4.5, 4.5) + 0.9, 4.5), to = new THREE.Vector3(-24, floorAt(-24, 20) + 3, 20);
+    const len = from.distanceTo(to);
+    const cg = new THREE.ConeGeometry(3.2, len, 16, 1, true); cg.translate(0, -len / 2, 0);
+    const beam = new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ color: 0x9aa6c0, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    beam.position.copy(from); beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), to.clone().sub(from).normalize());
+    W.root.add(beam);
     W.beam = beam;
   }
 
@@ -1105,15 +1236,46 @@ export function leaveDeep() {
 // ------------------------------------------------------------------
 // per frame: the flickering lamp, the blinking mast light
 // ------------------------------------------------------------------
+const _v = new THREE.Vector3();
 export function tick(dt, t, cam) {
   if (cam && !W.deepOn) for (const n of W.near) n.mesh.visible = Math.hypot(n.x - cam.position.x, n.z - cam.position.z) < W.nearDist + (n.extra || 0);
+  // lamps: fade toward target, flicker, halo seen from far off (pulled inside the far plane)
   for (const L of W.lamps) {
+    L.on += (L.target - L.on) * Math.min(1, dt * (L.target ? 2 : 1.2));
     L.t -= dt;
-    if (L.t < 0) { L.on = Math.random() > 0.35; L.t = L.on ? 0.05 + Math.random() * 2.5 : 0.03 + Math.random() * 0.25; }
-    L.light.intensity = L.on ? L.base * (0.85 + Math.random() * 0.15) : L.base * 0.02;
+    if (L.t < 0) {
+      const nervous = L.kind === "flare" ? 0.5 : L.dying ? 0.8 : 0.08;
+      L.flick = Math.random() < nervous ? 0.15 + Math.random() * 0.5 : 0.9 + Math.random() * 0.1;
+      L.t = L.flick < 0.8 ? 0.03 + Math.random() * 0.12 : 0.2 + Math.random() * (L.kind === "flare" ? 0.3 : 3);
+    }
+    const k = L.on * L.flick;
+    L.bulb.visible = k > 0.05;
+    L.g.visible = true;
+    if (!cam) continue;
+    const d = L.pos.distanceTo(cam.position);
+    const far = cam.far * 0.85;
+    // far off it's a soft glow in the mist, bigger the further it has to carry
+    const glowSize = 2.4 + d * 0.09;
+    if (d > far) { _v.copy(L.pos).sub(cam.position).multiplyScalar(far / d).add(cam.position); L.halo.position.copy(_v); L.halo.scale.setScalar(glowSize * far / d); }
+    else { L.halo.position.copy(L.pos); L.halo.scale.setScalar(glowSize); }
+    L.occT = (L.occT || 0) - dt;
+    if (L.occT < 0) { L.occT = 0.25 + Math.random() * 0.1; L.occ = occlusion(cam.position.x, cam.position.z, L.pos.x, L.pos.z); }
+    L.halo.material.opacity = k * Math.min(0.9, 0.4 + d / 70) * (1 - 0.55 * (L.occ || 0)) * (d > 190 ? Math.max(0, 1 - (d - 190) / 60) : 1);
+    L.halo.visible = L.halo.material.opacity > 0.01;
+  }
+  // the pool: nearest lit lamps get the three real lights
+  if (cam) {
+    const lit = W.lamps.filter((L) => L.on * L.flick > 0.05).map((L) => [L.pos.distanceTo(cam.position), L]).sort((a, b) => a[0] - b[0]);
+    W.pool.forEach((P, i) => {
+      const e = lit[i];
+      if (!e || e[0] > 60) { P.intensity = 0; return; }
+      const L = e[1];
+      P.position.copy(L.pos); P.color.setHex(L.K.color); P.distance = L.K.range;
+      P.intensity = L.K.power * L.on * L.flick;
+    });
   }
   for (const B of W.blinkers) {
     const on = (t % 2.4) < 0.35;
-    B.mesh.visible = on; B.light.intensity = on ? 6 : 0;
+    B.mesh.visible = on; B.halo.visible = on;
   }
 }

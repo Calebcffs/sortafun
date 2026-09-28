@@ -177,6 +177,40 @@ export const Audio = {
     const s = ctx.createGain(); s.gain.value = 0.5; lp.connect(s); s.connect(this.revIn);
   },
 
+  // a deep cinematic boom: sub drop, a thud, a long dark tail. vol ~0.5-1
+  boom(vol = 0.8, dest = "music") {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const sat = ctx.createWaveShaper();
+    const curve = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 2.2); }
+    sat.curve = curve;
+    const out = ctx.createGain(); out.gain.value = vol;
+    sat.connect(out); out.connect(bus[dest]);
+    const s2 = ctx.createGain(); s2.gain.value = 0.45; out.connect(s2); s2.connect(this.revIn);
+    for (const [f0, f1, v, len] of [[58, 26, 0.9, 3.8], [87, 40, 0.35, 2.4], [29, 22, 0.6, 4.5]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + len * 0.8);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g); g.connect(sat); o.start(t); o.stop(t + len + 0.1);
+    }
+    const n = noiseSrc(1), nf = ctx.createBiquadFilter(), ng = ctx.createGain();
+    nf.type = "lowpass"; nf.frequency.setValueAtTime(600, t); nf.frequency.exponentialRampToValueAtTime(90, t + 0.8);
+    ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+    n.connect(nf); nf.connect(ng); ng.connect(sat); n.start(t); n.stop(t + 1.3);
+  },
+  // an old clock: tick (hi) and tock (lo)
+  tick(hi = true, vol = 0.25) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const n = noiseSrc(0.1), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = "bandpass"; f.frequency.value = hi ? 2600 : 1500; f.Q.value = 9;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    n.connect(f); f.connect(g); g.connect(bus.tape); n.start(t); n.stop(t + 0.08);
+    const o = ctx.createOscillator(), og = ctx.createGain();
+    o.frequency.value = hi ? 880 : 620; og.gain.setValueAtTime(vol * 0.2, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    o.connect(og); og.connect(bus.tape); o.start(t); o.stop(t + 0.06);
+  },
+
   music: null,
   startMusic() {
     if (this.music) return;

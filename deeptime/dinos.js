@@ -113,7 +113,7 @@ function glow() {
   if (glowTex) return glowTex;
   const c = document.createElement("canvas"); c.width = c.height = 64;
   const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, "rgba(255,255,230,1)"); gr.addColorStop(0.2, "rgba(220,255,160,0.9)"); gr.addColorStop(0.5, "rgba(120,200,60,0.25)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.2, "rgba(255,255,255,0.85)"); gr.addColorStop(0.5, "rgba(255,255,255,0.22)"); gr.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   glowTex = new THREE.CanvasTexture(c);
   return glowTex;
@@ -215,7 +215,7 @@ export class Dino {
     const hs = new THREE.Vector3(); head.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), hs);
     const inv = 1 / hs.x;
     for (const e of eyes) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: 0xd8ff9a, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: this.kind === "rex" ? 0xffb030 : 0xff2a14, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
       s.scale.setScalar(size * inv);
       head.updateMatrixWorld(true);
       s.position.copy(head.worldToLocal(e.clone()));
@@ -300,6 +300,11 @@ export class Watcher {
         this.pos.x += (dx / dist) * sp * dt; this.pos.z += (dz / dist) * sp * dt;
         collide(this.pos, 0.6);
         d.play("walk", 0.3, sp / 2.2);
+        this.stepT = (this.stepT || 0) - dt * sp;
+        if (this.stepT < 0 && dist < 38) {
+          this.stepT = 0.9;
+          g.audio.oneShot(Math.random() < 0.6 ? "step_leaves" : "step_soft", { pos: this.pos, vol: 0.55, ref: 2.5, rate: 1.15 + Math.random() * 0.15 });
+        }
       } else d.play("idle", 0.3, 0.6);
     }
     this.pos.y = floorAt(this.pos.x, this.pos.z);
@@ -376,7 +381,7 @@ export class Queen {
     const L = g.level;
     if (this.state === "off") {
       d.visible = false;
-      if (L < 4 || !g.queenOn) return;
+      if (L < 3 || !g.queenOn) return;
       this.next -= dt;
       if (this.next <= 0) this.walkBy(g);
       return;
@@ -389,11 +394,12 @@ export class Queen {
       speed = 2.6;
       d.play("walk", 0.5, 0.75);
       // noticed?
-      const moving = g.speed > 3.2, lit = g.lit(this.pos, 3.2, 34);
-      if (this.state === "walk" && dist < 42 && (moving || lit) && !g.inTunnel) this.suspicion += dt * (lit ? 2.2 : 1.4);
+      const moving = g.speed > 3.4, lit = g.lit(this.pos, 3.2, 34);
+      const reach = this.calm ? 14 : 42;
+      if (this.state === "walk" && dist < reach && (moving || (lit && !this.calm)) && !g.inTunnel) this.suspicion += dt * (lit ? 2.2 : 1.4);
       else this.suspicion = Math.max(0, this.suspicion - dt * 0.5);
       if (this.suspicion > 0.7) { this.state = "alert"; this.t = 0; this.roared = false; g.onQueenAlert(this); }
-      if (this.state === "leave" && dist > 95) { this.state = "off"; this.next = lerp(95, 50, (L - 4) / 4) * (0.8 + this.R() * 0.4); }
+      if (this.state === "leave" && dist > 95) { this.state = "off"; this.calm = false; this.next = lerp(95, 50, clamp01((L - 3) / 5)) * (0.8 + this.R() * 0.4); }
       if (this.state === "walk" && this.travelled > this.pathLen) { this.state = "leave"; }
     } else if (this.state === "alert") {
       this.t += dt;
@@ -432,8 +438,29 @@ export class Queen {
     d.update(dt);
   }
 
+  // her first appearance: she walks through the lit spot you just took a part
+  // from, while you're walking away. she isn't hunting yet (only a sprint right
+  // past her gets her attention), she's just there.
+  cameo(g, spot) {
+    const P = g.player;
+    const away = Math.atan2(spot.x - P.x, spot.z - P.z); // from you toward the lamp
+    const side = this.R() < 0.5 ? 1 : -1;
+    const across = away + side * (Math.PI / 2) + (this.R() - 0.5) * 0.5;
+    const hx = Math.sin(across), hz = Math.cos(across);
+    this.pos.set(spot.x - hx * 32, 0, spot.z - hz * 32);
+    this.pos.x = Math.max(-FENCE + 5, Math.min(FENCE - 5, this.pos.x));
+    this.pos.z = Math.max(-FENCE + 5, Math.min(FENCE - 5, this.pos.z));
+    this.heading = Math.atan2(spot.x + hx * 40 - this.pos.x, spot.z + hz * 40 - this.pos.z);
+    this.d.root.rotation.y = this.heading;
+    this.pathLen = 75; this.travelled = 0; this.suspicion = 0;
+    this.state = "walk"; this.calm = true;
+    this.d.visible = true;
+    g.onQueenArrive(this);
+  }
+
   // cross your path at 18-30m, from out of sight
   walkBy(g) {
+    this.calm = false;
     const P = g.player;
     const side = this.R() < 0.5 ? 1 : -1;
     const across = g.yaw + (this.R() - 0.5) * 1.2 + Math.PI / 2 * side; // her heading, roughly across your view
