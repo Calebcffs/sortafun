@@ -31,6 +31,7 @@
   var ITEMS = [
     { id: "site",      name: "the whole site" },
     { id: "city",      name: "City Sandbox",         file: "city.html",         game: true },
+    { id: "draw",      name: "Draw and Guess",       file: "draw.html",         game: true },
     { id: "crossword", name: "Crossword",            file: "crossword.html",    game: true },
     { id: "five",      name: "Five Letters",         file: "five.html",         game: true },
     { id: "sides",     name: "Four Sides",           file: "sides.html",        game: true },

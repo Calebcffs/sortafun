@@ -206,6 +206,12 @@ Two one-time clicks in the Firebase console, then it runs by itself:
 
 Until then the game still works, online mode just says "offline, playing solo".
 
+**Draw and Guess** (`draw.html`) uses the same Realtime Database and the same
+anonymous sign-in, under `draw/rooms/`. Its rules are in the same
+`database.rules.json`, so nothing extra to set up. Traffic is small: strokes
+are batched ~20 times a second while someone draws and deleted after each
+turn.
+
 Free (Spark) plan limits that matter: 100 simultaneous connections (fine,
 the game stops at 50) and **10 GB a month downloaded**. Each player receives
 everyone else's updates, so bandwidth goes up with the square of the crowd:

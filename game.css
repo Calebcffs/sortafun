@@ -30,6 +30,7 @@ body.k-skill  { --accent: #1fb85a; --accent2: #56d98a; }
 body.k-art    { --accent: #ff3d8b; --accent2: #ff72ab; }
 body.k-hang   { --accent: #1d8fe8; --accent2: #4db0ff; }
 body.k-base   { --accent: #3a3550; --accent2: #5a5475; }
+body.k-online { --accent: #12a8a0; --accent2: #3fd0c6; }
 
 * { box-sizing: border-box; }
 html { background: var(--sky); -webkit-text-size-adjust: 100%; }
@@ -99,7 +100,7 @@ a { color: var(--accent); }
 .hb-nav .n-hang  { background: #1d8fe8; }
 .hb-nav .n-base  { background: #3a3550; }
 /* the section you're in gets a little yellow underline */
-body:is(.k-word, .k-puzzle, .k-skill) .n-games,
+body:is(.k-word, .k-puzzle, .k-skill, .k-online) .n-games,
 body.k-art .n-art, body.k-hang .n-hang, body.k-base .n-base {
   box-shadow: inset 0 -3px 0 rgba(0,0,0,.2), 0 0 0 3px #fff, 0 0 0 5px var(--ink);
 }

@@ -20,6 +20,7 @@
     --word: #ff7a1a;
     --puzzle: #8a4dff;
     --skill: #1fb85a;
+    --online: #12a8a0;
     --art: #ff3d8b;
     --hang: #1d8fe8;
     --base: #3a3550;
@@ -514,6 +515,7 @@
   .c-word   { background: var(--word); }
   .c-puzzle { background: var(--puzzle); }
   .c-skill  { background: var(--skill); }
+  .c-online { background: var(--online); }
   .c-art    { background: var(--art); }
   .c-hang   { background: var(--hang); }
   .c-base   { background: var(--base); }
@@ -700,7 +702,7 @@
   }
 </style>
 <script src="sfx.js?v=95063f31"></script>
-<script src="feedback.js?v=42ecaa3e"></script>
+<script src="feedback.js?v=d90de861"></script>
 </head>
 <body>
 <div class="site">
@@ -736,6 +738,7 @@
   <div class="ticker" aria-label="news ticker">
     <span class="lbl">NEWS</span>
     <div class="lane"><div class="run" id="tickrun">
+      <span><b>DRAW AND GUESS!</b> make a room, send the link, draw badly with your friends.</span>
       <span><b>WE'RE IN ALPHA!</b> things will break. hit the pink <b>feedback</b> bubble and tell us what.</span>
       <span><b>RATE EVERY GAME!</b> 0 to 5 stars, right on each game's page. be honest, we can take it.</span>
       <span><b>CITY SANDBOX STORY MODE!</b> HALCYON: 12 chapters, three nights, one very tall ladder.</span>
@@ -794,12 +797,13 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>fifteen games. your best today lands on the leaderboards.</p>
+      <p>sixteen games, two of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
         <button class="chip" data-cat="puzzle" aria-pressed="false"><i class="c-puzzle"></i>Puzzles</button>
         <button class="chip" data-cat="skill" aria-pressed="false"><i class="c-skill"></i>Skill</button>
+        <button class="chip" data-cat="online" aria-pressed="false"><i class="c-online"></i>Online</button>
       </div>
     </div>
     <div class="panel-body"><div class="grid" id="gamegrid"></div></div>
@@ -842,12 +846,12 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-28</span> NEW: <b>draw and guess</b>. make a room, send your friends the link, one draws and everyone else guesses in the chat. our first party game.</li>
         <li><span class="when">09-28</span> sortafun is officially in <b>alpha</b>. every game has a feedback bubble now: rate it 0 to 5 stars, report a bug, or pitch an idea.</li>
         <li><span class="when">09-27</span> city sandbox has a story mode: HALCYON. 12 chapters, three nights, cutscenes, a sniper vigil, a plane, the metro, and a very tall ladder.</li>
         <li><span class="when">09-26</span> city sandbox: zombies, nights, crews, safehouses and a helicopter out. ride with friends in any car, bike or the plane.</li>
         <li><span class="when">09-25</span> birdie grew up into CITY SANDBOX. walk, loot, drive, fly and shoot round the city with up to 50 people. you can still be a bird.</li>
         <li><span class="when">09-25</span> the site makes noise now! clicks, dings and a little 8-bit tune. the speaker button turns it off.</li>
-        <li><span class="when">09-24</span> three new daily word games: five letters, four sides and word grab.</li>
       </ul>
     </section>
     <section class="panel howto">
@@ -890,7 +894,8 @@
  * ------------------------------------------------------------------ */
 
 var GAMES = [
-  { id: "city",      name: "City Sandbox",   url: "city.html",      cat: "skill",  key: "city",     badge: "new",   blurb: "online zombie survival. crew up, hold your safehouse through the night, fuel the radio mast and catch the chopper out." },
+  { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
+  { id: "city",      name: "City Sandbox",   url: "city.html",      cat: "online",  key: "city",     badge: "new",   blurb: "online zombie survival. crew up, hold your safehouse through the night, fuel the radio mast and catch the chopper out." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
   { id: "sides",     name: "Four Sides",     url: "sides.html",     cat: "word",   key: "sides",    badge: "new",   blurb: "twelve letters round a box. chain words together until you've used them all." },
@@ -928,7 +933,7 @@ var BASEMENT = [
   { id: "watch",  name: "Watch the Guy",        url: "watch.html",  cat: "base", key: "watch",  blurb: "the anti-game. it scores you for looking away." }
 ];
 
-var CAT_LABEL = { word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout", base: "basement" };
+var CAT_LABEL = { online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout", base: "basement" };
 var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY" };
 
 /* ------------------------------------------------------------------ *
@@ -1036,6 +1041,26 @@ var THUMB = {
       '<circle cx="-4" cy="-12" r="1.8" fill="' + K + '"/><circle cx="4" cy="-12" r="1.8" fill="' + K + '"/>' +
       '<rect x="4" y="2" width="20" height="6" rx="2" fill="#ff9a3c" stroke="' + K + '" stroke-width="2"/><rect x="8" y="7" width="4" height="6" fill="#555" stroke="' + K + '" stroke-width="1.5"/></g>' +
       '<g transform="translate(22 104)"><rect x="-10" y="-9" width="20" height="12" rx="2" fill="#c47a3a" stroke="' + K + '" stroke-width="2"/><path d="M-10 -4 h20" stroke="' + K + '" stroke-width="2"/><rect x="-2" y="-6" width="4" height="4" fill="#ffd43b" stroke="' + K + '" stroke-width="1"/></g>';
+  },
+  draw: function () {
+    var bubble = function (x, y, w, t, fill, col) {
+      return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="17" rx="6" fill="' + fill + '" stroke="' + K + '" stroke-width="2.5"/>' +
+        txt(x + w / 2, y + 13, t, 11, col);
+    };
+    return bg("#3fd0c6") + '<circle cx="18" cy="14" r="34" fill="#96f2d7"/>' +
+      // easel legs + board
+      '<path d="M30 112 L46 40 M86 112 L70 40 M58 40 L58 108"' + S + ' fill="none"/>' +
+      '<rect x="18" y="14" width="80" height="62" rx="4" fill="#fff"' + S + '/>' +
+      // the doodle: a cat
+      '<g fill="none" stroke="' + K + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M44 58 q14 12 28 0 M46 36 l-4 -10 l10 6 M70 36 l4 -10 l-10 6"/><ellipse cx="58" cy="46" rx="16" ry="14" fill="#ffd43b"/>' +
+        '<path d="M52 44 h.1 M64 44 h.1" stroke-width="4"/><path d="M55 51 q3 3 6 0 M40 48 h-8 M40 52 h-7 M76 48 h8 M76 52 h7"/></g>' +
+      '<path d="M88 64 l12 -18 l4 3 l-12 18 z" fill="#ff3d8b"' + S + '/>' +
+      // the chat
+      bubble(106, 22, 48, "dog?", "#fff", K) +
+      bubble(102, 46, 52, "a lion?", "#fff", K) +
+      bubble(98, 70, 58, "CAT!", "#1fb85a", "#fff") +
+      outlined(146, 102, "+250", 13, "#ffd43b");
   },
   five: function () {
     var rows = [["c", "r", "a", "n", "e"], ["s", "l", "i", "m", "e"], ["g", "r", "e", "a", "t"]];
@@ -1382,7 +1407,7 @@ function tile(item, badge) {
   a.dataset.cat = item.cat;
   a.dataset.find = (item.name + " " + item.blurb + " " + CAT_LABEL[item.cat]).toLowerCase();
   var b = badge || item.badge;
-  var isGame = /^(word|puzzle|skill|base)$/.test(item.cat);
+  var isGame = /^(online|word|puzzle|skill|base)$/.test(item.cat);
   a.innerHTML =
     (b ? '<span class="badge b-' + b + '">' + BADGE_LABEL[b] + "</span>" : "") +
     '<span class="thumb">' + thumb(item.id) + "</span>" +

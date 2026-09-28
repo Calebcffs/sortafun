@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>draw and guess &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=11f5d647">
+<style>
+  .wrap.dg { max-width: 1100px; }
+  [hidden] { display: none !important; }
+
+  /* ---------- the way in ---------- */
+  .door { max-width: 460px; margin: 6px auto 0; display: flex; flex-direction: column; gap: 14px; text-align: left; }
+  .door label { font-family: var(--chunky); font-size: 16px; display: block; margin-bottom: 5px; }
+  .door input { width: 100%; font-size: 16px; }
+  .door .or { text-align: center; color: var(--muted); font-size: 12px; }
+  .joinrow { display: flex; gap: 8px; }
+  .joinrow input { text-transform: uppercase; letter-spacing: 4px; font-weight: 700; text-align: center; }
+  .big-go {
+    font-family: var(--chunky); font-weight: 400; font-size: 22px; color: #fff; width: 100%;
+    background: linear-gradient(#5cf08e, #18a84b); border: 3px solid var(--ink); border-radius: 999px;
+    padding: 9px 18px 8px; box-shadow: 0 4px 0 var(--ink); text-shadow: 0 2px 0 rgba(0,0,0,.3); cursor: pointer;
+  }
+  .big-go:hover { background: linear-gradient(#ffe36e, #ffb300); color: var(--ink); text-shadow: none; }
+  .big-go:disabled { opacity: .5; cursor: default; }
+  .note { font-size: 12px; color: var(--muted); min-height: 16px; text-align: center; }
+  .note.err { color: #d6204e; font-weight: 700; }
+
+  /* ---------- the room ---------- */
+  .bar {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+    background: var(--soft); border: 3px solid var(--ink); border-radius: 12px; padding: 6px 12px; margin-bottom: 10px;
+  }
+  .bar .rnd { text-align: left; font-family: var(--chunky); font-size: 17px; }
+  .bar .rnd small { display: block; font-family: var(--body); font-size: 11px; color: var(--muted); }
+  .word { font-family: "Courier New", Courier, monospace; font-weight: 700; font-size: 26px; letter-spacing: 6px; white-space: pre; }
+  .word small { font-family: var(--body); font-size: 12px; letter-spacing: 0; color: var(--muted); margin-left: 6px; }
+  .word.mine { font-family: var(--chunky); font-weight: 400; letter-spacing: 1px; color: var(--accent); }
+  .clock {
+    justify-self: end; width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--ink);
+    display: grid; place-items: center; font-family: var(--chunky); font-size: 18px; background: #fff;
+  }
+  .clock.idle { visibility: hidden; }
+  .clock.low { background: #ffd6de; color: #d6204e; animation: dg-pulse .5s ease-in-out infinite alternate; }
+  @keyframes dg-pulse { to { transform: scale(1.08); } }
+
+  .table { display: grid; grid-template-columns: 190px 1fr 270px; gap: 10px; align-items: stretch; text-align: left; }
+  .people { align-self: start; }
+
+  .people { list-style: none; margin: 0; padding: 0; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; background: #fff; }
+  .people li { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-bottom: 1px solid #e1e5f0; font-size: 13px; }
+  .people li:last-child { border-bottom: 0; }
+  .people li.me { background: #fffbe0; }
+  .people li.got { background: #dcf8e5; }
+  .people .av { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center;
+    font-family: var(--chunky); font-size: 14px; color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
+  .people .who { flex: 1; min-width: 0; }
+  .people .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .people .who small { color: var(--muted); font-size: 11px; }
+  .people .tag { flex: none; font-size: 15px; }
+
+  .stagecol { min-width: 0; }
+  .stage { position: relative; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; background: #fff; }
+  #cv { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; border: 0; border-radius: 0; touch-action: none; background: #fff; }
+  .stage.can-draw #cv { cursor: crosshair; }
+  .stage.can-draw.fill #cv { cursor: cell; }
+
+  .over {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 14px;
+    background: rgba(29,27,46,.72); color: #fff; text-align: center; overflow-y: auto;
+  }
+  .over .card { background: #fff; color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; padding: 16px 18px;
+    box-shadow: 0 5px 0 rgba(0,0,0,.4); max-width: 520px; width: 100%; }
+  .over h2 { margin: 0 0 8px; font-family: var(--chunky); font-weight: 400; font-size: 26px; }
+  .over p { margin: 6px 0; font-size: 13px; }
+  .picks { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  .picks button { font-family: var(--chunky); font-weight: 400; font-size: 20px; padding: 8px 16px 7px; }
+  .picks button small { display: block; font-family: var(--body); font-size: 10px; color: var(--muted); font-weight: 700; }
+  .code { font-family: var(--chunky); font-size: 44px; letter-spacing: 8px; line-height: 1; color: var(--accent); margin: 2px 0 6px; }
+  .settings { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 8px 10px; align-items: center; text-align: left; margin: 10px 0; font-size: 13px; }
+  .settings select { padding: 4px 6px; }
+  .over .card.lobby { padding: 12px 16px; }
+  .over .card.lobby h2 { font-size: 15px; font-family: var(--body); font-weight: 700; color: var(--muted); margin: 0; }
+  .settings textarea { width: 100%; height: 44px; min-height: 0; font-size: 13px; resize: vertical; }
+  .settings select:disabled, .settings textarea:disabled { opacity: .7; }
+  .settings .full { grid-column: 1 / -1; }
+  .result { list-style: none; padding: 0; margin: 10px 0 0; text-align: left; font-size: 13px; }
+  .result li { display: flex; justify-content: space-between; padding: 3px 6px; border-bottom: 1px dashed #d4d9ea; }
+  .result li b.plus { color: #18a84b; }
+  .podium { display: flex; justify-content: center; align-items: flex-end; gap: 8px; margin: 12px 0 4px; }
+  .podium div { width: 110px; border: 3px solid var(--ink); border-radius: 10px 10px 0 0; padding: 6px 4px; background: var(--soft); font-size: 12px; }
+  .podium div b { display: block; font-family: var(--chunky); font-weight: 400; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .podium .p1 { height: 120px; background: #ffe36e; } .podium .p2 { height: 95px; background: #e6eaf6; } .podium .p3 { height: 75px; background: #ffd2b0; }
+  .podium .medal { font-size: 22px; }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; margin-top: 8px; }
+  .tools[aria-disabled="true"] { visibility: hidden; }
+  .swatches { display: grid; grid-template-columns: repeat(8, 22px); gap: 3px; }
+  .sw { width: 22px; height: 22px; padding: 0; border: 2px solid var(--ink); border-radius: 6px; box-shadow: none; cursor: pointer; }
+  .sw.on { outline: 3px solid var(--sun); outline-offset: 1px; transform: scale(1.1); }
+  .tools .tb { padding: 5px 9px; font-size: 13px; }
+  .tools .tb.on { background: linear-gradient(#fffbe0, #ffe36e); }
+  .sizes { display: flex; gap: 3px; }
+  .sizes button { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; }
+  .sizes button i { display: block; background: var(--ink); border-radius: 50%; }
+
+  .chat { border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; background: #fff; display: flex; flex-direction: column; min-height: 300px; }
+  .log { flex: 1 1 0; overflow-y: auto; padding: 6px 8px; font-size: 13px; line-height: 1.35; min-height: 220px; }
+  .log div { padding: 2px 0; overflow-wrap: anywhere; }
+  .log div b { font-weight: 700; }
+  .log .sys { color: var(--muted); font-style: italic; }
+  .log .ok { color: #13843d; font-weight: 700; }
+  .log .close { color: #b87900; font-weight: 700; }
+  .log .gd { color: #13843d; opacity: .8; }
+  .log .draw { color: #1d8fe8; font-weight: 700; }
+  .say { display: flex; border-top: 3px solid var(--ink); }
+  .say input { flex: 1; min-width: 0; border: 0; border-radius: 0; padding: 9px 10px; font-size: 14px; }
+  .say input:focus { box-shadow: inset 0 0 0 3px var(--sun); }
+  .say button { border: 0; border-left: 3px solid var(--ink); border-radius: 0; box-shadow: none; }
+
+  .roomfoot { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+
+  @media (max-width: 900px) {
+    .table { grid-template-columns: 1fr; }
+    .stagecol { order: 1; }
+    .chat { order: 2; min-height: 0; }
+    .log { flex: none; height: 180px; min-height: 0; }
+    .people { order: 3; display: flex; flex-wrap: wrap; }
+    .people li { flex: 1 1 45%; border-bottom: 0; border-right: 1px solid #e1e5f0; }
+    .word { font-size: 20px; letter-spacing: 4px; }
+    .bar { grid-template-columns: auto 1fr auto; padding: 5px 8px; }
+    .code { font-size: 32px; }
+    .tools[aria-disabled="true"] { display: none; }
+    .settings { grid-template-columns: auto 1fr; }
+  }
+</style>
+<script src="sfx.js?v=95063f31"></script>
+<script src="feedback.js?v=d90de861"></script>
+</head>
+<body class="k-online">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a><a class="n-base" href="index.html#basement">Basement</a></nav></header>
+<div class="wrap dg">
+  <h1>draw and guess</h1>
+  <p class="sub" id="how">one person draws, everyone else guesses in the chat. guess fast for more points, and the artist scores when you get it. 2 to 8 players: make a room and send your friends the link.</p>
+
+  <!-- the way in -->
+  <div class="door" id="door">
+    <div><label for="nm">your name</label><input id="nm" maxlength="16" autocomplete="off" spellcheck="false" placeholder="what should we call you?"></div>
+    <button class="big-go" id="make">make a room &#9654;</button>
+    <div class="or">or join a friend's room</div>
+    <div class="joinrow"><input id="jc" maxlength="4" autocomplete="off" spellcheck="false" placeholder="CODE" aria-label="room code"><button id="join">join</button></div>
+    <div class="note" id="doornote"></div>
+  </div>
+
+  <!-- the room -->
+  <div id="room" hidden>
+    <div class="bar">
+      <div class="rnd" id="rnd">lobby<small id="rndsub"></small></div>
+      <div class="word" id="word" aria-live="polite"></div>
+      <div class="clock" id="clock" aria-label="time left">&nbsp;</div>
+    </div>
+    <div class="table">
+      <ul class="people" id="people" aria-label="players"></ul>
+      <div class="stagecol">
+        <div class="stage" id="stage">
+          <canvas id="cv" width="800" height="600" aria-label="the drawing"></canvas>
+          <div class="over" id="over" hidden><div class="card" id="card"></div></div>
+        </div>
+        <div class="tools" id="tools" aria-disabled="true">
+          <div class="swatches" id="swatches"></div>
+          <div class="sizes" id="sizes"></div>
+          <button class="tb on" data-tool="pen" title="pen">pen</button>
+          <button class="tb" data-tool="fill" title="fill bucket">fill</button>
+          <button class="tb" data-tool="eraser" title="eraser">eraser</button>
+          <button class="tb" id="undo" title="undo (ctrl+z)">&#8630; undo</button>
+          <button class="tb" id="wipe" title="clear the drawing">clear</button>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="log" id="log" aria-live="polite"></div>
+        <form class="say" id="say" autocomplete="off"><input id="msg" maxlength="100" placeholder="type your guess here..." aria-label="guess or chat"><button>send</button></form>
+      </div>
+    </div>
+    <div class="roomfoot">
+      <span>room <b id="codefoot"></b> &middot; <a href="#" id="copy2">copy invite link</a></span>
+      <button id="leave" class="tb">leave room</button>
+    </div>
+  </div>
+
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js?v=ff02e94a"></script>
+<script src="leaderboard.js?v=277a9229"></script>
+<script src="draw-words.js?v=2ca9bb34"></script>
+<script type="module">
+/* draw and guess. Firebase Realtime Database, no server of our own.
+ *
+ * draw/rooms/<CODE>/
+ *   meta     { st: lobby|choose|draw|reveal|over, g: game no, n: turn no,
+ *              rd/rds: round of, ts: seconds a turn, ord: "uid,uid..." turn
+ *              order, i: index in ord, dr: drawer uid, dl: deadline (server
+ *              ms), cw: custom words, co: custom only, c, t }
+ *   players/<uid> { n: name, c: colour, j: joined }   (onDisconnect removes it)
+ *   turns/<n> { d: drawer, h: sha256(salt:word), s: salt, l: "5 3" word
+ *              lengths, st: start, du: seconds, e: guessers at the start,
+ *              g: game no, hi: hint ("_a___"), w: the word (after the turn),
+ *              correct/<uid>: server time they got it }
+ *   ink/<n>/<id> { k: l line | f fill | u undo | x clear, p: "x,y,x,y..",
+ *              c: colour, w: width, gp: stroke group }
+ *   chat/<id> { u, n, m, k: m message | o "got it", q: turn no, gd: sent by
+ *              someone who already knows the word, t }
+ *
+ * Who does what: the host (whoever has been in the room longest) moves the
+ * game along; the drawer picks the word, writes hints and reveals it at the
+ * end. Every change to meta is a transaction guarded on the turn + state it
+ * expects, so two clients that both think they're host can't double-step.
+ * Nobody writes anybody else's score: every client adds the scores up from
+ * the turn records. The word itself only exists on the drawer's machine
+ * until the turn ends; guessers check a salted hash locally, so a right
+ * guess never goes out as chat. (Someone with devtools can still brute
+ * force the hash against the word list. It's a party game.)
+ */
+const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+const ROOT = "draw/rooms/";
+const MAX_PLAYERS = 8;
+const CHOOSE_MS = 15000, REVEAL_MS = 6000;
+const W = 800, H = 600;
+const COLOURS = ["#1d1b2e", "#ffffff", "#8a879c", "#e03131", "#ff7a1a", "#ffd43b", "#1fb85a", "#0b7a3e",
+                 "#4dabf7", "#1d5fd8", "#8a4dff", "#ff3d8b", "#8b5a2b", "#ffc9a8", "#f783ac", "#96f2d7"];
+const AV = ["#ff7a1a", "#8a4dff", "#1fb85a", "#ff3d8b", "#1d8fe8", "#e03131", "#12a8a0", "#b8860b", "#6741d9", "#f76707", "#2b8a3e", "#c2255c", "#1971c2", "#5c940d", "#862e9c", "#495057"];
+const SIZES = [4, 10, 20, 38];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sfx = (n) => { if (window.SortafunSFX) SortafunSFX.play(n); };
+const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+const cleanName = (s) => String(s || "").replace(/[^\x20-\x7e]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
+const rid = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "abcdefghijkmnpqrstuvwxyz23456789"[b % 32]).join("");
+async function sha(s) {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");
+}
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* ------------------------------------------------------------------ *
+ * connecting. draw gets its own named Firebase app with per-tab sign-in,
+ * so two tabs in one browser are two players (the default app, used by
+ * leaderboard.js for the feedback form, is left alone)
+ * ------------------------------------------------------------------ */
+let F = null;
+function connect() {
+  if (F) return F;
+  const cfg = window.SORTAFUN_FIREBASE;
+  if (!cfg || !cfg.databaseURL) return Promise.reject(new Error("offline"));
+  F = Promise.all([import(SDK + "firebase-app.js"), import(SDK + "firebase-auth.js"), import(SDK + "firebase-database.js")])
+    .then(async ([A, U, D]) => {
+      const app = A.getApps().find((a) => a.name === "draw") || A.initializeApp(cfg, "draw");
+      let auth;
+      try { auth = U.initializeAuth(app, { persistence: U.browserSessionPersistence }); } catch (e) { auth = U.getAuth(app); }
+      const cred = await U.signInAnonymously(auth);
+      const db = D.getDatabase(app, cfg.databaseURL);
+      let off = 0;
+      D.onValue(D.ref(db, ".info/serverTimeOffset"), (s) => { off = s.val() || 0; });
+      return { D, db, uid: cred.user.uid, now: () => Date.now() + off, ref: (p) => D.ref(db, p) };
+    });
+  F.catch(() => { F = null; });
+  return F;
+}
+
+/* ------------------------------------------------------------------ *
+ * state
+ * ------------------------------------------------------------------ */
+let C = null;            // the connection
+let code = null;         // room code
+let R = (p) => null;     // ref under this room
+let meta = null, players = {}, turns = {};
+let unsub = [], inkUnsub = [];
+let inkN = -1;           // which turn's ink we're drawing
+let ops = [], undone = new Set(), mineKeys = new Set();
+let myWord = null, myWordN = -1, choices = null, choicesN = -1, picking = false;
+let lastHint = "", revealedN = -1, seenGotN = new Set(), usedWords = new Set();
+let tool = "pen", colour = COLOURS[0], size = SIZES[1];
+let lastSt = "", lastN = -1;
+let leaving = false;
+
+const present = () => Object.keys(players).sort((a, b) => (players[a].j - players[b].j) || (a < b ? -1 : 1));
+const hostUid = () => present()[0];
+const amHost = () => C && hostUid() === C.uid;
+const amDrawer = () => C && meta && meta.dr === C.uid && (meta.st === "choose" || meta.st === "draw");
+const curTurn = () => (meta && turns[meta.n]) || {};
+const iGotIt = () => !!(C && curTurn().correct && curTurn().correct[C.uid]);
+const nameOf = (u) => (players[u] && players[u].n) || "someone";
+
+/* ------------------------------------------------------------------ *
+ * the door: make or join
+ * ------------------------------------------------------------------ */
+const nm = $("nm"), jc = $("jc"), doornote = $("doornote");
+try { nm.value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
+function doorMsg(t, err) { doornote.textContent = t; doornote.classList.toggle("err", !!err); }
+function myName() {
+  const n = cleanName(nm.value);
+  if (!n) { doorMsg("type a name first", true); nm.focus(); return null; }
+  try { localStorage.setItem("sortafun-name", n); } catch (e) {}
+  return n;
+}
+const hashCode = () => (location.hash.replace("#", "").toUpperCase().match(/^[A-Z]{4}$/) || [])[0];
+if (hashCode()) { jc.value = hashCode(); $("make").hidden = true; document.querySelector(".or").textContent = "you've been invited to room " + hashCode(); }
+
+$("make").addEventListener("click", async () => {
+  const n = myName(); if (!n) return;
+  $("make").disabled = true; doorMsg("making a room...");
+  try {
+    C = await connect();
+    const L = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    for (let tries = 0; tries < 8; tries++) {
+      const c = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => L[b % L.length]).join("");
+      const t = Math.floor(C.now() - 3000);
+      const res = await C.D.runTransaction(C.ref(ROOT + c + "/meta"), (cur) => {
+        if (cur) return; // taken
+        return { st: "lobby", g: 0, n: 0, rd: 0, rds: 3, ts: 80, i: -1, ord: "", dr: "", dl: 0, cw: "", co: false, c: t, t };
+      });
+      if (res.committed) { await enter(c, n); return; }
+    }
+    doorMsg("couldn't find a free room code, try again", true);
+  } catch (e) { console.warn(e); doorMsg("couldn't reach the server. online play needs a connection", true); }
+  $("make").disabled = false;
+});
+async function joinClick() {
+  const n = myName(); if (!n) return;
+  const c = jc.value.toUpperCase().replace(/[^A-Z]/g, "");
+  if (!/^[A-Z]{4}$/.test(c)) { doorMsg("room codes are 4 letters", true); jc.focus(); return; }
+  $("join").disabled = true; doorMsg("knocking...");
+  try {
+    C = await connect();
+    await enter(c, n);
+  } catch (e) { console.warn(e); doorMsg(e.message === "nope" ? "no room with that code" : e.message === "full" ? "that room is full (8 max)" : "couldn't reach the server", true); }
+  $("join").disabled = false;
+}
+$("join").addEventListener("click", joinClick);
+jc.addEventListener("keydown", (e) => { if (e.key === "Enter") joinClick(); });
+nm.addEventListener("keydown", (e) => { if (e.key === "Enter") (hashCode() ? joinClick() : $("make").click()); });
+
+async function enter(c, n) {
+  const { D } = C;
+  const m = await D.get(C.ref(ROOT + c + "/meta"));
+  if (!m.exists()) throw new Error("nope");
+  const ps = (await D.get(C.ref(ROOT + c + "/players"))).val() || {};
+  if (!ps[C.uid] && Object.keys(ps).length >= MAX_PLAYERS) throw new Error("full");
+  code = c;
+  R = (p) => C.ref(ROOT + code + (p ? "/" + p : ""));
+  const me = R("players/" + C.uid);
+  await D.onDisconnect(me).remove();
+  let col = 0; for (const ch of C.uid) col = (col * 31 + ch.charCodeAt(0)) % AV.length;
+  await D.set(me, { n, c: col, j: Math.floor(C.now() - 2000) });
+  // someone deleted our record while we're still here (a stale onDisconnect)? put it back
+  history.replaceState(null, "", "#" + code);
+  $("door").hidden = true; $("room").hidden = false; $("how").hidden = true;
+  $("codefoot").textContent = code;
+  sysLine("you joined room " + code + ". share the link to invite people.");
+  listen();
+  sfx("whoosh");
+}
+
+function listen() {
+  const { D } = C;
+  unsub.push(D.onValue(R("meta"), (s) => { meta = s.val(); onMeta(); }));
+  unsub.push(D.onValue(R("players"), (s) => {
+    const before = players; players = s.val() || {};
+    for (const u in players) if (!before[u] && Object.keys(before).length && u !== C.uid) { sysLine(players[u].n + " joined"); sfx("pop"); }
+    for (const u in before) if (!players[u]) sysLine(before[u].n + " left");
+    if (!players[C.uid] && code && !leaving) { // our record went (a flaky connection): rejoin quietly
+      D.set(R("players/" + C.uid), { n: before[C.uid] ? before[C.uid].n : cleanName(nm.value) || "player", c: before[C.uid] ? before[C.uid].c : 0, j: Math.floor(C.now() - 2000) }).catch(() => {});
+    }
+    renderPeople(); renderOverlay();
+  }));
+  unsub.push(D.onValue(R("turns"), (s) => { turns = s.val() || {}; onTurns(); }));
+  unsub.push(D.onChildAdded(D.query(R("chat"), D.limitToLast(60)), (s) => chatIn(s.val())));
+  tickTimer = setInterval(tick, 250);
+}
+
+$("leave").addEventListener("click", async () => {
+  leaving = true;
+  if (C && code) { try { await C.D.remove(R("players/" + C.uid)); } catch (e) {} }
+  location.hash = ""; location.reload();
+});
+function copyLink(e) {
+  if (e) e.preventDefault();
+  const url = location.origin + location.pathname + "#" + code;
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(
+    () => sysLine("invite link copied: " + url), () => sysLine("invite link: " + url));
+}
+$("copy2").addEventListener("click", copyLink);
+
+/* ------------------------------------------------------------------ *
+ * scores: everyone adds them up the same way from the turn records
+ * ------------------------------------------------------------------ */
+function turnPoints(t) {
+  const pts = {};
+  if (!t || !t.st || !t.du) return pts;
+  const got = Object.entries(t.correct || {}).sort((a, b) => a[1] - b[1]);
+  got.forEach(([u, at], rank) => {
+    const frac = Math.max(0, Math.min(1, 1 - (at - t.st) / (t.du * 1000)));
+    pts[u] = Math.round(50 + 200 * frac) + (rank === 0 ? 50 : rank === 1 ? 25 : 0);
+  });
+  if (got.length && t.d) pts[t.d] = Math.round(50 + 150 * got.length / Math.max(t.e || 1, got.length));
+  return pts;
+}
+function scores() {
+  const s = {};
+  if (!meta) return s;
+  for (const n in turns) {
+    const t = turns[n];
+    if (!t || t.g !== meta.g) continue;
+    const p = turnPoints(t);
+    for (const u in p) s[u] = (s[u] || 0) + p[u];
+  }
+  return s;
+}
+
+/* ------------------------------------------------------------------ *
+ * reacting to the room
+ * ------------------------------------------------------------------ */
+function onMeta() {
+  if (!meta) { sysLine("this room has gone"); return; }
+  if (meta.n !== inkN) watchInk(meta.n);
+  if (meta.st !== lastSt || meta.n !== lastN) {
+    // announcements, once per change
+    if (meta.st === "choose") { sysLine(nameOf(meta.dr) + " is picking a word", "draw"); if (meta.dr === C.uid) sfx("start"); }
+    if (meta.st === "draw" && lastSt !== "draw") { sysLine(nameOf(meta.dr) + " is drawing now", "draw"); sfx("whoosh"); }
+    if (meta.st === "over" && lastSt !== "over") {
+      const s = scores(), top = Object.keys(s).sort((a, b) => s[b] - s[a])[0];
+      if (window.SortafunSFX) SortafunSFX.result(top === C.uid ? "win" : "done");
+    }
+    if (meta.st === "lobby" && lastSt === "over") { usedWords.clear(); }
+    lastSt = meta.st; lastN = meta.n;
+  }
+  renderBar(); renderPeople(); renderOverlay(); renderTools();
+}
+
+function onTurns() {
+  const t = curTurn();
+  // somebody got it
+  for (const u in (t.correct || {})) {
+    const k = meta.n + ":" + u;
+    if (seenGotN.has(k)) continue;
+    seenGotN.add(k);
+    if (u === C.uid) sfx("great"); else sfx("good");
+  }
+  // the word came out at the end of a turn
+  if (t.w && revealedN !== meta.n && (meta.st === "reveal" || meta.st === "choose" || meta.st === "over")) {
+    revealedN = meta.n; usedWords.add(t.w);
+    sysLine("the word was: " + t.w, "ok");
+  }
+  renderBar(); renderPeople(); renderOverlay();
+}
+
+/* ------------------------------------------------------------------ *
+ * the clock: the host moves things on, the drawer does the drawer's jobs
+ * ------------------------------------------------------------------ */
+let tickTimer = null;
+function tick() {
+  if (!meta || !C) return;
+  renderClock();
+  drawerJobs();
+  if (amHost()) hostJobs();
+}
+
+function step(expectN, expectSt, change) {
+  return C.D.runTransaction(R("meta"), (cur) => {
+    if (!cur || cur.n !== expectN || cur.st !== expectSt) return; // someone beat us to it
+    const next = change(cur);
+    if (!next) return;
+    return Object.assign({}, cur, next, { t: Math.floor(C.now() - 2000) });
+  }).catch((e) => console.warn("[draw] step", e));
+}
+
+let hostBusy = false;
+async function hostJobs() {
+  if (hostBusy) return;
+  hostBusy = true;
+  try {
+    const now = C.now(), ps = present(), st = meta.st, n = meta.n, t = curTurn();
+    // new arrivals mid-game join the back of the turn order
+    if (st !== "lobby" && st !== "over") {
+      const ord = meta.ord ? meta.ord.split(",") : [];
+      const add = ps.filter((u) => ord.indexOf(u) === -1);
+      if (add.length) await step(n, st, (cur) => ({ ord: (cur.ord ? cur.ord + "," : "") + add.join(",") }));
+    }
+    if (st === "choose") {
+      if (!players[meta.dr] || now > meta.dl + 5000) await nextTurn(n, "choose", players[meta.dr] ? nameOf(meta.dr) + " didn't pick in time" : "the drawer left");
+    } else if (st === "draw") {
+      const guessers = ps.filter((u) => u !== meta.dr);
+      const allGot = guessers.length > 0 && guessers.every((u) => t.correct && t.correct[u]);
+      if (now > meta.dl || !players[meta.dr] || allGot || ps.length < 2) {
+        await step(n, "draw", () => ({ st: "reveal", dl: Math.floor(now + REVEAL_MS) }));
+      }
+    } else if (st === "reveal") {
+      if (now > meta.dl) await nextTurn(n, "reveal");
+    }
+  } finally { hostBusy = false; }
+}
+
+async function nextTurn(n, fromSt, why) {
+  const ps = present();
+  // tidy the finished turn's drawing away (the turn record stays, it holds the scores)
+  C.D.remove(R("ink/" + n)).catch(() => {});
+  if (why) sysLine(why + ". skipping.");
+  await step(n, fromSt, (cur) => {
+    const ord = cur.ord ? cur.ord.split(",") : [];
+    if (ps.length < 2) return { st: "over", dl: 0, dr: "" };
+    let i = cur.i, rd = cur.rd;
+    for (let k = 0; k < ord.length + 1; k++) {
+      i++;
+      if (i >= ord.length) { i = 0; rd++; }
+      if (rd > cur.rds) return { st: "over", dl: 0, dr: "", rd: cur.rds };
+      if (players[ord[i]]) break;
+    }
+    return { st: "choose", n: cur.n + 1, i, rd, dr: ord[i], dl: Math.floor(C.now() + CHOOSE_MS) };
+  });
+}
+
+async function startGame() {
+  const ps = present();
+  if (ps.length < 2) { sysLine("you need at least 2 players to start"); return; }
+  // clear out the last game's records first
+  try {
+    for (const n in turns) await C.D.remove(R("turns/" + n));
+    await C.D.remove(R("chat"));
+  } catch (e) { console.warn(e); }
+  const ord = shuffle(ps.slice());
+  await step(meta.n, meta.st, (cur) => ({
+    st: "choose", g: cur.g + 1, rd: 1, i: 0, ord: ord.join(","), dr: ord[0], n: cur.n + 1, dl: Math.floor(C.now() + CHOOSE_MS),
+  }));
+}
+
+/* drawer: pick (or get given) a word, drop hints, say what it was at the end */
+function wordPool() {
+  const WL = window.SORTAFUN_DRAW_WORDS || { easy: ["cat"], medium: ["volcano"], hard: ["gravity"] };
+  const custom = Array.from(new Set(String(meta.cw || "").split(/[,\n]/).map(norm).filter((w) => w.length >= 2 && w.length <= 24)));
+  const fresh = (list) => { const f = list.filter((w) => !usedWords.has(w)); return f.length ? f : list; };
+  const one = (list) => list[Math.floor(Math.random() * list.length)];
+  if (meta.co && custom.length >= 3) return shuffle(fresh(custom).slice()).slice(0, 3).map((w) => ({ w, lv: "yours" }));
+  const out = [];
+  [["easy", "easy"], ["medium", "medium"], ["hard", "hard"]].forEach(([k, lv]) => {
+    let w, tries = 0;
+    do {
+      const useCustom = custom.length && Math.random() < 0.35;
+      w = useCustom ? one(fresh(custom)) : one(fresh(WL[k]));
+      lv = useCustom ? "yours" : lv;
+    } while (out.some((o) => o.w === w) && ++tries < 20);
+    out.push({ w, lv });
+  });
+  return out;
+}
+
+async function pickWord(w) {
+  if (picking || !amDrawer() || meta.st !== "choose") return;
+  picking = true;
+  const n = meta.n, st = Math.floor(C.now());
+  const salt = rid(10);
+  myWord = norm(w); myWordN = n; lastHint = "";
+  const others = present().filter((u) => u !== C.uid).length;
+  try {
+    await C.D.update(R("turns/" + n), {
+      d: C.uid, h: await sha(salt + ":" + myWord), s: salt, l: myWord.split(" ").map((x) => x.length).join(" "),
+      st, du: meta.ts, e: Math.min(8, others), g: meta.g, hi: "",
+    });
+    await step(n, "choose", (cur) => (cur.dr === C.uid ? { st: "draw", dl: st + cur.ts * 1000 } : null));
+  } catch (e) { console.warn("[draw] pick", e); }
+  picking = false;
+}
+
+function drawerJobs() {
+  const n = meta.n;
+  if (meta.dr !== C.uid) return;
+  if (meta.st === "choose") {
+    if (choicesN !== n) { choices = wordPool(); choicesN = n; renderOverlay(); }
+    if (C.now() > meta.dl - 400 && myWordN !== n) pickWord(choices[Math.floor(Math.random() * choices.length)].w);
+  }
+  if (meta.st === "draw" && myWordN === n && myWord) {
+    // hints: one letter at half time, another at three quarters (long words only)
+    const t = curTurn(), total = (t.du || meta.ts) * 1000, gone = C.now() - (t.st || 0);
+    const letters = myWord.replace(/ /g, "").length;
+    const want = letters <= 3 ? 0 : gone > total * 0.75 && letters >= 6 ? 2 : gone > total * 0.5 ? 1 : 0;
+    const have = (lastHint.match(/[a-z]/g) || []).length;
+    if (want > have) {
+      const hint = (lastHint || myWord.replace(/[a-z]/g, "_")).split("");
+      const hidden = hint.map((c, i) => (c === "_" ? i : -1)).filter((i) => i >= 0);
+      const at = hidden[Math.floor(Math.random() * hidden.length)];
+      hint[at] = myWord[at];
+      lastHint = hint.join("");
+      C.D.set(R("turns/" + n + "/hi"), lastHint).catch(() => {});
+    }
+  }
+  if (meta.st === "reveal" && myWordN === n && myWord && !curTurn().w) {
+    C.D.set(R("turns/" + n + "/w"), myWord).catch(() => {});
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * rendering the room
+ * ------------------------------------------------------------------ */
+function renderBar() {
+  if (!meta) return;
+  const rnd = $("rnd"), word = $("word");
+  if (meta.st === "lobby") { rnd.innerHTML = "lobby<small>" + present().length + " of " + MAX_PLAYERS + " here</small>"; word.textContent = ""; return; }
+  if (meta.st === "over") { rnd.innerHTML = "game over<small>" + meta.rds + " rounds</small>"; word.textContent = ""; return; }
+  rnd.innerHTML = "round " + meta.rd + " of " + meta.rds + "<small>" + esc(nameOf(meta.dr)) + (meta.st === "choose" ? " is picking" : " is drawing") + "</small>";
+  word.classList.remove("mine");
+  const t = curTurn();
+  if (meta.st === "draw" && meta.dr === C.uid && myWordN === meta.n) {
+    word.classList.add("mine");
+    word.textContent = "draw: " + myWord;
+  } else if (meta.st === "draw" || meta.st === "reveal") {
+    if (meta.st === "reveal" && t.w) { word.textContent = t.w; return; }
+    const shape = t.hi || (t.l ? t.l.split(" ").map((k) => "_".repeat(+k)).join(" ") : "");
+    const shown = shape.split("").map((c) => (c === " " ? "  " : c)).join(" ");
+    word.innerHTML = esc(shown) + (t.l ? "<small>(" + esc(t.l.replace(/ /g, ", ")) + ")</small>" : "");
+    if (iGotIt()) word.innerHTML += "<small>you got it!</small>";
+  } else word.textContent = "";
+}
+
+function renderClock() {
+  const el = $("clock");
+  const idle = !meta || !meta.dl || meta.st === "lobby" || meta.st === "over";
+  el.classList.toggle("idle", idle);
+  if (idle) { el.innerHTML = "&nbsp;"; el.classList.remove("low"); return; }
+  const left = Math.max(0, Math.ceil((meta.dl - C.now()) / 1000));
+  el.textContent = left;
+  el.classList.toggle("low", meta.st === "draw" && left <= 10);
+}
+
+function renderPeople() {
+  if (!meta) return;
+  const s = scores(), t = curTurn();
+  const list = present().sort((a, b) => (s[b] || 0) - (s[a] || 0) || (players[a].j - players[b].j));
+  const host = hostUid();
+  $("people").innerHTML = list.map((u, rank) => {
+    const p = players[u], got = t.correct && t.correct[u] && meta.st !== "lobby";
+    const drawing = meta.dr === u && (meta.st === "choose" || meta.st === "draw");
+    return '<li class="' + (u === C.uid ? "me " : "") + (got ? "got" : "") + '">' +
+      '<span class="av" style="background:' + AV[p.c % AV.length] + '">' + esc(p.n.charAt(0).toUpperCase()) + "</span>" +
+      '<span class="who"><b>' + (meta.st !== "lobby" ? "#" + (rank + 1) + " " : "") + esc(p.n) + (u === C.uid ? " (you)" : "") + "</b>" +
+      "<small>" + (s[u] || 0) + " pts" + (u === host ? " &middot; host" : "") + "</small></span>" +
+      '<span class="tag">' + (drawing ? "&#9998;" : got ? "&#10004;" : u === host ? "&#9813;" : "") + "</span></li>";
+  }).join("");
+}
+
+function renderTools() {
+  const can = meta && meta.st === "draw" && meta.dr === C.uid && myWordN === meta.n;
+  $("tools").setAttribute("aria-disabled", String(!can));
+  $("stage").classList.toggle("can-draw", !!can);
+  $("stage").classList.toggle("fill", tool === "fill");
+  const msg = $("msg");
+  msg.placeholder = !meta || meta.st === "lobby" ? "say hi..." : can ? "chat (you can't say the word)" : iGotIt() ? "you got it! chat away" : "type your guess here...";
+}
+
+let overKey = "";
+function renderOverlay() {
+  if (!meta) return;
+  const over = $("over"), card = $("card");
+  const s = scores(), host = amHost(), t = curTurn();
+  let html = "", key = meta.st + ":" + meta.n + ":" + (host ? 1 : 0);
+  if (meta.st === "lobby") {
+    key += ":" + present().length + ":" + meta.rds + ":" + meta.ts + ":" + meta.co + ":" + (meta.cw || "").length;
+    html = "<h2>room code</h2><div class=\"code\">" + code + "</div>" +
+      '<button id="copy1" class="tb">copy invite link</button>' +
+      '<div class="settings">' +
+        '<label for="s-rds">rounds</label><select id="s-rds"' + (host ? "" : " disabled") + ">" + [1, 2, 3, 4, 5].map((r) => "<option" + (r === meta.rds ? " selected" : "") + ">" + r + "</option>").join("") + "</select>" +
+        '<label for="s-ts">draw time</label><select id="s-ts"' + (host ? "" : " disabled") + ">" + [30, 45, 60, 80, 100, 120].map((r) => '<option value="' + r + '"' + (r === meta.ts ? " selected" : "") + ">" + r + "s</option>").join("") + "</select>" +
+        '<label class="full" for="s-cw">your own words <small>(optional, comma separated. inside jokes welcome)</small></label>' +
+        '<textarea class="full" id="s-cw" maxlength="1500"' + (host ? "" : " disabled") + ' placeholder="' + (host ? "e.g. caleb's car, the blue sofa, karaoke night" : "the host can add words") + '">' + esc(meta.cw || "") + "</textarea>" +
+        '<label class="full"><input type="checkbox" id="s-co"' + (meta.co ? " checked" : "") + (host ? "" : " disabled") + "> only use our words (needs 3 or more)</label>" +
+      "</div>" +
+      (host
+        ? '<button class="big-go" id="start"' + (present().length < 2 ? " disabled" : "") + ">" + (present().length < 2 ? "waiting for 1 more player..." : "start the game &#9654;") + "</button>"
+        : "<p><b>waiting for " + esc(nameOf(hostUid())) + " (the host) to start</b></p>");
+  } else if (meta.st === "choose") {
+    if (meta.dr === C.uid && choices && choicesN === meta.n) {
+      key += ":picks";
+      html = "<h2>your turn to draw!</h2><p>pick a word. the others won't see it.</p><div class=\"picks\">" +
+        choices.map((c) => '<button data-w="' + esc(c.w) + '">' + esc(c.w) + "<small>" + c.lv + "</small></button>").join("") + "</div>";
+    } else {
+      key += ":wait";
+      html = "<h2>" + esc(nameOf(meta.dr)) + " is picking a word</h2><p>get ready to guess...</p>";
+    }
+  } else if (meta.st === "reveal") {
+    const p = turnPoints(t);
+    key += ":" + (t.w || "") + ":" + Object.keys(p).length;
+    const rows = present().map((u) => [u, p[u] || 0]).sort((a, b) => b[1] - a[1]);
+    html = "<h2>" + (t.w ? "the word was <u>" + esc(t.w) + "</u>" : "turn over") + "</h2>" +
+      (Object.keys(t.correct || {}).length ? "" : "<p>nobody got it!</p>") +
+      '<ul class="result">' + rows.map(([u, v]) => "<li><span>" + esc(nameOf(u)) + "</span><b class=\"" + (v ? "plus" : "") + "\">+" + v + "</b></li>").join("") + "</ul>";
+  } else if (meta.st === "over") {
+    const rows = present().map((u) => [u, s[u] || 0]).sort((a, b) => b[1] - a[1]);
+    key += ":" + rows.map((r) => r.join("=")).join(",");
+    const pod = [rows[1], rows[0], rows[2]].map((r, i) => r ? '<div class="p' + [2, 1, 3][i] + '"><span class="medal">' + ["&#129352;", "&#129351;", "&#129353;"][i] + "</span><b>" + esc(nameOf(r[0])) + "</b>" + r[1] + " pts</div>" : "").join("");
+    html = "<h2>" + (rows[0] ? esc(nameOf(rows[0][0])) + " wins!" : "game over") + "</h2><div class=\"podium\">" + pod + "</div>" +
+      (rows.length > 3 ? '<ul class="result">' + rows.slice(3).map(([u, v], i) => "<li><span>#" + (i + 4) + " " + esc(nameOf(u)) + "</span><b>" + v + "</b></li>").join("") + "</ul>" : "") +
+      (host ? '<p><button class="big-go" id="again">play again &#9654;</button></p>' : "<p>waiting for the host to start another game</p>");
+  } else { over.hidden = true; overKey = ""; return; }
+  over.hidden = false;
+  if (key === overKey) return; // don't rebuild under someone's cursor
+  overKey = key;
+  card.innerHTML = html;
+  card.classList.toggle("lobby", meta.st === "lobby");
+  const on = (id, ev, fn) => { const e = card.querySelector("#" + id); if (e) e.addEventListener(ev, fn); };
+  on("copy1", "click", copyLink);
+  on("start", "click", startGame);
+  on("again", "click", () => step(meta.n, "over", () => ({ st: "lobby", rd: 0, i: -1, dr: "", dl: 0 })));
+  const setting = (id, f) => on(id, "change", (e) => step(meta.n, "lobby", () => f(e.target)));
+  setting("s-rds", (el) => ({ rds: +el.value }));
+  setting("s-ts", (el) => ({ ts: +el.value }));
+  setting("s-cw", (el) => ({ cw: el.value.slice(0, 1500) }));
+  setting("s-co", (el) => ({ co: el.checked }));
+  card.querySelectorAll(".picks button").forEach((b) => b.addEventListener("click", () => pickWord(b.dataset.w)));
+}
+
+/* ------------------------------------------------------------------ *
+ * chat + guessing
+ * ------------------------------------------------------------------ */
+const log = $("log");
+function line(html, cls) {
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  d.innerHTML = html;
+  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  log.appendChild(d);
+  while (log.children.length > 150) log.firstChild.remove();
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+function sysLine(t, cls) { line(esc(t), cls || "sys"); }
+
+function chatIn(m) {
+  if (!m) return;
+  if (m.k === "o") { line("<b>" + esc(m.n) + "</b> guessed the word!", "ok"); return; }
+  // messages from people who know the word stay among people who know it, while the turn is on
+  if (m.gd && meta && m.q === meta.n && meta.st === "draw" && !(meta.dr === C.uid || iGotIt())) return;
+  line("<b>" + esc(m.n) + ":</b> " + esc(m.m), m.gd ? "gd" : "");
+  if (m.u !== C.uid) sfx("tick");
+}
+
+$("say").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = $("msg"), text = input.value.trim().slice(0, 100);
+  if (!text || !C || !code) return;
+  input.value = "";
+  const me = players[C.uid] ? players[C.uid].n : cleanName(nm.value);
+  const drawing = meta && meta.st === "draw", t = curTurn();
+  const drawer = drawing && meta.dr === C.uid;
+  if (drawer && myWord && norm(text).indexOf(myWord) !== -1) { sysLine("nice try. you can't say the word"); return; }
+  if (drawing && !drawer && !iGotIt() && t.h && t.s) {
+    const g = norm(text);
+    if (g && (await sha(t.s + ":" + g)) === t.h) {
+      await C.D.set(R("turns/" + meta.n + "/correct/" + C.uid), C.D.serverTimestamp()).catch((e) => console.warn(e));
+      await C.D.push(R("chat"), { u: C.uid, n: me, m: "", k: "o", q: meta.n, gd: true, t: C.D.serverTimestamp() });
+      return;
+    }
+    if (g && (await isClose(g, t))) line("<b>'" + esc(text) + "'</b> is close!", "close");
+  }
+  C.D.push(R("chat"), { u: C.uid, n: me, m: text, k: "m", q: meta ? meta.n : 0, gd: !!(drawing && (drawer || iGotIt())), t: C.D.serverTimestamp() })
+    .catch((e) => console.warn("[draw] chat", e));
+});
+
+// one letter off? try every word one edit away from the guess against the hash
+async function isClose(g, t) {
+  const target = (t.l || "").split(" ").reduce((a, b) => a + (+b), 0) + (t.l || "").split(" ").length - 1;
+  if (Math.abs(g.length - target) > 1 || g.length < 4) return false;
+  const A = "abcdefghijklmnopqrstuvwxyz ", v = new Set();
+  for (let i = 0; i <= g.length; i++) {
+    if (i < g.length) v.add(g.slice(0, i) + g.slice(i + 1));
+    for (const c of A) { v.add(g.slice(0, i) + c + g.slice(i)); if (i < g.length) v.add(g.slice(0, i) + c + g.slice(i + 1)); }
+    if (i < g.length - 1) v.add(g.slice(0, i) + g[i + 1] + g[i] + g.slice(i + 2));
+  }
+  v.delete(g);
+  for (const w of v) if (w.length === target && (await sha(t.s + ":" + w)) === t.h) return true;
+  return false;
+}
+
+/* ------------------------------------------------------------------ *
+ * the canvas. Fixed 800x600 inside, scaled by css, so every client
+ * rasterises the same log the same way (fills and undo replay it)
+ * ------------------------------------------------------------------ */
+const cv = $("cv"), ctx = cv.getContext("2d", { willReadFrequently: true });
+function blank() { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H); }
+blank();
+
+function drawLine(op) {
+  const p = op.p.split(",").map(Number);
+  ctx.strokeStyle = ctx.fillStyle = op.c; ctx.lineWidth = op.w; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (p.length === 2) { ctx.beginPath(); ctx.arc(p[0], p[1], op.w / 2, 0, Math.PI * 2); ctx.fill(); return; }
+  ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+  for (let i = 2; i < p.length; i += 2) ctx.lineTo(p[i], p[i + 1]);
+  ctx.stroke();
+}
+function hexRgb(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+function floodFill(op) {
+  const [x0, y0] = op.p.split(",").map((v) => Math.round(+v));
+  if (x0 < 0 || y0 < 0 || x0 >= W || y0 >= H) return;
+  const img = ctx.getImageData(0, 0, W, H), d = img.data;
+  const at = (y0 * W + x0) * 4, tr = d[at], tg = d[at + 1], tb = d[at + 2];
+  const [fr, fg, fb] = hexRgb(op.c);
+  if (Math.abs(tr - fr) + Math.abs(tg - fg) + Math.abs(tb - fb) < 12) return;
+  const TOL = 90, seen = new Uint8Array(W * H), stack = [x0, y0];
+  const match = (i) => Math.abs(d[i] - tr) + Math.abs(d[i + 1] - tg) + Math.abs(d[i + 2] - tb) <= TOL;
+  while (stack.length) {
+    const y = stack.pop(), x = stack.pop();
+    let lx = x;
+    while (lx >= 0 && !seen[y * W + lx] && match((y * W + lx) * 4)) lx--;
+    lx++;
+    let up = false, down = false;
+    for (let cx = lx; cx < W; cx++) {
+      const k = y * W + cx;
+      if (seen[k] || !match(k * 4)) break;
+      seen[k] = 1; d[k * 4] = fr; d[k * 4 + 1] = fg; d[k * 4 + 2] = fb; d[k * 4 + 3] = 255;
+      if (y > 0) { const u = k - W; const ok = !seen[u] && match(u * 4); if (ok && !up) { stack.push(cx, y - 1); up = true; } else if (!ok) up = false; }
+      if (y < H - 1) { const b = k + W; const ok = !seen[b] && match(b * 4); if (ok && !down) { stack.push(cx, y + 1); down = true; } else if (!ok) down = false; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function apply(op) { if (op.k === "l") drawLine(op); else if (op.k === "f") floodFill(op); }
+function redrawAll() {
+  blank();
+  let from = 0;
+  ops.forEach((o, i) => { if (o.k === "x") from = i + 1; });
+  for (let i = from; i < ops.length; i++) { const o = ops[i]; if ((o.k === "l" || o.k === "f") && !undone.has(o.gp)) apply(o); }
+}
+
+function watchInk(n) {
+  inkUnsub.forEach((f) => f()); inkUnsub = [];
+  inkN = n; ops = []; undone = new Set(); mineKeys = new Set(); blank();
+  if (n == null || !C) return;
+  const q = R("ink/" + n);
+  inkUnsub.push(C.D.onChildAdded(q, (s) => {
+    const op = s.val(); if (!op) return;
+    ops.push(op);
+    if (op.k === "u") { undone.add(op.gp); redrawAll(); }
+    else if (op.k === "x") redrawAll();
+    else if (!mineKeys.has(s.key)) apply(op);
+  }));
+}
+
+/* drawing: the drawer's own strokes go on screen straight away and out in
+ * little batches (~20 a second), each batch starting where the last ended */
+let pts = null, gp = null, sent = 0, flushT = null;
+function canDraw() { return meta && meta.st === "draw" && meta.dr === C.uid && myWordN === meta.n; }
+function pos(e) {
+  const r = cv.getBoundingClientRect();
+  return [Math.round(Math.max(0, Math.min(W, (e.clientX - r.left) / r.width * W))), Math.round(Math.max(0, Math.min(H, (e.clientY - r.top) / r.height * H)))];
+}
+function sendOp(op) {
+  const ref = C.D.push(R("ink/" + meta.n));
+  mineKeys.add(ref.key);
+  C.D.set(ref, op).catch((e) => console.warn("[draw] ink", e));
+  return ref.key;
+}
+function flush() {
+  if (!pts || pts.length / 2 <= sent) return;
+  const start = Math.max(0, sent - 1) * 2;
+  const seg = pts.slice(start);
+  sent = pts.length / 2;
+  sendOp({ k: "l", p: seg.join(","), c: tool === "eraser" ? "#ffffff" : colour, w: size, gp });
+}
+cv.addEventListener("pointerdown", (e) => {
+  if (!canDraw() || e.button > 0) return;
+  e.preventDefault();
+  const [x, y] = pos(e);
+  gp = rid(8);
+  if (tool === "fill") {
+    const op = { k: "f", p: x + "," + y, c: colour, gp };
+    sendOp(op); floodFill(op); sfx("pop");
+    return;
+  }
+  cv.setPointerCapture(e.pointerId);
+  pts = [x, y]; sent = 0;
+  const op = { k: "l", p: x + "," + y, c: tool === "eraser" ? "#ffffff" : colour, w: size, gp };
+  drawLine(op);
+  flushT = setInterval(flush, 50);
+});
+cv.addEventListener("pointermove", (e) => {
+  if (!pts) return;
+  const [x, y] = pos(e), lx = pts[pts.length - 2], ly = pts[pts.length - 1];
+  if (Math.abs(x - lx) + Math.abs(y - ly) < 2) return;
+  pts.push(x, y);
+  drawLine({ p: [lx, ly, x, y].join(","), c: tool === "eraser" ? "#ffffff" : colour, w: size });
+  if (pts.length > 300) { flush(); pts = pts.slice(-2); sent = 1; }
+});
+function penUp() {
+  if (!pts) return;
+  clearInterval(flushT);
+  if (sent === 0) sendOp({ k: "l", p: pts.slice(0, 2).join(","), c: tool === "eraser" ? "#ffffff" : colour, w: size, gp });
+  else flush();
+  // keep our own ops in the log too, for undo/redraw
+  pts = null;
+}
+cv.addEventListener("pointerup", penUp);
+cv.addEventListener("pointercancel", penUp);
+// our own batches come back through onChildAdded too: they join the op log
+// there (for undo / redraw) but aren't drawn a second time (mineKeys)
+
+/* tools */
+$("swatches").innerHTML = COLOURS.map((c, i) => '<button class="sw' + (i === 0 ? " on" : "") + '" data-c="' + c + '" style="background:' + c + '" aria-label="colour ' + c + '"></button>').join("");
+$("swatches").addEventListener("click", (e) => {
+  const b = e.target.closest(".sw"); if (!b) return;
+  colour = b.dataset.c;
+  document.querySelectorAll(".sw").forEach((x) => x.classList.toggle("on", x === b));
+  if (tool === "eraser") setTool("pen");
+});
+$("sizes").innerHTML = SIZES.map((s, i) => '<button class="tb' + (i === 1 ? " on" : "") + '" data-s="' + s + '" aria-label="size ' + s + '"><i style="width:' + Math.max(4, s / 2) + "px;height:" + Math.max(4, s / 2) + 'px"></i></button>').join("");
+$("sizes").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-s]"); if (!b) return;
+  size = +b.dataset.s;
+  document.querySelectorAll("#sizes button").forEach((x) => x.classList.toggle("on", x === b));
+});
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll("[data-tool]").forEach((x) => x.classList.toggle("on", x.dataset.tool === t));
+  renderTools();
+}
+document.querySelectorAll("[data-tool]").forEach((b) => b.addEventListener("click", () => setTool(b.dataset.tool)));
+function undo() {
+  if (!canDraw()) return;
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const o = ops[i];
+    if (o.k === "x") return;
+    if ((o.k === "l" || o.k === "f") && o.gp && !undone.has(o.gp)) { sendOp({ k: "u", gp: o.gp }); return; }
+  }
+}
+$("undo").addEventListener("click", undo);
+$("wipe").addEventListener("click", () => { if (canDraw()) sendOp({ k: "x" }); });
+window.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && canDraw() && document.activeElement !== $("msg")) { e.preventDefault(); undo(); }
+});
+
+window.addEventListener("beforeunload", () => { leaving = true; if (C && code) C.D.remove(R("players/" + C.uid)); });
+
+// test hook (the multi-browser check drives the game through this)
+window.__draw = { state: () => ({ meta, players, turns, uid: C && C.uid, code, myWord, choices, scores: scores(), host: hostUid() }), pickWord, startGame };
+</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

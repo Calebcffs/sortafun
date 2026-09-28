@@ -33,6 +33,8 @@ the homepage) with WebAudio, no audio files, behind a speaker button.
 All the word games share `dict.js`, a 170k-word dictionary with no proper nouns
 (ENABLE + modern words), built by `tools/build-dict.py`.
 
+- draw and guess - skribbl-style party game, 2 to 8 players. Make a room, send the link, one draws while the rest guess in the chat. Realtime Database (`draw.html`, `draw-words.js`).
+
 ### the basement (the joke games)
 
 - how long is a minute - press start, press stop at 60 seconds. No clock. Closest wins.

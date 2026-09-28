@@ -734,6 +734,45 @@ green light or anything in the minute game while it counts: a cue would help
 you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
 checks (keep sfx peaks under ~0.35).
 
+### Draw and Guess (`draw.html` + `draw-words.js`)
+
+A skribbl.io-style party game, 2 to 8 players, private rooms only (4-letter
+code, invite link `draw.html#CODE`). Firebase **Realtime Database** under
+`draw/rooms/<CODE>/` (rules in `database.rules.json`, auto-deployed by the
+rtdb Action like City's). Data shape is in the comment at the top of the
+page's module script: `meta` (the game state), `players/<uid>` (removed
+onDisconnect), `turns/<n>` (small records: drawer, salted word hash, hints,
+`correct/<uid>` server times), `ink/<n>/<id>` (stroke batches, deleted when
+the turn ends), `chat/<id>`.
+
+How it hangs together:
+- Its own named Firebase app ("draw") with **per-tab** anonymous sign-in
+  (`browserSessionPersistence`), so two tabs are two players. Don't switch it
+  to the default app: `leaderboard.js` owns that one.
+- Host = present player with the earliest `j`. The host moves the game on;
+  the drawer picks the word, writes hints (`hi`) and reveals `w` at the end.
+  Every `meta` change is `runTransaction` guarded on the expected `n` + `st`.
+- **The word never leaves the drawer's machine until the reveal.** Guessers
+  check `sha256(salt + ":" + guess)` against `turns/<n>/h` locally; a right
+  guess writes `correct/<uid>` and a "guessed the word" chat line, never the
+  text. Not cheat-proof (the list is public, the hash can be brute forced).
+- **Scores are never stored**: every client adds them up from `turns` with
+  `turnPoints()`, so they always agree.
+- Canvas is a fixed 800x600 internally (CSS scales it); undo, fill and late
+  joins replay the `ink` log, so keep rendering deterministic.
+- `window.__draw.state()` is a test hook. The 3-browser CDP test in the
+  2026-09-28 session drove the whole game through real clicks.
+
+Words: `draw-words.js` (easy / medium / hard, lowercase `[a-z ]`), the drawer
+gets one of each; the host can add their own (`meta.cw`) or use only theirs.
+Test rooms can be deleted with the admin service account (RTDB REST DELETE).
+Rooms are never cleaned up automatically yet (ink is deleted per turn, so
+leftovers are small); add a scheduled purge if storage ever matters.
+
+The homepage has an **Online** filter chip (`cat: "online"`, colour
+`--online` / `body.k-online` in `game.css`); City Sandbox and Draw and Guess
+are in it.
+
 ### Feedback (`feedback.js`)
 
 Sortafun is badged **alpha** (logo is "Sortafun (Alpha)" everywhere: the
