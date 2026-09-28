@@ -46,8 +46,13 @@ void main() {
   vec3 c0 = tex(uv);
   vec3 yiq = toYIQ(c0);
   vec2 ch = vec2(0.0);
+#ifdef LITE
+  for (int i = -1; i <= 1; i++) ch += toYIQ(tex(uv + vec2(float(i) * 0.005 - 0.003, 0.0))).yz;
+  yiq.yz = ch / 3.0;
+#else
   for (int i = -3; i <= 3; i++) ch += toYIQ(tex(uv + vec2(float(i) * 0.0022 - 0.003, 0.0))).yz;
   yiq.yz = ch / 7.0;
+#endif
   vec3 col = fromYIQ(yiq);
   col.r = mix(col.r, tex(uv + vec2(ca, 0.0)).r, 0.5);
   col.b = mix(col.b, tex(uv - vec2(ca, 0.0)).b, 0.5);
@@ -102,6 +107,12 @@ export class Tape {
     r.render(scene, cam);
     r.setRenderTarget(null);
     r.render(this.qScene, this.qCam);
+  }
+  // phones: fewer chroma taps
+  setLite(on) {
+    const m = this.quad.material;
+    if (on) m.defines = { LITE: 1 }; else m.defines = {};
+    m.needsUpdate = true;
   }
   kick(amount) { this.glitch = Math.min(1.5, this.glitch + amount); }
 }

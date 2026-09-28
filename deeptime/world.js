@@ -334,6 +334,7 @@ export function build(scene, opts = {}) {
   W.lampGroup = new THREE.Group();
   W.root.add(W.lampGroup);
   const R = rng(opts.seed || 1987);
+  W.lite = !!opts.lite;
   terrain();
   landmarks(R);
   forest(R);
@@ -428,7 +429,7 @@ function terrain() {
   const N = 8, size = (HALF * 2) / N;
   for (let ix = 0; ix < N; ix++) for (let iz = 0; iz < N; iz++) {
     const x0 = -HALF + ix * size, z0 = -HALF + iz * size;
-    const m = new THREE.Mesh(tileGeo(x0, z0, size, 34), mat);
+    const m = new THREE.Mesh(tileGeo(x0, z0, size, W.lite ? 24 : 34), mat);
     m.receiveShadow = true;
     ground.add(m);
     W.near.push({ mesh: m, x: x0 + size / 2, z: z0 + size / 2, extra: size * 0.72 });
@@ -620,6 +621,7 @@ function clutter(R) {
     !LANDMARKS.some((L) => Math.hypot(x - L.x, z - L.z) < L.clear * clear) &&
     !(Math.abs(z - BERM.z) < BERM.w + 2 && x > BERM.x0 - 6);
   const scatter = (arr, n, fn) => {
+    if (W.lite) n = Math.round(n * 0.55);
     for (let i = 0; i < n; i++) {
       const x = (R() * 2 - 1) * (FENCE - 3), z = (R() * 2 - 1) * (FENCE - 3);
       if (!ok(x, z)) continue;

@@ -25,7 +25,14 @@ const lerp = (a, b, t) => a + (b - a) * t;
 // ------------------------------------------------------------------
 // settings
 // ------------------------------------------------------------------
-const S = Object.assign({ sens: 1, vol: 0.9, quality: "high" }, (() => { try { return JSON.parse(localStorage.getItem("deeptime-settings")) || {}; } catch (e) { return {}; } })());
+// a phone (or small tablet): coarse pointer and a small screen. it gets the
+// lite profile automatically: no shadows, lower resolution, less clutter,
+// simpler dinosaur skin and tape pass, a shorter view distance.
+const PHONE = matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 820;
+const saved = (() => { try { return JSON.parse(localStorage.getItem("deeptime-settings")) || {}; } catch (e) { return {}; } })();
+const S = Object.assign({ sens: PHONE ? 1.3 : 1, vol: 0.9, quality: PHONE ? "low" : "high" }, saved);
+const LITE = PHONE || S.quality === "low";
+A.lite = LITE;
 function saveSettings() { try { localStorage.setItem("deeptime-settings", JSON.stringify(S)); } catch (e) {} }
 const siteSoundOn = () => { try { return localStorage.getItem("sortafun-sound") !== "0"; } catch (e) { return true; } };
 const dawnUnlocked = () => { try { return localStorage.getItem("deeptime-dawn") === "1"; } catch (e) { return false; } };
@@ -35,14 +42,14 @@ const dawnUnlocked = () => { try { return localStorage.getItem("deeptime-dawn") 
 // ------------------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
 renderer.setPixelRatio(1);
-renderer.shadowMap.enabled = S.quality !== "low";
+renderer.shadowMap.enabled = !LITE;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 A.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, 16 / 9, 0.08, 60); // night fog hides everything past ~45m
 scene.add(camera);
 const tape = new Tape(renderer);
-if (S.quality === "low") tape.scale = 0.55;
+tape.setLite(LITE);
 
 const NIGHT = { fog: 0x10151a, density: 0.044, hemi: 0.14, moon: 0.16, exposure: 1.7, sky: [0x080b0e, 0x020304] };
 // the start: the sun's just gone down the path in front of you (like Slender: The Arrival)
@@ -85,7 +92,7 @@ function cookie() {
   return t;
 }
 const flash = new THREE.SpotLight(0xfff0d8, 150, 48, 0.44, 0.55, 1.5); // gentler than inverse-square so the beam carries
-flash.castShadow = S.quality !== "low";
+flash.castShadow = !LITE;
 flash.shadow.mapSize.set(512, 512);
 flash.shadow.camera.near = 0.3; flash.shadow.camera.far = 24; // only near trunks throw shadows
 flash.shadow.bias = -0.0005; flash.shadow.normalBias = 0.03;
@@ -227,8 +234,8 @@ function setLook(L, dawn) {
   skyU.cLow.value.setHex(L.sky[0]); skyU.cHigh.value.setHex(L.sky[1]);
   tape.u.uDawn.value = dawn ? 1 : 0;
   tape.u.uExposure.value = L.exposure;
-  camera.far = dawn ? 150 : 60; camera.updateProjectionMatrix();
-  WD.W.nearDist = dawn ? 90 : 40;
+  camera.far = dawn ? (PHONE ? 100 : 150) : PHONE ? 50 : 60; camera.updateProjectionMatrix();
+  WD.W.nearDist = dawn ? (PHONE ? 60 : 90) : PHONE ? 28 : 40;
   sky.scale.setScalar(dawn ? 2.3 : 1);
 }
 
@@ -385,18 +392,24 @@ function toggleLight() {
 // touch: left thumb moves, right thumb looks, three buttons
 const T = { move: null, look: null, mx: 0, mz: 0, run: false };
 if (touch) {
-  $("touch").hidden = false;
   stage.addEventListener("touchstart", (e) => {
     for (const t of e.changedTouches) {
       if (t.target.closest && t.target.closest(".tbtn")) continue;
       const r = stage.getBoundingClientRect();
-      if (t.clientX - r.left < r.width * 0.45 && !T.move) T.move = { id: t.identifier, x: t.clientX, y: t.clientY };
+      if (t.clientX - r.left < r.width * 0.45 && !T.move) {
+        T.move = { id: t.identifier, x: t.clientX, y: t.clientY };
+        const st = $("stick"); st.hidden = false; st.style.left = (t.clientX - r.left) + "px"; st.style.top = (t.clientY - r.top) + "px";
+        $("knob").style.transform = ""; $("movehint").hidden = true;
+      }
       else if (!T.look) T.look = { id: t.identifier, x: t.clientX, y: t.clientY };
     }
   }, { passive: true });
   stage.addEventListener("touchmove", (e) => {
     for (const t of e.changedTouches) {
-      if (T.move && t.identifier === T.move.id) { T.mx = Math.max(-1, Math.min(1, (t.clientX - T.move.x) / 50)); T.mz = Math.max(-1, Math.min(1, (t.clientY - T.move.y) / 50)); }
+      if (T.move && t.identifier === T.move.id) {
+        T.mx = Math.max(-1, Math.min(1, (t.clientX - T.move.x) / 45)); T.mz = Math.max(-1, Math.min(1, (t.clientY - T.move.y) / 45));
+        $("knob").style.transform = `translate(${T.mx * 35}px, ${T.mz * 35}px)`;
+      }
       if (T.look && t.identifier === T.look.id) {
         G.yaw -= (t.clientX - T.look.x) * 0.006 * S.sens; G.pitch -= (t.clientY - T.look.y) * 0.006 * S.sens;
         G.pitch = Math.max(-1.45, Math.min(1.45, G.pitch)); T.look.x = t.clientX; T.look.y = t.clientY;
@@ -404,16 +417,22 @@ if (touch) {
     }
     e.preventDefault();
   }, { passive: false });
-  stage.addEventListener("touchend", (e) => {
+  const endTouch = (e) => {
     for (const t of e.changedTouches) {
-      if (T.move && t.identifier === T.move.id) { T.move = null; T.mx = T.mz = 0; }
+      if (T.move && t.identifier === T.move.id) { T.move = null; T.mx = T.mz = 0; $("stick").hidden = true; }
       if (T.look && t.identifier === T.look.id) T.look = null;
     }
-  });
+  };
+  stage.addEventListener("touchend", endTouch);
+  stage.addEventListener("touchcancel", endTouch);
   $("t-run").addEventListener("touchstart", (e) => { T.run = !T.run; e.currentTarget.classList.toggle("on", T.run); e.preventDefault(); });
   $("t-light").addEventListener("touchstart", (e) => { toggleLight(); e.preventDefault(); });
   $("t-grab").addEventListener("touchstart", (e) => { tryPickup(); e.preventDefault(); });
+  $("t-pause").addEventListener("touchstart", (e) => { pause(G.state === "play"); e.preventDefault(); });
+  // no pinch-zoom or double-tap zoom on the game
+  for (const ev of ["gesturestart", "gesturechange", "dblclick"]) stage.addEventListener(ev, (e) => e.preventDefault());
 }
+document.addEventListener("visibilitychange", () => { if (document.hidden && G.state === "play") pause(true); });
 
 // ------------------------------------------------------------------
 // picking up
@@ -574,8 +593,9 @@ const INTRO = [
   "the night technician went in with a flashlight\nand the station camcorder.\n\nthis is his tape.",
 ];
 let introI = 0, introT = 0, introTimer = null;
+let introStarted = 0;
 function playIntro(mode) {
-  G.state = "intro"; G.introMode = mode;
+  G.state = "intro"; G.introMode = mode; introStarted = Date.now();
   $("title").hidden = true; $("end").hidden = true;
   const el = $("intro"); el.hidden = false;
   introI = 0; showIntroCard();
@@ -618,35 +638,74 @@ function refreshTitle() {
   d.textContent = dawnUnlocked() ? "DAWN" : "DAWN (finish the tape)";
 }
 
+// ------------------------------------------------------------------
+// fullscreen. iPhone Safari only fullscreens <video>, so there (and anywhere
+// the API fails) the stage is pinned over the whole screen instead.
+// ------------------------------------------------------------------
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+const isFS = () => !!fsEl() || stage.classList.contains("fake-fs");
+function fakeFS(on) {
+  stage.classList.toggle("fake-fs", on);
+  document.documentElement.classList.toggle("dt-fs", on);
+  if (on) window.scrollTo(0, 0);
+  setTimeout(resize, 50); setTimeout(resize, 400); // Safari settles its bars late
+}
+function enterFS() {
+  if (isFS()) return;
+  const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+  if (req && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
+    try {
+      const r = req.call(stage, { navigationUI: "hide" });
+      if (r && r.catch) r.catch(() => fakeFS(true));
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(() => {});
+      return;
+    } catch (e) {}
+  }
+  fakeFS(true);
+}
+function exitFS() {
+  if (stage.classList.contains("fake-fs")) { fakeFS(false); return; }
+  const ex = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fsEl() && ex) ex.call(document);
+}
+function rotateHint() {
+  $("rotate").classList.toggle("want", PHONE && (G.state === "play" || G.state === "title" || G.state === "intro"));
+}
+addEventListener("orientationchange", () => setTimeout(resize, 300));
+addEventListener("resize", rotateHint);
+
 async function begin(mode, again) {
   if (!loaded) return;
   await Audio.init();
   Audio.resume();
   Audio.volume(siteSoundOn() ? S.vol : 0);
-  if (stage.requestFullscreen && !document.fullscreenElement) stage.requestFullscreen().catch(() => {});
+  if (PHONE || S.fullscreen !== false) enterFS();
   $("title").hidden = true;
   if (again) { tape.kick(1); newRun(mode); } else playIntro(mode);
 }
 $("btn-play").addEventListener("click", () => begin("night"));
+// phones have no space bar: tap the intro to skip it
+$("intro").addEventListener("click", () => { if (G.state === "intro" && Date.now() - introStarted > 800) skipIntro(); });
+if (touch) document.querySelector("#intro .skip").textContent = "tap to skip";
 $("btn-dawn").addEventListener("click", () => begin("dawn"));
 $("btn-again").addEventListener("click", () => { $("end").hidden = true; tape.u.uBlack.value = 0; tape.u.uWhite.value = 0; begin(G.mode, true); });
-$("btn-menu").addEventListener("click", () => { $("end").hidden = true; $("title").hidden = false; tape.u.uBlack.value = 0; G.state = "title"; });
+$("btn-menu").addEventListener("click", () => { $("end").hidden = true; exitFS(); $("title").hidden = false; tape.u.uBlack.value = 0; G.state = "title"; });
 $("btn-resume").addEventListener("click", () => pause(false));
-$("btn-quit").addEventListener("click", () => { $("pause").hidden = true; Audio.resume(); Audio.stopAll(0.1); G.state = "title"; $("title").hidden = false; });
+$("btn-quit").addEventListener("click", () => { $("pause").hidden = true; exitFS(); Audio.resume(); Audio.stopAll(0.1); G.state = "title"; $("title").hidden = false; });
 $("set-sens").value = S.sens; $("set-vol").value = S.vol; $("set-q").value = S.quality;
 $("set-sens").addEventListener("input", (e) => { S.sens = +e.target.value; saveSettings(); });
 $("set-vol").addEventListener("input", (e) => { S.vol = +e.target.value; saveSettings(); Audio.volume(siteSoundOn() ? S.vol : 0); });
 $("set-q").addEventListener("change", (e) => { S.quality = e.target.value; saveSettings(); $("q-note").hidden = false; });
 addEventListener("sortafun-sound", (e) => Audio.volume(e.detail && e.detail.on ? S.vol : 0));
-$("fsbtn").addEventListener("click", () => { if (document.fullscreenElement) document.exitFullscreen(); else stage.requestFullscreen && stage.requestFullscreen().catch(() => {}); });
+$("fsbtn").addEventListener("click", () => { if (isFS()) exitFS(); else enterFS(); });
 
 // ------------------------------------------------------------------
 // the loop
 // ------------------------------------------------------------------
 const clock = new THREE.Clock();
 let tAll = 0;
-const DYN = { ema: 1 / 60, t: 0, max: S.quality === "low" ? 0.5 : 0.72, min: 0.36 };
-tape.scale = S.quality === "low" ? 0.5 : 0.62;
+const DYN = { ema: 1 / 60, t: 0, max: PHONE ? 0.5 : LITE ? 0.55 : 0.72, min: PHONE ? 0.28 : 0.36 };
+tape.scale = PHONE ? 0.42 : LITE ? 0.5 : 0.62;
 function frame() {
   requestAnimationFrame(frame);
   const raw = clock.getDelta();
@@ -912,6 +971,8 @@ function osd() {
   $("osd-batt").classList.toggle("low", G.battery < 0.2 && (tAll % 1) < 0.5);
   $("osd-zoom").textContent = G.zoom > 0.02 ? "ZOOM " + "=".repeat(1 + Math.round(G.zoom * 8)) : "";
   $("osd").hidden = G.state === "end";
+  if (touch) $("touch").hidden = G.state !== "play";
+  rotateHint();
 }
 
 // ------------------------------------------------------------------
@@ -946,7 +1007,7 @@ async function load() {
     ...Object.keys(man).map((s) => AS.soundBytes(s)),
     document.fonts ? document.fonts.load('20px "Rock Salt"').catch(() => {}) : null,
   ]);
-  WD.build(scene);
+  WD.build(scene, { lite: LITE, phone: PHONE });
   watcher = new Watcher(scene);
   queen = new Queen(scene);
   // park the camera somewhere moody for the title
@@ -964,4 +1025,4 @@ load().catch((e) => { console.error(e); $("load-pct").textContent = "TRACKING ER
 frame();
 
 // test hooks (headless checks drive the game through these)
-window.deeptime = { G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get queen() { return queen; }, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, Audio };
+window.deeptime = { PHONE, LITE, isFS, G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get queen() { return queen; }, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, Audio };

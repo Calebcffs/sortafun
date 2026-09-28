@@ -786,6 +786,20 @@ Quaternius' flat colours swapped for `skinMaterial()`; its scale detail is
 faded by `fwidth` or it shimmers into noise through the tape. The models
 have no eye geometry: `addEyes()` finds the skull from the mesh.
 
+Phones (2026-09-28, Caleb plays on an iPhone): `PHONE` = coarse pointer and
+a screen under 820px on its short side. It forces the lite profile (also
+the "low" picture setting): no shadows, `tape.setLite` (3 chroma taps),
+~55% of the clutter, coarser ground tiles, a skin shader without the 3D
+cellular scales, far plane 50m, resolution 0.28-0.5. iPhone Safari has no
+element fullscreen (only video), so `enterFS()` falls back to `fakeFS()`:
+the stage gets `.fake-fs` (fixed, 100dvh, above the feedback bubble) and the
+page stops scrolling; OSD and buttons respect `env(safe-area-inset-*)`
+(viewport-fit=cover). Android uses the real API + landscape lock. Touch: a
+visible stick where the left thumb lands, right thumb looks, RUN / LIGHT /
+GRAB / II, tap the intro to skip, backgrounding the app pauses. Test with
+puppeteer `KnownDevices['iPhone 15 Pro landscape']` and requestFullscreen
+deleted in evaluateOnNewDocument (see git history for phone.mjs).
+
 Testing: headless Chrome with swiftshader (`--use-angle=swiftshader`), click
 `#btn-play`, press Space, then drive `window.deeptime` (`step(dt)`, `G`,
 `watcher`, `queen`, `newRun`, `tryPickup`, `tape`, `renderer`). Set

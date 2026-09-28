@@ -2,7 +2,10 @@
 <html lang="en" data-nomusic>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
 <title>deep time &middot; SORTAFUN.ORG</title>
 <meta name="description" content="Deep Time: find the 8 parts of the time machine in a dark forest at night. Something came through. Found-footage horror, like Slender, with dinosaurs.">
 <link rel="icon" href="favicon.ico">
@@ -17,7 +20,19 @@
     position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden;
     border: 3px solid var(--ink); border-radius: 12px; user-select: none; -webkit-user-select: none; touch-action: none;
   }
-  .stage:fullscreen { border: 0; border-radius: 0; aspect-ratio: auto; width: 100vw; height: 100vh; }
+  .stage:fullscreen, .stage:-webkit-full-screen { border: 0; border-radius: 0; aspect-ratio: auto; width: 100vw; height: 100vh; }
+  /* iPhone Safari has no element fullscreen, so the stage covers the screen itself */
+  .stage.fake-fs { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; aspect-ratio: auto; border: 0; border-radius: 0; z-index: 2147483000; }
+  html.dt-fs, html.dt-fs body { overflow: hidden; overscroll-behavior: none; height: 100%; }
+  html.dt-fs .fb-bubble { display: none !important; }
+  .stage { -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  /* keep the camcorder text off the notch and the home bar */
+  .fake-fs .osd .tl, .fake-fs .osd .zoom, .fake-fs .osd .bl { left: max(4%, env(safe-area-inset-left)); }
+  .fake-fs .osd .tr, .fake-fs .osd .br { right: max(4%, env(safe-area-inset-right)); }
+  .fake-fs .osd .bl, .fake-fs .osd .br { bottom: max(6%, env(safe-area-inset-bottom)); }
+  .fake-fs .fsbtn { display: none; } /* leave via pause > EJECT or the end card's MENU */
+  .rotate { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; background: rgba(0,0,0,.85); z-index: 20; font-size: 26px; padding: 20px; }
+  @media (orientation: portrait) { .fake-fs .rotate.want, .stage:fullscreen .rotate.want { display: flex; } }
   .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
   .vcr { font-family: "VT323", "Courier New", monospace; color: #f2f2e8; text-shadow: 2px 0 0 rgba(255, 40, 40, 0.45), -2px 0 0 rgba(40, 200, 255, 0.35), 0 0 6px rgba(255, 255, 255, 0.35); letter-spacing: 1px; }
 
@@ -60,9 +75,19 @@
   .end-lb { width: min(92%, 440px); max-height: 38%; overflow: auto; }
   .end-lb .dim { opacity: .6; font-size: 18px; }
   .fsbtn { position: absolute; right: 10px; bottom: 10px; z-index: 5; font-size: 18px; width: 34px; height: 34px; padding: 0; background: rgba(0,0,0,.5); color: #fff; border: 1px solid #fff; cursor: pointer; }
-  .touch { position: absolute; right: 3%; bottom: 20%; display: flex; flex-direction: column; gap: 10px; }
-  .tbtn { font-family: "VT323", monospace; font-size: 22px; width: 76px; height: 50px; background: rgba(0,0,0,.45); color: #f2f2e8; border: 2px solid rgba(242,242,232,.7); }
+  .touch { position: absolute; right: max(3%, env(safe-area-inset-right)); bottom: 16%; display: flex; flex-direction: column; gap: 10px; z-index: 6; }
+  .tbtn { font-family: "VT323", monospace; font-size: 22px; width: 84px; height: 54px; background: rgba(0,0,0,.4); color: #f2f2e8; border: 2px solid rgba(242,242,232,.6); border-radius: 12px; touch-action: none; -webkit-user-select: none; user-select: none; }
   .tbtn.on { background: rgba(242,242,232,.8); color: #000; }
+  .tpause { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: 56px; height: 40px; z-index: 6; }
+  .stick { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgba(242,242,232,.35); background: rgba(0,0,0,.15); pointer-events: none; z-index: 5; }
+  .stick .knob { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; background: rgba(242,242,232,.35); }
+  @media (max-height: 500px) {
+    .touch { bottom: auto; top: 18%; gap: 8px; }
+    .tbtn { width: 70px; height: 42px; font-size: 19px; }
+    .tpause { width: 48px; height: 34px; }
+    .osd { font-size: 16px; }
+  }
+  .movehint { position: absolute; left: max(5%, env(safe-area-inset-left)); bottom: 12%; font-size: 18px; opacity: .45; pointer-events: none; }
   .keys { font-size: 13px; color: var(--muted, #666); margin: 10px 0 0; line-height: 1.5; }
   .keys b { font-family: var(--chunky); font-weight: 400; }
 </style>
@@ -74,10 +99,10 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./deeptime/assets.js": "./deeptime/assets.js?v=451e2f86",
   "./deeptime/audio.js": "./deeptime/audio.js?v=2d8a89e2",
-  "./deeptime/dinos.js": "./deeptime/dinos.js?v=704b4ddb",
-  "./deeptime/main.js": "./deeptime/main.js?v=28ba3224",
-  "./deeptime/tape.js": "./deeptime/tape.js?v=3b5e435f",
-  "./deeptime/world.js": "./deeptime/world.js?v=d2e0d274"
+  "./deeptime/dinos.js": "./deeptime/dinos.js?v=e773eb06",
+  "./deeptime/main.js": "./deeptime/main.js?v=c1fb7652",
+  "./deeptime/tape.js": "./deeptime/tape.js?v=02ebbebe",
+  "./deeptime/world.js": "./deeptime/world.js?v=5a244685"
 } }
 </script>
 </head>
@@ -145,11 +170,17 @@
       <div class="btns"><button class="vbtn" id="btn-again">REWIND &amp; PLAY AGAIN</button><button class="vbtn" id="btn-menu">MENU</button></div>
     </div>
 
-    <div id="touch" class="touch" hidden>
-      <button class="tbtn" id="t-run">RUN</button>
-      <button class="tbtn" id="t-light">LIGHT</button>
-      <button class="tbtn" id="t-grab">GRAB</button>
+    <div id="touch" hidden>
+      <div class="touch">
+        <button class="tbtn" id="t-run">RUN</button>
+        <button class="tbtn" id="t-light">LIGHT</button>
+        <button class="tbtn" id="t-grab">GRAB</button>
+      </div>
+      <button class="tbtn tpause" id="t-pause">II</button>
+      <div class="stick" id="stick" hidden><div class="knob" id="knob"></div></div>
+      <div class="movehint vcr" id="movehint">left thumb: walk &middot; right thumb: look</div>
     </div>
+    <div class="rotate vcr" id="rotate">turn your phone sideways</div>
     <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
   </div>
 
@@ -163,7 +194,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=f52f1ce8"></script>
-<script type="module" src="deeptime/main.js?v=28ba3224"></script>
+<script type="module" src="deeptime/main.js?v=c1fb7652"></script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
 if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "deeptime");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>

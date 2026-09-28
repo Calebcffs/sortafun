@@ -71,6 +71,25 @@ const PALETTE = {
 function skinMaterial(kind, part, color, freq, axis) {
   const m = new THREE.MeshStandardMaterial({ color, roughness: part === "mouth" ? 0.28 : part === "horn" ? 0.35 : 0.5, metalness: 0 });
   if (part === "mouth" || part === "horn") return m;
+  if (A.lite) {
+    // cheap skin for phones: keep the mottling and banding, drop the scales
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, { uFreq: { value: freq }, uAxis: { value: axis }, uBand: { value: kind === "raptor" ? 1 : 0.35 } });
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vSkinPos;\nuniform float uFreq;")
+        .replace("#include <skinning_vertex>", "#include <skinning_vertex>\nvSkinPos = position * uFreq;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+        varying vec3 vSkinPos; uniform vec3 uAxis; uniform float uBand;
+        float lh(vec3 p) { return fract(sin(dot(floor(p), vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+        float lvn(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(lh(i), lh(i + vec3(1,0,0)), f.x), mix(lh(i + vec3(0,1,0)), lh(i + vec3(1,1,0)), f.x), f.y),
+                     mix(mix(lh(i + vec3(0,0,1)), lh(i + vec3(1,0,1)), f.x), mix(lh(i + vec3(0,1,1)), lh(i + vec3(1,1,1)), f.x), f.y), f.z); }`)
+        .replace("#include <color_fragment>", `#include <color_fragment>
+        float mott = lvn(vSkinPos * 0.08) * 0.6 + lvn(vSkinPos * 0.31) * 0.4;
+        float bands = uBand * smoothstep(0.35, 0.65, sin(dot(vSkinPos, uAxis) * 0.62 + lvn(vSkinPos * 0.04) * 4.0) * 0.5 + 0.5);
+        diffuseColor.rgb *= (0.78 + 0.4 * mott) * (1.0 - 0.38 * bands);`);
+    };
+    return m;
+  }
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, {
       uFreq: { value: freq }, uAxis: { value: axis }, uBump: { value: part === "belly" ? 0.55 : 1.0 }, uBand: { value: kind === "raptor" ? 1 : 0.35 }, uWet: { value: 0.25 },
