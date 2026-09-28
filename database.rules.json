@@ -284,32 +284,35 @@
                   ".validate": "newData.isNumber() && newData.val() === now"
                 }
               },
-              "k": {
-                "$id": {
-                  ".write": "auth != null && root.child('draw/rooms/' + $code + '/players/' + auth.uid).exists() && (!newData.exists() || (!data.exists() && root.child('draw/rooms/' + $code + '/turns/' + $n + '/d').val() === auth.uid))",
-                  ".validate": "newData.hasChildren(['k'])",
-                  "k": {
-                    ".validate": "newData.isString() && newData.val().matches(/^[lfux]$/)"
-                  },
-                  "p": {
-                    ".validate": "newData.isString() && newData.val().length <= 4000"
-                  },
-                  "c": {
-                    ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-f]{6}$/)"
-                  },
-                  "w": {
-                    ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 80"
-                  },
-                  "gp": {
-                    ".validate": "newData.isString() && newData.val().length <= 16"
-                  },
-                  "$other": {
-                    ".validate": false
-                  }
-                }
-              },
               "$other": {
                 ".validate": false
+              }
+            }
+          },
+          "ink": {
+            "$n": {
+              ".write": "auth != null && root.child('draw/rooms/' + $code + '/players/' + auth.uid).exists() && !newData.exists()",
+              "$id": {
+                ".write": "auth != null && root.child('draw/rooms/' + $code + '/players/' + auth.uid).exists() && (!newData.exists() || (!data.exists() && root.child('draw/rooms/' + $code + '/turns/' + $n + '/d').val() === auth.uid))",
+                ".validate": "newData.hasChildren(['k'])",
+                "k": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[lfux]$/)"
+                },
+                "p": {
+                  ".validate": "newData.isString() && newData.val().length <= 4000"
+                },
+                "c": {
+                  ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-f]{6}$/)"
+                },
+                "w": {
+                  ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 80"
+                },
+                "gp": {
+                  ".validate": "newData.isString() && newData.val().length <= 16"
+                },
+                "$other": {
+                  ".validate": false
+                }
               }
             }
           },
