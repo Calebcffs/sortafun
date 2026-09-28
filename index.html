@@ -769,7 +769,7 @@
   }
 </style>
 <script src="sfx.js?v=bef8d726"></script>
-<script src="feedback.js?v=50f0f078"></script>
+<script src="feedback.js?v=8e2793bd"></script>
 </head>
 <body>
 <div class="site">
@@ -804,6 +804,7 @@
   <div class="ticker" aria-label="news ticker">
     <span class="lbl">NEWS</span>
     <div class="lane"><div class="run" id="tickrun">
+      <span><b>DEEP TIME!</b> 8 parts, one forest, 1987. something came through. play it in the dark.</span>
       <span><b>DRAW AND GUESS!</b> make a room, send the link, draw badly with your friends.</span>
       <span><b>WE'RE IN ALPHA!</b> things will break. hit the pink <b>feedback</b> bubble and tell us what.</span>
       <span><b>RATE EVERY GAME!</b> 0 to 5 stars, right on each game's page. be honest, we can take it.</span>
@@ -863,7 +864,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>sixteen games, two of them online with friends. your best today lands on the leaderboards.</p>
+      <p>seventeen games, two of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -902,6 +903,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-28</span> NEW: <b>deep time</b>. a found-footage horror game. find the 8 parts of the time machine in the woods at night. the tall one skips closer every time you look away. and she is out there too.</li>
         <li><span class="when">09-28</span> tidied the place up. smaller game tiles so they all fit, a live chatroom in the hangout, and the music stays off till you press the note button. the basement got bricked up.</li>
         <li><span class="when">09-28</span> NEW: <b>draw and guess</b>. make a room, send your friends the link, one draws and everyone else guesses in the chat. our first party game.</li>
         <li><span class="when">09-28</span> sortafun is officially in <b>alpha</b>. every game has a feedback bubble now: rate it 0 to 5 stars, report a bug, or pitch an idea.</li>
@@ -933,7 +935,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=fc67ec2e"></script>
+<script src="leaderboard.js?v=f52f1ce8"></script>
 <script src="chat.js?v=2d14dd27"></script>
 <script>
 "use strict";
@@ -949,6 +951,7 @@
 
 var GAMES = [
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
+  { id: "deeptime",  name: "Deep Time",      url: "deeptime.html",  cat: "skill",  key: "deeptime", badge: "new",   blurb: "a camcorder tape from a forest in 1987. find the 8 parts of the time machine. something came through. headphones on." },
   { id: "city",      name: "City Sandbox",   url: "city.html",      cat: "online",  key: "city",     badge: "new",   blurb: "online zombie survival. crew up, hold your safehouse through the night, fuel the radio mast and catch the chopper out." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
@@ -1184,6 +1187,27 @@ var THUMB = {
       '<path d="M32 82 q18 -22 36 0 z" fill="#ffd43b"' + S + '/><path d="M28 82 h44" stroke="' + K + '" stroke-width="3" stroke-linecap="round"/>' +
       '<circle cx="43" cy="92" r="3" fill="' + K + '"/><circle cx="57" cy="92" r="3" fill="' + K + '"/>' +
       '<path d="M45 100 q5 4 10 0" fill="none" stroke="' + K + '" stroke-width="2.5" stroke-linecap="round"/>';
+  },
+  deeptime: function () {
+    // a T. rex against a misty moon, pines, the tape OSD
+    var g = '<defs><linearGradient id="dts" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5e7a78"/><stop offset=".7" stop-color="#2a3b37"/><stop offset="1" stop-color="#101814"/></linearGradient>' +
+      '<radialGradient id="dtm"><stop offset="0" stop-color="#f4f0d8"/><stop offset=".5" stop-color="#f4f0d8" stop-opacity=".35"/><stop offset="1" stop-color="#f4f0d8" stop-opacity="0"/></radialGradient></defs>';
+    g += '<rect width="160" height="120" fill="url(#dts)"/>';
+    g += '<circle cx="118" cy="30" r="30" fill="url(#dtm)"/><circle cx="118" cy="30" r="13" fill="#f4f0d8"/>';
+    // far pines
+    [[4, 34], [18, 44], [138, 40], [152, 30]].forEach(function (t) { g += '<path d="M' + t[0] + ' ' + (t[1] - 30) + 'l-9 ' + (130 - t[1]) + 'h18z" fill="#1a2623"/>'; });
+    // her
+    g += '<path d="M22 46 L34 34 L54 28 Q66 26 72 34 Q80 42 94 42 Q116 38 136 44 L159 40 L159 47 Q136 54 120 62 Q114 72 106 77 L104 96 L110 108 L114 112 L96 112 L95 104 L92 86 Q84 84 78 78 L78 92 L72 104 L76 110 L60 110 L63 102 L66 86 Q62 76 64 64 Q60 56 56 52 L44 54 L28 60 L30 54 L48 46 L40 44 L24 50 Z" fill="#070b0a"/>';
+    g += '<path d="M66 60 l7 6 -2 3" stroke="#070b0a" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    g += '<path d="M30 48 l3 3 3-3 3 3 3-3 3 3" stroke="#d8d2bc" stroke-width="1.4" fill="none"/>';
+    g += '<circle cx="55" cy="35" r="2" fill="#d8ff9a"/><circle cx="55" cy="35" r="4.5" fill="#d8ff9a" opacity=".35"/>';
+    // near pines
+    g += '<rect x="138" y="0" width="7" height="120" fill="#0b120f"/><rect x="6" y="0" width="5" height="120" fill="#0b120f"/>';
+    g += '<rect x="0" y="108" width="160" height="12" fill="#0b120f"/>';
+    // the tape
+    g += outlined(26, 15, "PLAY", 11, "#f2f2e8") + '<path d="M45 6l7 4-7 4z" fill="#f2f2e8" stroke="' + K + '" stroke-width="1.5"/>';
+    g += '<circle cx="148" cy="12" r="4" fill="#ff3b30" stroke="' + K + '" stroke-width="1.5"/>';
+    return g;
   },
   draw: function () {
     var bubble = function (x, y, w, t, fill, col) {

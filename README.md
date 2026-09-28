@@ -15,6 +15,7 @@ stays off until you press the note button) with WebAudio, no audio files, behind
 
 - city sandbox (was birdie) - an online open world city for up to 50 players: play as a person (loot gun cases and chests, a shop, guns, cars, a motorbike, a plane in a secret hangar, wardens who chase you) or as a bird (the original poo game). Kenney CC0 models. `city.html` + `city/` (`birdie.html` redirects).
 
+- deep time - found-footage horror, Slender: The Eight Pages with dinosaurs. Find 8 parts of a time machine in a fenced forest at night, 1987. A raptor that skips closer when you look away, a T. rex that hunts movement and light. Photoscanned Poly Haven assets, Quaternius dinosaurs, Freesound sounds, all CC0. `deeptime.html` + `deeptime/`.
 - crossword - a 15x15 themeless ("SNACKY BUT THEMELESS", from `Crosswords/*.ipuz`); across/down nav, click-a-clue, check/reveal, progress saved per browser
 - tile slider - sliding 8-puzzle, seeded by the Singapore-time date
 - circuit race - 3d, slowroads.io-ish closed-loop circuit; hit every checkpoint and cross the line for a lap time (three.js from a CDN)

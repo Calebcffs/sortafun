@@ -710,6 +710,67 @@ rendering is slow; judge speed by the logic tick (~1-2.5ms), not frames.
 Always run `tools/stamp.py` before testing a change or the browser keeps the
 old module.
 
+### Deep Time (`deeptime.html` + `deeptime/`)
+
+Caleb asked (2026-09-28) for an analogue horror game that is "basically a
+copy of Slender: The Eight Pages in every way" but prehistoric: T. rexes and
+raptors, collect the parts of a time machine, photoreal, dark, flashlight,
+lots of sound and ambience, directional roars, jumpscares like Slender. The
+design (story, beat-for-beat Slender mapping, map, parts, notes) is
+`deeptime/PLAN.md`; read it before changing rules. Asset sources are in
+`deeptime/CREDITS.md` (all CC0) and the rebuild scripts in `tools/deeptime/`.
+
+Files: `main.js` (boot, input, player, flashlight, parts, the rules, intro /
+caught / finale / end cards, OSD), `world.js` (analytic `height()`, the
+ground mask shader, instanced pines, clutter, the procedural fence, the 10
+landmarks + crater, colliders, `surface()` for footsteps, `deepSet()` the
+Cretaceous set for the ending), `dinos.js` (`Dino` rig + procedural reptile
+skin + eyeshine, `Watcher`, `Queen`), `audio.js` (HRTF sprites/loops,
+generated reverbs, the synthesised music/heart/footfalls), `tape.js` (the
+VHS pass; it also does exposure + ACES + sRGB because three skips tone
+mapping when rendering to a target), `assets.js` (loaders, `dequantize()`).
+three 0.160 via importmap; `tools/stamp.py` now stamps `deeptime/` modules
+into deeptime.html's import map like city/ (and always writes "/" paths).
+
+Rules that matter (tuned by numbers, change with care):
+- Parts: 8 of the 10 landmarks, one of 3 spots each, a blinking red LED so
+  you can spot them. E / click within 2.6m while looking at it.
+- The Watcher: off until part 1 (or 10 minutes). Skips every 16s -> 4.5s,
+  to 34m -> 7m, mostly behind you; creeps when unwatched, freezes when
+  watched. `G.seen()` (frustum, trunk occlusion, fog, flashlight) drives the
+  static: `look * (0.22 + 1.3 * close^2)` per second, plus a bit when it's
+  within 8m even unseen. Static 1 or 2.4m = caught.
+- The Queen: from part 4, walk-bys across your view at 18-30m. Suspicion
+  builds when you're running (speed > 3.2) or your beam is on her within
+  ~40m; she roars (alert), then if you move or light her after 1s she
+  charges (10.5 m/s, caught at 6.5m); freeze and go dark and she sniffs and
+  leaves. Tested both ways headless.
+- Stamina regen drops 0.008/s per part; battery lasts 14 min of light.
+- Score `parts * 10000 - seconds` (key `deeptime`, high); Dawn mode (unlocked
+  by finishing, localStorage `deeptime-dawn`) never submits.
+
+Performance budget: ~400k tris / ~125 draw calls per frame including the
+flashlight's shadow pass. Night far plane is 72m (the fog hides everything
+past ~50m), trees are chunked 35m and distance-culled (`W.near`), clutter
+only draws within 52m. Anything instanced across the forest must stay tiny
+(fern ~1000 tris, shrub ~800, branches ~600). The Poly Haven chain-link
+fence GLB is a whole modular kit, never instance it (the fence is built in
+`fence()`).
+
+Look: fog `0x10151a` (slightly lit mist so dark shapes silhouette), flashlight
+SpotLight with decay 1.5 (gentler than physical so the beam carries) and a
+lens cookie, exposure 1.7 in the tape pass. The dinosaurs' materials are
+Quaternius' flat colours swapped for `skinMaterial()`; its scale detail is
+faded by `fwidth` or it shimmers into noise through the tape. The models
+have no eye geometry: `addEyes()` finds the skull from the mesh.
+
+Testing: headless Chrome with swiftshader (`--use-angle=swiftshader`), click
+`#btn-play`, press Space, then drive `window.deeptime` (`step(dt)`, `G`,
+`watcher`, `queen`, `newRun`, `tryPickup`, `tape`, `renderer`). Set
+`deeptime.noPause = true` (headless drops pointer lock, which pauses). For
+logic runs stub `deeptime.tape.render = () => {}` (0.3ms per step). The
+page's own rAF loop keeps stepping too, so timed screenshots drift.
+
 ### Sound (`sfx.js`)
 
 Every page loads `sfx.js` in its `<head>` (`/sfx.js` on the 404). Everything

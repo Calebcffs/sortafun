@@ -7,9 +7,11 @@ minutes. So after a push people would get the new page but the OLD scripts.
 Stamping each link with a hash of the file's content gives a changed file a
 new URL, which both Cloudflare and the browser fetch fresh.
 
-City Sandbox's ES modules (city/, once called Birdie) import each other
-("./flight.js"), which can't carry a stamp, so city.html gets an import map
-entry per module that points the plain URL at the stamped one.
+City Sandbox's and Deep Time's ES modules (city/, deeptime/) import each
+other ("./flight.js"), which can't carry a stamp, so city.html and
+deeptime.html get an import map entry per module that points the plain URL
+at the stamped one. Paths are always written with "/" (a run on Windows once
+wrote "city\\ambient.js" keys); stray backslash keys are dropped.
 
 Run before every commit that changes a .js or .css file:
 
@@ -49,13 +51,18 @@ def stamp_refs(html):
 IMPORTMAP = re.compile(rb'(<script type="importmap">\s*)(\{.*?\})(\s*</script>)', re.S)
 
 
-def stamp_birdie_modules(html):
+MODULE_DIRS = {"city.html": "city", "deeptime.html": "deeptime"}
+
+
+def stamp_modules(html, folder):
     m = IMPORTMAP.search(html)
     if not m:
         return html
     data = json.loads(m.group(2))
-    imports = {k: v for k, v in data["imports"].items() if not k.startswith("./birdie/") and not k.startswith("./city/")}
-    for path in sorted(glob.glob("city/*.js")):
+    imports = {k: v for k, v in data["imports"].items()
+               if "\\" not in k and not k.startswith("./birdie/") and not k.startswith("./" + folder + "/")}
+    for path in sorted(glob.glob(folder + "/*.js")):
+        path = path.replace(os.sep, "/")
         imports["./" + path] = "./" + path + "?v=" + digest(path)
     data["imports"] = imports
     body = "{ \"imports\": {\n" + ",\n".join("  %s: %s" % (json.dumps(k), json.dumps(v)) for k, v in imports.items()) + "\n} }"
@@ -67,8 +74,8 @@ for page in sorted(glob.glob("*.html")):
     with open(page, "rb") as f:
         old = f.read()
     new = stamp_refs(old)
-    if page == "city.html":
-        new = stamp_birdie_modules(new)
+    if page in MODULE_DIRS:
+        new = stamp_modules(new, MODULE_DIRS[page])
     if new != old:
         with open(page, "wb") as f:
             f.write(new)

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en" data-nomusic>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>deep time &middot; SORTAFUN.ORG</title>
+<meta name="description" content="Deep Time: find the 8 parts of the time machine in a dark forest at night. Something came through. Found-footage horror, like Slender, with dinosaurs.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=f59c62c1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Rock+Salt&display=swap" rel="stylesheet">
+<style>
+  .wrap.dt { max-width: 1100px; }
+  [hidden] { display: none !important; }
+  .stage {
+    position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden;
+    border: 3px solid var(--ink); border-radius: 12px; user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  .stage:fullscreen { border: 0; border-radius: 0; aspect-ratio: auto; width: 100vw; height: 100vh; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+  .vcr { font-family: "VT323", "Courier New", monospace; color: #f2f2e8; text-shadow: 2px 0 0 rgba(255, 40, 40, 0.45), -2px 0 0 rgba(40, 200, 255, 0.35), 0 0 6px rgba(255, 255, 255, 0.35); letter-spacing: 1px; }
+
+  /* the camcorder OSD */
+  .osd { position: absolute; inset: 0; pointer-events: none; font-size: clamp(16px, 2.6vw, 30px); }
+  .osd > div { position: absolute; white-space: pre; }
+  .osd .tl { top: 4%; left: 4%; }
+  .osd .tr { top: 4%; right: 4%; text-align: right; }
+  .osd .bl { bottom: 6%; left: 4%; }
+  .osd .br { bottom: 6%; right: 4%; text-align: right; }
+  .osd .zoom { top: 12%; left: 4%; font-size: .75em; }
+  .osd .low { color: #ff5a4a; }
+  .count { position: absolute; top: 13%; left: 0; right: 0; text-align: center; font-size: clamp(22px, 4vw, 44px); pointer-events: none; }
+  .caption { position: absolute; bottom: 20%; left: 0; right: 0; text-align: center; font-size: clamp(18px, 3vw, 34px); pointer-events: none; }
+  .prompt { position: absolute; bottom: 14%; left: 0; right: 0; text-align: center; font-size: clamp(14px, 2vw, 24px); opacity: .8; pointer-events: none; }
+  .note { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-3deg); width: min(62%, 560px); pointer-events: none; filter: sepia(.2) contrast(1.05) drop-shadow(0 8px 24px #000); animation: notein .35s ease-out; }
+  .note canvas { width: 100%; height: auto; display: block; }
+  @keyframes notein { from { transform: translate(-50%, -46%) rotate(-7deg) scale(.9); opacity: 0; } }
+
+  /* menus over the stage */
+  .scr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 20px; background: rgba(0, 0, 0, .55); }
+  .scr.solid { background: #000; }
+  .logo { font-size: clamp(54px, 11vw, 132px); line-height: .85; letter-spacing: 6px; }
+  .tag { font-size: clamp(16px, 2.4vw, 26px); opacity: .85; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .vbtn { font-family: "VT323", monospace; font-size: clamp(20px, 2.6vw, 30px); color: #f2f2e8; background: rgba(0, 0, 0, .6); border: 2px solid #f2f2e8; padding: 6px 22px 4px; cursor: pointer; letter-spacing: 2px; }
+  .vbtn:hover:not(:disabled) { background: #f2f2e8; color: #000; }
+  .vbtn:disabled { opacity: .4; cursor: default; }
+  .warn { font-size: clamp(13px, 1.6vw, 18px); opacity: .6; max-width: 640px; }
+  .sets { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; font-size: clamp(15px, 1.8vw, 20px); }
+  .sets label { display: flex; align-items: center; gap: 8px; }
+  .sets input[type=range] { width: 110px; accent-color: #f2f2e8; }
+  .sets select { font-family: "VT323", monospace; font-size: 18px; background: #000; color: #f2f2e8; border: 1px solid #f2f2e8; }
+  .loadbar { width: min(60%, 420px); height: 10px; border: 2px solid #f2f2e8; }
+  .loadbar div { height: 100%; width: 0; background: #f2f2e8; }
+  .intro-text { font-size: clamp(18px, 2.8vw, 32px); max-width: 860px; white-space: pre-wrap; text-align: left; min-height: 8em; line-height: 1.2; }
+  .skip { position: absolute; bottom: 5%; right: 4%; font-size: clamp(14px, 1.6vw, 20px); opacity: .5; }
+  .end-body { font-size: clamp(17px, 2.2vw, 26px); max-width: 760px; line-height: 1.25; }
+  .end-body .unlock { color: #ffd76a; }
+  .end-lb { width: min(92%, 440px); max-height: 38%; overflow: auto; }
+  .end-lb .dim { opacity: .6; font-size: 18px; }
+  .fsbtn { position: absolute; right: 10px; bottom: 10px; z-index: 5; font-size: 18px; width: 34px; height: 34px; padding: 0; background: rgba(0,0,0,.5); color: #fff; border: 1px solid #fff; cursor: pointer; }
+  .touch { position: absolute; right: 3%; bottom: 20%; display: flex; flex-direction: column; gap: 10px; }
+  .tbtn { font-family: "VT323", monospace; font-size: 22px; width: 76px; height: 50px; background: rgba(0,0,0,.45); color: #f2f2e8; border: 2px solid rgba(242,242,232,.7); }
+  .tbtn.on { background: rgba(242,242,232,.8); color: #000; }
+  .keys { font-size: 13px; color: var(--muted, #666); margin: 10px 0 0; line-height: 1.5; }
+  .keys b { font-family: var(--chunky); font-weight: 400; }
+</style>
+<script src="sfx.js?v=bef8d726"></script>
+<script src="feedback.js?v=8e2793bd"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "./deeptime/assets.js": "./deeptime/assets.js?v=451e2f86",
+  "./deeptime/audio.js": "./deeptime/audio.js?v=05d3c383",
+  "./deeptime/dinos.js": "./deeptime/dinos.js?v=38311c64",
+  "./deeptime/main.js": "./deeptime/main.js?v=bfbad992",
+  "./deeptime/tape.js": "./deeptime/tape.js?v=41c430bf",
+  "./deeptime/world.js": "./deeptime/world.js?v=aa0b75ab"
+} }
+</script>
+</head>
+<body class="k-skill">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap dt">
+  <h1>deep time</h1>
+  <p class="sub">a camcorder tape from a forest in montana, october 1987. something came through a hole in time. find the 8 parts of the machine before it finds you.
+    <b>play with headphones, with the lights off.</b></p>
+
+  <div id="stage" class="stage" tabindex="0">
+    <canvas id="view"></canvas>
+
+    <div id="osd" class="osd vcr" hidden>
+      <div class="tl" id="osd-play">PLAY &#9654;</div>
+      <div class="tr" id="osd-batt">BATT [||||]</div>
+      <div class="zoom" id="osd-zoom"></div>
+      <div class="bl" id="osd-counter">SP  0:00:00</div>
+      <div class="br" id="osd-date">OCT.14 1987
+11:47:12 PM</div>
+    </div>
+    <div id="count" class="count vcr" hidden>PARTS 0/8</div>
+    <div id="caption" class="caption vcr" hidden></div>
+    <div id="prompt" class="prompt vcr" hidden></div>
+    <div id="note" class="note" hidden></div>
+
+    <div id="loading" class="scr solid vcr">
+      <div class="tag">HOLLOW CREEK &middot; TAPE 1 OF 1</div>
+      <div class="loadbar"><div id="load-bar"></div></div>
+      <div id="load-pct">TRACKING 0%</div>
+      <div class="warn">about 20 MB of forest, animals and sound, the first time.</div>
+    </div>
+
+    <div id="title" class="scr vcr" hidden>
+      <div class="logo">DEEP TIME</div>
+      <div class="tag">HOLLOW CREEK, MONTANA &middot; OCTOBER 14, 1987 &middot; 11:47 PM</div>
+      <div class="btns">
+        <button class="vbtn" id="btn-play">PLAY TAPE &#9654;</button>
+        <button class="vbtn" id="btn-dawn" disabled>DAWN (finish the tape)</button>
+      </div>
+      <div class="sets">
+        <label>LOOK <input type="range" id="set-sens" min="0.3" max="2.5" step="0.05"></label>
+        <label>VOLUME <input type="range" id="set-vol" min="0" max="1.2" step="0.05"></label>
+        <label>PICTURE <select id="set-q"><option value="high">high</option><option value="low">low (faster)</option></select></label>
+        <span id="q-note" hidden>(reload to apply)</span>
+      </div>
+      <div class="warn">WASD move &middot; mouse look &middot; SHIFT run &middot; F or right click flashlight &middot; E or click pick up &middot; wheel zoom &middot; ESC pause<br>
+        contains sudden loud sounds, flashing static and jumpscares.</div>
+    </div>
+
+    <div id="intro" class="scr solid vcr" hidden>
+      <div id="intro-text" class="intro-text"></div>
+      <div class="skip">SPACE to skip</div>
+    </div>
+
+    <div id="pause" class="scr vcr" hidden>
+      <div class="logo" style="font-size:clamp(40px,7vw,80px)">PAUSE II</div>
+      <div class="btns"><button class="vbtn" id="btn-resume">RESUME</button><button class="vbtn" id="btn-quit">EJECT</button></div>
+    </div>
+
+    <div id="end" class="scr solid vcr" hidden>
+      <div class="logo" id="end-title" style="font-size:clamp(40px,7vw,86px)">SIGNAL LOST</div>
+      <div class="end-body" id="end-body"></div>
+      <div class="end-lb" id="end-lb"></div>
+      <div class="btns"><button class="vbtn" id="btn-again">REWIND &amp; PLAY AGAIN</button><button class="vbtn" id="btn-menu">MENU</button></div>
+    </div>
+
+    <div id="touch" class="touch" hidden>
+      <button class="tbtn" id="t-run">RUN</button>
+      <button class="tbtn" id="t-light">LIGHT</button>
+      <button class="tbtn" id="t-grab">GRAB</button>
+    </div>
+    <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
+  </div>
+
+  <p class="keys"><b>how it works:</b> 8 parts of the time machine are somewhere in the woods, each at a landmark, each with a blinking red light. every part you pick up makes it worse.
+    the tall one skips closer when you're not looking, and the tape breaks up when you look at it. from the 4th part she walks the woods too: if she roars at you, stop moving and kill the light.
+    run out of breath, run out of battery, run out of luck. scores go on the board as parts found, then time.</p>
+
+  <div id="lb"></div>
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=f52f1ce8"></script>
+<script type="module" src="deeptime/main.js?v=bfbad992"></script>
+<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "deeptime");</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

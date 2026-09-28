@@ -1,0 +1,12 @@
+import { NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { prune, dedup, quantize, meshopt, weld } from '@gltf-transform/functions';
+import { MeshoptEncoder } from 'meshoptimizer';
+import fs from 'fs';
+await MeshoptEncoder.ready;
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.encoder': MeshoptEncoder });
+const [src, dst] = process.argv.slice(2);
+const doc = await io.read(src);
+await doc.transform(prune(), dedup(), weld(), quantize(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+fs.writeFileSync(dst, await io.writeBinary(doc));
+console.log(dst.split('/').pop(), (fs.statSync(src).size/1024|0)+'K ->', (fs.statSync(dst).size/1024|0)+'K');
