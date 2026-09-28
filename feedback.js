@@ -127,9 +127,9 @@
       ".fb-bubble small{display:block;font:700 10px/1.1 var(--fb-body);letter-spacing:0;text-shadow:none;opacity:.95;margin-top:2px;}",
       ".fb-bubble.fb-hide{opacity:0;pointer-events:none;transform:translateY(20px);}",
       ".fb-bubble.fb-init{transition:none;}",
-      ".fb-bubble.fb-wave{animation:fb-wave .9s ease-in-out 3;}",
+      ".fb-bubble.fb-wave,.fb-navbtn.fb-wave{animation:fb-wave .9s ease-in-out 3;}",
       "@keyframes fb-wave{25%{transform:rotate(-6deg) scale(1.08);}75%{transform:rotate(5deg) scale(1.08);}}",
-      "body.typing .fb-bubble{opacity:0;pointer-events:none;}",
+      "body.typing .fb-bubble,body.typing .fb-strip{opacity:0;pointer-events:none;}",
       "@media (max-width:640px){.fb-bubble{right:10px;bottom:12px;font-size:15px;padding:8px 12px 7px 10px;}",
         ".fb-bubble small{display:none;}}",
 
@@ -491,7 +491,7 @@
     var hide = false;
     if (document.fullscreenElement || document.pointerLockElement) hide = true;
     else if (!isHome) {
-      var wrap = document.querySelector(".wrap, .room");
+      var wrap = document.querySelector(".wrap, .room, #page");
       if (wrap) {
         var free = window.innerWidth - wrap.getBoundingClientRect().right;
         hide = free < bubble.offsetWidth + 30;
@@ -501,11 +501,13 @@
     bubble.tabIndex = hide ? -1 : 0;
   }
 
+  // end of a round: wave whichever is on screen, the bubble or the nav button
   function nudge() {
-    if (!bubble) return;
-    bubble.classList.remove("fb-wave");
-    void bubble.offsetWidth;
-    bubble.classList.add("fb-wave");
+    var el = bubble && !bubble.classList.contains("fb-hide") ? bubble : document.querySelector(".fb-navbtn");
+    if (!el) return;
+    el.classList.remove("fb-wave");
+    void el.offsetWidth;
+    el.classList.add("fb-wave");
   }
 
   function boot() {
