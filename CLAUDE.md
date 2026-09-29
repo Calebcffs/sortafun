@@ -712,6 +712,34 @@ old module.
 
 ### Deep Time (`deeptime.html` + `deeptime/`)
 
+**Rework, 2026-09-29 (v0.2), overrides the Watcher / Queen rules further
+down:** only the T. rex hunts (`Rex` in `dinos.js`, states off / stare /
+stalk / windup / charge / search / leave, plus ladder / present for the
+ending). It spawns out of sight behind you (`spawn()`, falls back to anywhere
+out of view at the gate), most likely a few seconds after a pickup
+(`onPickup`). "Looking at it with the torch" is `G.lit(pos, 3.5, 42)`, not
+`G.seen`. Torch on it ~1-1.5s -> roar -> 9.5 m/s charge; torch off -> search
+at 1.7 m/s (stops a head short of where it saw you) -> leave. Torch on,
+pointed away -> stalk at 3.6-4.3 m/s, lost past 30m. Its outline is a
+fresnel rim + front fill in the skin shader driven by one shared uniform
+(`RIM.uRim`, every rex material incl. mouth/horn and the lite branch, each
+with its own `customProgramCacheKey`). Eyes glow faintly while it hunts
+(`fog: false`), bright in the beam. The Watcher class is still there but
+never switched on. Lamps are all `LAMP_COLOR`; parts never at the mast.
+Finale: `toMast()` (beacon strobe via `WD.beacon(true)`, "GET TO THE MAST"),
+within 4.2m of the mast -> `startFinale()`: ladder rungs on the mast's +z
+face, the snap is timed and placed from `rex.bite` (measured from the attack
+clip at load), top of the mast, white, `presentDay()` (the `#pwin` window
+overlay, OSD hidden), eyes + faint rim, end card "DEEP TIME / well done for
+beating part 1 (alpha version)". The start sign text is `START_SIGN` in
+main.js (Caleb is rewriting it and `NOTES`).
+
+**Testing:** drive it over CDP with `deeptime.step(1/60)` inside one
+evaluate (`deeptime.keys` for input; stub `tape.render` for speed), and grab
+frames with `renderer.domElement.toDataURL()` in the same evaluate (a normal
+screenshot of the canvas comes back stale). Call `Audio.init()` first. Plain
+`node --check` on these .js files doesn't really parse them; copy to .mjs.
+
 Caleb asked (2026-09-28) for an analogue horror game that is "basically a
 copy of Slender: The Eight Pages in every way" but prehistoric: T. rexes and
 raptors, collect the parts of a time machine, photoreal, dark, flashlight,

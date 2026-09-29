@@ -13,7 +13,7 @@ import * as THREE from "three";
 import * as AS from "./assets.js";
 import { A } from "./assets.js";
 import * as WD from "./world.js";
-import { Watcher, Queen } from "./dinos.js";
+import { Watcher, Rex, RIM } from "./dinos.js";
 import { Audio } from "./audio.js";
 import { Tape } from "./tape.js";
 
@@ -124,13 +124,17 @@ const NOTES = [
   "IT KNOWS WHAT\nYOU CARRY",
 ];
 
+// pinned to a post by the gate, the first thing the torch finds (2026-09-29).
+// one string: rewrite freely, \n breaks a line
+const START_SIGN = "IF YOU SEE ONE\nSWITCH OFF YOUR TORCH\nAND RUN.\n\nDONT LOOK AT IT\nWITH THE LIGHT ON";
+
 const G = {
   state: "title", mode: "night", level: 0, parts: [], got: 0, time: 0, static: 0, fear: 0,
   player: new THREE.Vector3(), yaw: 0, pitch: 0, speed: 0, stamina: 1, exhausted: false, battery: 1, lightOn: true,
   zoom: 0, bob: 0, stepAcc: 0, shakeAmt: 0, inTunnel: false, watcherOn: false, queenOn: true,
   flashPower: 290, lastSting: -10, ambT: 5, packT: 10, roarT: 0, thunderT: 40, noteT: 0, countT: 0, captionT: 0,
 };
-let watcher, queen, loops = {};
+let watcher, rex, loops = {};
 const keys = new Set();
 
 // ------------------------------------------------------------------
@@ -159,6 +163,40 @@ function tagCanvas(n, note, big) {
   return c;
 }
 
+// the start sign: a sheet of station paper, pencilled in a hurry
+function signCanvas(text, big) {
+  const W = big ? 620 : 256, H = big ? 560 : 232, k = W / 256;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  g.fillStyle = "#e3d6b4"; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 50; i++) { g.fillStyle = `rgba(90,60,20,${Math.random() * 0.07})`; g.beginPath(); g.arc(Math.random() * W, Math.random() * H, Math.random() * 30 * k, 0, 7); g.fill(); }
+  g.fillStyle = "#b23a1e"; g.font = `bold ${14 * k}px "Courier New", monospace`;
+  g.fillText("HOLLOW CREEK STATION", 16 * k, 24 * k);
+  g.fillRect(16 * k, 30 * k, W - 32 * k, 2 * k);
+  g.save(); g.translate(18 * k, 58 * k); g.rotate(-0.03);
+  g.fillStyle = "rgba(25,20,15,0.93)"; g.font = `${15 * k}px "Rock Salt", "Comic Sans MS", cursive, sans-serif`;
+  text.split("\n").forEach((line, i) => g.fillText(line, (i % 2) * 5 * k, i * 21 * k));
+  g.restore();
+  return c;
+}
+let sign = null;
+function buildSign() {
+  const x = WD.GATE.x + 1.5, z = WD.GATE.z - 5.5, y = WD.floorAt(x, z);
+  const grp = new THREE.Group();
+  const wood = new THREE.MeshStandardMaterial({ color: 0x4a3b2a, roughness: 0.9 });
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.7, 0.09), wood); post.position.set(0, 0.85, -0.06); grp.add(post);
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.66, 0.03), wood); board.position.set(0, 1.42, -0.02); grp.add(board);
+  const tex = new THREE.CanvasTexture(signCanvas(START_SIGN, false)); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.545), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
+  paper.position.set(0, 1.42, 0.0); paper.rotation.z = 0.03; grp.add(paper);
+  grp.position.set(x, y, z);
+  grp.rotation.y = -0.25; // turned a little toward where you start
+  grp.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  WD.W.root.add(grp);
+  WD.circle(x, z, 0.12);
+  sign = { grp, center: new THREE.Vector3(x, y + 1.42, z) };
+}
+
 // ------------------------------------------------------------------
 // the parts
 // ------------------------------------------------------------------
@@ -166,7 +204,8 @@ function layoutParts() {
   for (const p of G.parts) WD.W.root.remove(p.obj);
   G.parts = [];
   // the trailer (first lamp down the path from the gate) always has one
-  const rest = WD.LANDMARKS.filter((L) => L.id !== "trailer").sort(() => Math.random() - 0.5).slice(0, 7);
+  // (never at the mast: that's where the tape ends)
+  const rest = WD.LANDMARKS.filter((L) => L.id !== "trailer" && L.id !== "mast").sort(() => Math.random() - 0.5).slice(0, 7);
   const lms = [WD.LANDMARKS.find((L) => L.id === "trailer"), ...rest];
   for (const L of WD.W.lamps) { L.target = 0; L.on = 0; L.dying = false; }
   const models = PART_MODELS.slice().sort(() => Math.random() - 0.5);
@@ -210,12 +249,14 @@ function newRun(mode) {
   G.yaw = 0; G.pitch = -0.02; G.watcherOn = false; G.shakeAmt = 0; G.lastSting = -10;
   G.ambT = 4; G.packT = 12; G.roarT = 0; G.thunderT = 30 + Math.random() * 30; G.countT = 0; G.noteT = 0; G.captionT = 6;
   G.endT = 0; G.finaleT = 0;
-  G.dusk = mode === "night" ? 1 : 0; G.cameoDone = false; G.firstLamp = null; G.firstAt = 0;
+  G.dusk = mode === "night" ? 1 : 0; G.phase = "parts"; G.presentDay = false; G.readingSign = false;
   G.player.set(WD.GATE.x, 0, WD.GATE.z - 1.5);
   G.player.y = WD.floorAt(G.player.x, G.player.z);
   layoutParts();
-  watcher.d.visible = false; watcher.timer = 8; watcher.pos.set(0, -50, 0);
-  queen.state = "off"; queen.next = 25; queen.d.visible = false;
+  watcher.d.visible = false; watcher.pos.set(0, -50, 0); // retired
+  rex.reset();
+  WD.beacon(false);
+  $("pwin").hidden = true;
   setLook(mode === "dawn" ? DAWN : NIGHT, mode === "dawn");
   if (mode === "night") { moon.position.set(0, 18, -120); blendLook(NIGHT, DUSK, 1); }
   WD.W.beam.visible = true;
@@ -313,38 +354,28 @@ G.litPoint = (p, maxD) => {
   return WD.occlusion(flash.position.x, flash.position.z, p.x, p.z) < 0.5;
 };
 G.shake = (a) => { G.shakeAmt = Math.min(1.2, G.shakeAmt + a); };
-G.onSighting = (w, dist) => {
-  if (G.time - G.lastSting < 6) return;
-  G.lastSting = G.time;
-  Audio.boom(dist < 15 ? 0.9 : 0.6);
-  G.fear = Math.max(G.fear, dist < 15 ? 0.9 : 0.6);
-  tape.kick(0.25);
+G.occlusion = (ax, az, bx, bz) => WD.occlusion(ax, az, bx, bz);
+// the rex: a huff behind you when it arrives, heavy feet, a roar when your light stays on it
+G.onRexArrive = (r) => {
+  Audio.oneShot("rex_huff", { pos: r.d.headPos(tmp), vol: 1.3, ref: 10, rate: 0.9 });
+  Audio.footfall(r.pos, 1.0); G.shake(0.2); r.boomed = false;
 };
-G.onSkipSeen = () => { tape.kick(0.5); G.static = Math.min(0.9, G.static + 0.06); };
-G.onQueenArrive = (q) => { Audio.oneShot("rex_huff", { pos: q.d.headPos(), vol: 1.1, ref: 10, rate: 0.9 }); };
-G.onQueenStep = (q, dist) => {
-  Audio.footfall(q.pos, clamp01(1.5 - dist / 55));
+G.onRexStep = (r, dist) => {
+  Audio.footfall(r.pos, clamp01(1.5 - dist / 55));
   G.shake(clamp01(1 - dist / 50) * 0.28);
-  if (Math.random() < 0.15) Audio.oneShot("branch", { pos: q.d.headPos(tmp), vol: 0.8, ref: 6 });
-  if (Math.random() < 0.06 && dist > 20) Audio.oneShot("rex_growl", { pos: q.d.headPos(tmp), vol: 0.9, ref: 10 });
+  if (Math.random() < 0.15) Audio.oneShot("branch", { pos: r.d.headPos(tmp), vol: 0.8, ref: 6 });
 };
-G.onQueenAlert = () => { tape.kick(0.35); };
-G.onQueenCharge = () => { Audio.oneShot("rex_roar", { pos: queen.d.headPos(tmp), vol: 1.8, ref: 16, i: 1 }); G.shake(0.6); tape.kick(0.6); };
+G.onRexRoar = (r) => { Audio.oneShot("rex_roar", { pos: r.d.headPos(tmp), vol: 1.8, ref: 16, i: 1 }); G.shake(0.6); tape.kick(0.6); };
+G.onRexFound = (r) => { Audio.oneShot("rex_huff", { pos: r.d.headPos(tmp), vol: 1.2, ref: 8 }); tape.kick(0.3); };
 G.caught = (who) => {
   if (G.state !== "play") return;
   G.state = "caught"; G.caughtBy = who; G.endT = 0;
   for (const id of ["note", "count", "prompt", "caption"]) $(id).hidden = true;
   tape.glitch = 0;
   document.exitPointerLock && document.exitPointerLock();
-  if (who === "watcher") {
-    watcher.lunge(camera);
-    Audio.oneShot("scare", { bus: "tape", vol: 1.5, i: 0 });
-    Audio.oneShot("rap_call", { bus: "tape", vol: 1.3, i: 3, rate: 1.15 });
-  } else {
-    Audio.oneShot("rex_roar", { bus: "tape", vol: 1.6, i: 0 });
-    Audio.oneShot("scare", { bus: "tape", vol: 1.2, i: 1, delay: 0.25 });
-    queen.d.play("attack", 0.05, 1.4);
-  }
+  Audio.oneShot("rex_roar", { bus: "tape", vol: 1.6, i: 0 });
+  Audio.oneShot("scare", { bus: "tape", vol: 1.2, i: 1, delay: 0.25 });
+  rex.d.play("attack", 0.05, 1.4);
   G.shake(1.2);
 };
 
@@ -454,20 +485,22 @@ function tryPickup() {
   p.taken = true;
   WD.W.root.remove(p.obj);
   const lamp = WD.LANDMARKS.find((l) => l.id === p.lm).lamp;
-  if (lamp) { lamp.dying = true; lamp.dieAt = G.time + 1.4; }
+  if (lamp) { lamp.dying = true; lamp.dieAt = G.time + 1.4; } // its light goes out: done here
   G.got++; G.level = G.got;
   Audio.oneShot("pickup", { vol: 0.9 });
   showNote(G.got, NOTES[G.got - 1]);
   G.countT = 4;
   $("count").textContent = `PARTS ${G.got}/8`;
-  if (G.got === 1) {
-    G.watcherOn = true; watcher.timer = 8;
-    G.firstLamp = lamp; G.firstAt = G.time;
-    if (lamp) lamp.dieAt = G.time + 32; // stays lit so you see her walk through it
-    G.roarT = 70;
-  }
-  if (G.got === 3) queen.next = 25;
-  if (G.got === 8) startFinale();
+  if (G.got === 1) G.roarT = 50;
+  rex.onPickup(G);
+  if (G.got === 8) toMast();
+}
+// all 8: the mast light starts strobing, go
+function toMast() {
+  G.phase = "mast";
+  WD.beacon(true);
+  Audio.boom(0.55);
+  G.captionT = 0;
 }
 function showNote(n, text) {
   const c = tagCanvas(n, text, true);
@@ -483,64 +516,154 @@ function farRoar(vol = 1) {
 // ------------------------------------------------------------------
 // the ending
 // ------------------------------------------------------------------
+// reaching the mast: you're on the ladder. it comes out of the trees under you,
+// the jaws come up and miss, you get to the top, the signal goes, white. then
+// present day: a dark window onto the woods, and two eyes.
+const LADDER_EYE = 1.62;
+let fin = null;
 function startFinale() {
-  G.state = "finale"; G.finaleT = 0; G.finaleStep = 0;
-  G.noteT = Math.min(G.noteT, 2.2); G.countT = 2.2;
-  Audio.tickMusic(8, 0, true);
-  for (const k of ["crickets", "wind", "gusts", "run", "scared", "calm", "rapBreath"]) loops[k].vol(0, 0.3);
-  watcher.d.visible = false; queen.d.visible = false; queen.state = "off";
+  G.state = "finale"; G.finaleT = 0; G.finaleStep = 0; G.phase = "done";
+  for (const id of ["note", "count", "prompt", "caption"]) $(id).hidden = true;
   document.exitPointerLock && document.exitPointerLock();
+  keys.clear();
+  for (const k of ["crickets", "gusts", "run", "calm", "rapBreath"]) loops[k].vol(0, 0.4);
+  loops.scared.vol(0.5, 0.3);
+  const M = WD.W.mast;
+  const lz = M.z + M.bw / 2 + 0.5;                   // standing on the rungs
+  const bite = rex.bite;
+  const headZ = lz + 1.25;                           // where its jaws end up: just behind you, below
+  const end = new THREE.Vector3(M.x, 0, headZ + bite.fwd);
+  fin = {
+    M, lz, end,
+    start: new THREE.Vector3(M.x + 4, 0, end.z + 24),
+    // climb so your eyes are ~1.3m above the jaws at the snap (3.3s in)
+    rate: Math.max(0.7, (bite.y + 1.3 - LADDER_EYE) / 3.3),
+    snapAt: 3.3, climbed: 0, rung: 0,
+  };
+  G.player.set(M.x, M.y, lz); G.yaw = 0; G.pitch = 0.55;
+  G.lightOn = true; G.zoom = 0;
+  rex.ladder(fin.start.x, fin.start.z, Math.atan2(fin.end.x - fin.start.x, fin.end.z - fin.start.z));
+  rex.d.play("run", 0.1, 1.2);
+  tape.u.uBlack.value = 1;
 }
+
 function tickFinale(dt) {
   const t = (G.finaleT += dt);
   const step = (n, at, fn) => { if (G.finaleStep === n && t >= at) { G.finaleStep++; fn(); } };
-  loops.hum.vol(Math.min(1.6, 0.5 + t * 0.35), 0.2);
-  loops.rumble.vol(clamp01((t - 0.8) / 3) * 0.9, 0.2);
-  if (t < 4.2) { $("caption").hidden = false; $("caption").textContent = t % 0.8 < 0.5 ? "RECALL ARMED" : ""; }
-  if (t < 3.6) { G.shake(dt * 0.25 * t); if (Math.random() < dt * t) tape.kick(0.3); }
-  step(0, 3.4, () => { Audio.thump(Audio.now(), 70, 20, 1.2, 2.5, "tape"); });
-  if (t > 3.4 && t < 4.3) tape.u.uWhite.value = clamp01((t - 3.4) / 0.6);
-  step(1, 4.2, () => {
-    // the other side: warm, hazy, 66 million years ago. and her.
-    setLook(DEEP, true);
-    WD.W.beam.visible = false;
-    // the 1987 forest goes; the Cretaceous is around you, with her in the clearing ahead
-    const f = tmp.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    WD.deepSet(camera.position.x, camera.position.z, Math.atan2(f.x, f.z));
-    G.lightOn = false;
-    queen.finale(camera);
-    $("caption").hidden = true;
-    for (const k of Object.keys(loops)) loops[k].vol(0, 0.1);
-  });
-  G.noteT -= dt; G.countT -= dt;
-  $("note").hidden = G.noteT <= 0; $("count").hidden = G.countT <= 0;
-  if (t > 3.4) { $("note").hidden = true; $("count").hidden = true; $("prompt").hidden = true; }
-  if (t >= 4.3 && t < 5.2) tape.u.uWhite.value = 1 - clamp01((t - 4.3) / 0.7);
-  step(2, 4.5, () => { Audio.oneShot("rex_roar", { bus: "tape", vol: 1.9, i: 0 }); G.shake(1); });
-  if (t > 4.3) {
-    const hp = queen.d.headPos(tmp);
-    lookToward(hp, dt * 3);
-    // then she comes at the lens
-    if (t > 5.4) {
-      const stop = queen.d.headReach() + 2.2;
-      const dx = camera.position.x - queen.pos.x, dz = camera.position.z - queen.pos.z, dd = Math.hypot(dx, dz);
-      // run in, then the bite brings the head down into the lens
-      if (dd > stop + 1.5) queen.d.play("run", 0.2, 1.3); else queen.d.play("attack", 0.15, 1.2);
-      if (dd > stop) { const s = Math.min(dd - stop, 13 * dt); queen.pos.x += dx / dd * s; queen.pos.z += dz / dd * s; }
-      if (t > 5.45 && t < 5.5) Audio.footfall(queen.pos, 1.4);
-    }
+  const F = fin, M = F.M;
+  if (t < 0.35) tape.u.uBlack.value = 1 - t / 0.35; else if (t < 6.1) tape.u.uBlack.value = 0;
+  // ---- the climb
+  if (t < 6.1) {
+    const rate = t < 4.3 ? F.rate : F.rate * 1.7;
+    F.climbed += rate * dt;
+    G.player.y = M.y + F.climbed;
+    G.bob += dt * 7;
+    if (F.climbed - F.rung > 0.36) { F.rung = F.climbed; Audio.oneShot("step_wood", { vol: 0.55, rate: 1.35 + Math.random() * 0.1 }); Audio.oneShot("click", { vol: 0.35, rate: 0.55, i: 0 }); }
   }
-  step(3, 6.5, () => { Audio.oneShot("scare", { bus: "tape", vol: 1.4, i: 0 }); tape.kick(1.5); G.static = 1; });
-  if (t > 6.5) G.static = 1;
-  step(4, 7.6, () => {
+  // ---- it comes out of the trees, running at the ladder
+  if (t < 2.7) {
+    const k = clamp01(t / 2.6), s = k * k * (3 - 2 * k);
+    rex.pos.x = lerp(F.start.x, F.end.x, s); rex.pos.z = lerp(F.start.z, F.end.z, s);
+    rex.pos.y = WD.floorAt(rex.pos.x, rex.pos.z) - 0.1;
+    F.stepT = (F.stepT || 0) - dt;
+    if (F.stepT < 0) { F.stepT = 0.36; Audio.footfall(rex.pos, 1.4); G.shake(0.22); }
+  }
+  step(0, 1.2, () => { Audio.oneShot("rex_roar", { pos: rex.d.headPos(tmp), vol: 1.7, ref: 16, i: 1 }); });
+  step(1, 2.7, () => { rex.d.play("idle", 0.15, 1); rex.d.root.rotation.y = Math.PI; });
+  step(2, F.snapAt - rex.bite.t / 1.15, () => { rex.lunge(); });
+  // eyes up the ladder, then yanked down at it, then back up
+  if (t < 2.9) { lookTowardP(M.x, G.player.y + 1.62 + 6, M.z - 0.2, dt * 3); }
+  else if (t < 4.4) lookToward(rex.d.headPos(tmp), dt * (t < 3.2 ? 9 : 5));
+  else lookTowardP(M.x, G.player.y + 1.62 + 8, M.z - 0.2, dt * 4);
+  rex.d.shine(t > 2.6 && t < 5 ? 0.9 : 0.3);
+  // ---- the snap: the jumpscare
+  step(3, F.snapAt, () => {
+    Audio.boom(1.0, "tape");
+    Audio.thump(Audio.now(), 48, 22, 1.4, 1.6, "tape");
+    Audio.oneShot("rex_roar", { bus: "tape", vol: 2.0, i: 0 });
+    Audio.oneShot("scare", { bus: "tape", vol: 1.4, i: 0 });
+    G.shake(1.2); tape.kick(1.5); G.static = 0.5;
+  });
+  if (t > F.snapAt && t < F.snapAt + 0.8) G.static = Math.max(0, 0.5 - (t - F.snapAt) * 0.6); else if (t >= F.snapAt + 0.8) G.static = 0;
+  step(4, 5.0, () => { Audio.oneShot("rex_growl", { pos: rex.d.headPos(tmp), vol: 1.4, ref: 10 }); });
+  // ---- black, then the top
+  if (t >= 5.6 && t < 6.1) tape.u.uBlack.value = clamp01((t - 5.6) / 0.4);
+  step(5, 6.1, () => {
+    G.player.y = M.y + M.H - 1.9;
+    G.yaw = Math.PI; G.pitch = -0.12;           // out over the trees, away from the mast
+    rex.d.visible = false;
+    WD.beacon("hide");
+    loops.hum.at(tmp.set(M.x, M.y + M.H, M.z)); loops.hum.vol(0.6, 0.5);
+    loops.wind.vol(0.45, 0.5);
+  });
+  if (t >= 6.1 && t < 6.7) tape.u.uBlack.value = 1 - clamp01((t - 6.1) / 0.6);
+  if (t >= 6.9 && t < 9.6) {
+    $("caption").hidden = false;
+    $("caption").textContent = t < 8.9 ? ((t % 0.7) < 0.45 ? "ACTIVATING SIGNAL" : "") : "SIGNAL SENT";
+    loops.hum.vol(Math.min(1.6, 0.6 + (t - 6.9) * 0.45), 0.2);
+    loops.rumble.vol(clamp01((t - 7) / 2.5) * 0.9, 0.2);
+    G.shake(dt * 0.3 * (t - 6.9));
+    if (Math.random() < dt * (t - 6.9)) tape.kick(0.3);
+  }
+  step(6, 8.9, () => { Audio.thump(Audio.now(), 70, 20, 1.2, 2.5, "tape"); });
+  if (t >= 9.0 && t < 9.7) tape.u.uWhite.value = clamp01((t - 9.0) / 0.6);
+  // ---- present day
+  step(7, 9.7, () => {
+    $("caption").hidden = true;
+    Audio.stopAll(0.2);
+    for (const k of Object.keys(loops)) loops[k].vol(0, 0.1);
+    presentDay();
+    $("intro").hidden = false;
+    $("intro-text").style.transition = "none"; $("intro-text").style.opacity = 1;
+    $("intro-text").textContent = "HOLLOW CREEK, MONTANA\n\nPRESENT DAY";
+  });
+  if (t >= 9.7 && t < 10.4) tape.u.uWhite.value = 1 - clamp01((t - 9.7) / 0.6);
+  step(8, 13.2, () => {
+    $("intro").hidden = true;
+    $("pwin").hidden = false;
+    loops.crickets.vol(0.3, 1.5); loops.wind.vol(0.12, 1.5);
+  });
+  // eyes: stillness first, then they light up, and the shape of it
+  if (t >= 17.2) {
+    const k = clamp01((t - 17.2) / 0.5);
+    rex.d.shine(k);
+    RIM.uRim.value = 0.16 * clamp01((t - 17.4) / 1.2);
+  } else if (t >= 9.7) { rex.d.shine(0); RIM.uRim.value = 0; }
+  step(9, 17.2, () => { Audio.boom(0.85, "tape"); Audio.thump(Audio.now(), 40, 18, 1.1, 2.4, "tape"); tape.kick(0.2); });
+  step(10, 21.2, () => {
     Audio.stopAll(0.05);
     tape.u.uBlack.value = 1;
+    $("pwin").hidden = true;
     if (G.mode === "night") { try { localStorage.setItem("deeptime-dawn", "1"); } catch (e) {} }
-    endCard(true);
   });
-  queen.update(dt, G);
+  step(11, 22.2, () => endCard(true));
+  rex.update(dt, G);
 }
 
+// present day: the woods at night through a window, and it's out there
+function presentDay() {
+  G.presentDay = true;
+  G.lightOn = false;
+  WD.beacon(false);
+  for (const L of WD.W.lamps) { L.target = 0; L.on = 0; L.dying = false; }
+  setLook(NIGHT, false);
+  moon.position.set(-60, 90, -40);
+  // stand at the gate, looking in, with it 20-26m out between the trees
+  const P = G.player;
+  P.set(WD.GATE.x, 0, WD.GATE.z - 3); P.y = WD.floorAt(P.x, P.z);
+  let best = null;
+  for (let i = 0; i < 40; i++) {
+    const a = (Math.random() - 0.5) * 0.5, r = 20 + Math.random() * 6;
+    const x = P.x - Math.sin(a) * r, z = P.z - Math.cos(a) * r;
+    const o = WD.occlusion(P.x, P.z, x, z);
+    if (!best || o < best.o) best = { x, z, a, o };
+    if (o < 0.15) break;
+  }
+  G.yaw = best.a; G.pitch = 0.1;
+  rex.present(best.x, best.z, Math.atan2(P.x - best.x, P.z - best.z));
+}
+
+function lookTowardP(x, y, z, k) { lookToward(tmp6.set(x, y, z), k); }
 function lookToward(p, k) {
   const v = tmp2.copy(p).sub(camera.position);
   const yaw = Math.atan2(-v.x, -v.z), pitch = Math.atan2(v.y, Math.hypot(v.x, v.z));
@@ -558,17 +681,14 @@ function endCard(won) {
   el.hidden = false;
   const got = G.got;
   if (won) {
-    $("end-title").textContent = "TAPE ENDS";
+    $("end-title").textContent = "DEEP TIME";
     $("end-body").innerHTML =
-      "the recall fired at 23:58.<br>the anomaly at hollow creek closed.<br><br>" +
-      "the camcorder was found at dawn in the anchor crater, still recording.<br>" +
-      "the night technician was not found.<br><br>" +
-      "also recovered: one tooth, 31 cm. species unconfirmed.<br><br>" +
+      "well done for beating part 1<br><span class='dim'>(alpha version)</span><br><br>" +
       `<b>8/8 parts &middot; ${fmt(G.time)}</b>` + (G.mode === "night" ? "<br><span class='unlock'>DAWN mode unlocked</span>" : "");
   } else {
     $("end-title").textContent = "SIGNAL LOST";
     $("end-body").innerHTML =
-      (G.caughtBy === "queen" ? "she saw you move." : "you looked at it for too long.") +
+      "it saw your light." +
       `<br><br><b>PARTS ${got}/8 &middot; ${fmt(G.time)}</b>`;
   }
   const lb = $("end-lb");
@@ -756,7 +876,7 @@ function placeCamera(dt) {
   G.flashDir.lerp(camFwd, 1 - Math.exp(-dt * 11)).normalize();
   flash.target.position.copy(flash.position).addScaledVector(G.flashDir, 10);
   // battery: dims, then flickers, never quite dies
-  const on = G.lightOn && G.state !== "finale";
+  const on = G.lightOn && !G.presentDay;
   let I = on ? G.flashPower * (0.25 + 0.75 * clamp01(G.battery / 0.3)) : 0;
   if (on && G.battery < 0.15 && Math.random() < 0.08) I *= 0.2;
   if (on && G.static > 0.3 && Math.random() < G.static * 0.3) I *= Math.random(); // it messes with the light too
@@ -773,14 +893,6 @@ function tickPlay(dt) {
   }
   // lamps whose part you took flicker out
   for (const L of WD.W.lamps) if (L.dying && G.time > L.dieAt) { L.target = 0; L.dying = false; }
-  // her first appearance: through the lamplight you just left
-  if (G.firstLamp && !G.cameoDone) {
-    const d = G.firstLamp.pos.distanceTo(G.player);
-    if (G.time - G.firstAt > 4 && d > 14 && d < 34 && queen.state === "off") { queen.cameo(G, G.firstLamp.pos); G.cameoDone = true; }
-    else if (G.time - G.firstAt > 75) G.cameoDone = true;
-  }
-  // after 10 minutes it comes anyway
-  if (!G.watcherOn && G.time > 600) { G.watcherOn = true; watcher.timer = 2; }
   // ---------- moving
   const run = (keys.has("ShiftLeft") || keys.has("ShiftRight") || T.run) && !G.exhausted;
   let mx = 0, mz = 0;
@@ -821,35 +933,46 @@ function tickPlay(dt) {
   if (G.stepAcc > stride) { G.stepAcc = 0; footstep(running); }
   // ---------- battery
   if (G.lightOn) G.battery = Math.max(0, G.battery - dt / (14 * 60));
-  // ---------- the animals
-  watcher.update(dt, G);
-  queen.update(dt, G);
-  // ---------- seeing her: a boom, once per appearance
-  if (queen.d.visible && queen.state !== "finale") {
-    if (!queen.boomed && G.seen(queen, 3.5) > 0.12) { queen.boomed = true; Audio.boom(0.8); G.fear = Math.max(G.fear, 0.8); }
-  } else queen.boomed = false;
-  // ---------- eyeshine: the eyes throw your light back, long before you can see the body
-  for (const a of [watcher, queen]) {
-    if (!a.d.visible) continue;
-    const hp = a.d.headPos(tmp3);
-    const d = hp.distanceTo(camera.position);
-    const facing = tmp4.set(Math.sin(a.d.root.rotation.y), 0, Math.cos(a.d.root.rotation.y)).dot(tmp5.copy(camera.position).sub(hp).setY(0).normalize());
-    const on = G.litPoint(hp, 48) ? clamp01(facing * 1.4) * clamp01(1.25 - d / 48) : 0;
-    a.shineV = (a.shineV || 0) + (on - (a.shineV || 0)) * Math.min(1, dt * 10);
-    a.d.shine(a.shineV);
+  // ---------- the animal
+  rex.update(dt, G);
+  if (G.state !== "play") return;
+  // ---------- seeing it: a boom, once per appearance
+  if (rex.d.visible && rex.hunting) {
+    if (!rex.boomed && G.seen(rex, 3.5) > 0.1) { rex.boomed = true; Audio.boom(0.8); G.fear = Math.max(G.fear, 0.8); tape.kick(0.25); }
   }
-  // ---------- static and fear
-  const wd = G.watcherOn && watcher.d.visible ? watcher.dist : 99;
-  const look = watcher.look || 0;
-  const close = clamp01(1 - wd / 22);
-  if (look > 0.02) G.static += dt * look * (0.03 + 1.4 * close * close);
-  G.static += dt * clamp01(1 - wd / 8) * 0.35;
-  if (look <= 0.02 && wd > 8) G.static -= dt * 0.25;
-  G.static = clamp01(G.static);
-  if (G.static >= 1) G.caught("watcher");
-  const qd = queen.state !== "off" ? queen.dist : 99;
-  const fearT = Math.max(close * 0.8, G.static * 1.1, clamp01(1 - qd / 55) * (queen.state === "charge" || queen.state === "alert" ? 1 : 0.6));
+  // ---------- its eyes: always a faint glow while it hunts, bright in your beam
+  if (rex.d.visible) {
+    const hp = rex.d.headPos(tmp3);
+    const d = hp.distanceTo(camera.position);
+    const facing = tmp4.set(Math.sin(rex.d.root.rotation.y), 0, Math.cos(rex.d.root.rotation.y)).dot(tmp5.copy(camera.position).sub(hp).setY(0).normalize());
+    const beam = G.litPoint(hp, 48) ? clamp01(facing * 1.4) * clamp01(1.25 - d / 48) : 0;
+    const on = Math.max(rex.hunting ? 0.75 * clamp01(facing * 1.5) : 0, beam);
+    rex.shineV = (rex.shineV || 0) + (on - (rex.shineV || 0)) * Math.min(1, dt * 10);
+    rex.d.shine(rex.shineV);
+  }
+  // ---------- static (a charge breaks the tape up) and fear
+  const qd = rex.state !== "off" ? rex.dist : 99;
+  const charging = rex.state === "charge" || rex.state === "windup";
+  G.static += ((charging ? clamp01(1 - qd / 28) * 0.45 : 0) - G.static) * Math.min(1, dt * 3);
+  const fearT = rex.state === "off" ? 0 : Math.max(clamp01(1 - qd / 45) * 0.7, charging ? 1 : 0);
   G.fear += (clamp01(fearT) - G.fear) * Math.min(1, dt * 1.5);
+  const wd = 99;
+  // ---------- the start sign: walk up to it and you read it
+  if (sign) {
+    const v = tmp.copy(sign.center).sub(camera.position), d = v.length();
+    const reading = d < 3.2 && v.normalize().dot(camFwd) > 0.82;
+    if (reading && !G.readingSign) { const el = $("note"); el.innerHTML = ""; el.appendChild(signCanvas(START_SIGN, true)); }
+    G.readingSign = reading;
+    if (reading) G.noteT = Math.max(G.noteT, 0.15);
+  }
+  // ---------- the mast: all 8 found, get to the light
+  if (G.phase === "mast") {
+    G.captionT = 0.5;
+    $("caption").hidden = false;
+    $("caption").textContent = (tAll % 1) < 0.6 ? "GET TO THE MAST" : "";
+    const M = WD.W.mast;
+    if (Math.hypot(G.player.x - M.x, G.player.z - M.z) < 4.2) { startFinale(); return; }
+  }
   // ---------- sound
   ambience(dt, wd, qd, running);
   Audio.tickMusic(G.level, G.fear);
@@ -893,9 +1016,7 @@ function ambience(dt, wd, qd, running) {
   loops.run.vol(clamp01(exert * 1.3) * 0.5, 0.5);
   loops.scared.vol(clamp01(G.fear * 1.2) * 0.45, 0.6);
   loops.calm.vol(0.1 * (1 - exert) * (1 - G.fear), 0.6);
-  loops.rumble.vol(queen.state !== "off" ? clamp01(1 - qd / 70) * 0.5 : 0, 1);
-  if (watcher.d.visible) { loops.rapBreath.at(watcher.d.headPos(tmp)); loops.rapBreath.vol(clamp01(1 - wd / 18) * 0.9, 0.3); }
-  else loops.rapBreath.vol(0, 0.3);
+  loops.rumble.vol(rex.state !== "off" ? clamp01(1 - qd / 70) * 0.5 : 0, 1);
   const L = G.level;
   // one-shots around you: mostly behind
   G.ambT -= dt;
@@ -913,32 +1034,17 @@ function ambience(dt, wd, qd, running) {
   // distant thunder, dry
   G.thunderT -= dt;
   if (G.thunderT < 0) { G.thunderT = 80 + Math.random() * 90; Audio.oneShot("thunder", { bus: "amb", vol: 0.5, reverb: 0.4 }); }
-  // the Queen far off, before she comes close
-  if (L >= 1 && L < 3 && G.cameoDone) {
+  // it, far off, between visits
+  if (L >= 1 && L < 4 && rex.state === "off") {
     G.roarT -= dt;
     if (G.roarT < 0) { G.roarT = 45 + Math.random() * 40; farRoar(0.8); }
-  }
-  // the pack
-  if (L >= 6) {
-    G.packT -= dt;
-    if (G.packT < 0) {
-      G.packT = lerp(14, 6, (L - 6) / 2) * (0.6 + Math.random() * 0.8);
-      const a = Math.random() * Math.PI * 2, d = 20 + Math.random() * 25;
-      Audio.oneShot(Math.random() < 0.7 ? "rap_call" : "rap_hiss", { pos: tmp.set(G.player.x + Math.cos(a) * d, 1.2 + WD.height(G.player.x + Math.cos(a) * d, G.player.z + Math.sin(a) * d), G.player.z + Math.sin(a) * d), vol: 1, ref: 5, rate: 0.9 + Math.random() * 0.3 });
-      // and an answer from the other side
-      if (Math.random() < 0.6) {
-        const b = a + Math.PI + (Math.random() - 0.5), d2 = 20 + Math.random() * 25;
-        Audio.oneShot("rap_call", { pos: tmp.set(G.player.x + Math.cos(b) * d2, 1.2, G.player.z + Math.sin(b) * d2), vol: 0.9, ref: 5, rate: 0.95 + Math.random() * 0.3, delay: 0.8 + Math.random() });
-      }
-      if (L >= 7 && Math.random() < 0.4) Audio.oneShot("claws", { pos: tmp.set(G.player.x - Math.sin(G.yaw) * -12, 1.4, G.player.z - Math.cos(G.yaw) * -12), vol: 0.8, ref: 3 });
-    }
   }
 }
 
 function tickCaught(dt) {
   G.endT += dt;
   const t = G.endT;
-  const who = G.caughtBy === "watcher" ? watcher : queen;
+  const who = rex;
   lookToward(who.d.headPos(tmp), dt * 8);
   // a beat where you SEE it (flickering), then the tape gives out
   G.static = t < 0.85 ? 0.12 + (Math.random() < 0.25 ? 0.35 : 0) : 1;
@@ -947,7 +1053,7 @@ function tickCaught(dt) {
   if (t < 0.9) G.shake(dt * 2);
   who.d.update(dt);
   // it closes the last bit, stopping short of the lens
-  const minReach = who.d.headReach() + (G.caughtBy === "watcher" ? 0.9 : 2.2);
+  const minReach = who.d.headReach() + 2.2;
   const dx = who.pos.x - camera.position.x, dz = who.pos.z - camera.position.z, dd = Math.hypot(dx, dz);
   if (dd > minReach) { const k = Math.min(1, dt * 1.6); who.pos.x -= dx / dd * (dd - minReach) * k; who.pos.z -= dz / dd * (dd - minReach) * k; }
   if (t > 0.9 && !G.loudStatic) { G.loudStatic = true; loops.static.vol(1.2, 0.02); for (const k of ["crickets", "wind", "gusts", "calm", "run", "scared", "rapBreath", "hum", "rumble"]) loops[k].vol(0, 0.05); Audio.tickMusic(0, 0, true); }
@@ -970,7 +1076,7 @@ function osd() {
   $("osd-batt").textContent = "BATT " + "[" + "|".repeat(bars) + " ".repeat(4 - bars) + "]" + (G.lightOn ? "" : " OFF");
   $("osd-batt").classList.toggle("low", G.battery < 0.2 && (tAll % 1) < 0.5);
   $("osd-zoom").textContent = G.zoom > 0.02 ? "ZOOM " + "=".repeat(1 + Math.round(G.zoom * 8)) : "";
-  $("osd").hidden = G.state === "end";
+  $("osd").hidden = G.state === "end" || G.presentDay;
   if (touch) $("touch").hidden = G.state !== "play";
   rotateHint();
 }
@@ -990,6 +1096,25 @@ new ResizeObserver(resize).observe(stage);
 // ------------------------------------------------------------------
 // loading
 // ------------------------------------------------------------------
+// where the rex's head gets to in its attack (the ladder snap is placed from this)
+function measureBite(d) {
+  const a = d.actions.attack;
+  const best = { y: d.height * 0.8, fwd: d.headReach(), t: 0.4 };
+  if (!a) return best;
+  d.root.position.set(0, 0, 0); d.root.rotation.y = 0;
+  d.mixer.stopAllAction(); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.setEffectiveWeight(1); a.play();
+  const dur = a.getClip().duration;
+  best.fwd = -1;
+  for (let i = 0; i <= 40; i++) {
+    const t = dur * i / 40;
+    d.mixer.setTime(t); d.root.updateMatrixWorld(true);
+    const hp = d.headPos(tmp);
+    if (hp.z > best.fwd) { best.fwd = hp.z; best.y = hp.y; best.t = t; }
+  }
+  d.mixer.stopAllAction(); d.current = null; d.play("idle");
+  return best;
+}
+
 let loaded = false;
 async function load() {
   G.state = "loading";
@@ -1008,8 +1133,10 @@ async function load() {
     document.fonts ? document.fonts.load('20px "Rock Salt"').catch(() => {}) : null,
   ]);
   WD.build(scene, { lite: LITE, phone: PHONE });
-  watcher = new Watcher(scene);
-  queen = new Queen(scene);
+  watcher = new Watcher(scene); // retired, kept so nothing that names it breaks
+  rex = new Rex(scene);
+  rex.bite = measureBite(rex.d);
+  buildSign();
   // park the camera somewhere moody for the title
   G.player.set(-10, WD.floorAt(-10, 30), 30);
   G.yaw = 0.4; G.pitch = 0.05;
@@ -1025,4 +1152,4 @@ load().catch((e) => { console.error(e); $("load-pct").textContent = "TRACKING ER
 frame();
 
 // test hooks (headless checks drive the game through these)
-window.deeptime = { PHONE, LITE, isFS, G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get queen() { return queen; }, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, Audio };
+window.deeptime = { PHONE, LITE, isFS, G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get rex() { return rex; }, RIM, keys, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, toMast, startFinale, Audio };

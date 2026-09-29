@@ -1,4 +1,4 @@
-// deeptime/dinos.js - the two that stayed.
+// deeptime/dinos.js - the one that stayed.
 //
 // Models: Quaternius' CC0 "Animated Dinosaur" T. rex and Velociraptor, the
 // same rig (root/Body/Hips/Torso/Neck/Head/Tail1-5/legs), smoothed with two
@@ -8,11 +8,16 @@
 // banded albedo, glossy mouth and eyes. Eyes get an eyeshine sprite that
 // only lights up when the flashlight is on them.
 //
-// The Watcher (a Utahraptor, "the tall one") is the Slender Man: it skips
-// (teleports) closer as parts go up, freezes when watched, creeps when not,
-// and looking at it fills the static. The Queen (the T. rex) walks through
-// the woods from part 4, hunts movement and light, roars when she notices
-// you and gives you ~3 seconds to freeze and go dark.
+// The T. rex (class Rex, 2026-09-29) is the only hunter. From the first part
+// on it turns up out of sight behind you (most likely a few seconds after a
+// pickup), always facing you, its outline and eyes faintly lit (a rim light
+// in the skin shader, RIM below) so you can make it out in the dark. The rule:
+// hold your torch on it and it roars and charges; kill the light and it slows
+// to below walking pace, loses you and leaves. With the torch on but pointed
+// elsewhere it stalks you, faster than a walk, slower than a sprint.
+//
+// The Watcher (the raptor, "the tall one") is retired: the class is still
+// here but main.js never switches it on.
 import * as THREE from "three";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import { A } from "./assets.js";
@@ -56,6 +61,23 @@ vec3 skinPerturb(vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection)
 }
 `;
 
+// the rex's outline: a fresnel rim plus a faint fill on the faces toward the
+// lens, so it reads as a shape in the dark (like the eyes, it's "there"
+// without your light). RIM.uRim is 0 when it isn't hunting.
+export const RIM = { uRim: { value: 0 }, uRimCol: { value: new THREE.Color(0xa9b2b8) } };
+const RIM_DECL = "uniform float uRim; uniform vec3 uRimCol;";
+const RIM_CODE = `
+  vec3 rimV = normalize(vViewPosition);
+  float rimN = clamp(dot(normal, rimV), 0.0, 1.0);
+  float rimF = pow(1.0 - rimN, 2.4);
+  outgoingLight += uRim * (uRimCol * rimF * 0.9 + (diffuseColor.rgb * 0.8 + vec3(0.035)) * rimN * rimN * 0.7);
+`;
+function rimInto(sh) {
+  sh.uniforms.uRim = RIM.uRim; sh.uniforms.uRimCol = RIM.uRimCol;
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + RIM_DECL)
+    .replace("#include <opaque_fragment>", RIM_CODE + "\n#include <opaque_fragment>");
+}
+
 // what each of Quaternius' flat colours becomes
 const PALETTE = {
   trex: {
@@ -70,7 +92,11 @@ const PALETTE = {
 // freq: skin-pattern units per mesh-local unit; axis: the body's long axis in mesh-local space
 function skinMaterial(kind, part, color, freq, axis) {
   const m = new THREE.MeshStandardMaterial({ color, roughness: part === "mouth" ? 0.28 : part === "horn" ? 0.35 : 0.5, metalness: 0 });
-  if (part === "mouth" || part === "horn") return m;
+  const rex = kind === "rex";
+  // three caches programs by onBeforeCompile's source text; the rex versions
+  // differ (the rim), so every branch gets its own key
+  m.customProgramCacheKey = () => "dt-" + kind + "-" + (part === "mouth" || part === "horn" ? "plain" : A.lite ? "lite" : "skin");
+  if (part === "mouth" || part === "horn") { if (rex) m.onBeforeCompile = (sh) => rimInto(sh); return m; }
   if (A.lite) {
     // cheap skin for phones: keep the mottling and banding, drop the scales
     m.onBeforeCompile = (sh) => {
@@ -87,6 +113,7 @@ function skinMaterial(kind, part, color, freq, axis) {
         float mott = lvn(vSkinPos * 0.08) * 0.6 + lvn(vSkinPos * 0.31) * 0.4;
         float bands = uBand * smoothstep(0.35, 0.65, sin(dot(vSkinPos, uAxis) * 0.62 + lvn(vSkinPos * 0.04) * 4.0) * 0.5 + 0.5);
         diffuseColor.rgb *= (0.78 + 0.4 * mott) * (1.0 - 0.38 * bands);`);
+      if (rex) rimInto(sh);
     };
     return m;
   }
@@ -122,6 +149,7 @@ function skinMaterial(kind, part, color, freq, axis) {
         normal = skinPerturb(-vViewPosition, normal, vec2(dFdx(skinH), dFdy(skinH)) * uBump * 0.9, faceDirection);`)
       .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
         roughnessFactor = clamp(roughnessFactor + (1.0 - scale) * 0.25 - mott * uWet * 0.4, 0.2, 1.0);`);
+    if (rex) rimInto(sh);
   };
   return m;
 }
@@ -228,13 +256,13 @@ export class Dino {
       }
     }
     this.eyes = [];
-    const size = this.kind === "rex" ? 0.42 : 0.22;
+    const size = this.kind === "rex" ? 0.7 : 0.22;
     // the bone carries the rig's own scale; sprites under it would be scaled by that too
     head.updateMatrixWorld(true);
     const hs = new THREE.Vector3(); head.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), hs);
     const inv = 1 / hs.x;
     for (const e of eyes) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: this.kind === "rex" ? 0xffb030 : 0xff2a14, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: this.kind === "rex" ? 0xfff1d6 : 0xff2a14, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false }));
       s.scale.setScalar(size * inv);
       head.updateMatrixWorld(true);
       s.position.copy(head.worldToLocal(e.clone()));
@@ -379,137 +407,177 @@ export class Watcher {
 }
 
 // ------------------------------------------------------------------
-// the Queen
+// the T. rex
 // ------------------------------------------------------------------
-export class Queen {
+// states: off -> stare (just arrived, still) <-> stalk (torch on, following)
+// -> windup (your light stayed on it: the roar) -> charge -> caught;
+// any of those + torch off -> search (slow, toward where it last saw you)
+// -> leave. The finale uses ladder / present.
+export class Rex {
   constructor(scene) {
     this.d = new Dino("trex", "rex", 12.5);
     this.d.visible = false;
     scene.add(this.d.root);
     this.pos = this.d.root.position;
-    this.state = "off";
-    this.next = 25;
-    this.suspicion = 0;
     this.R = rng(1987);
-    this.stepPhase = 0;
-    this.heading = 0;
+    this.state = "off";
+    this.reset();
+  }
+
+  reset() {
+    this.state = "off"; this.d.visible = false;
+    this.next = 999;      // seconds to the next random appearance (set on part 1)
+    this.soon = -1;       // a quick one after a pickup, when >= 0
+    this.cool = 0;        // quiet time after it leaves
+    this.lookT = 0; this.t = 0; this.v = 0; this.stepPhase = 0;
+    this.dist = 99; this.hunting = false; this.lit = false;
+    this.last = new THREE.Vector3();
+    RIM.uRim.value = 0;
+  }
+
+  // a part was picked up: good odds it's behind you a few seconds later
+  onPickup(g) {
+    const L = g.level;
+    if (this.next > 900) this.next = lerp(60, 30, L / 8);
+    if (this.state === "off" && this.R() < lerp(0.65, 0.95, L / 8)) this.soon = 2.5 + this.R() * lerp(7, 3, L / 8);
   }
 
   update(dt, g) {
-    const d = this.d, P = g.player;
-    const L = g.level;
+    const d = this.d, P = g.player, L = g.level;
+    this.hunting = false;
+    if (this.state === "ladder" || this.state === "present") { d.update(dt); return; }
     if (this.state === "off") {
-      d.visible = false;
-      if (L < 3 || !g.queenOn) return;
+      d.visible = false; this.dist = 99;
+      RIM.uRim.value = Math.max(0, RIM.uRim.value - dt);
+      if (L < 1 || g.phase === "done") return;
+      this.cool -= dt;
+      if (this.soon >= 0) { this.soon -= dt; if (this.soon < 0 && this.cool <= 0) this.spawn(g); return; }
       this.next -= dt;
-      if (this.next <= 0) this.walkBy(g);
+      if (this.next <= 0 && this.cool <= 0) this.spawn(g);
       return;
     }
     const dx = P.x - this.pos.x, dz = P.z - this.pos.z, dist = Math.hypot(dx, dz);
     this.dist = dist;
     const toYou = Math.atan2(dx, dz);
-    let speed = 0;
-    if (this.state === "walk" || this.state === "leave") {
-      speed = 2.6;
-      d.play("walk", 0.5, 0.75);
-      // noticed?
-      const moving = g.speed > 3.4, lit = g.lit(this.pos, 3.2, 34);
-      const reach = this.calm ? 14 : 42;
-      if (this.state === "walk" && dist < reach && (moving || (lit && !this.calm)) && !g.inTunnel) this.suspicion += dt * (lit ? 2.2 : 1.4);
-      else this.suspicion = Math.max(0, this.suspicion - dt * 0.5);
-      if (this.suspicion > 0.7) { this.state = "alert"; this.t = 0; this.roared = false; g.onQueenAlert(this); }
-      if (this.state === "leave" && dist > 95) { this.state = "off"; this.calm = false; this.next = lerp(95, 50, clamp01((L - 3) / 5)) * (0.8 + this.R() * 0.4); }
-      if (this.state === "walk" && this.travelled > this.pathLen) { this.state = "leave"; }
-    } else if (this.state === "alert") {
-      this.t += dt;
-      turnTo(this, toYou, dt * 1.4);
-      if (this.t < 0.3) d.play("idle", 0.3);
-      if (this.t > 0.35 && !this.roared) { this.roared = true; d.play("attack", 0.2, 0.8); g.audio.oneShot("rex_roar", { pos: d.headPos(), vol: 1.6, ref: 14, i: 0, reverb: 0.6 }); g.shake(0.6); }
-      if (this.t > 2.2 && d.current !== "idle") d.play("idle", 0.6, 0.7);
-      // the rule: freeze and go dark
-      if (this.t > 1.0 && (g.speed > 0.7 || g.lit(this.pos, 3.2, 40))) { this.state = "charge"; g.onQueenCharge(this); }
-      else if (this.t > 4.4) { this.state = "sniff"; this.t = 0; g.audio.oneShot("rex_huff", { pos: d.headPos(), vol: 1.2, ref: 8 }); }
-    } else if (this.state === "sniff") {
-      this.t += dt;
-      d.play("idle", 0.5, 0.5);
-      if (g.speed > 3.2 || g.lit(this.pos, 3.2, 30)) { this.state = "charge"; g.onQueenCharge(this); }
-      if (this.t > 2.5) { this.state = "leave"; this.heading = toYou + Math.PI + (this.R() - 0.5); this.suspicion = 0; }
+    const torch = g.lightOn && g.battery >= 0.03;
+    // "looking at it with the torch": the beam is on it (not just in view)
+    this.lit = g.lit(this.pos, 3.5, 42);
+    const reach = d.headReach() + 1.2;
+    let speed = 0, face = toYou;
+    this.t += dt;
+
+    if (this.state === "stare" || this.state === "stalk") {
+      if (this.lit) this.lookT += dt; else this.lookT = Math.max(0, this.lookT - dt * 0.6);
+      if (!torch) { this.toSearch(); }
+      else if (this.lookT > lerp(1.5, 0.95, L / 8)) { this.state = "windup"; this.t = 0; d.play("attack", 0.15, 0.85); g.onRexRoar(this); }
+      else if (this.state === "stare") {
+        d.play("idle", 0.3, 0.5);
+        if (this.t > 1.6) { this.state = "stalk"; this.t = 0; }
+      } else {
+        // following your light at a lope: a walk won't lose it, a sprint can
+        // (early on: past 30m it loses you in the trees, torch or not)
+        speed = lerp(3.6, 4.3, L / 8);
+        d.play("walk", 0.4, speed / 3.2);
+        if (dist > 30) this.toSearch();
+      }
+    } else if (this.state === "windup") {
+      if (!torch && this.t < 0.7) this.toSearch();
+      else if (this.t > 0.85) { this.state = "charge"; this.t = 0; }
     } else if (this.state === "charge") {
-      speed = 10.5;
-      turnTo(this, toYou, dt * 3);
-      d.play("run", 0.25, 1.2);
-      if (dist < 6.5) g.caught("queen");
-    } else if (this.state === "finale") {
-      d.update(dt);
-      return;
+      speed = 9.5;
+      d.play("run", 0.2, 1.25);
+      if (!torch) this.toSearch();
+    } else if (this.state === "search") {
+      // lost you: it drifts to where it last saw your light, slower than you walk
+      face = Math.atan2(this.last.x - this.pos.x, this.last.z - this.pos.z);
+      const toLast = Math.hypot(this.last.x - this.pos.x, this.last.z - this.pos.z);
+      speed = toLast > d.headReach() + 3 ? 1.7 : 0;
+      d.play(speed ? "walk" : "idle", 0.5, speed ? 0.55 : 0.5);
+      // torch back on nearby, and it has you again
+      if (torch && dist < 30 && this.t > 0.4) { this.state = "stalk"; this.t = 0; this.lookT = this.lit ? 0.7 : 0.3; g.onRexFound(this); }
+      else if (this.t > 6) { this.state = "leave"; this.t = 0; this.heading = toYou + Math.PI + (this.R() - 0.5); }
+    } else if (this.state === "leave") {
+      face = this.heading; speed = 3;
+      d.play("walk", 0.6, 0.8);
+      if (this.t > 7 || dist > 45) this.gone(g);
+      if (torch && dist < 16 && this.lit) { this.state = "stalk"; this.t = 0; this.lookT = 0.5; g.onRexFound(this); }
     }
-    if (this.state !== "alert" && this.state !== "sniff") {
-      if (this.state !== "charge") turnTo(this, this.heading, dt * 0.4);
-      this.pos.x += Math.sin(d.root.rotation.y) * speed * dt;
-      this.pos.z += Math.cos(d.root.rotation.y) * speed * dt;
-      this.travelled = (this.travelled || 0) + speed * dt;
-      // footfalls: two per walk cycle
-      this.stepPhase += dt * (speed > 5 ? 2.6 : 1.05);
-      if (this.stepPhase > 1) { this.stepPhase -= 1; g.onQueenStep(this, dist); }
+    if (this.state === "off") return;
+    // you're in the culvert, or it's lost you completely: it gives up
+    if (g.inTunnel || dist > 70) { this.gone(g); return; }
+    if (torch && this.state !== "search" && this.state !== "leave") this.last.set(P.x, P.y, P.z);
+
+    // it always looks at you (except walking off)
+    const faceRate = this.state === "leave" || this.state === "search" ? 1.2 : 4;
+    turnTo(this, this.state === "search" || this.state === "leave" ? face : toYou, dt * faceRate);
+    // momentum: speeds up quick, slows over half a second (so killing the light mid-charge still lets it slide a bit)
+    this.v += (speed - this.v) * Math.min(1, dt * (speed > this.v ? 4 : 2));
+    if (this.v > 0.05) {
+      const hx = Math.sin(d.root.rotation.y), hz = Math.cos(d.root.rotation.y);
+      this.pos.x += hx * this.v * dt; this.pos.z += hz * this.v * dt;
+      this.stepPhase += dt * (this.v > 5 ? 2.6 : 1.05);
+      if (this.stepPhase > 1) { this.stepPhase -= 1; g.onRexStep(this, dist); }
     }
     this.pos.y = floorAt(this.pos.x, this.pos.z) - 0.1;
+    this.hunting = this.state !== "leave";
+    RIM.uRim.value += ((this.hunting ? 0.6 : 0.25) - RIM.uRim.value) * Math.min(1, dt * 3);
     d.visible = true;
+    if (dist < reach && (this.state === "charge" || this.state === "stalk" || this.state === "windup")) g.caught("rex");
     d.update(dt);
   }
 
-  // her first appearance: she walks through the lit spot you just took a part
-  // from, while you're walking away. she isn't hunting yet (only a sprint right
-  // past her gets her attention), she's just there.
-  cameo(g, spot) {
-    const P = g.player;
-    const away = Math.atan2(spot.x - P.x, spot.z - P.z); // from you toward the lamp
-    const side = this.R() < 0.5 ? 1 : -1;
-    const across = away + side * (Math.PI / 2) + (this.R() - 0.5) * 0.5;
-    const hx = Math.sin(across), hz = Math.cos(across);
-    this.pos.set(spot.x - hx * 32, 0, spot.z - hz * 32);
-    this.pos.x = Math.max(-FENCE + 5, Math.min(FENCE - 5, this.pos.x));
-    this.pos.z = Math.max(-FENCE + 5, Math.min(FENCE - 5, this.pos.z));
-    this.heading = Math.atan2(spot.x + hx * 40 - this.pos.x, spot.z + hz * 40 - this.pos.z);
-    this.d.root.rotation.y = this.heading;
-    this.pathLen = 75; this.travelled = 0; this.suspicion = 0;
-    this.state = "walk"; this.calm = true;
-    this.d.visible = true;
-    g.onQueenArrive(this);
+  toSearch() { if (this.state !== "search") { this.state = "search"; this.t = 0; this.lookT = 0; } }
+  gone(g) {
+    this.state = "off"; this.d.visible = false; this.hunting = false;
+    this.cool = lerp(14, 8, g.level / 8);
+    this.next = lerp(60, 26, g.level / 8) * (0.7 + this.R() * 0.6);
   }
 
-  // cross your path at 18-30m, from out of sight
-  walkBy(g) {
-    this.calm = false;
-    const P = g.player;
-    const side = this.R() < 0.5 ? 1 : -1;
-    const across = g.yaw + (this.R() - 0.5) * 1.2 + Math.PI / 2 * side; // her heading, roughly across your view
-    const pass = 18 + this.R() * 12;
-    // closest point of her line to you is `pass` ahead-ish of you
-    const fx = -Math.sin(g.yaw), fz = -Math.cos(g.yaw);
-    const cx = P.x + fx * pass, cz = P.z + fz * pass;
-    const hx = Math.sin(across), hz = Math.cos(across);
-    this.pos.set(cx - hx * 60, 0, cz - hz * 60);
-    this.pos.x = Math.max(-FENCE + 5, Math.min(FENCE - 5, this.pos.x));
-    this.pos.z = Math.max(-FENCE + 5, Math.min(FENCE - 5, this.pos.z));
-    this.heading = Math.atan2(cx + hx * 60 - this.pos.x, cz + hz * 60 - this.pos.z);
-    this.d.root.rotation.y = this.heading;
-    this.pathLen = 120;
-    this.travelled = 0;
-    this.suspicion = 0;
-    this.state = "walk";
-    this.d.visible = true;
-    g.onQueenArrive(this);
+  // turn up out of sight, mostly behind you, 16-26m out, somewhere you'll see it when you turn
+  spawn(g) {
+    if (g.inTunnel) { this.next = 5; return; }
+    const L = g.level, P = g.player;
+    const dMin = lerp(22, 15, L / 8), dMax = dMin + 5;
+    for (let tries = 0; tries < 40; tries++) {
+      // behind you first; if that's all fence (the gate), anywhere you're not looking
+      const a = tries < 20 ? g.yaw + Math.PI + (this.R() - 0.5) * 2.2 : g.yaw + Math.PI + (this.R() - 0.5) * 4.2;
+      const r = dMin + this.R() * (dMax - dMin);
+      const x = P.x - Math.sin(a) * r, z = P.z - Math.cos(a) * r;
+      if (Math.abs(x) > FENCE - 4 || Math.abs(z) > FENCE - 4 || inTunnel(x, z)) continue;
+      const t = new THREE.Vector3(x, 0, z);
+      if (collide(t, 1.2) && Math.hypot(t.x - x, t.z - z) > 0.4) continue;
+      if (tries < 32 && g.occlusion(P.x, P.z, x, z) > 0.45) continue; // somewhere you can actually see it
+      this.pos.set(x, floorAt(x, z) - 0.1, z);
+      this.d.root.rotation.y = Math.atan2(P.x - x, P.z - z);
+      this.state = "stare"; this.t = 0; this.lookT = 0; this.v = 0; this.soon = -1;
+      this.last.set(P.x, P.y, P.z);
+      this.d.visible = true;
+      this.d.play("idle", 0.1, 0.5);
+      g.onRexArrive(this);
+      return;
+    }
+    this.next = 4;
   }
 
-  // the end: in front of you, far enough to see all of her
-  finale(cam) {
-    const f = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion); f.y = 0; f.normalize();
-    this.pos.set(cam.position.x + f.x * 20, 0, cam.position.z + f.z * 20);
-    this.pos.y = floorAt(this.pos.x, this.pos.z);
-    this.d.root.rotation.y = Math.atan2(-f.x, -f.z);
+  // the finale, on the mast ladder: under you, head up, then the snap
+  ladder(x, z, heading) {
+    this.state = "ladder";
+    this.pos.set(x, floorAt(x, z) - 0.1, z);
+    this.d.root.rotation.y = heading;
     this.d.visible = true;
-    this.state = "finale";
-    this.d.play("attack", 0.05, 0.9);
+    this.d.play("idle", 0.1, 0.8);
+    RIM.uRim.value = 0.35;
+  }
+  lunge() { this.d.play("attack", 0.05, 1.15); }
+
+  // present day, out past the window: eyes first
+  present(x, z, heading) {
+    this.state = "present";
+    this.pos.set(x, floorAt(x, z) - 0.1, z);
+    this.d.root.rotation.y = heading;
+    this.d.visible = true;
+    this.d.play("idle", 0.1, 0.35);
+    RIM.uRim.value = 0;
   }
 }
 

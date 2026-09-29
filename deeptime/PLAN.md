@@ -1,5 +1,22 @@
 # DEEP TIME (the 8 parts)
 
+> **2026-09-29 rework (Caleb): read this first, it overrides the rest.**
+> Only the T. rex hunts now (`Rex` in dinos.js); the Watcher is retired (class
+> kept, never switched on) and the raptor pack sounds are gone. The rex turns up
+> out of sight behind you from part 1 on (most likely 2.5-9s after a pickup),
+> always facing you, outline + eyes faintly lit so you can make it out in the
+> dark. **The rule: keep your torch on it and it roars and charges; switch the
+> torch off and it slows below walking pace, searches, and leaves.** Torch on
+> but pointed away: it follows at 3.6-4.3 m/s (faster than a walk, slower than
+> a sprint) and loses you past 30m. A sign by the gate says so (`START_SIGN`).
+> Every lamp is one colour and goes out 1.4s after you take its part. Parts are
+> never at the mast. All 8 found: the mast light strobes ("GET TO THE MAST");
+> reaching it plays the finale: the ladder climb, the rex snapping up at you,
+> the signal from the top, white, then present day through a dark window with
+> two eyes and a faint outline, and "DEEP TIME / well done for beating part 1
+> (alpha version)". The Watcher / Queen / Cretaceous-ending sections below are
+> history.
+
 Slender: The Eight Pages, beat for beat, but the thing in the woods came
 through a hole in time. Found-footage analogue horror: you are watching a
 recovered camcorder tape. First person, night, a flashlight, eight things to

@@ -52,6 +52,16 @@
   .note canvas { width: 100%; height: auto; display: block; }
   @keyframes notein { from { transform: translate(-50%, -46%) rotate(-7deg) scale(.9); opacity: 0; } }
 
+  /* present day (the ending): a dark room, a window onto the woods */
+  .pwin { position: absolute; inset: 0; pointer-events: none; }
+  .pwin::before { content: ""; position: absolute; left: 24%; right: 24%; top: 14%; bottom: 26%;
+    box-shadow: 0 0 0 100vmax #040506, inset 0 0 40px rgba(0,0,0,.9); border: 12px solid #101315; border-radius: 2px;
+    background: linear-gradient(160deg, rgba(255,255,255,.035), transparent 40%); }
+  .pwin::after { content: ""; position: absolute; left: 21%; right: 21%; top: 74%; height: 3%; background: #15191b; box-shadow: 0 6px 18px #000; }
+  .pwin i { position: absolute; left: 50%; top: 14%; bottom: 26%; width: 10px; margin-left: -5px; background: #101315; }
+  .pwin b { position: absolute; left: 24%; right: 24%; top: 43%; height: 10px; background: #101315; }
+  .pwin[hidden] { display: none; }
+
   /* menus over the stage */
   .scr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 20px; background: rgba(0, 0, 0, .55); }
   .scr.solid { background: #000; }
@@ -92,7 +102,7 @@
   .keys b { font-family: var(--chunky); font-weight: 400; }
 </style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=37bc65a6"></script>
+<script src="feedback.js?v=b25b147e"></script>
 <script src="panic-app.js?v=46971910"></script>
 <script type="importmap">
 { "imports": {
@@ -100,10 +110,10 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./deeptime/assets.js": "./deeptime/assets.js?v=451e2f86",
   "./deeptime/audio.js": "./deeptime/audio.js?v=2d8a89e2",
-  "./deeptime/dinos.js": "./deeptime/dinos.js?v=e773eb06",
-  "./deeptime/main.js": "./deeptime/main.js?v=c1fb7652",
+  "./deeptime/dinos.js": "./deeptime/dinos.js?v=106c2486",
+  "./deeptime/main.js": "./deeptime/main.js?v=7eccc6dc",
   "./deeptime/tape.js": "./deeptime/tape.js?v=02ebbebe",
-  "./deeptime/world.js": "./deeptime/world.js?v=5a244685"
+  "./deeptime/world.js": "./deeptime/world.js?v=fdf8f76d"
 } }
 </script>
 </head>
@@ -125,6 +135,7 @@
       <div class="br" id="osd-date">OCT.14 1987
 11:47:12 PM</div>
     </div>
+    <div id="pwin" class="pwin" hidden aria-hidden="true"><i></i><b></b></div>
     <div id="count" class="count vcr" hidden>PARTS 0/8</div>
     <div id="caption" class="caption vcr" hidden></div>
     <div id="prompt" class="prompt vcr" hidden></div>
@@ -185,9 +196,9 @@
     <button id="fsbtn" class="fsbtn" title="fullscreen">&#x26F6;</button>
   </div>
 
-  <p class="keys"><b>how it works:</b> 8 parts of the time machine are somewhere in the woods, each at a landmark, each with a blinking red light. every part you pick up makes it worse.
-    the tall one skips closer when you're not looking, and the tape breaks up when you look at it. from the 4th part she walks the woods too: if she roars at you, stop moving and kill the light.
-    run out of breath, run out of battery, run out of luck. scores go on the board as parts found, then time.</p>
+  <p class="keys"><b>how it works:</b> 8 parts of the time machine are somewhere in the woods, each at a landmark in a pool of lamplight, each with a blinking red light. the lamp goes out when you take its part.
+    something big came through, and every part you pick up brings it closer. it turns up behind you, always looking at you. <b>if you see it, switch off your torch and get away</b>: keep your light on it and it charges. torch on but pointing elsewhere, it follows faster than you can walk (not faster than you can run).
+    find all 8, then get to the flashing light on the radio mast.</p>
 
   <div id="lb"></div>
   <a class="back" href="index.html">&larr; back up the pipe</a>
@@ -195,7 +206,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=9dddb334"></script>
-<script type="module" src="deeptime/main.js?v=c1fb7652"></script>
+<script type="module" src="deeptime/main.js?v=7eccc6dc"></script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
 if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "deeptime");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>

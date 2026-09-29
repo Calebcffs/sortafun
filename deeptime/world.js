@@ -760,15 +760,17 @@ function local(L, lx, lz) {
 }
 // a lamp at a landmark: the part (if this landmark gets one) sits in its light.
 // kind: pole (work light on a stand), street (the trailer's), bulb (hanging),
-// flare (red, on the ground), lantern (on the ground). the real light comes
+// flare (on the ground), lantern (on the ground). the real light comes
 // from a pool of 2 PointLights that follow the nearest lit lamps (constant
 // light count, so no shader recompiles); from far off you see the halo.
+// every lamp is the same warm colour (2026-09-29): a light in the woods means a part
+const LAMP_COLOR = 0xffc98a;
 const LAMP_KINDS = {
-  pole: { color: 0xffd9a0, power: 26, range: 16 },
-  street: { color: 0xffc98a, power: 30, range: 18 },
-  bulb: { color: 0xffc070, power: 16, range: 11 },
-  flare: { color: 0xff3a1c, power: 22, range: 14 },
-  lantern: { color: 0xffa850, power: 14, range: 10 },
+  pole: { color: LAMP_COLOR, power: 26, range: 16 },
+  street: { color: LAMP_COLOR, power: 30, range: 18 },
+  bulb: { color: LAMP_COLOR, power: 18, range: 12 },
+  flare: { color: LAMP_COLOR, power: 22, range: 14 },
+  lantern: { color: LAMP_COLOR, power: 16, range: 11 },
 };
 function lampAt(L, lx, lz, kind, h, yAbs) {
   const [x, z] = local(L, lx, lz);
@@ -1016,13 +1018,20 @@ function landmarks(R) {
       g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()));
       g.translate(p0.x, p0.y, p0.z); segs.push(g);
     }
+    // the ladder: rungs up the +z face, between the two corner legs
+    for (let yy = 0.35; yy < H; yy += 0.36) {
+      const g = new THREE.CylinderGeometry(0.018, 0.018, bw, 4);
+      g.rotateZ(Math.PI / 2); g.translate(l.x, y + yy, l.z + bw / 2 + 0.02); segs.push(g);
+    }
     const mast = new THREE.Mesh(mergeGeometries(segs), rustC); mast.castShadow = true; W.root.add(mast);
+    W.mast = { x: l.x, z: l.z, y, H, bw };
     // the red light on top, blinking
     const red = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2010 }));
     red.position.set(l.x, y + H + 0.2, l.z); W.root.add(red);
     const rh = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex(), color: 0xff2010, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0.8 }));
     rh.position.copy(red.position); rh.scale.setScalar(3); W.lampGroup.add(rh);
-    W.blinkers.push({ mesh: red, halo: rh });
+    rh.renderOrder = 6;
+    W.blinkers.push({ mesh: red, halo: rh, pos: red.position.clone(), beacon: false });
     // guy wires
     const wp = [];
     for (let s = 0; s < 3; s++) { const a = s * 2.09 + 0.4; const gx = l.x + Math.cos(a) * 14, gz = l.z + Math.sin(a) * 14; wp.push(new THREE.Vector3(l.x, y + H * 0.8, l.z), new THREE.Vector3(gx, height(gx, gz), gz)); }
@@ -1239,6 +1248,8 @@ export function leaveDeep() {
 // per frame: the flickering lamp, the blinking mast light
 // ------------------------------------------------------------------
 const _v = new THREE.Vector3();
+// on: the fast strobe (all parts found); "hide": nothing (you're up there next to it)
+export function beacon(on) { for (const B of W.blinkers) { B.beacon = on === true; B.hidden = on === "hide"; } }
 export function tick(dt, t, cam) {
   if (cam && !W.deepOn) for (const n of W.near) n.mesh.visible = Math.hypot(n.x - cam.position.x, n.z - cam.position.z) < W.nearDist + (n.extra || 0);
   // lamps: fade toward target, flicker, halo seen from far off (pulled inside the far plane)
@@ -1246,9 +1257,9 @@ export function tick(dt, t, cam) {
     L.on += (L.target - L.on) * Math.min(1, dt * (L.target ? 2 : 1.2));
     L.t -= dt;
     if (L.t < 0) {
-      const nervous = L.kind === "flare" ? 0.5 : L.dying ? 0.8 : 0.08;
+      const nervous = L.dying ? 0.8 : 0.08;
       L.flick = Math.random() < nervous ? 0.15 + Math.random() * 0.5 : 0.9 + Math.random() * 0.1;
-      L.t = L.flick < 0.8 ? 0.03 + Math.random() * 0.12 : 0.2 + Math.random() * (L.kind === "flare" ? 0.3 : 3);
+      L.t = L.flick < 0.8 ? 0.03 + Math.random() * 0.12 : 0.2 + Math.random() * 3;
     }
     const k = L.on * L.flick;
     L.bulb.visible = k > 0.05;
@@ -1277,7 +1288,22 @@ export function tick(dt, t, cam) {
     });
   }
   for (const B of W.blinkers) {
-    const on = (t % 2.4) < 0.35;
+    if (B.hidden) { B.mesh.visible = false; B.halo.visible = false; continue; }
+    if (!B.beacon) {
+      const on = (t % 2.4) < 0.35;
+      B.mesh.visible = on; B.halo.visible = on;
+      B.halo.material.depthTest = true; B.halo.position.copy(B.pos); B.halo.scale.setScalar(3);
+      continue;
+    }
+    // beacon mode (all 8 parts found): a fast strobe you can see from anywhere,
+    // drawn over the trees and pulled inside the far plane like the lamp glows
+    const on = (t % 1.0) < 0.45;
     B.mesh.visible = on; B.halo.visible = on;
+    B.halo.material.depthTest = false; B.halo.material.opacity = 0.95;
+    if (cam) {
+      const d = B.pos.distanceTo(cam.position), far = cam.far * 0.85, size = 5 + d * 0.12;
+      if (d > far) { _v.copy(B.pos).sub(cam.position).multiplyScalar(far / d).add(cam.position); B.halo.position.copy(_v); B.halo.scale.setScalar(size * far / d); }
+      else { B.halo.position.copy(B.pos); B.halo.scale.setScalar(size); }
+    }
   }
 }
