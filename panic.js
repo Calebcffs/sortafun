@@ -40,31 +40,9 @@
       '<path d="M25.8 13.7a6 6 0 0 1 1.3 11.6H9.3l11.2-9.7a5.6 5.6 0 0 1 5.3-1.9z" fill="#28a8ea"/>';
   }
 
-  // an Office file icon: a sheet in three shades with the letter plate on top
-  function office(c, letter, round) {
-    var sheet = round
-      ? '<circle cx="18" cy="16" r="12" fill="' + c[1] + '"/><path d="M18 4a12 12 0 0 1 12 12H18z" fill="' + c[0] + '"/><path d="M6 16a12 12 0 0 0 24 0z" fill="' + c[2] + '"/>'
-      : '<rect x="7" y="4" width="22" height="24" rx="2.5" fill="' + c[1] + '"/>' +
-        '<path d="M9.5 4h17A2.5 2.5 0 0 1 29 6.5V12H7V6.5A2.5 2.5 0 0 1 9.5 4z" fill="' + c[0] + '"/>' +
-        '<rect x="18" y="12" width="11" height="8" fill="' + c[2] + '"/>' +
-        '<path d="M7 20h22v5.5a2.5 2.5 0 0 1-2.5 2.5h-17A2.5 2.5 0 0 1 7 25.5z" fill="' + c[3] + '"/>';
-    return '<svg viewBox="0 0 32 32" aria-hidden="true">' + sheet +
-      '<rect x="2" y="10" width="14" height="14" rx="2" fill="' + c[4] + '"/>' +
-      '<text x="9" y="21.2" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-weight="700" font-size="10" fill="#fff">' + letter + "</text></svg>";
-  }
-  var ICON = {
-    excel: office(["#33c481", "#21a366", "#107c41", "#185c37", "#107c41"], "X"),
-    word: office(["#41a5ee", "#2b7cd3", "#185abd", "#103f91", "#185abd"], "W"),
-    ppt: office(["#ff8f6b", "#ed6c47", "#d35230", "", "#c43e1c"], "P", true),
-    onenote: office(["#ca64ea", "#ae4bd5", "#9332bf", "#7719aa", "#7719aa"], "N"),
-    pdf: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 3h11l7 7v18a1.5 1.5 0 0 1-1.5 1.5h-16A1.5 1.5 0 0 1 7 28V4.5A1.5 1.5 0 0 1 8.5 3z" fill="#fff" stroke="#c8c6c4"/>' +
-      '<path d="M19 3v5.5A1.5 1.5 0 0 0 20.5 10H26" fill="#f3f2f1" stroke="#c8c6c4"/>' +
-      '<rect x="4" y="8" width="15" height="7" rx="1" fill="#d13438"/><text x="11.5" y="13.6" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-weight="700" font-size="5.5" fill="#fff">PDF</text>' +
-      '<path d="M11 19h11M11 22h11M11 25h7" stroke="#c8c6c4" stroke-width="1.4"/></svg>',
-    loop: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 3h11l7 7v18a1.5 1.5 0 0 1-1.5 1.5h-16A1.5 1.5 0 0 1 7 28V4.5A1.5 1.5 0 0 1 8.5 3z" fill="#fff" stroke="#c8c6c4"/>' +
-      '<defs><linearGradient id="odloop" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b61ff"/><stop offset=".55" stop-color="#3a37d6"/><stop offset="1" stop-color="#0f6cbd"/></linearGradient></defs>' +
-      '<circle cx="16.5" cy="17.5" r="7" fill="none" stroke="url(#odloop)" stroke-width="3.2"/><circle cx="17.5" cy="18.5" r="2.4" fill="#e3008c"/></svg>',
-  };
+  // file icons + which app each page opens in live in panic-app.js (loaded in <head>)
+  var OFFICE = window.SortafunOffice;
+  var ICON = OFFICE.ICON;
 
   // outline icons for the rail and the top bar (Fluent-ish, 20px, 1.4 stroke)
   function line(d, extra) {
@@ -130,7 +108,7 @@
         case 3: act = { icon: "shared", html: "<b>" + who + "</b> shared this in a Teams chat &middot; " + WHEN[i % WHEN.length] }; break;
         default: act = { icon: "open", html: "You opened this &middot; " + WHEN[i % WHEN.length] };
       }
-      return { name: g.name, url: g.url, type: TYPE[g.cat] || "word", owner: owner, place: PLACES[i % PLACES.length],
+      return { name: g.name, url: g.url, type: OFFICE.appFor(g.url) || TYPE[g.cat] || "word", owner: owner, place: PLACES[i % PLACES.length],
         opened: OPENED[Math.min(i, OPENED.length - 1)], act: act, badge: g.badge };
     });
   }
@@ -265,7 +243,7 @@
       var shown = 0;
       rows.forEach(function (r) {
         var t = r.getAttribute("data-t");
-        var okT = chip === "all" || t === chip || (chip === "more" && (t === "loop" || t === "onenote"));
+        var okT = chip === "all" || chip === "more" || t === chip;
         var hay = r.getAttribute("data-q");
         var okQ = q.every(function (w) { return hay.indexOf(w) >= 0; });
         r.style.display = okT && okQ ? "" : "none";
