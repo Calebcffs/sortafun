@@ -398,7 +398,10 @@ every daily puzzle (they index into it), including today's.
   rank tiers come from the common answers only, so "queen bee" is reachable;
   obscure dictionary words still score ("ooh, deep cut"). **Ranks are bee
   puns** (`TIERS`: wannabee, bee-ginner, buzzy bee, busy bee, worker bee,
-  bee-dazzling, the bee's knees, unbee-lievable, hive mind, queen bee) shown on
+  bee-dazzling, the bee's knees, unbee-lievable, hive mind, queen bee, then
+  since 2026-09-29 beeber fever at 1.5x queen bee and the bee all end all at
+  2x, reachable only with deep cuts; a day's full dictionary is always
+  >= 2.04x queen bee, median 3.7x) shown on
   a side meter (a strip above the hive on phones) with the points for each and
   "N more points to X". **The thresholds scale with the day's difficulty**
   (Caleb's ask: hard letters = higher ranks for fewer points, an easy -ing hive

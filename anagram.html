@@ -96,7 +96,7 @@
   }
 </style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=0c231a5d"></script>
+<script src="feedback.js?v=fe7e9bcc"></script>
 <script src="panic-app.js?v=46971910"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -243,11 +243,15 @@ function makePuzzleFrom(letters, center, inHive) {
 // Ranks. The share of the max score each one needs is scaled by how hard the
 // day's letters are: on a hard hive "hive mind" might need half the points, on
 // an easy one (lots of -ing and -ed words) over 80%. Queen bee is always every
-// common word.
+// common word. Past it (2026-09-29, the regulars got too good) only deep cuts
+// count: beeber fever at 1.5x queen bee, the bee all end all at 2x. Every
+// day's full dictionary is worth at least 2.04x queen bee (median 3.7x over a
+// year of puzzles), so both are always reachable.
 var TIERS = [
   [0, "wannabee"], [0.02, "bee-ginner"], [0.05, "buzzy bee"], [0.08, "busy bee"],
   [0.15, "worker bee"], [0.25, "bee-dazzling"], [0.4, "the bee's knees"],
-  [0.5, "unbee-lievable"], [0.7, "hive mind"], [1.0, "queen bee"]
+  [0.5, "unbee-lievable"], [0.7, "hive mind"], [1.0, "queen bee"],
+  [1.5, "beeber fever"], [2.0, "the bee all end all"]
 ];
 
 // How findable a word is for a typical player: its frequency (freq.js), but an
@@ -287,7 +291,8 @@ function rankTable(p) {
   var top = Math.max(0.5, Math.min(0.85, 0.7 + (ease - 0.49) * 1.25));
   var ranks = [], last = -1;
   TIERS.forEach(function (t, i) {
-    var pts = i === TIERS.length - 1 ? p.maxScore : Math.round(t[0] / 0.7 * top * p.maxScore);
+    // queen bee and up are straight multiples of the common max; below it scales with the day
+    var pts = t[0] >= 1 ? Math.round(t[0] * p.maxScore) : Math.round(t[0] / 0.7 * top * p.maxScore);
     if (i > 0 && pts <= last) pts = last + 1; // tiny hives: keep every rank a step up
     ranks.push({ name: t[1], pts: pts });
     last = pts;
@@ -454,7 +459,7 @@ function buildMeter() {
     meterTiers.appendChild(li);
   }
   document.getElementById("mdiff").innerHTML = "today's hive: <b>" + RT.label +
-    "</b>. queen bee is every common word (" + puzzle.maxScore + " pts).";
+    "</b>. queen bee is every common word (" + puzzle.maxScore + " pts). past that, only deep cuts count.";
 }
 function renderMeter() {
   var r = rankIndex(score), n = RANKS.length;
@@ -472,7 +477,7 @@ function renderMeter() {
   document.getElementById("mnext").innerHTML = r < n - 1
     ? "<b>" + (RANKS[r + 1].pts - score) + "</b> more " + (RANKS[r + 1].pts - score === 1 ? "point" : "points") +
       " to <b>" + RANKS[r + 1].name + "</b>"
-    : "<b>queen bee!</b> you found every common word. take a bow.";
+    : "<b>the bee all end all.</b> twice queen bee. there is nothing left to prove.";
 }
 function popRank() {
   var li = meterTiers.querySelector("li.cur");
