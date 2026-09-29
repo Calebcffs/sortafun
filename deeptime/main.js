@@ -616,11 +616,13 @@ function tickFinale(dt) {
     $("intro").hidden = false;
     $("intro-text").style.transition = "none"; $("intro-text").style.opacity = 1;
     $("intro-text").textContent = "HOLLOW CREEK, MONTANA\n\nPRESENT DAY";
+    document.querySelector("#intro .skip").hidden = true; // nothing to skip here
   });
   if (t >= 9.7 && t < 10.4) tape.u.uWhite.value = 1 - clamp01((t - 9.7) / 0.6);
   step(8, 13.2, () => {
     $("intro").hidden = true;
     $("pwin").hidden = false;
+    Audio.restoreBuses(); // stopAll muted every bus at the white-out; the loops stay at 0 unless picked below
     loops.crickets.vol(0.3, 1.5); loops.wind.vol(0.12, 1.5);
   });
   // eyes: stillness first, then they light up, and the shape of it
@@ -718,6 +720,7 @@ function playIntro(mode) {
   G.state = "intro"; G.introMode = mode; introStarted = Date.now();
   $("title").hidden = true; $("end").hidden = true;
   const el = $("intro"); el.hidden = false;
+  document.querySelector("#intro .skip").hidden = false;
   introI = 0; showIntroCard();
   Audio.restoreBuses();
   loops.introHiss = Audio.loop("tape_hiss", { bus: "tape", vol: 0.12 });

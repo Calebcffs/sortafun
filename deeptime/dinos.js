@@ -70,7 +70,7 @@ const RIM_CODE = `
   vec3 rimV = normalize(vViewPosition);
   float rimN = clamp(dot(normal, rimV), 0.0, 1.0);
   float rimF = pow(1.0 - rimN, 2.4);
-  outgoingLight += uRim * (uRimCol * rimF * 0.9 + (diffuseColor.rgb * 0.8 + vec3(0.035)) * rimN * rimN * 0.7);
+  outgoingLight += uRim * (uRimCol * rimF * 0.9 + (diffuseColor.rgb * 0.8 + vec3(0.035)) * rimN * rimN * 0.35);
 `;
 function rimInto(sh) {
   sh.uniforms.uRim = RIM.uRim; sh.uniforms.uRimCol = RIM.uRimCol;
@@ -252,7 +252,9 @@ export class Dino {
         const ey = top - (top - bot) * 0.3;
         const band = slice.filter((p) => Math.abs(p.y - ey) < (top - bot) * 0.15);
         const half = Math.max(...(band.length ? band : slice).map((p) => Math.abs(p.x - hp.x)));
-        for (const sx of [-1, 1]) eyes.push(new THREE.Vector3(hp.x + sx * half * 0.92, ey, ez));
+        // out of the skin a little (world metres, the rig is already scaled), or the head hides them
+        const out = this.kind === "rex" ? 0.16 : 0.05;
+        for (const sx of [-1, 1]) eyes.push(new THREE.Vector3(hp.x + sx * (half * 0.92 + out), ey + out * 0.3, ez + out * 0.6));
       }
     }
     this.eyes = [];
