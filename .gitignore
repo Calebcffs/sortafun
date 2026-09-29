@@ -4,3 +4,6 @@ _birdtest.html
 *.log
 _citytest.html
 _citytest2.html
+
+# taka-san: the plaintext game content (faces, dialogue). only the encrypted taka/vault.js is published
+taka/src/

@@ -9,15 +9,20 @@
  * time out into an awkward silence. window.__taka is the test hook: go() to
  * any scene, read S, run the dinner or karaoke sim by hand.
  *
- * The content (lines, questions, songs) is in taka/data.js.
+ * The content (lines, questions, songs, faces) is encrypted in taka/vault.js;
+ * taka/lock.js decrypts it with the password and calls TakaBoot(content).
+ * The plaintext lives only in taka/src/ (git-ignored), see
+ * tools/build-taka-vault.mjs.
  */
-(function () {
+window.TakaBoot = function (V) {
   "use strict";
-  var D = window.TAKA_DATA;
+  if (window.__taka) return;
+  var D = V.data;
+  window.TAKA_DATA = D;
   var $ = function (id) { return document.getElementById(id); };
   var stage = $("stage");
   var PEOPLE = {}; D.PEOPLE.forEach(function (p) { PEOPLE[p.id] = p; });
-  var FACE = function (id) { return "taka/faces/" + id + ".png"; };
+  var FACE = function (id) { return V.faces[id] || ""; };
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
   var sfx = function (n) { if (window.SortafunSFX) SortafunSFX.play(n); };
   var shuffle = function (a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
@@ -106,8 +111,8 @@
           r.innerHTML = '<img src="' + FACE("taka") + '" alt="">' + esc(a[3]);
           box.querySelector(".dlg-a").innerHTML = ""; box.querySelector(".dlg-a").appendChild(r);
           box.querySelector("p").innerHTML = "<i>you:</i> " + esc(a[0]);
-          box.querySelector(".dlg-face").src = FACE("caleb");
-          box.querySelector("b").textContent = "Caleb";
+          box.querySelector(".dlg-face").src = FACE(D.ME);
+          box.querySelector("b").textContent = PEOPLE[D.ME].name;
         }
         setTimeout(function () { box.hidden = true; dlgOpen = false; resolve(i); }, o.hold || 2600);
       }
@@ -153,7 +158,7 @@
       var nextAt = 5;
       var api = {
         event: function (kind) {
-          if (kind === "crash") { S.crashes++; adj(-4, 0, "crashed the car"); toast(["taka-san grips the door handle.", "\"...caleb-kun.\"", "\"the car is not a bumper car.\""][Math.min(2, S.crashes - 1)]); }
+          if (kind === "crash") { S.crashes++; adj(-4, 0, "crashed the car"); toast(D.LINES.crash[Math.min(D.LINES.crash.length - 1, S.crashes - 1)]); }
           if (kind === "red") { S.reds++; adj(-5, 0, "ran a red light"); toast("red light! taka-san says nothing. which is worse."); }
           if (kind === "erp") toast("ERP: $1.50. taka-san: \"singapore charges you to drive under a gate?\"", 3200);
           if (kind === "stop") adj(1, 0, "stopped at the red");
@@ -192,6 +197,7 @@
   var seatPick = null;
   scenes.seating = {
     enter: function () {
+      $("seat-rules-list").innerHTML = D.LINES.seatRules.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("");
       S.seats = S.seats || new Array(10).fill(null);
       drawSeating();
       toast("hand in hand. a round table for ten. seat everyone before taka-san sits down.", 3600);
@@ -258,7 +264,7 @@
   var DN = null;
   scenes.dinner = {
     enter: function (tk) {
-      var seats = S.seats || ["taka", "jasmine", "hiroto", "benson", "xinle", "caleb", "xinyu", "serene", "clarissa", "kimhuat"];
+      var seats = S.seats && S.seats.indexOf(null) < 0 ? S.seats : D.PEOPLE.map(function (p) { return p.id; });
       S.seats = seats;
       DN = {
         tk: tk, t: 0, rot: 0, rotShown: 0, glass: 100, dry: 0, bottles: 4, waitress: null,
@@ -407,11 +413,11 @@
     S.seats.forEach(function (id, k) {
       var xy = seatXY(k, 45), g = seatXY(k, 33.5);
       var el = document.createElement("div");
-      el.className = "d-seat" + (id === "taka" ? " taka" : "") + (id === "caleb" ? " me" : "");
+      el.className = "d-seat" + (id === "taka" ? " taka" : "") + (id === D.ME ? " me" : "");
       el.style.left = xy[0] + "%"; el.style.top = xy[1] + "%";
-      el.innerHTML = '<img src="' + FACE(id) + '" alt="' + esc(PEOPLE[id].name) + '" title="' + esc(PEOPLE[id].name) + '">';
+      el.innerHTML = '<img src="' + FACE(id) + '" alt="" title="' + esc(PEOPLE[id].name) + '"><span>' + esc(PEOPLE[id].name) + "</span>";
       t.appendChild(el);
-      if (id === "taka" || id === "caleb") {
+      if (id === "taka" || id === D.ME) {
         var gl = document.createElement("button");
         gl.type = "button"; gl.className = "d-glass" + (id === "taka" ? " taka" : "");
         gl.id = id === "taka" ? "g-taka" : "g-me";
@@ -534,7 +540,7 @@
     adj(f, 0, "tambourine " + h + "/" + n);
     $("k-lane").hidden = true; $("k-tamb").hidden = true;
     $("k-screen").innerHTML = "<h3>" + (S.tamb > 0.8 ? "taka-san points at you mid-chorus." : S.tamb > 0.5 ? "taka-san nods along." : "taka-san keeps glancing at the tambourine.") + '</h3><p class="k-small">' + h + "/" + n + " beats. now it's your turn. pick a song.</p>";
-    $("k-singer").src = FACE("caleb");
+    $("k-singer").src = FACE(D.ME);
     var o = $("k-opts"); o.innerHTML = "";
     D.SONGS.forEach(function (s) {
       var b = document.createElement("button"); b.type = "button"; b.className = "k-song";
@@ -583,7 +589,7 @@
   function finishSong(tk) {
     var r = S.lyrics / Math.max(1, S.lyricsOf);
     adj(r === 1 ? 5 : 0, 0, "the whole song");
-    $("k-screen").innerHTML = "<h3>" + (r === 1 ? "every word. the room goes wild. taka-san stands up to clap." : r > 0.6 ? "not bad. taka-san claps politely." : "hiroto quietly takes the mic off you.") + "</h3>";
+    $("k-screen").innerHTML = "<h3>" + D.LINES.songEnd[r === 1 ? 0 : r > 0.6 ? 1 : 2] + "</h3>";
     $("k-opts").innerHTML = "";
     setTimeout(function () { if (alive(tk)) go("ending"); }, 3400);
   }
@@ -600,10 +606,8 @@
     enter: function () {
       var f = S.favour, best = f >= 80 && S.insight >= 25;
       var title, line, sub;
-      if (best) { title = "next time you come to japan, let me know."; sub = "achievement: trusted overseas subsidiary representative. a japan trip is pencilled in."; }
-      else if (f >= 65) { title = "good dinner, caleb-kun. see you at the next one."; sub = "he shook your hand on the way out. a proper one."; }
-      else if (f >= 40) { title = "ok. thank you for tonight."; sub = "taka-san takes a taxi. he waves. probably at you."; }
-      else { title = "hiroto, can you drive me back?"; sub = "you drive home alone. the car still smells of chilli crab."; }
+      var E = D.LINES.endings[best ? "best" : f >= 65 ? "good" : f >= 40 ? "ok" : "bad"];
+      title = E[0]; sub = E[1];
       line = "favour " + Math.round(f) + " / 100 &middot; insight " + S.insight + " &middot; beers poured " + S.pours +
         (S.song ? " &middot; sang " + esc(S.song) + " (" + S.lyrics + "/" + S.lyricsOf + ")" : "");
       $("e-face").src = FACE("taka");
@@ -622,4 +626,4 @@
     dinner: function () { return DN; }, dinnerTick: dinnerTick, pour: pour, turn: turn, waitress: waitress,
     answer: function (k) { if (dlgResolve) dlgResolve(k); }, score: score, music: music };
   go("title");
-})();
+};

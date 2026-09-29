@@ -871,13 +871,25 @@ checks (keep sfx peaks under ~0.35).
 
 ### Taka-san Dinner Simulator (`taka.html` + `taka/`, 2026-09-29, v0.3)
 
+**Password protected and encrypted (v0.3.1).** The page opens on a lock
+screen (`taka/lock.js`); the faces, names and every line of text are only in
+`taka/vault.js`, AES-256-GCM encrypted with a key from Caleb's password
+(PBKDF2-SHA256, 250k rounds). The right password decrypts it in the browser
+and calls `TakaBoot(content)` in `taka/game.js`; nothing is remembered, it
+asks every visit. The plaintext lives in `taka/src/` (`data.js` + `faces/`),
+which is **git-ignored and only on Caleb's machine**. The password is not in
+the repo or in memory: ask Caleb. To change content: edit `taka/src/`, then
+`node tools/build-taka-vault.mjs <password>`, `tools/stamp.py`, commit
+`taka/vault.js`. Keep names out of `game.js` / `taka.html` (they go in
+`LINES` / `ME` in data.js); `grep -i` for the names before committing.
+
 Caleb's work-dinner game: the MD ("Taka-san") is over from HQ. Scenes, in
 order: **drive** (3D, `taka/drive.js`), **seating**, **dinner**, **karaoke**,
 **ending**. The team are real people from Caleb's office: first names and
 their org-chart avatars (`taka/faces/*.png`, 96px crops, keep them small on
 screen) are fine, **the real company name is not**: it's "Sankyu Frontline"
 (SFSG) everywhere. Yuki-san isn't at the table. All the words (questions,
-replies, lines, songs) are in `taka/data.js`, in house voice.
+replies, lines, songs) are in `taka/src/data.js` (encrypted into the vault), in house voice.
 
 - One state object (`S`: favour 0-100 from 50, insight, pours/beer) and a
   scene runner in `taka/game.js`; `ask()` is the dialogue box (keys 1/2/3,
