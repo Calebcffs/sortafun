@@ -252,7 +252,7 @@ window.SlackBoot = function (V) {
       if (w.circle) {
         var vx = bx - ax, vz = bz - az, L2 = vx * vx + vz * vz, t = clamp(((w.x - ax) * vx + (w.z - az) * vz) / L2, 0, 1);
         if (Math.hypot(ax + vx * t - w.x, az + vz * t - w.z) < w.r) return false;
-      } else if (w.kind === "solid" && segHit(ax, az, bx, bz, w.a[0], w.a[1], w.b[0], w.b[1])) return false;
+      } else if ((w.kind === "solid" || w.kind === "frosted") && segHit(ax, az, bx, bz, w.a[0], w.a[1], w.b[0], w.b[1])) return false;
     }
     return true;
   }
@@ -268,7 +268,7 @@ window.SlackBoot = function (V) {
   function bossStep(dt) {
     var b = boss, p = b.g.position;
     b.cool -= dt;
-    if (b.mode === "meeting") { b.wait -= dt; if (b.wait <= 0) { b.mode = "walk"; b.i = O.route.length - 1; b.g.visible = true; } return; }
+    if (b.mode === "meeting") { b.wait -= dt; if (b.wait <= 0) { b.mode = "walk"; b.i = O.layout.meetingAt; b.g.visible = true; } return; }
     if (b.mode === "stand") { b.wait -= dt; if (b.wait <= 0) b.mode = "walk"; }
     else {
       var target = b.mode === "visit" ? [O.myDesk.seat[0] + Math.sin(O.myDesk.face) * -0.2, O.myDesk.seat[1] + Math.cos(O.myDesk.face) * 1.0] : O.route[b.i];
@@ -279,7 +279,7 @@ window.SlackBoot = function (V) {
         else {
           // at a waypoint: sometimes stop, sometimes go and hold a meeting, sometimes come and check on you
           var r = Math.random();
-          if (b.i === O.route.length - 1 && r < 0.5) {
+          if (b.i === O.layout.meetingAt && r < 0.5) {
             if (S.act && S.act.kind === "meeting") { strike("mr. goh walked into his meeting and found you in it"); }
             else { b.mode = "meeting"; b.wait = 25 + Math.random() * 20; b.g.visible = false; toast("mr. goh went into the meeting room.", 2400); }
           }
@@ -326,9 +326,12 @@ window.SlackBoot = function (V) {
       if (len > 1) { mx /= len; mz /= len; }
       var sp = keys.ShiftLeft || keys.ShiftRight ? 3.2 : 1.9;
       var c = Math.cos(S.yaw), s = Math.sin(S.yaw);
+      var px0 = S.x, pz0 = S.z;
       S.x += (mx * c + mz * s) * sp * dt; S.z += (-mx * s + mz * c) * sp * dt;
       if (S.act && S.act.kind === "window") S.act = null;
       collide();
+      // never out of the building: slide along whichever axis still works
+      if (!O.walkable(S.x, S.z)) { if (O.walkable(S.x, pz0)) S.z = pz0; else if (O.walkable(px0, S.z)) S.x = px0; else { S.x = px0; S.z = pz0; } }
     }
     // slacking
     var k = slacking();
@@ -378,9 +381,6 @@ window.SlackBoot = function (V) {
         S.x = c.x + lx * co + lz * si; S.z = c.z - lx * si + lz * co;
       }
     });
-    // stay inside the triangle
-    var Lb = O.layout, maxZ = Lb.C[1] * (1 - S.x / Lb.A[0]) - 0.35;
-    S.x = clamp(S.x, 0.35, Lb.A[0] - 1); S.z = clamp(S.z, 0.45, Math.max(0.45, maxZ));
   }
 
   // ---------------------------------------------------------------- render
@@ -417,13 +417,16 @@ window.SlackBoot = function (V) {
     minimap();
   }
   function minimap() {
-    var c = $("minimap"), g = c.getContext("2d"), W = c.width, Hh = c.height, L = O.layout, k = W / (L.A[0] + 1);
-    var P = function (x, z) { return [4 + x * k, 4 + z * k]; };
+    var c = $("minimap"), g = c.getContext("2d"), W = c.width, Hh = c.height, L = O.layout, MR = L.meeting;
+    var zmin = MR.z0, k = Math.min((W - 8) / L.A[0], (Hh - 8) / (L.C[1] - zmin));
+    var P = function (x, z) { return [4 + x * k, 4 + (z - zmin) * k]; };
     g.clearRect(0, 0, W, Hh);
-    g.fillStyle = "rgba(20,20,26,.72)"; g.beginPath(); var a = P(L.B[0], L.B[1]), b = P(L.A[0], L.A[1]), cc = P(L.C[0], L.C[1]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(cc[0], cc[1]); g.closePath(); g.fill();
-    g.strokeStyle = "#8fd3ff"; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
-    g.strokeStyle = "rgba(255,255,255,.5)"; g.lineWidth = 1; var m0 = P(0, L.meeting.z1), m1 = P(L.meeting.x1, L.meeting.z1), m2 = P(L.meeting.x1, 0); g.beginPath(); g.moveTo(m0[0], m0[1]); g.lineTo(m1[0], m1[1]); g.lineTo(m2[0], m2[1]); g.stroke();
-    g.fillStyle = "rgba(255,255,255,.35)"; O.desks.forEach(function (d) { var q = P(d.x, d.z); g.fillRect(q[0] - 3, q[1] - 2, 6, 4); });
+    var poly = function (pts, fill, stroke) { g.beginPath(); pts.forEach(function (p, i) { var q = P(p[0], p[1]); if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.stroke(); } };
+    poly([L.TL, L.A, L.C], "rgba(20,20,26,.72)");
+    poly([[MR.x0, MR.z0], [MR.x1, MR.z0], [MR.x1, MR.z1], [MR.x0, MR.z1]], "rgba(60,70,90,.72)", "rgba(255,255,255,.4)");
+    var a2 = P(L.A[0], L.A[1]), c2 = P(L.C[0], L.C[1]); g.strokeStyle = "#8fd3ff"; g.lineWidth = 2; g.beginPath(); g.moveTo(a2[0], a2[1]); g.lineTo(c2[0], c2[1]); g.stroke(); g.lineWidth = 1;
+    g.fillStyle = "rgba(255,255,255,.35)"; O.desks.forEach(function (d) { var q = P(d.x, d.z); g.fillRect(q[0] - 3, q[1] - 3, 6, 6); });
+    var fr = P(L.fridge[0], L.fridge[1]); g.fillStyle = "#ff6b6b"; g.fillRect(fr[0] - 2, fr[1] - 2, 4, 4);
     if (S.errand) { var sp = O.spots[S.errand.spot], q2 = P(sp.x, sp.z); g.fillStyle = "#ffd43b"; g.beginPath(); g.arc(q2[0], q2[1], 4, 0, 7); g.fill(); }
     if (boss.g.visible) {
       var bp = P(boss.g.position.x, boss.g.position.z);

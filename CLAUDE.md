@@ -884,14 +884,19 @@ company's branding ("MOBILE SPACE" poster) before building the vault
 (`node tools/build-vault.mjs slack <password>`; `tools/build-vault.mjs` also
 builds taka's).
 
-- `slack/office.js`: `LAYOUT` is the whole floor plan in metres: a triangle
-  (B = window meets entrance wall, A = the sharp corner, C = entrance wall
-  meets the long inner wall), the curtain wall B->A, the glass meeting room in
-  the B corner, the glass entrance door, columns, desk clusters (back to back,
-  monitors at the divider), shelves along the window, water, printer, fridge
-  (the grey box in the sharp corner), cafe tables, counter, screens, and the
-  manager's `route`. **The layout is provisional**: it's read off the photos,
-  and Caleb is sending a top-down sketch; change the numbers, nothing else.
+- `slack/office.js`: `LAYOUT` is the whole floor plan in metres, **from
+  Caleb's top-down sketch** (one sketch pixel = 4cm, so a desk box is ~2.2m
+  and the window wall ~28.6m): a right triangle, square corner TL (0,0), the
+  sharp corner A (23.2,0), C (0,16.7). The diagonal A->C is the curtain wall
+  (bay view at the C half, depot at the A half); the meeting room sticks out
+  above the top wall (x 4-7.6, z -5.8-0, frosted front with a door gap); the
+  entrance is on the left wall; the fridge is on the top wall towards A; a
+  pillar and the printer mid-floor; a long block of desks under the top wall
+  and a 2x2 block (turned 90deg) by the left wall, a lone desk, a long low
+  cabinet on the left wall. Things along the window use `onWindow(t, inset)`
+  (t 0 = C, 1 = A). Walls are general segments (solid / frosted / glass,
+  each also an oriented box collider; solid and frosted block the manager's
+  sight), and `walkable()` keeps you in the triangle + meeting room.
   `build()` returns colliders (boxes/circles), walls (solid ones block the
   manager's sight, glass doesn't), `spots` (E targets) and the desks.
 - `slack/game.js`: `SlackBoot(content)`. 8-minute day (9-6), slack points per

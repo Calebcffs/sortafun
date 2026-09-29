@@ -1,14 +1,19 @@
 /* sfsg slacking simulator: the office, built from one layout table.
  *
- * LAYOUT is the whole floor plan in metres (x east, z south, y up): the
- * triangle's corners, which walls are windows, the meeting room, the doors,
- * and every desk / shelf / table / fridge. PROVISIONAL (2026-09-29): read off
- * Caleb's 13 photos; his top-down sketch will correct the numbers, nothing
- * else needs to change. SlackOffice.build() turns it into meshes plus:
+ * LAYOUT is the whole floor plan in metres (x east, z south, y up), from
+ * Caleb's top-down sketch (2026-09-29, one sketch pixel = 4cm): a right
+ * triangle with the square corner top left (TL), the sharp corner top right
+ * (A) and the third corner bottom left (C). The long diagonal A -> C is the
+ * curtain wall (the window). The meeting room sticks out above the top wall,
+ * frosted glass towards the office. The entrance is on the left wall.
+ * SlackOffice.build() turns it into meshes plus:
  *   colliders: boxes {x, z, hx, hz, rot} and circles {x, z, r} the player can't walk into
- *   walls:     segments {a, b, kind} (solid walls block the manager's line of sight)
+ *   walls:     segments {a, b, kind}; "solid" and "frosted" block the manager's sight, "glass" doesn't
  *   spots:     named places you can use with E (your desk, fridge, printer...)
- *   route:     the manager's patrol points
+ *   route:     the manager's patrol points (meetingAt = the one outside the meeting room)
+ *   walkable(x, z): inside the triangle or the meeting room
+ * Rotation convention everywhere: rot = -atan2(dz, dx) of the thing's long axis
+ * (what three.js rotation.y wants for a box whose width runs along it).
  * Textures (photo crops, from the vault): tex.carpet, tex.sky_bay, tex.sky_depot.
  */
 window.SlackOffice = (function () {
@@ -16,232 +21,227 @@ window.SlackOffice = (function () {
 
   var H = 2.7; // ceiling height
   var LAYOUT = {
-    // the triangle: B (window meets entrance wall), A (the sharp corner), C (entrance wall meets the long inner wall)
-    B: [0, 0], A: [34, 0], C: [0, 16],
-    // the curtain wall B -> A: the bay and the Flyer at the B end, the rail depot towards A
-    windowViews: [{ from: 0, to: 17, tex: "sky_bay" }, { from: 17, to: 34, tex: "sky_depot" }],
-    entrance: { z0: 11.4, z1: 13.0 },                         // glass sliding door in the B-C wall
-    meeting: { x0: 0, x1: 6.2, z0: 0, z1: 4.6, door: [3.6, 4.6] }, // glass box in the B corner (door gap along z1, x 3.6..4.6)
-    columns: [[11, 0.95], [22.5, 0.95]],
-    // desk clusters: two rows back to back (facing north / south) with a divider. n desks per row
+    TL: [0, 0], A: [23.2, 0], C: [0, 16.7],
+    // the curtain wall, from C (bottom left) to A (the sharp corner): the bay view first, then the depot
+    windowViews: [{ from: 0, to: 0.5, tex: "sky_bay" }, { from: 0.5, to: 1, tex: "sky_depot" }],
+    meeting: { x0: 4.0, x1: 7.6, z0: -5.8, z1: 0, door: [4.25, 5.35] }, // door gap in its frosted front, along z = 0
+    entrance: { z0: 2.4, z1: 3.9 },                                       // the way in / out, on the left wall
+    columns: [[6.9, 8.5]],
+    // desk clusters: two rows back to back, n desks a row, rowW metres each, rot turns the whole cluster
     clusters: [
-      { x: 9.5, z: 6.3, n: 2 },
-      { x: 15.2, z: 5.0, n: 2 },
-      { x: 20.8, z: 3.6, n: 2 },
+      { x: 11.0, z: 2.4, n: 4, rowW: 2.6, rot: 0 },             // the long block under the top wall
+      { x: 3.15, z: 8.95, n: 2, rowW: 2.15, rot: Math.PI / 2 }, // the 2x2 block by the left wall
     ],
-    myDesk: { cluster: 1, row: "S", i: 1 },               // yours: second desk of the south-facing row in the middle cluster
-    shelves: [[3.8, 9.8], [12.2, 20.9], [23.6, 25.6]],    // low bookshelves along the window, x from..to
-    water: [12.6, 0.62],
-    printer: [26.6, 0.62],
-    fridge: [31.8, 0.42],                                 // the small grey box in the sharp corner
-    cafe: [[3.0, 7.4], [5.9, 9.2]],                       // round white tables with eames chairs
-    counter: [2.1, 14.0],                                 // the white counter by the door
-    screens: [{ z: 6.6, kind: "tv" }, { z: 8.1, kind: "portrait" }], // on the entrance wall
-    clock: [0, 9.6],
-    route: [[7.2, 2.3], [11, 2.4], [16, 2.0], [21, 1.9], [25, 1.8], [29.5, 1.4], [27, 3.2], [23.5, 5.2], [18.5, 7.2],
-      [13.5, 8.8], [9.5, 10.2], [6.5, 11.6], [4.2, 10.4], [7.6, 7.6], [12.2, 6.9], [4.6, 5.4]],
+    myDesk: { cluster: 0, row: "S", i: 1 },
+    single: [3.25, 12.9],               // the lone desk near the bottom left
+    counter: { x: 0.42, z: 11.3, len: 7.0 }, // the long low cabinet along the left wall
+    printer: [8.9, 8.2],
+    fridge: [19.3, 0.45],               // the minifridge, top wall, out towards the sharp corner
+    water: 0.36,                        // along the window (0 = C end, 1 = A end)
+    shelves: [[0.2, 0.3], [0.44, 0.6], [0.66, 0.8]], // low bookshelves along the window, from..to (same 0..1)
+    cafe: [[3.2, 3.2], [2.6, 5.5]],
+    screens: [{ x: 1.3, kind: "tv" }, { x: 2.7, kind: "portrait" }], // on the top wall, left of the meeting room
+    clock: [0, 6.2],
+    route: [[1.3, 1.3], [4.8, 0.9], [10, 0.75], [17, 0.8], [17.2, 3.0], [13.5, 4.6], [9.5, 4.7], [5.6, 5.6],
+      [5.2, 9.6], [5.4, 12.4], [3.0, 14.0], [1.25, 12.0], [1.25, 6.2]],
+    meetingAt: 1,
   };
 
-  function build(THREE, scene, tex, opts) {
-    opts = opts || {};
-    var L = LAYOUT, out = { colliders: [], walls: [], spots: {}, route: L.route, layout: L, meeting: L.meeting, H: H, screens: {} };
+  function build(THREE, scene, tex) {
+    var L = LAYOUT, MR = L.meeting, E = L.entrance;
+    var out = { colliders: [], walls: [], spots: {}, route: L.route, layout: L, meeting: MR, H: H, screens: {} };
     var add = function (m) { scene.add(m); return m; };
     var M = function (c, o) { return new THREE.MeshLambertMaterial(Object.assign({ color: c }, o || {})); };
     var WHITE = M(0xf4f4f1), OFFWHITE = M(0xe9e8e3), GREY = M(0x9aa0a6), DARK = M(0x2b2d31), BLACK = M(0x151618), METAL = M(0xb8bcc0);
-    function box(w, h, d, mat, x, y, z, ry) {
-      var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      m.position.set(x, y, z); if (ry) m.rotation.y = ry; return add(m);
-    }
+    function box(w, h, d, mat, x, y, z, ry) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; return add(m); }
     function collide(x, z, hx, hz, rot) { out.colliders.push({ x: x, z: z, hx: hx, hz: hz, rot: rot || 0 }); }
-    function inside(x, z) { return z > 0 && x > 0 && z < L.C[1] * (1 - x / L.A[0]); }
-    out.inside = inside;
+    var ax = L.A[0], cz = L.C[1];
+    function inTri(x, z) { return x >= 0 && z >= 0 && z <= cz * (1 - x / ax); }
+    function inMeeting(x, z) { return x >= MR.x0 && x <= MR.x1 && z >= MR.z0 && z <= MR.z1; }
+    out.walkable = function (x, z) { return inTri(x, z) || inMeeting(x, z); };
+    out.inside = inTri;
+    // a point on the window wall, t = 0 at C, 1 at A, pulled `inset` metres into the room
+    var wlen = Math.hypot(ax, cz), wdir = [ax / wlen, -cz / wlen], win = [-cz / wlen, -ax / wlen]; // along C->A, and the inward normal
+    function onWindow(t, inset) { return [L.C[0] + ax * t + win[0] * inset, L.C[1] - cz * t + win[1] * inset]; }
+    var wrot = -Math.atan2(wdir[1], wdir[0]);
+    out.onWindow = onWindow;
 
-    // ---------------- floor + ceiling
-    var floorShape = new THREE.Shape([new THREE.Vector2(L.B[0], -L.B[1]), new THREE.Vector2(L.A[0], -L.A[1]), new THREE.Vector2(L.C[0], -L.C[1])]);
-    var fg = new THREE.ShapeGeometry(floorShape);
-    fg.rotateX(-Math.PI / 2);
-    // uvs in metres, one carpet texture per 2m
-    var pos = fg.attributes.position, uv = [];
-    for (var i = 0; i < pos.count; i++) uv.push(pos.getX(i) / 2, pos.getZ(i) / 2);
-    fg.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-    var carpet = tex.carpet; if (carpet) { carpet.wrapS = carpet.wrapT = THREE.RepeatWrapping; carpet.colorSpace = THREE.SRGBColorSpace; }
-    add(new THREE.Mesh(fg, carpet ? new THREE.MeshLambertMaterial({ map: carpet }) : M(0x4a433c)));
-    // the ceiling: same triangle, built with +z so rotating it up doesn't mirror it
-    var ceilShape = new THREE.Shape([new THREE.Vector2(L.B[0], L.B[1]), new THREE.Vector2(L.A[0], L.A[1]), new THREE.Vector2(L.C[0], L.C[1])]);
-    var cg = new THREE.ShapeGeometry(ceilShape); cg.rotateX(Math.PI / 2); cg.translate(0, H, 0);
-    var cpos = cg.attributes.position, cuv = [];
-    for (var j = 0; j < cpos.count; j++) cuv.push(cpos.getX(j) / 0.6, cpos.getZ(j) / 0.6);
-    cg.setAttribute("uv", new THREE.Float32BufferAttribute(cuv, 2));
-    add(new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ map: ceilingTex(THREE), color: 0xe4e4e0, side: THREE.DoubleSide }))); // unlit: the lights are in it
-    // light panels (emissive, no real lights) in a grid across the ceiling
-    var panelM = new THREE.MeshBasicMaterial({ color: 0xfffbf0 });
-    for (var px = 2.4; px < 34; px += 3.6) for (var pz = 1.8; pz < 16; pz += 3) {
-      if (!inside(px + 0.6, pz + 0.3) || !inside(px - 0.6, pz + 0.3)) continue;
-      var p = box(1.2, 0.02, 0.3, panelM, px, H - 0.012, pz);
-
+    // ---------------- floors + ceilings: the triangle and the meeting room
+    function slab(pts, y, mat, up) {
+      var sh = new THREE.Shape(pts.map(function (p) { return new THREE.Vector2(p[0], up ? -p[1] : p[1]); }));
+      var g = new THREE.ShapeGeometry(sh); g.rotateX(up ? -Math.PI / 2 : Math.PI / 2); g.translate(0, y, 0);
+      var P = g.attributes.position, uv = [];
+      for (var i = 0; i < P.count; i++) uv.push(P.getX(i) / (up ? 2 : 0.6), P.getZ(i) / (up ? 2 : 0.6));
+      g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+      return add(new THREE.Mesh(g, mat));
     }
+    var carpet = tex.carpet; if (carpet) { carpet.wrapS = carpet.wrapT = THREE.RepeatWrapping; carpet.colorSpace = THREE.SRGBColorSpace; }
+    var floorM = carpet ? new THREE.MeshLambertMaterial({ map: carpet }) : M(0x4a433c);
+    var ceilM = new THREE.MeshBasicMaterial({ map: ceilingTex(THREE), color: 0xe4e4e0, side: THREE.DoubleSide }); // unlit: the lights are in it
+    var tri = [L.TL, L.A, L.C], room = [[MR.x0, MR.z0], [MR.x1, MR.z0], [MR.x1, MR.z1], [MR.x0, MR.z1]];
+    slab(tri, 0, floorM, true); slab(room, 0, floorM, true);
+    slab(tri, H, ceilM, false); slab(room, H, ceilM, false);
+    var panelM = new THREE.MeshBasicMaterial({ color: 0xfffbf0 });
+    for (var px = 1.8; px < ax; px += 3.6) for (var pz = 1.5; pz < cz; pz += 3) {
+      if (!inTri(px + 0.7, pz + 0.3) || !inTri(px - 0.7, pz - 0.3)) continue;
+      box(1.2, 0.02, 0.3, panelM, px, H - 0.012, pz);
+    }
+    box(1.2, 0.02, 0.3, panelM, (MR.x0 + MR.x1) / 2, H - 0.012, MR.z0 / 2);
 
-    // ---------------- walls
+    // ---------------- walls: solid white, frosted glass, clear glass; every one also a collider
     function wall(a, b, kind) {
       out.walls.push({ a: a, b: b, kind: kind });
-      if (kind === "window") return;
-      var dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
-      var m = box(len, H, 0.12, kind === "glass" ? glassM(THREE) : WHITE, (a[0] + b[0]) / 2, H / 2, (a[1] + b[1]) / 2, -Math.atan2(dz, dx));
-      if (kind === "glass") m.renderOrder = 2;
+      var dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), rot = -Math.atan2(dz, dx), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+      collide(mx, mz, len / 2, 0.1, rot);
+      if (kind === "solid") { box(len, H, 0.12, WHITE, mx, H / 2, mz, rot); return; }
+      var g = box(len, H, 0.05, kind === "frosted" ? frostedM(THREE) : glassM(THREE), mx, H / 2, mz, rot); g.renderOrder = 2;
+      stripes(THREE, add, mx, mz, len, rot);
     }
-    // the curtain wall: sill + heater below, glass band, bulkhead above, mullions, and the view outside
+    // top wall, with the meeting room's frosted front and its door gap
+    wall(L.TL, [MR.x0, 0], "solid");
+    wall([MR.x0, 0], [MR.door[0], 0], "frosted");
+    wall([MR.door[1], 0], [MR.x1, 0], "frosted");
+    wall([MR.x1, 0], L.A, "solid");
+    // the meeting room's other three sides
+    wall([MR.x0, MR.z1], [MR.x0, MR.z0], "solid");
+    wall([MR.x0, MR.z0], [MR.x1, MR.z0], "solid");
+    wall([MR.x1, MR.z0], [MR.x1, MR.z1], "solid");
+    // the left wall, with the way in
+    wall(L.TL, [0, E.z0], "solid");
+    wall([0, E.z1], L.C, "solid");
+    [E.z0 + 0.38, E.z1 - 0.38].forEach(function (zz) { var d = box(0.75, 2.3, 0.04, glassM(THREE), 0.02, 1.15, zz, Math.PI / 2); d.renderOrder = 2; stripes(THREE, add, 0.02, zz, 0.75, Math.PI / 2); });
+    box(0.36, 0.14, 0.05, new THREE.MeshBasicMaterial({ map: signTex(THREE, "EXIT", "#12a24a", "#ffffff") }), 0.07, H - 0.25, (E.z0 + E.z1) / 2, Math.PI / 2);
+    out.spots.door = { x: 0.8, z: (E.z0 + E.z1) / 2, r: 1.2, label: "slip out (toilet break)" };
+
+    // ---------------- the curtain wall along the diagonal, built flat in its own frame then turned into place
     (function curtain() {
-      var x0 = L.B[0], x1 = L.A[0];
-      out.walls.push({ a: L.B, b: L.A, kind: "window" });
-      box(x1 - x0, 0.72, 0.28, M(0xdcdcd8), (x0 + x1) / 2, 0.36, 0.12);             // heater / sill block
-      box(x1 - x0, 0.03, 0.36, WHITE, (x0 + x1) / 2, 0.73, 0.14);                   // the sill top
-      var slats = M(0x7d8287); for (var sx = x0 + 0.5; sx < x1; sx += 1.4) box(1.2, 0.35, 0.02, slats, sx + 0.1, 0.36, 0.27); // grille
-      box(x1 - x0, 0.42, 0.12, WHITE, (x0 + x1) / 2, H - 0.21, 0.04);               // bulkhead
-      box(x1 - x0, 0.14, 0.08, M(0xcfd3d6), (x0 + x1) / 2, H - 0.49, 0.06);          // rolled-up blinds
+      out.walls.push({ a: L.C, b: L.A, kind: "window" });
+      collide((L.C[0] + ax) / 2 + win[0] * 0.15, cz / 2 + win[1] * 0.15, wlen / 2, 0.25, wrot);
+      var g = new THREE.Group(); g.position.set(L.C[0], 0, L.C[1]); g.rotation.y = wrot; add(g);
+      // in this frame x runs along the wall (0..wlen) and -z points into the office
+      var put = function (w, h, d, mat, x, y, z) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
+      var s = -1; // into the room
+      put(wlen, 0.72, 0.28, M(0xdcdcd8), wlen / 2, 0.36, s * 0.12);
+      put(wlen, 0.03, 0.36, WHITE, wlen / 2, 0.73, s * 0.14);
+      var slats = M(0x7d8287); for (var sx = 0.5; sx < wlen - 1; sx += 1.4) put(1.2, 0.35, 0.02, slats, sx + 0.6, 0.36, s * 0.27);
+      put(wlen, 0.42, 0.12, WHITE, wlen / 2, H - 0.21, s * 0.04);
+      put(wlen, 0.14, 0.08, M(0xcfd3d6), wlen / 2, H - 0.49, s * 0.06);
       var mull = M(0xc7ccd0);
-      for (var mx = x0; mx <= x1 + 0.01; mx += 2.8) box(0.07, H - 0.9, 0.12, mull, Math.min(mx, x1 - 0.05), 0.75 + (H - 0.9) / 2, 0.02);
+      for (var mx = 0; mx <= wlen + 0.01; mx += 2.8) put(0.07, H - 0.9, 0.12, mull, Math.min(mx, wlen - 0.05), 0.75 + (H - 0.9) / 2, s * 0.02);
       L.windowViews.forEach(function (v) {
-        var t = tex[v.tex], w = v.to - v.from;
-        if (t) { t.colorSpace = THREE.SRGBColorSpace; }
-        // the photo sits just behind the glass, the height of the window band
-        if (t && v.tex === "sky_depot") { t.wrapS = THREE.RepeatWrapping; t.repeat.set(w / 2.8, 1); } // one view per pane
+        var t = tex[v.tex], x0 = v.from * wlen, w = (v.to - v.from) * wlen;
+        if (t) { t.colorSpace = THREE.SRGBColorSpace; if (v.tex === "sky_depot") { t.wrapS = THREE.RepeatWrapping; t.repeat.set(w / 2.8, 1); } }
         var view = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.85), t ? new THREE.MeshBasicMaterial({ map: t, fog: false }) : new THREE.MeshBasicMaterial({ color: 0xa9c6dc }));
-        view.position.set(v.from + w / 2, 1.62, -0.35); add(view);
+        view.position.set(x0 + w / 2, 1.62, -s * 0.35); view.rotation.y = Math.PI; g.add(view); // faces into the room
       });
-      var sky = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), new THREE.MeshBasicMaterial({ color: 0xbcd3e3 }));
-      sky.position.set(17, 12, -1.5); add(sky);
-      collide((x0 + x1) / 2, 0.1, (x1 - x0) / 2, 0.2);
+      var sky = new THREE.Mesh(new THREE.PlaneGeometry(wlen + 20, 30), new THREE.MeshBasicMaterial({ color: 0xbcd3e3 }));
+      sky.position.set(wlen / 2, 12, -s * 1.5); sky.rotation.y = Math.PI; g.add(sky);
     })();
-    // the long inner wall A -> C (solid), with a TV and a whiteboard on it
-    wall(L.A, L.C, "solid");
-    var ax = L.A[0], cz = L.C[1], ang = Math.atan2(cz, -ax);
-    (function onInner() {
-      var t = 0.52; var x = ax + (0 - ax) * t, z = cz * t, nx = cz / Math.hypot(cz, ax), nz = ax / Math.hypot(cz, ax);
-      // inward normal points to (-,-)
-      var tv = box(1.4, 0.8, 0.05, BLACK, x - nx * 0.08, 1.55, z - nz * 0.08, -Math.atan2(-cz, ax)); tv.name = "innerTV";
-      var wb = box(1.2, 0.9, 0.03, WHITE, x + 2.2 * (ax / Math.hypot(cz, ax)) - nx * 0.07, 1.4, z - 2.2 * (cz / Math.hypot(cz, ax)) - nz * 0.07, -Math.atan2(-cz, ax));
-      wb.name = "whiteboard";
-    })();
-    // the long wall's collider: a chain of small boxes along it
-    for (var s = 0; s <= 1; s += 0.02) collide(ax * (1 - s), cz * s, 0.35, 0.35);
-    // the entrance wall C -> B (x = 0), with the glass door gap
-    var E = L.entrance, MR = L.meeting;
-    wall([0, cz], [0, E.z1], "solid");
-    wall([0, E.z0], [0, MR.z1], "solid");
-    // the glass door: two panes with the frosted stripes
-    [E.z0 + 0.4, E.z1 - 0.4].forEach(function (zz) { var g = box(0.04, 2.3, 0.78, glassM(THREE), 0.03, 1.15, zz); g.renderOrder = 2; frost(THREE, add, 0.05, zz, 0.78, true); });
-    collide(0, (cz + E.z1) / 2, 0.15, (cz - E.z1) / 2); collide(0, (E.z0 + MR.z1) / 2, 0.15, (E.z0 - MR.z1) / 2);
-    out.spots.door = { x: 0.7, z: (E.z0 + E.z1) / 2, r: 1.2, label: "slip out (toilet break)" };
-    // exit sign above the meeting room
-    var exitSign = box(0.36, 0.14, 0.05, new THREE.MeshBasicMaterial({ map: signTex(THREE, "EXIT", "#12a24a", "#ffffff") }), MR.x1 + 0.9, H - 0.3, MR.z1 + 0.02);
 
-    // ---------------- the meeting room: glass on the inside, a long white table, a TV
-    wall([0, 0], [0, MR.z1], "solid");
-    wall([MR.x1, 0], [MR.x1, MR.z1], "glass");
-    wall([0, MR.z1], [MR.door[0], MR.z1], "glass");
-    wall([MR.door[1], MR.z1], [MR.x1, MR.z1], "glass");
-    frost(THREE, add, MR.x1, MR.z1 / 2, MR.z1, true);
-    frost(THREE, add, MR.door[0] / 2, MR.z1, MR.door[0], false);
-    frost(THREE, add, (MR.door[1] + MR.x1) / 2, MR.z1, MR.x1 - MR.door[1], false);
-    collide(MR.x1, MR.z1 / 2, 0.08, MR.z1 / 2);
-    collide(MR.door[0] / 2, MR.z1, MR.door[0] / 2, 0.08);
-    collide((MR.door[1] + MR.x1) / 2, MR.z1, (MR.x1 - MR.door[1]) / 2, 0.08);
-    table(THREE, add, box, WHITE, METAL, MR.x1 / 2, MR.z1 / 2 + 0.1, 3.6, 1.1, 0);
-    collide(MR.x1 / 2, MR.z1 / 2 + 0.1, 1.8, 0.55);
+    // ---------------- the meeting room: a long white table, chairs, a TV on the far wall
+    var mcx = (MR.x0 + MR.x1) / 2, mcz = (MR.z0 + MR.z1) / 2;
+    table(THREE, add, box, WHITE, METAL, mcx, mcz - 0.2, 1.1, 3.4, 0);
+    collide(mcx, mcz - 0.2, 0.55, 1.7);
     for (var mc = 0; mc < 4; mc++) {
-      chair(THREE, add, BLACK, 1.8 + mc * 0.9, MR.z1 / 2 - 0.65, 0);
-      chair(THREE, add, BLACK, 1.8 + mc * 0.9, MR.z1 / 2 + 0.85, Math.PI);
+      chair(THREE, add, BLACK, mcx - 0.8, mcz - 1.5 + mc * 0.85, -Math.PI / 2);
+      chair(THREE, add, BLACK, mcx + 0.8, mcz - 1.5 + mc * 0.85, Math.PI / 2);
     }
-    box(1.3, 0.75, 0.05, BLACK, 0.08, 1.5, MR.z1 / 2).rotation.y = Math.PI / 2;
-    out.spots.meeting = { x: MR.x1 / 2, z: MR.z1 / 2 + 0.95, r: 1.4, label: "hide in the meeting room" };
+    box(1.4, 0.8, 0.05, BLACK, mcx, 1.5, MR.z0 + 0.08);
+    out.spots.meeting = { x: mcx - 0.9, z: mcz + 1.6, r: 1.3, label: "hide in the meeting room" };
 
-    // ---------------- the entrance wall's screens, the clock
+    // ---------------- screens on the top wall, the clock on the left wall
     L.screens.forEach(function (sc) {
-      if (sc.kind === "tv") { var m = box(0.05, 0.62, 1.05, new THREE.MeshBasicMaterial({ map: screenTex(THREE, "tv") }), 0.07, 1.75, sc.z); out.screens.tv = m; }
-      else {
-        var p2 = box(0.07, 2.0, 1.15, new THREE.MeshBasicMaterial({ map: screenTex(THREE, "portrait") }), 0.08, 1.2, sc.z);
-        box(0.05, 2.1, 0.06, BLACK, 0.1, 1.05, sc.z - 0.6);
-        out.screens.portrait = p2;
-      }
+      if (sc.kind === "tv") out.screens.tv = box(1.05, 0.62, 0.05, new THREE.MeshBasicMaterial({ map: screenTex(THREE, "tv") }), sc.x, 1.75, 0.09);
+      else { out.screens.portrait = box(1.15, 2.0, 0.07, new THREE.MeshBasicMaterial({ map: screenTex(THREE, "portrait") }), sc.x, 1.2, 0.1); box(0.06, 2.1, 0.05, BLACK, sc.x - 0.6, 1.05, 0.11); }
     });
     var clk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 24), new THREE.MeshBasicMaterial({ map: clockTex(THREE) }));
-    clk.rotation.z = Math.PI / 2; clk.rotation.x = Math.PI / 2; clk.position.set(0.08, 2.0, L.clock[1]); add(clk);
-    clk.rotation.set(0, 0, Math.PI / 2); clk.rotateX(-Math.PI / 2);
+    clk.rotation.set(0, 0, Math.PI / 2); clk.position.set(0.08, 2.0, L.clock[1]); add(clk);
     out.clock = clk;
 
-    // ---------------- columns
+    // ---------------- the pillar
     L.columns.forEach(function (c) {
-      var col = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, H, 24), OFFWHITE); col.position.set(c[0], H / 2, c[1]); add(col);
-      out.colliders.push({ x: c[0], z: c[1], r: 0.5 });
-      out.walls.push({ circle: true, x: c[0], z: c[1], r: 0.42 });
+      var col = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, H, 24), OFFWHITE); col.position.set(c[0], H / 2, c[1]); add(col);
+      out.colliders.push({ x: c[0], z: c[1], r: 0.52 });
+      out.walls.push({ circle: true, x: c[0], z: c[1], r: 0.45 });
     });
 
     // ---------------- desks
     out.desks = [];
+    var K = { WHITE: WHITE, GREY: GREY, BLACK: BLACK, DARK: DARK, M: M };
     L.clusters.forEach(function (cl, ci) {
-      var rowW = 1.6, n = cl.n, x0 = cl.x - (n * rowW) / 2 + rowW / 2;
-      // the grey divider between the rows
-      box(n * rowW, 0.38, 0.04, M(0x8f959b), cl.x, 1.02, cl.z);
-      collide(cl.x, cl.z, (n * rowW) / 2 + 0.05, 0.85);
+      var co = Math.cos(cl.rot), si = Math.sin(cl.rot);
+      var W = function (lx, lz) { return [cl.x + lx * co + lz * si, cl.z - lx * si + lz * co]; }; // cluster-local -> world
+      box(cl.n * cl.rowW, 0.38, 0.04, M(0x8f959b), cl.x, 1.02, cl.z, cl.rot);          // the grey divider
+      collide(cl.x, cl.z, (cl.n * cl.rowW) / 2 + 0.05, 0.85, cl.rot);
       ["N", "S"].forEach(function (row) {
-        for (var k = 0; k < n; k++) {
-          // back to back: monitors meet at the divider, chairs face out. the N row sits on the window side facing south
-          var dx = x0 + k * rowW, dz = cl.z + (row === "N" ? -0.42 : 0.42), face = row === "N" ? Math.PI : 0;
+        for (var k = 0; k < cl.n; k++) {
+          // back to back: monitors meet at the divider, chairs face out
+          var p = W(-(cl.n * cl.rowW) / 2 + cl.rowW / 2 + k * cl.rowW, row === "N" ? -0.42 : 0.42);
+          var face = (row === "N" ? Math.PI : 0) + cl.rot;
           var mine = L.myDesk.cluster === ci && L.myDesk.row === row && L.myDesk.i === k;
-          var d = desk(THREE, add, box, dx, dz, face, { WHITE: WHITE, GREY: GREY, BLACK: BLACK, DARK: DARK, M: M }, mine, ci * 10 + k + (row === "S" ? 5 : 0));
+          var d = desk(THREE, add, box, p[0], p[1], face, K, mine, ci * 10 + k + (row === "S" ? 5 : 0), Math.min(1.45, cl.rowW / 1.75));
           d.row = row; d.mine = mine; out.desks.push(d);
           if (mine) { out.myDesk = d; out.spots.desk = { x: d.seat[0], z: d.seat[1], r: 1.0, label: "sit at your desk" }; }
         }
       });
     });
+    // the lone desk and the long cabinet
+    var lone = desk(THREE, add, box, L.single[0], L.single[1], 0, K, false, 77, 1.4); out.desks.push(lone);
+    collide(L.single[0], L.single[1], 1.1, 0.45);
+    var cab = L.counter;
+    box(0.55, 0.9, cab.len, WHITE, cab.x, 0.45, cab.z); box(0.6, 0.03, cab.len + 0.04, WHITE, cab.x, 0.91, cab.z);
+    for (var dz = cab.z - cab.len / 2 + 0.6; dz < cab.z + cab.len / 2; dz += 1.2) box(0.005, 0.8, 0.005, GREY, cab.x + 0.28, 0.45, dz);
+    collide(cab.x, cab.z, 0.32, cab.len / 2);
 
-    // ---------------- shelves along the window, water, printer, fridge
-    L.shelves.forEach(function (sh, si) { shelf(THREE, add, box, WHITE, M, (sh[0] + sh[1]) / 2, 0.62, sh[1] - sh[0], si); collide((sh[0] + sh[1]) / 2, 0.62, (sh[1] - sh[0]) / 2, 0.25); });
+    // ---------------- along the window: low open shelves, the water bottles
+    L.shelves.forEach(function (sh, si) {
+      var a = onWindow(sh[0], 0.55), b = onWindow(sh[1], 0.55), len = Math.hypot(b[0] - a[0], b[1] - a[1]), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+      var g = new THREE.Group(); g.position.set(mx, 0, mz); g.rotation.y = wrot + Math.PI; add(g); // backs to the glass
+      var lbox = function (w, h, d, mat, x, y, z) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
+      shelf(THREE, function (m) { g.add(m); return m; }, lbox, WHITE, M, 0, 0, len, si);
+      collide(mx, mz, len / 2, 0.25, wrot);
+    });
     (function water() {
-      var bm = new THREE.MeshLambertMaterial({ color: 0x6fb6ff, transparent: true, opacity: 0.75 });
-      for (var w = 0; w < 5; w++) { var b = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.45, 12), bm); b.position.set(L.water[0] - 0.35 + (w % 3) * 0.3, 0.23 + Math.floor(w / 3) * 0.46, L.water[1] + (w % 2) * 0.08); add(b); }
-      collide(L.water[0], L.water[1], 0.5, 0.25);
-      out.spots.water = { x: L.water[0], z: L.water[1] + 0.8, r: 1.1, label: "refill the water" };
+      var p = onWindow(L.water, 0.6), bm = new THREE.MeshLambertMaterial({ color: 0x6fb6ff, transparent: true, opacity: 0.75 });
+      for (var w = 0; w < 5; w++) { var b = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.45, 12), bm); b.position.set(p[0] + wdir[0] * (w % 3 - 1) * 0.3, 0.23 + Math.floor(w / 3) * 0.46, p[1] + wdir[1] * (w % 3 - 1) * 0.3); add(b); }
+      collide(p[0], p[1], 0.5, 0.25, wrot);
+      out.spots.water = { x: p[0] + win[0] * 0.8, z: p[1] + win[1] * 0.8, r: 1.1, label: "refill the water" };
     })();
     (function printer() {
       var x = L.printer[0], z = L.printer[1];
       box(0.6, 0.55, 0.55, M(0xf0f0f0), x, 0.28, z); box(0.6, 0.35, 0.5, M(0x3a3d42), x, 0.73, z); box(0.4, 0.02, 0.3, WHITE, x, 0.92, z + 0.05);
       collide(x, z, 0.32, 0.3);
-      out.spots.printer = { x: x, z: z + 0.85, r: 1.1, label: "use the printer" };
+      out.spots.printer = { x: x, z: z - 0.85, r: 1.1, label: "use the printer" };
     })();
     (function fridge() {
       var x = L.fridge[0], z = L.fridge[1];
-      var f = box(0.5, 0.85, 0.5, M(0x8c9196), x, 0.43, z, 0.3); box(0.03, 0.3, 0.03, METAL, x + 0.18, 0.6, z + 0.27, 0.3);
+      out.fridgeMesh = box(0.5, 0.85, 0.5, M(0x8c9196), x, 0.43, z); box(0.03, 0.3, 0.03, METAL, x + 0.18, 0.6, z + 0.27);
       collide(x, z, 0.3, 0.3);
-      out.spots.fridge = { x: x - 0.6, z: z + 0.7, r: 1.2, label: "raid the fridge" };
-      out.fridgeMesh = f;
+      out.spots.fridge = { x: x, z: z + 0.85, r: 1.2, label: "raid the fridge" };
     })();
-    // the window, for staring out of
-    out.spots.window = { x: 18.5, z: 1.0, r: 1.4, label: "stare out of the window" };
+    var wv = onWindow(0.5, 1.1);
+    out.spots.window = { x: wv[0], z: wv[1], r: 1.4, label: "stare out of the window" };
 
-    // ---------------- the cafe tables, the counter
+    // ---------------- the cafe tables
     L.cafe.forEach(function (t, ti) {
       var top = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.03, 28), WHITE); top.position.set(t[0], 0.74, t[1]); add(top);
       var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.72, 8), WHITE); stem.position.set(t[0], 0.37, t[1]); add(stem);
       var base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.3, 0.03, 20), WHITE); base.position.set(t[0], 0.02, t[1]); add(base);
       for (var c = 0; c < 3; c++) { var a = c * 2.1 + ti; eames(THREE, add, WHITE, M(0xd2b48c), t[0] + Math.cos(a) * 0.72, t[1] + Math.sin(a) * 0.72, -a + Math.PI / 2); }
       out.colliders.push({ x: t[0], z: t[1], r: 0.95 });
-      if (!ti) out.spots.cafe = { x: t[0] + 1.1, z: t[1] + 0.4, r: 1.3, label: "take a coffee break" };
+      if (!ti) out.spots.cafe = { x: t[0] + 1.15, z: t[1] + 0.2, r: 1.3, label: "take a coffee break" };
     });
-    box(2.2, 0.9, 0.5, WHITE, L.counter[0], 0.45, L.counter[1], 0.44);
-    collide(L.counter[0], L.counter[1], 1.15, 0.3, 0.44);
 
     return out;
   }
 
   // ---------------------------------------------------------------- pieces
   function glassM(THREE) { return new THREE.MeshLambertMaterial({ color: 0xcfe8e2, transparent: true, opacity: 0.18, depthWrite: false }); }
-  function frost(THREE, add, x, z, len, alongZ) {
-    var fm = new THREE.MeshLambertMaterial({ color: 0xe8f1ee, transparent: true, opacity: 0.55, depthWrite: false });
-    [0.95, 1.05, 1.15].forEach(function (y) {
-      var m = new THREE.Mesh(new THREE.BoxGeometry(alongZ ? 0.02 : len, 0.05, alongZ ? len : 0.02), fm);
-      m.position.set(x, y, z); m.renderOrder = 3; add(m);
-    });
+  function frostedM(THREE) { return new THREE.MeshLambertMaterial({ color: 0xeef4f2, transparent: true, opacity: 0.82, depthWrite: false }); }
+  // the three frosted bands across glass, whichever way the glass runs
+  function stripes(THREE, add, x, z, len, rot) {
+    var fm = new THREE.MeshLambertMaterial({ color: 0xe8f1ee, transparent: true, opacity: 0.6, depthWrite: false });
+    [0.95, 1.05, 1.15].forEach(function (y) { var m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.07), fm); m.position.set(x, y, z); m.rotation.y = rot; m.renderOrder = 3; add(m); });
   }
   function table(THREE, add, box, WHITE, METAL, x, z, w, d, rot) {
     box(w, 0.04, d, WHITE, x, 0.74, z, rot);
@@ -264,16 +264,18 @@ window.SlackOffice = (function () {
     g.position.set(x, 0, z); g.rotation.y = ry; add(g);
   }
   var CLUTTER = [0xff6b6b, 0xffd43b, 0x69db7c, 0x4dabf7, 0xf783ac, 0xffa94d, 0xe9ecef];
-  function desk(THREE, add, box, x, z, face, K, mine, seed) {
+  function desk(THREE, add, box, x, z, face, K, mine, seed, wide) {
     var R = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
     var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = face; add(g);
+    var top = new THREE.Group(); top.scale.x = wide || 1; g.add(top); // the desk itself stretches to fill its slot; the chair doesn't
     var put = function (w, h, d, mat, px, py, pz) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(px, py, pz); g.add(m); return m; };
     // the curved white top: a slab plus a rounded front lip
-    put(1.56, 0.035, 0.8, K.WHITE, 0, 0.74, 0);
-    var lip = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.035, 24, 1, false, -Math.PI / 2, Math.PI), K.WHITE); lip.scale.set(1.95, 1, 0.35); lip.position.set(0, 0.74, 0.4); g.add(lip);
-    put(0.04, 0.72, 0.76, K.WHITE, -0.76, 0.36, 0);                    // side panel
-    put(0.42, 0.62, 0.62, K.WHITE, 0.55, 0.31, -0.05);                   // pedestal
-    for (var dr = 0; dr < 3; dr++) put(0.36, 0.005, 0.005, K.GREY, 0.55, 0.12 + dr * 0.2, 0.265);
+    var putT = function (w, h, d, mat, px, py, pz) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(px, py, pz); top.add(m); return m; };
+    putT(1.56, 0.035, 0.8, K.WHITE, 0, 0.74, 0);
+    var lip = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.035, 24, 1, false, -Math.PI / 2, Math.PI), K.WHITE); lip.scale.set(1.95, 1, 0.35); lip.position.set(0, 0.74, 0.4); top.add(lip);
+    putT(0.04, 0.72, 0.76, K.WHITE, -0.76, 0.36, 0);                    // side panel
+    putT(0.42, 0.62, 0.62, K.WHITE, 0.55, 0.31, -0.05);                 // pedestal
+    for (var dr = 0; dr < 3; dr++) putT(0.36, 0.005, 0.005, K.GREY, 0.55, 0.12 + dr * 0.2, 0.265);
     // monitor(s), keyboard, a phone, clutter
     var monX = mine ? -0.1 : (R() - 0.5) * 0.3;
     put(0.12, 0.02, 0.18, K.DARK, monX, 0.77, -0.25);

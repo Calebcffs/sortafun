@@ -31,7 +31,7 @@
   .hud .sus i { display: block; height: 100%; width: 0; background: #ffd43b; transition: width .15s; }
   .hud .sus.hot i { background: #ff5a5a; }
   #h-strikes { color: #ff6b6b; letter-spacing: 2px; }
-  #minimap { position: absolute; right: 8px; top: 8px; z-index: 10; width: 200px; height: 100px; pointer-events: none; }
+  #minimap { position: absolute; right: 8px; top: 8px; z-index: 10; width: 140px; height: 140px; pointer-events: none; }
   #h-act { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 10; font: 400 16px var(--chunky); color: #7cff9a; text-shadow: 0 2px 0 #000; pointer-events: none; }
   #h-prompt { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; z-index: 10; font: 700 13px var(--body); text-shadow: 0 1px 3px #000; pointer-events: none; }
   #h-errand { position: absolute; left: 10px; top: 42px; z-index: 10; color: #ffd43b; font: 700 12px var(--body); text-shadow: 0 1px 3px #000; pointer-events: none; }
@@ -58,10 +58,10 @@
   #touch { position: absolute; right: 8px; bottom: 36px; z-index: 12; display: grid; grid-template-columns: repeat(2, 60px); gap: 6px; }
   #touch[hidden] { display: none; }
   #touch button { height: 44px; font: 700 12px var(--body) !important; opacity: .85; touch-action: none; }
-  @media (max-width: 640px) { #minimap { width: 140px; height: 70px; } .hud { font-size: 11px; gap: 8px; } }
+  @media (max-width: 640px) { #minimap { width: 100px; height: 100px; } .hud { font-size: 11px; gap: 8px; } }
 </style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=0d6d6d72"></script>
+<script src="feedback.js?v=4f0cd45d"></script>
 <script src="panic-app.js?v=5a5cc086"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -75,7 +75,7 @@
     <canvas id="view"></canvas>
     <div id="s-msg"></div>
     <div class="hud"><span id="h-clock">9:00am</span><span>slack <b id="h-slack">0</b></span><span title="how suspicious mr. goh is">eye <span class="sus"><i id="h-sus"></i></span></span><span id="h-strikes">___</span></div>
-    <canvas id="minimap" width="400" height="200"></canvas>
+    <canvas id="minimap" width="300" height="300"></canvas>
     <div class="cross"></div>
     <div id="h-act"></div>
     <div id="h-errand"></div>
@@ -107,8 +107,8 @@
   <a class="back" href="index.html#games">&laquo; back to all games</a>
 </div>
 <script src="slack/vault.js?v=3ef32f6d"></script>
-<script src="slack/office.js?v=0cc934c1"></script>
-<script src="slack/game.js?v=8f1314c6"></script>
+<script src="slack/office.js?v=18ce62a6"></script>
+<script src="slack/game.js?v=107df813"></script>
 <script src="slack/lock.js?v=25849d38"></script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
