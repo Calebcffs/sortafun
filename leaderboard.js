@@ -49,6 +49,7 @@
     callit:   { label: "call it",        unit: "streak", better: "high", retired: true },
     watch:    { label: "watch the guy",  unit: "s",     better: "high", retired: true },
     // parts * 10000 - seconds, so any 8/8 beats any 7/8 and faster beats slower
+    taka:     { label: "taka-san dinner", unit: "pts", better: "high" },
     deeptime: { label: "deep time",      unit: "parts", better: "high", format: function (v) {
       if (v <= 0) return "0/8";
       var p = Math.ceil(v / 10000), s = p * 10000 - v;

@@ -110,29 +110,7 @@ original. Working title only; pick an original name before it ships.
 
 ## 4. Taka-san Dinner Simulator
 
-**Pitch (guess, brief was just the title):** a Japanese company dinner
-(nomikai) with Taka-san. Survive the evening with your dignity, and your
-reputation, intact.
-
-**Minigames (guess):**
-- **Keep the glasses full:** never pour your own drink; top up Taka-san's
-  and everyone else's before they're empty, with the label facing out.
-- **The toasts:** hit "kanpai!" on the beat, glass held lower than your
-  senior's.
-- **Ordering:** remember the table's orders when the waiter comes round.
-- **Small talk:** pick the right reply when Taka-san asks about your
-  weekend, your golf, your plans.
-- **Karaoke round:** a rhythm minigame, song choice matters.
-- **The last train:** leave at exactly the right moment. Too early is rude,
-  too late and you're walking home.
-
-**Scoring:** a reputation meter, plus an end-of-night rating from Taka-san.
-
-**Before publishing:** this names a real person on a public site. Make sure
-Taka-san is in on the joke (or give the character a made-up name).
-
-**Tech:** one static page, illustrated 2D scenes (same outlined style as the
-homepage thumbnails).
+Shipped 2026-09-29 as `taka.html` (see CLAUDE.md).
 
 ---
 

@@ -42,6 +42,7 @@
     "city.html": ["City Sandbox", "ppt"],
     "draw.html": ["Draw and Guess", "ppt"],
     "deeptime.html": ["Deep Time", "ppt"],
+    "taka.html": ["Taka-san Dinner", "ppt"],
     "driving.html": ["Circuit Race", "ppt"],
     "reaction.html": ["Reaction Light", "ppt"],
     "aim.html": ["Aim Trainer", "ppt"],

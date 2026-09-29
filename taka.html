@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>taka-san dinner simulator &middot; SORTAFUN.ORG</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=f59c62c1">
+<style>
+  .wrap.tk { max-width: 1000px; }
+  .stage {
+    position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: #2a1d17;
+    border: 3px solid var(--ink); border-radius: 12px; user-select: none; -webkit-user-select: none;
+    text-align: left; font-size: 14px; color: #fff;
+  }
+  @media (max-width: 640px) { .stage { aspect-ratio: 3 / 5.4; } }
+  .sc { position: absolute; inset: 0; }
+  .sc[hidden] { display: none !important; }
+  .stage button { font-family: var(--body); }
+
+  /* meters */
+  #hud { position: absolute; left: 10px; top: 8px; z-index: 20; display: flex; gap: 12px; align-items: center; background: rgba(20,14,10,.72); padding: 5px 10px; border-radius: 10px; border: 2px solid rgba(255,255,255,.2); font-size: 13px; }
+  #hud[hidden] { display: none; }
+  #hud svg { width: 18px; height: 18px; vertical-align: -4px; }
+  .m-bar { display: inline-block; width: 110px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.18); overflow: hidden; vertical-align: 0; margin: 0 4px; }
+  .m-bar i { display: block; height: 100%; width: 50%; background: linear-gradient(90deg, #ff5a7a, #ff2e63); transition: width .4s; }
+  @media (max-width: 640px) { .m-bar { width: 60px; } #hud { font-size: 12px; gap: 8px; } }
+  .fl { position: absolute; top: 18%; z-index: 30; font: 400 26px var(--chunky); pointer-events: none; animation: fl 1.3s ease-out forwards; text-shadow: 0 2px 0 #000; }
+  .fl-up { color: #7cff9a; } .fl-down { color: #ff6b6b; } .fl-ins { color: #9ad4ff; font-size: 18px; }
+  @keyframes fl { to { transform: translateY(-50px); opacity: 0; } }
+  #toast { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 25; max-width: 80%; background: #fffdf5; color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; padding: 7px 12px; font-size: 13.5px; text-align: center; box-shadow: 0 4px 0 rgba(0,0,0,.4); }
+  #toast[hidden] { display: none; }
+
+  /* the dialogue box */
+  #dlg { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 22; display: flex; gap: 10px; background: #fffdf5; color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; padding: 10px; box-shadow: 0 5px 0 rgba(0,0,0,.45); }
+  #dlg[hidden] { display: none; }
+  .dlg-face { width: 64px; height: 64px; flex: none; border-radius: 50%; border: 3px solid var(--ink); background: #fff; }
+  .dlg-body { flex: 1; min-width: 0; }
+  .dlg-body b { font: 400 17px var(--chunky); }
+  .dlg-body > p { margin: 2px 0 6px; font-size: 14.5px; }
+  .dlg-a { display: flex; flex-direction: column; gap: 5px; }
+  .dlg-btn { text-align: left; font-size: 13.5px !important; padding: 6px 9px !important; border-radius: 9px !important; line-height: 1.3; }
+  .dlg-btn kbd, .k-word kbd { display: inline-block; min-width: 18px; margin-right: 7px; padding: 0 4px; border: 2px solid var(--ink); border-radius: 5px; background: #ffd43b; font: 700 11px var(--body); text-align: center; }
+  .dlg-reply { margin: 2px 0; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+  .dlg-reply img { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--ink); }
+  .dlg-t { height: 4px; margin-top: 7px; background: #eee; border-radius: 2px; overflow: hidden; }
+  .dlg-t i { display: block; height: 100%; width: 100%; background: #ff7a1a; }
+  .at-drive #dlg { bottom: auto; top: 52px; left: 50%; right: auto; transform: translateX(-50%); width: min(600px, 94%); }
+  .at-dinner #dlg { left: auto; right: 8px; width: calc(42% - 16px); bottom: 8px; }
+  @media (max-width: 640px) {
+    .at-dinner #dlg, .at-drive #dlg { left: 6px; right: 6px; width: auto; transform: none; }
+    .at-drive #dlg { top: auto; bottom: 64px; }
+    .dlg-face { width: 40px; height: 40px; }
+    #dlg { padding: 7px; gap: 7px; }
+  }
+
+  /* title */
+  #sc-title { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center;
+    background: radial-gradient(circle at 50% 30%, #b3121d, #4a0a0e 70%); }
+  #sc-title h2 { margin: 0; font: 400 clamp(30px, 6vw, 52px) var(--chunky); color: #ffd84a; text-shadow: 0 4px 0 #1d1b2e; letter-spacing: 1px; }
+  #sc-title p { margin: 0; max-width: 560px; color: #ffe9d6; }
+  #t-faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+  #t-faces img { width: 46px; height: 46px; border-radius: 50%; border: 2px solid #ffd84a; background: #fff; }
+  #t-start { font: 400 22px var(--chunky) !important; padding: 10px 26px !important; }
+
+  /* drive */
+  #drive-view { position: absolute; inset: 0; }
+  #drive-view canvas { width: 100%; height: 100%; display: block; }
+  #drive-msg { position: absolute; left: 0; right: 0; top: 45%; text-align: center; font: 400 20px var(--chunky); }
+  .dv-hud { position: absolute; right: 10px; top: 8px; display: flex; gap: 10px; background: rgba(20,14,10,.72); padding: 5px 10px; border-radius: 10px; font: 700 13px var(--body); }
+  .dv-help { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-size: 12px; text-shadow: 0 1px 2px #000; }
+  .dv-touch { display: none; position: absolute; left: 8px; right: 8px; bottom: 8px; gap: 8px; }
+  .dv-touch span { flex: 1; }
+  .dv-touch button { width: 64px; height: 50px; font: 700 14px var(--body) !important; opacity: .85; touch-action: none; }
+  @media (pointer: coarse) { .dv-touch { display: flex; } .dv-help { display: none; } }
+
+  /* seating */
+  #sc-seating { background: #5a2b1f repeating-linear-gradient(45deg, rgba(0,0,0,.05) 0 10px, transparent 10px 20px); display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; padding: 50px 12px 12px; }
+  .seat-rules { grid-column: 2; background: #fffdf5; color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; padding: 8px 12px; font-size: 13px; }
+  .seat-rules h3 { margin: 0 0 4px; font: 400 18px var(--chunky); }
+  .seat-rules ol { margin: 0; padding-left: 18px; }
+  #seat-table { grid-column: 1; grid-row: 1 / span 2; position: relative; aspect-ratio: 1; max-height: 100%; margin: auto; width: 100%; max-width: 440px; }
+  #seat-table::before { content: ""; position: absolute; inset: 18%; border-radius: 50%; background: radial-gradient(#fff8ea, #e9dcc6); border: 3px solid var(--ink); box-shadow: 0 6px 0 rgba(0,0,0,.3); }
+  #seat-table::after { content: "door"; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); font: 400 13px var(--chunky); color: #ffd84a; }
+  .seat { position: absolute; width: 17%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; padding: 0 !important; border: 3px dashed rgba(255,255,255,.7) !important; background: rgba(255,255,255,.12) !important; box-shadow: none !important; overflow: visible; }
+  .seat img { width: 100%; height: 100%; border-radius: 50%; display: block; }
+  .seat span { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); font: 700 10.5px var(--body); color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+  .seat em { position: absolute; inset: 0; display: grid; place-items: center; font: 700 9px var(--body); color: #ffd84a; text-align: center; font-style: normal; }
+  .seat.sel, .who.sel { outline: 4px solid #ffd43b; outline-offset: 2px; }
+  .seat-side { grid-column: 2; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  #seat-bench { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; overflow: auto; }
+  .who { display: flex; gap: 6px; align-items: center; text-align: left; padding: 3px 6px !important; font-size: 11px !important; line-height: 1.15; }
+  .who img { width: 34px; height: 34px; border-radius: 50%; flex: none; }
+  .who b { display: block; font-size: 12.5px; }
+  .seat-btns { display: flex; gap: 6px; }
+  @media (max-width: 640px) {
+    .kh { display: none; }
+    #sc-seating { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; align-content: start; padding-top: 44px; font-size: 12px; gap: 6px; }
+    .seat-rules { grid-column: 1; grid-row: 1; font-size: 11px; padding: 5px 8px; }
+    .seat-rules h3 { font-size: 15px; }
+    #seat-table { grid-column: 1; grid-row: 2; max-width: 250px; min-width: 0; }
+    .seat-side { min-width: 0; }
+    .seat-side { grid-column: 1; grid-row: 3; }
+    #seat-bench { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 46%; grid-template-rows: auto auto; overflow-x: auto; }
+    .seat-btns button { font-size: 12px !important; padding: 5px 8px !important; }
+  }
+
+  /* dinner */
+  #sc-dinner { background: #3b1f18 radial-gradient(circle at 30% 50%, #6b3526, #2a140f 75%); }
+  #d-table { position: absolute; left: 2%; top: 7%; width: 56%; aspect-ratio: 1; max-height: 92%; }
+  .d-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .d-seat { position: absolute; width: 12.5%; transform: translate(-50%, -50%); }
+  .d-seat img { width: 100%; border-radius: 50%; border: 2px solid #1d1b2e; display: block; background: #fff; }
+  .d-seat.taka img { border: 3px solid #ffd43b; box-shadow: 0 0 12px #ffd43b; }
+  .d-seat.me img { border-color: #4db0ff; }
+  .d-glass { position: absolute; width: 5.5%; aspect-ratio: .7; transform: translate(-50%, -50%); padding: 0 !important; border: 2px solid #1d1b2e !important; border-radius: 3px 3px 6px 6px !important; background: rgba(255,255,255,.55) !important; box-shadow: none !important; overflow: hidden; }
+  .d-glass i { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; background: linear-gradient(#fff 0 12%, #f2b233 12%); }
+  .d-glass.taka { width: 7%; }
+  .d-glass.low { animation: blink .5s steps(1) infinite; }
+  @keyframes blink { 50% { border-color: #ff2e63 !important; } }
+  .d-panel { position: absolute; right: 8px; top: 50px; width: calc(42% - 16px); display: flex; flex-direction: column; gap: 7px; }
+  .d-panel .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .d-panel button { font-size: 13px !important; padding: 6px 10px !important; }
+  .d-note { background: rgba(0,0,0,.35); border-radius: 10px; padding: 6px 9px; font-size: 12px; color: #ffe9d6; }
+  .d-note b { color: #ffd84a; }
+  #wmenu { display: flex; gap: 6px; flex-wrap: wrap; }
+  #wmenu[hidden] { display: none; }
+  @media (max-width: 640px) {
+    #d-table { left: 50%; top: 42px; width: 68%; transform: translateX(-50%); }
+    .d-panel { left: 8px; right: 8px; width: auto; top: calc(48px + 0.68 * (100vw - 56px)); gap: 5px; }
+    .d-panel button { font-size: 12px !important; padding: 5px 8px !important; }
+    .d-note { display: none; }
+    .d-panel .row .d-note:first-of-type { display: inline-block; }
+    .at-dinner #dlg .dlg-body > p { font-size: 13px; }
+    .at-dinner .dlg-btn { font-size: 12px !important; padding: 4px 7px !important; }
+  }
+
+  /* karaoke */
+  #sc-karaoke { background: linear-gradient(135deg, #2b1055, #7597de 140%); overflow: hidden; }
+  #sc-karaoke::before { content: ""; position: absolute; inset: -50%; background: conic-gradient(from 0deg, rgba(255,0,150,.12), rgba(0,200,255,.12), rgba(255,220,0,.12), rgba(255,0,150,.12)); animation: spin 8s linear infinite; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  #k-singer { position: absolute; left: 4%; bottom: 8%; width: 16%; max-width: 110px; border-radius: 50%; border: 4px solid #ffd84a; background: #fff; animation: sway 1.3s ease-in-out infinite alternate; }
+  @keyframes sway { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+  #k-screen { position: absolute; left: 22%; right: 6%; top: 14%; min-height: 36%; background: #0b0b1e; border: 4px solid #1d1b2e; border-radius: 10px; box-shadow: 0 0 30px rgba(120,180,255,.4); padding: 14px 18px; text-align: center; }
+  #k-screen h3 { margin: 4px 0; font: 400 clamp(18px, 3vw, 28px) var(--chunky); color: #ffd84a; }
+  .k-small { margin: 4px 0; font-size: 13px; color: #cfd8ff; }
+  .k-line { margin: 10px 0; font: 700 clamp(17px, 2.8vw, 26px) var(--body); color: #fff; }
+  .k-blank { color: #ffd84a; text-decoration: none; border-bottom: 3px solid #ffd84a; }
+  .k-ok { color: #7cff9a; text-decoration: none; } .k-bad { color: #ff6b6b; text-decoration: line-through; }
+  .k-time { height: 5px; background: rgba(255,255,255,.15); border-radius: 3px; overflow: hidden; }
+  .k-time i { display: block; height: 100%; width: 100%; background: #ff2e63; }
+  #k-opts { position: absolute; left: 22%; right: 6%; bottom: 8%; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .k-song, .k-word { font-size: 15px !important; padding: 8px 14px !important; }
+  .k-song span { display: block; font-size: 11px; opacity: .7; }
+  #k-lane { position: absolute; left: 22%; right: 6%; top: 58%; height: 54px; background: rgba(0,0,0,.35); border-radius: 27px; border: 2px solid rgba(255,255,255,.25); overflow: hidden; }
+  #k-lane[hidden] { display: none; }
+  .k-hit { position: absolute; left: 12%; top: 4px; bottom: 4px; width: 42px; margin-left: -21px; border-radius: 50%; border: 3px solid #ffd84a; }
+  #k-lane i { position: absolute; top: 12px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: #ff2e63; border: 2px solid #fff; }
+  #k-lane i.hit { background: #7cff9a; transform: scale(1.4); opacity: 0; transition: .25s; }
+  #k-lane i.miss { background: #555; }
+  #k-tamb { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); font: 400 20px var(--chunky) !important; padding: 12px 30px !important; touch-action: none; }
+  #k-tamb[hidden] { display: none; }
+  #k-tamb.shake { animation: shake .15s; }
+  @keyframes shake { 30% { transform: translateX(-50%) rotate(-8deg); } 70% { transform: translateX(-50%) rotate(8deg); } }
+  @media (max-width: 640px) {
+    #k-screen, #k-lane, #k-opts { left: 5%; right: 5%; }
+    #k-screen { top: 22%; }
+    #k-singer { left: 50%; top: 5%; bottom: auto; width: 60px; margin-left: -30px; }
+  }
+
+  /* ending */
+  #sc-ending { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; background: radial-gradient(circle, #3b2a5a, #140c24 75%); }
+  #e-face { width: 96px; height: 96px; border-radius: 50%; border: 4px solid #ffd84a; background: #fff; }
+  #e-title { margin: 0; font: 400 clamp(20px, 3.6vw, 32px) var(--chunky); color: #ffd84a; }
+  #e-sub { margin: 0; color: #e6dcff; }
+  #e-line { margin: 0; font-size: 13px; color: #cfc4ea; }
+  #e-badge { background: #ffd43b; color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; padding: 6px 14px; font: 400 16px var(--chunky); transform: rotate(-2deg); }
+  #e-badge[hidden] { display: none; }
+</style>
+<script src="sfx.js?v=157a95fd"></script>
+<script src="feedback.js?v=3c454290"></script>
+<script src="panic-app.js?v=acd5f40f"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-skill">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap tk">
+  <h1>taka-san dinner simulator</h1>
+  <p class="sub">taka-san is over from HQ. drive him to dinner, seat the table properly, keep his glass full, answer his questions, and survive karaoke. win his favour and you might get a trip to japan.</p>
+
+  <div id="stage" class="stage">
+    <div id="hud" hidden>
+      <span title="taka-san's favour"><svg viewBox="0 0 20 20"><path d="M10 17s-7-4.4-7-9.2A3.8 3.8 0 0 1 10 5.6a3.8 3.8 0 0 1 7 2.2C17 12.6 10 17 10 17z" fill="#ff2e63" stroke="#fff" stroke-width="1.2"/></svg><span class="m-bar"><i id="m-fav"></i></span><b id="m-fav-n">50</b></span>
+      <span title="insight into HQ"><svg viewBox="0 0 20 20"><path d="M3 16h14M5 13l3-4 3 2 4-6" stroke="#9ad4ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg> <b id="m-ins-n">0</b></span>
+      <span title="taka-san's beer level"><svg viewBox="0 0 20 20"><path d="M5 5h8v11H5z" fill="#f2b233" stroke="#fff" stroke-width="1.2"/><path d="M13 7h2.5v6H13" fill="none" stroke="#fff" stroke-width="1.2"/><path d="M5 5h8V3.5H5z" fill="#fff"/></svg> <b id="m-beer-n">0</b></span>
+    </div>
+
+    <section class="sc" id="sc-title">
+      <h2>TAKA-SAN DINNER SIMULATOR</h2>
+      <p>7:00pm. taka-san is back from HQ and hungry. the team has booked hand in hand. you have the car keys.</p>
+      <div id="t-faces"></div>
+      <button type="button" id="t-start">LET'S GO &#9654;</button>
+    </section>
+
+    <section class="sc" id="sc-drive" hidden>
+      <div id="drive-view"></div>
+      <div id="drive-msg"></div>
+    </section>
+
+    <section class="sc" id="sc-seating" hidden>
+      <div class="seat-rules">
+        <h3>seat the table</h3>
+        <ol>
+          <li>taka-san sits facing the door (top seat).</li>
+          <li>the two directors either side of him.</li>
+          <li>then hiroto, then the team leads (benson, clarissa).</li>
+          <li>everyone else after them.</li>
+          <li>you sit by the door, nearest the waitress.</li>
+        </ol>
+      </div>
+      <div id="seat-table"></div>
+      <div class="seat-side">
+        <div id="seat-bench"></div>
+        <div class="seat-btns"><button type="button" id="seat-done" disabled>everyone's seated &#10003;</button><button type="button" id="seat-auto" title="shuffle everyone in (usually badly)">just sit anywhere</button></div>
+      </div>
+    </section>
+
+    <section class="sc" id="sc-dinner" hidden>
+      <div id="d-table"></div>
+      <div class="d-panel">
+        <div class="row"><button type="button" id="d-pour">pour for taka-san<span class="kh"> (P)</span></button><span class="d-note">bottles: <b id="d-bottles">0</b></span></div>
+        <div class="row"><button type="button" id="d-left">&#10226; turn<span class="kh"> (Q)</span></button><button type="button" id="d-right">turn &#10227;<span class="kh"> (E)</span></button><button type="button" id="d-wait">call the waitress</button></div>
+        <div id="wmenu" hidden><button type="button" data-w="beer">more beer<span class="kh"> (B)</span></button><button type="button" data-w="food">more food<span class="kh"> (F)</span></button><button type="button" data-w="bill">the bill</button></div>
+        <div class="d-note">keep <b>taka-san's glass</b> topped up (never your own). when new dishes arrive (orange ring), <b>turn the lazy susan</b> so they reach taka-san first. the more he drinks, the more honest the questions get.</div>
+      </div>
+    </section>
+
+    <section class="sc" id="sc-karaoke" hidden>
+      <img id="k-singer" alt="">
+      <div id="k-screen"></div>
+      <div id="k-lane" hidden></div>
+      <div id="k-opts"></div>
+      <button type="button" id="k-tamb" hidden>TAMBOURINE (SPACE)</button>
+    </section>
+
+    <section class="sc" id="sc-ending" hidden>
+      <img id="e-face" alt="">
+      <h3 id="e-title"></h3>
+      <p id="e-sub"></p>
+      <div id="e-badge">achievement unlocked: trusted overseas subsidiary representative</div>
+      <p id="e-line"></p>
+      <button type="button" id="e-again">DINNER AGAIN &#8635;</button>
+    </section>
+
+    <div id="dlg" hidden></div>
+    <div id="toast" hidden></div>
+  </div>
+
+  <div id="lb"></div>
+  <a class="back" href="index.html#games">&laquo; back to all games</a>
+</div>
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=02699242"></script>
+<script src="taka/data.js?v=4ffd6e14"></script>
+<script src="taka/drive.js?v=359abd23"></script>
+<script src="taka/game.js?v=e1ed9129"></script>
+<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "taka");</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

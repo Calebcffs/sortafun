@@ -869,6 +869,45 @@ circuit racer have their own synth audio but follow the speaker button (the
 green light: a cue would help you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
 checks (keep sfx peaks under ~0.35).
 
+### Taka-san Dinner Simulator (`taka.html` + `taka/`, 2026-09-29, v0.3)
+
+Caleb's work-dinner game: the MD ("Taka-san") is over from HQ. Scenes, in
+order: **drive** (3D, `taka/drive.js`), **seating**, **dinner**, **karaoke**,
+**ending**. The team are real people from Caleb's office: first names and
+their org-chart avatars (`taka/faces/*.png`, 96px crops, keep them small on
+screen) are fine, **the real company name is not**: it's "Sankyu Frontline"
+(SFSG) everywhere. Yuki-san isn't at the table. All the words (questions,
+replies, lines, songs) are in `taka/data.js`, in house voice.
+
+- One state object (`S`: favour 0-100 from 50, insight, pours/beer) and a
+  scene runner in `taka/game.js`; `ask()` is the dialogue box (keys 1/2/3,
+  answers shuffled, times out into "awkward silence"). Score =
+  favour*100 + insight*10 (leaderboard key `taka`, high). Best ending (the
+  japan trip + achievement) needs favour >= 80 and insight >= 25.
+- **Drive:** one road laid out from `ROUTE` (straights + bends, a point per
+  metre); the car rides along it (`s`, `lat`), you pick the lane and the
+  speed. Drives on the left; left lane slow, right lane quick. Traffic lights
+  at `LIGHTS` (16s cycle), the ERP gantry, HDB blocks with lit windows,
+  instanced rain trees. Crashes / red lights only cost favour. Six of the
+  `DRIVE` questions come up on the way. `TakaDrive.debug()` gives the state
+  and `step()` for tests; grab frames with `renderer.domElement.toDataURL()`.
+- **Seating:** round table of 10, seat 0 faces the door; `ALLOW` = how far
+  from Taka-san each rank may sit. Per-person scoring, not all-or-nothing.
+- **Dinner:** a 0.1s tick: his glass drains (pour with P / the glass; your
+  own glass costs favour), people eat what's in front of them on the lazy
+  susan, the waitress brings beer / food (only one dish per delivery is the
+  "fresh" one that should reach Taka-san first; turn with Q/E), asking for
+  the bill is a faux pas. `DINNER` questions run in order; `beer:` ones wait
+  until he's had enough.
+- **Karaoke:** his song is only ever the title ("Can You Feel the Love
+  Tonight") with a generic backing track and a tambourine rhythm game: no
+  lyrics or melody of it, it's copyrighted. Your turn uses **public-domain
+  songs only** (pre-1929: Daisy Bell, Take Me Out to the Ball Game, My Bonnie)
+  with fill-the-blank lyrics. The beat clock is `performance.now()`, not the
+  AudioContext (a suspended context would stall it).
+- `window.__taka` is the test hook (`go(scene)`, `S()`, `dinnerTick`,
+  `answer(k)`, `pour`, `turn`, `waitress`).
+
 ### Draw and Guess (`draw.html` + `draw-words.js`)
 
 A skribbl.io-style party game, 2 to 8 players, private rooms only (4-letter

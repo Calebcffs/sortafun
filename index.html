@@ -723,8 +723,8 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=fe7e9bcc"></script>
-<script src="panic-app.js?v=46971910"></script>
+<script src="feedback.js?v=3c454290"></script>
+<script src="panic-app.js?v=acd5f40f"></script>
 </head>
 <body>
 <div class="site">
@@ -818,7 +818,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>seventeen games, two of them online with friends. your best today lands on the leaderboards.</p>
+      <p>eighteen games, two of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -857,11 +857,11 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-29</span> <b>v0.3</b>: NEW: <b>taka-san dinner simulator</b>. drive the boss to hand in hand, seat the round table properly, keep his glass full, answer his big questions, then karaoke. do well enough and it's a trip to japan.</li>
         <li><span class="when">09-29</span> <b>v0.2.5</b>: word hive has two ranks past queen bee for you lot: <b>beeber fever</b> (1.5x queen bee) and <b>the bee all end all</b> (2x). only deep cuts will get you there.</li>
         <li><span class="when">09-29</span> <b>v0.2.4</b>: the chatroom follows you round the site. the blue bubble bottom left lights up when someone says something, click it to chat from any page.</li>
         <li><span class="when">09-29</span> <b>v0.2.3</b>: deep time has a new intro and new notes. watch the intro closely. don't blink.</li>
         <li><span class="when">09-29</span> <b>v0.2.2</b>: the chatroom forgets fast now. every message vanishes a minute after it's sent.</li>
-        <li><span class="when">09-29</span> <b>v0.2.1</b>: deep time fixes. its eyes glow properly now, and the very end has its sound back.</li>
       </ul>
     </section>
     <section class="panel howto">
@@ -890,7 +890,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=9dddb334"></script>
+<script src="leaderboard.js?v=02699242"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -906,6 +906,7 @@
 
 var GAMES = [
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
+  { id: "taka",      name: "Taka-san Dinner", url: "taka.html",     cat: "skill",  key: "taka",     badge: "new",   blurb: "drive the boss to dinner, seat the table right, keep his glass full, answer his big questions, then karaoke. win a trip to japan." },
   { id: "deeptime",  name: "Deep Time",      url: "deeptime.html",  cat: "skill",  key: "deeptime", badge: "new",   blurb: "a camcorder tape from a forest in 1987. find the 8 parts of the time machine. something came through. headphones on." },
   { id: "city",      name: "City Sandbox",   url: "city.html",      cat: "online",  key: "city",     badge: "new",   blurb: "online zombie survival. crew up, hold your safehouse through the night, fuel the radio mast and catch the chopper out." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
@@ -942,7 +943,6 @@ var SOON = [
   { id: "slack",  name: "SFSG Slacking Simulator",   cat: "soon", blurb: "the office, rebuilt in 3D. alt-tab before the manager walks past, answer Teams in time, and sneak down to Starbucks." },
   { id: "hotdog", name: "Hot Dog Bush",              cat: "soon", blurb: "the old political hot dog stand. grill it, dress it, serve it before the queue loses its patience." },
   { id: "sushi",  name: "Sushi Go Round",            cat: "soon", blurb: "roll sushi from the recipe book, send it round the belt, and don't run out of salmon." },
-  { id: "taka",   name: "Taka-san Dinner Simulator", cat: "soon", blurb: "the company dinner. keep the glasses full, nail the kanpai, and catch the last train." },
   { id: "pets",   name: "Frontier Pets",             cat: "soon", blurb: "adopt a pet and build it a home out of modular units. feed it with points from every game on the site." }
 ];
 
@@ -1111,19 +1111,22 @@ var THUMB = {
       plates + '<rect x="0" y="102" width="160" height="18" fill="#c49a6c"/>';
   },
   taka: function () {
-    // the dinner table: two beers mid-kanpai, plates, chopsticks
-    return bg("#3a2a4a") + '<circle cx="80" cy="-20" r="70" fill="#ffd28a" opacity=".35"/>' +
-      '<path d="M40 0 L80 26 L120 0" fill="#ffd28a" opacity=".25"/>' +
-      '<ellipse cx="80" cy="104" rx="90" ry="30" fill="#8b5a2b"' + S + '/>' +
-      '<ellipse cx="44" cy="100" rx="18" ry="7" fill="#fff"' + S + '/><ellipse cx="116" cy="100" rx="18" ry="7" fill="#fff"' + S + '/>' +
-      '<path d="M38 98 q6 -6 12 0" fill="#ff922b" stroke="' + K + '" stroke-width="2"/>' +
-      '<path d="M108 97 h16" stroke="#1fb85a" stroke-width="5" stroke-linecap="round"/>' +
-      '<path d="M130 86 l20 -10 M132 90 l20 -10" stroke="' + K + '" stroke-width="2.5" stroke-linecap="round"/>' +
-      // clinking glasses
-      '<g transform="rotate(-14 62 62)"><rect x="52" y="42" width="20" height="36" rx="3" fill="#ffc21a"' + S + '/><rect x="52" y="38" width="20" height="9" rx="3" fill="#fff"' + S + '/></g>' +
-      '<g transform="rotate(14 98 62)"><rect x="88" y="42" width="20" height="36" rx="3" fill="#ffc21a"' + S + '/><rect x="88" y="38" width="20" height="9" rx="3" fill="#fff"' + S + '/></g>' +
-      '<path d="M80 30 v-8 M72 32 l-5 -6 M88 32 l5 -6" stroke="#ffd43b" stroke-width="3" stroke-linecap="round"/>' +
-      outlined(80, 18, "kanpai!", 15, "#fff");
+    // the round table from above: the glass lazy susan, dim sum, two beers, a mic
+    var g = bg("#5a1a1a") + '<circle cx="80" cy="64" r="50" fill="#f6efe2"' + S + '/>';
+    g += '<circle cx="80" cy="64" r="28" fill="#bfe6ff" opacity=".6" stroke="#5c8fb5" stroke-width="2"/>';
+    [[66, 52, "#d9b779"], [94, 52, "#d9b779"], [80, 78, "#fff"]].forEach(function (d) {
+      g += '<circle cx="' + d[0] + '" cy="' + d[1] + '" r="10" fill="' + d[2] + '"' + S + '/>';
+    });
+    g += '<circle cx="62" cy="50" r="3" fill="#fff"/><circle cx="69" cy="54" r="3" fill="#fff"/><circle cx="90" cy="50" r="3" fill="#f2c14e"/><circle cx="97" cy="54" r="3" fill="#f2c14e"/>';
+    g += '<rect x="74" y="75" width="12" height="3" rx="1.5" fill="#c0392b"/><rect x="74" y="80" width="12" height="3" rx="1.5" fill="#c0392b"/>';
+    // seats round the edge, the boss's in gold
+    for (var i = 0; i < 10; i++) {
+      var a = -Math.PI / 2 + i * Math.PI / 5, x = 80 + Math.cos(a) * 58, y = 64 + Math.sin(a) * 50;
+      g += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="7" fill="' + (i ? "#ffd8a8" : "#ffd43b") + '"' + S + '/>';
+    }
+    g += '<g transform="rotate(-12 30 96)"><rect x="22" y="80" width="15" height="26" rx="2" fill="#ffc21a"' + S + '/><rect x="22" y="77" width="15" height="7" rx="2" fill="#fff"' + S + '/></g>';
+    g += '<g transform="rotate(20 134 92)"><rect x="129" y="84" width="10" height="24" rx="4" fill="#555"' + S + '/><circle cx="134" cy="80" r="8" fill="#ccc"' + S + '/></g>';
+    return g + outlined(80, 20, "kanpai!", 15, "#fff");
   },
   pets: function () {
     // a little pet in front of its stacked modular units, with a crane
