@@ -731,8 +731,12 @@ within 4.2m of the mast -> `startFinale()`: ladder rungs on the mast's +z
 face, the snap is timed and placed from `rex.bite` (measured from the attack
 clip at load), top of the mast, white, `presentDay()` (the `#pwin` window
 overlay, OSD hidden), eyes + faint rim, end card "DEEP TIME / well done for
-beating part 1 (alpha version)". The start sign text is `START_SIGN` in
-main.js (Caleb is rewriting it and `NOTES`).
+beating part 1 (alpha version)". `INTRO`, `NOTES` and `START_SIGN` in
+main.js are Caleb's own wording (rewritten 2026-09-29): change them only
+when he asks. The intro has three ~0.1s flashes (`INTRO_FLASH`, halfway
+through cards 3, 5 and 7): a tape glitch, the rex roaring (posed from the
+attack clip 5m out), the rex lunging at the lens (sunk so its head is at eye
+level). `introFlash()` hides the card for that tenth of a second.
 
 **Testing:** drive it over CDP with `deeptime.step(1/60)` inside one
 evaluate (`deeptime.keys` for input; stub `tape.render` for speed), and grab

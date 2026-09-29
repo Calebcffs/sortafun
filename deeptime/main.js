@@ -114,12 +114,12 @@ const PART_MODELS = [
   ["metal_toolbox", "the field kit", 1],
 ];
 const NOTES = [
-  "IT DOESNT WALK.\nIT SKIPS.",
+  "RUN AWAY",
   "THE CRICKETS\nSTOP FIRST",
-  "DONT RUN WHEN\nTHE GROUND SHAKES",
-  "SHE CANT SEE YOU\nIF YOU DONT MOVE\nKILL THE LIGHT",
+  "RUN WHEN\nTHE GROUND SHAKES",
+  "IF IT SEES YOU\nRUN\nKILL THE LIGHT",
   "DONT LOOK AT\nTHE TALL ONE",
-  "THEY HUNT\nIN THREES",
+  "THEY HUNT LIGHTS",
   "66 MILLION YEARS\nAND STILL HUNGRY",
   "IT KNOWS WHAT\nYOU CARRY",
 ];
@@ -707,14 +707,54 @@ function endCard(won) {
 // ------------------------------------------------------------------
 const INTRO = [
   "U.S. DEPARTMENT OF ENERGY\nEVIDENCE ITEM 66-C\nVHS-C CASSETTE, 1 OF 1\n\nRECOVERED 10.15.87  06:12\nHOLLOW CREEK RESEARCH STATION\nGARFIELD COUNTY, MONTANA",
-  "at 23:14 on october 14th the CHRONOS apparatus\n(the \"anchor\") was run at full power.",
-  "it was built to open a window 66 million years\ninto the past. look, don't touch.",
-  "the window opened wider than it was built to.\nfor four seconds the forest at hollow creek\nand the forest of the late cretaceous\nwere the same place.",
-  "the anchor came apart. eight of its components\nwere thrown into the woods.\ntwo things came through before it closed.",
-  "with all eight components back in range of its core\nthe anchor can fire once more, and pull back\neverything that does not belong here.",
-  "the night technician went in with a flashlight\nand the station camcorder.\n\nthis is his tape.",
+  "at 23:14 on october 14th the CHRONOS apparatus\nwas run at full power.",
+  "it was built to open a window 66 million years\ninto the past.",
+  "the window opened wider than it was built to.\nfor four seconds the forest at hollow creek\nand the forest of the late cretaceous period\nwere the same place.",
+  "the anchor was blown apart. eight of its components\nwere thrown into the woods.\nsomething came through before it closed.",
+  "with all eight components back in range of its core\nCHRONOS can fire once more, and pull back\neverything that does not belong.",
+  "the night technician went in with a flashlight\nand the station camcorder to reverse the chaos.\n\nthis is their tape.",
 ];
 let introI = 0, introT = 0, introTimer = null;
+
+// three flashes in the intro (Caleb, 2026-09-29), each ~0.1s, halfway through
+// a card: the tape glitches (card 3), the rex roaring out in the trees
+// (card 5), the rex lunging at the lens (card 7)
+const INTRO_FLASH = { 2: "glitch", 4: "roar", 6: "lunge" };
+function introFlash(kind) {
+  const card = $("intro");
+  tape.kick(kind === "glitch" ? 0.9 : kind === "roar" ? 0.6 : 1.5);
+  G.static = kind === "glitch" ? 0.7 : kind === "roar" ? 0.18 : 0.35;
+  if (kind === "glitch") {
+    card.style.visibility = "hidden"; // a torn frame of the woods behind the card
+    Audio.thump(Audio.now(), 90, 40, 0.35, 0.12, "tape");
+    setTimeout(() => { card.style.visibility = ""; G.static = 0; }, 100);
+    return;
+  }
+  // the rex, posed mid-roar / mid-bite in front of the lens, for a tenth of a second
+  const d = rex.d, b = rex.bite;
+  const f = tmp.set(0, 0, -1).applyQuaternion(camera.quaternion); f.y = 0; f.normalize();
+  const dist = kind === "roar" ? b.fwd + 5 : b.fwd + 1.3;   // head 5m out, or right at the lens
+  const x = camera.position.x + f.x * dist, z = camera.position.z + f.z * dist;
+  // the lunge sinks it so the head is at eye level (nobody sees the legs in 0.1s)
+  const sink = kind === "lunge" ? b.y - (camera.position.y - WD.floorAt(x, z)) + 0.15 : 0.1;
+  rex.state = "present";
+  rex.pos.set(x, WD.floorAt(x, z) - sink, z);
+  d.root.rotation.y = Math.atan2(-f.x, -f.z);
+  const a = d.actions.attack;
+  d.mixer.stopAllAction(); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.play(); d.current = "attack";
+  d.mixer.setTime(kind === "roar" ? b.t * 0.7 : b.t);
+  d.visible = true; d.shine(1); RIM.uRim.value = 0.7;
+  const wasLight = G.lightOn; G.lightOn = true;
+  card.style.visibility = "hidden";
+  Audio.oneShot("rex_roar", { bus: "tape", vol: kind === "lunge" ? 1.7 : 1.4, i: kind === "lunge" ? 0 : 1 });
+  if (kind === "lunge") Audio.oneShot("scare", { bus: "tape", vol: 1.2, i: 0 });
+  G.shake(kind === "lunge" ? 1 : 0.6);
+  setTimeout(() => {
+    card.style.visibility = "";
+    rex.reset(); d.shine(0); d.play("idle");
+    G.lightOn = wasLight; G.static = 0;
+  }, kind === "lunge" ? 110 : 100);
+}
 let introStarted = 0;
 function playIntro(mode) {
   G.state = "intro"; G.introMode = mode; introStarted = Date.now();
@@ -737,6 +777,8 @@ function showIntroCard() {
   tickTimer = setInterval(() => { Audio.tick(tickHi, 0.18); tickHi = !tickHi; }, 1000);
   const hold = 3200 + text.length * 30;
   clearTimeout(introTimer);
+  const flash = INTRO_FLASH[introI], card = introI;
+  if (flash) setTimeout(() => { if (G.state === "intro" && introI === card) introFlash(flash); }, hold * 0.5);
   introTimer = setTimeout(() => {
     el.style.transition = "opacity 1.1s ease"; el.style.opacity = 0;
     introTimer = setTimeout(() => { introI++; if (introI < INTRO.length) showIntroCard(); else skipIntro(); }, 1300);
@@ -744,7 +786,7 @@ function showIntroCard() {
 }
 function skipIntro() {
   clearInterval(tickTimer); clearTimeout(introTimer);
-  $("intro").hidden = true;
+  $("intro").hidden = true; $("intro").style.visibility = "";
   if (loops.introHiss) loops.introHiss.stop(0.2);
   tape.kick(1);
   newRun(G.introMode);
@@ -1155,4 +1197,4 @@ load().catch((e) => { console.error(e); $("load-pct").textContent = "TRACKING ER
 frame();
 
 // test hooks (headless checks drive the game through these)
-window.deeptime = { PHONE, LITE, isFS, G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get rex() { return rex; }, RIM, keys, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, toMast, startFinale, Audio };
+window.deeptime = { PHONE, LITE, isFS, G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get rex() { return rex; }, RIM, keys, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, toMast, startFinale, introFlash, Audio };
