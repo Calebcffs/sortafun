@@ -32,7 +32,7 @@
 
   // the site version. every update that ships bumps it: +0.0.1 for fixes and
   // small things, +0.1 for a big one (a new game, a new system)
-  var VERSION = "0.3.2";
+  var VERSION = "0.3.3";
   window.SORTAFUN_VERSION = VERSION;
 
   // every page, keyed by id. game: true = a thing you play (gets the star strip
@@ -43,6 +43,7 @@
     { id: "draw",      name: "Draw and Guess",       file: "draw.html",         game: true },
     { id: "deeptime",  name: "Deep Time",            file: "deeptime.html",     game: true },
     { id: "taka",      name: "Taka-san Dinner",      file: "taka.html",         game: true },
+    { id: "slack",     name: "Slacking Simulator",   file: "slack.html",        game: true },
     { id: "crossword", name: "Crossword",            file: "crossword.html",    game: true },
     { id: "five",      name: "Five Letters",         file: "five.html",         game: true },
     { id: "sides",     name: "Four Sides",           file: "sides.html",        game: true },

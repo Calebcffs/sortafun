@@ -869,6 +869,45 @@ circuit racer have their own synth audio but follow the speaker button (the
 green light: a cue would help you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
 checks (keep sfx peaks under ~0.35).
 
+### SFSG Slacking Simulator (`slack.html` + `slack/`, WORK IN PROGRESS, 2026-09-29)
+
+Caleb's office rebuilt in 3D, first person, from 13 photos he took (they're
+in his Downloads, never in the repo). **Password protected while it's being
+built** (same scheme as taka: `slack/lock.js` decrypts `slack/vault.js`; the
+password is Caleb's, not in the repo, ask him). The vault holds only the
+photo crops (`slack/src/*.jpg`, git-ignored): `carpet` (a real crop, made
+seamless by blending with a half-offset copy, no mirroring), `sky_bay`
+(the Flyer / Gardens view between the mullions), `sky_depot` (one pane of the
+rail-depot side, repeated per pane). **Never commit a photo or crop**, and
+check every crop for people, screens with text, name cards and the real
+company's branding ("MOBILE SPACE" poster) before building the vault
+(`node tools/build-vault.mjs slack <password>`; `tools/build-vault.mjs` also
+builds taka's).
+
+- `slack/office.js`: `LAYOUT` is the whole floor plan in metres: a triangle
+  (B = window meets entrance wall, A = the sharp corner, C = entrance wall
+  meets the long inner wall), the curtain wall B->A, the glass meeting room in
+  the B corner, the glass entrance door, columns, desk clusters (back to back,
+  monitors at the divider), shelves along the window, water, printer, fridge
+  (the grey box in the sharp corner), cafe tables, counter, screens, and the
+  manager's `route`. **The layout is provisional**: it's read off the photos,
+  and Caleb is sending a top-down sketch; change the numbers, nothing else.
+  `build()` returns colliders (boxes/circles), walls (solid ones block the
+  manager's sight, glass doesn't), `spots` (E targets) and the desks.
+- `slack/game.js`: `SlackBoot(content)`. 8-minute day (9-6), slack points per
+  second of slacking (`ACTS`: phone F, youtube tab at your desk with TAB to
+  flip back, nap N, cafe, window, meeting room, fridge, toilet), the manager
+  "mr. goh" (made up, no real people) walks `route`, sometimes stands, visits
+  your desk or holds a meeting (then he's in the meeting room: be there and
+  it's a strike); his view cone (110 deg, 13m) + line of sight fills
+  suspicion while you slack, full = strike, 3 = game over. Teams pings (1/2/3)
+  and errands (printer / water / meeting room, 60s). Minimap, touch controls.
+  No leaderboard yet: when it gets one, key `slack`, rules commit first.
+- `window.__slack`: `step(dt)`, `snap()` (render + toDataURL), `lineOfSight`,
+  `sees`, `start`. Test after unlocking via `SlackUnlock` / the lock form.
+- Registered in panic-app FILES and feedback ITEMS; the homepage tile is still
+  in Coming Soon (not clickable) until it's ready.
+
 ### Taka-san Dinner Simulator (`taka.html` + `taka/`, 2026-09-29, v0.3)
 
 **Password protected and encrypted (v0.3.1).** The page opens on a lock
@@ -879,7 +918,7 @@ and calls `TakaBoot(content)` in `taka/game.js`; nothing is remembered, it
 asks every visit. The plaintext lives in `taka/src/` (`data.js` + `faces/`),
 which is **git-ignored and only on Caleb's machine**. The password is not in
 the repo or in memory: ask Caleb. To change content: edit `taka/src/`, then
-`node tools/build-taka-vault.mjs <password>`, `tools/stamp.py`, commit
+`node tools/build-vault.mjs taka <password>`, `tools/stamp.py`, commit
 `taka/vault.js`. Keep names out of `game.js` / `taka.html` (they go in
 `LINES` / `ME` in data.js); `grep -i` for the names before committing.
 

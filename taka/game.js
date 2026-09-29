@@ -12,7 +12,7 @@
  * The content (lines, questions, songs, faces) is encrypted in taka/vault.js;
  * taka/lock.js decrypts it with the password and calls TakaBoot(content).
  * The plaintext lives only in taka/src/ (git-ignored), see
- * tools/build-taka-vault.mjs.
+ * tools/build-vault.mjs.
  */
 window.TakaBoot = function (V) {
   "use strict";

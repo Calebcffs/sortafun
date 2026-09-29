@@ -7,3 +7,6 @@ _citytest2.html
 
 # taka-san: the plaintext game content (faces, dialogue). only the encrypted taka/vault.js is published
 taka/src/
+
+# slacking simulator: office photo crops. only the encrypted slack/vault.js is published
+slack/src/

@@ -43,6 +43,7 @@
     "draw.html": ["Draw and Guess", "ppt"],
     "deeptime.html": ["Deep Time", "ppt"],
     "taka.html": ["Taka-san Dinner", "ppt"],
+    "slack.html": ["Slacking Simulator", "ppt"],
     "driving.html": ["Circuit Race", "ppt"],
     "reaction.html": ["Reaction Light", "ppt"],
     "aim.html": ["Aim Trainer", "ppt"],
