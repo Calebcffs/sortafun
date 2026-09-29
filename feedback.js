@@ -32,7 +32,7 @@
 
   // the site version. every update that ships bumps it: +0.0.1 for fixes and
   // small things, +0.1 for a big one (a new game, a new system)
-  var VERSION = "0.2.3";
+  var VERSION = "0.2.4";
   window.SORTAFUN_VERSION = VERSION;
 
   // every page, keyed by id. game: true = a thing you play (gets the star strip

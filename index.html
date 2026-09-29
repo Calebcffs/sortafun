@@ -574,84 +574,7 @@
   .hang-links .tile .name { margin: 0; font-size: 15px; align-items: center; }
   .hang-links .tile .name i { margin-top: 0; }
 
-  /* ================= chatroom (chat.js) ================= */
-  .chat {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    border: 3px solid var(--ink);
-    border-radius: 10px;
-    overflow: hidden;
-    background: #fff;
-  }
-  .chat-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 10px;
-    background: var(--soft);
-    border-bottom: 2px solid var(--ink);
-  }
-  .chat-top b { font-family: var(--chunky); font-weight: 400; font-size: 16px; }
-  .chat-here { font-size: 11px; color: #666; cursor: pointer; }
-  .chat-here::before {
-    content: "";
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #aaa;
-    margin-right: 5px;
-    vertical-align: 0;
-  }
-  .chat-here.on { color: var(--ink); cursor: default; }
-  .chat-here.on::before { background: #2fd05f; box-shadow: 0 0 5px #2fd05f; }
-  .chat-log {
-    list-style: none;
-    margin: 0;
-    padding: 6px 10px;
-    height: 250px;
-    overflow-y: auto;
-    font-size: 12.5px;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
-  }
-  .chat-log li { padding: 1px 0; }
-  .chat-log li.me { background: #fff8d9; margin: 0 -10px; padding: 1px 10px; }
-  .chat-log .chat-t { color: #9a97ad; font-size: 10.5px; }
-  .chat-log .chat-sys { color: #8a87a0; font-style: italic; }
-  .chat-form {
-    display: flex;
-    gap: 6px;
-    padding: 6px;
-    border-top: 2px solid var(--ink);
-    background: var(--soft);
-  }
-  .chat-form input {
-    min-width: 0;
-    font: 13px var(--body);
-    padding: 6px 8px;
-    border: 2px solid var(--ink);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--ink);
-  }
-  .chat-form .chat-name { flex: 0 1 110px; }
-  .chat-form .chat-name.want { background: #ffe3e3; }
-  .chat-form .chat-msg { flex: 1 1 auto; }
-  .chat-form button {
-    flex: none;
-    font-family: var(--chunky);
-    font-size: 14px;
-    color: #fff;
-    background: linear-gradient(#4db0ff, var(--hang));
-    border: 2px solid var(--ink);
-    border-radius: 8px;
-    padding: 4px 12px 3px;
-    cursor: pointer;
-    text-shadow: 0 1px 0 rgba(0,0,0,.3);
-  }
-  .chat-form button:disabled { opacity: .6; cursor: default; }
+  /* the chatroom's own look lives in chat.js now (it's on every page) */
 
   .noresults {
     display: none;
@@ -800,7 +723,7 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=2a3fcbe0"></script>
+<script src="feedback.js?v=0c231a5d"></script>
 <script src="panic-app.js?v=46971910"></script>
 </head>
 <body>
@@ -934,11 +857,11 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-29</span> <b>v0.2.4</b>: the chatroom follows you round the site. the blue bubble bottom left lights up when someone says something, click it to chat from any page.</li>
         <li><span class="when">09-29</span> <b>v0.2.3</b>: deep time has a new intro and new notes. watch the intro closely. don't blink.</li>
         <li><span class="when">09-29</span> <b>v0.2.2</b>: the chatroom forgets fast now. every message vanishes a minute after it's sent.</li>
         <li><span class="when">09-29</span> <b>v0.2.1</b>: deep time fixes. its eyes glow properly now, and the very end has its sound back.</li>
         <li><span class="when">09-29</span> <b>v0.2</b>: <b>deep time</b> reworked. it's just the t. rex now, and it turns up behind you. keep your torch on it and it charges, so kill the light and run. all 8 parts gets you to the radio mast and a proper ending.</li>
-        <li><span class="when">09-29</span> <b>v0.1</b>: sortafun has a version number now, it goes up with every update. <b>deep time</b> is the featured game, the chatroom wipes clean at midnight every night, and the feedback bubble got bigger. use it.</li>
       </ul>
     </section>
     <section class="panel howto">
@@ -968,7 +891,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=9dddb334"></script>
-<script src="chat.js?v=9d000cb1"></script>
+<script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
 
@@ -1573,7 +1496,7 @@ fill("gamegrid", GAMES);
 SOON.forEach(function (item) { document.getElementById("soongrid").appendChild(soonTile(item)); });
 fill("artgrid", ART);
 fill("hanggrid", HANGOUT);
-if (window.SortafunChat) SortafunChat.mount(document.getElementById("chat"));
+// the chatroom mounts itself into #chat (chat.js), plus the corner dock on every page
 
 /* ------------------------------------------------------------------ *
  * game of the day: same pick for everyone, flips at Singapore midnight
@@ -1727,6 +1650,6 @@ function stamp(k) { try { localStorage.setItem("sortafun-stamp-" + k, "1"); } ca
 /* sound: the tune is off until you press the note button (sfx.js), and loudest here when it's on */
 if (window.SortafunSFX) SortafunSFX.music.auto(1);
 </script>
-<script src="panic.js?v=9ef62a11"></script>
+<script src="panic.js?v=980954dd"></script>
 </body>
 </html>

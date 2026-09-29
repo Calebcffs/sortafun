@@ -330,6 +330,16 @@
   // came back from a "file" with panic still on: finish the job the <head> started
   if (root.classList.contains("panic")) set(true);
 
+  // the chatroom's unread count (chat.js) goes on the Copilot button while disguised
+  window.addEventListener("sortafun-chat-unread", function (e) {
+    var cp = document.getElementById("odCp");
+    if (!cp) return;
+    var b = cp.querySelector(".od-cpb");
+    if (!b) { b = document.createElement("span"); b.className = "od-cpb"; cp.appendChild(b); }
+    var n = e.detail || 0;
+    b.hidden = !n; b.textContent = n > 9 ? "9+" : String(n);
+  });
+
   window.SortafunPanic = { set: set, on: function () { return root.classList.contains("panic"); } };
 
   // ---------------------------------------------------------------
@@ -442,6 +452,8 @@
     ".od-cp{position:fixed;right:22px;bottom:20px;z-index:30;width:58px;height:58px;border-radius:16px;border:0;cursor:pointer;display:grid;place-items:center;" +
       "background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#8fd3ff,#b99cff,#ffb3d9) border-box;border:2px solid transparent;box-shadow:0 4px 14px rgba(80,90,200,.22),0 1px 3px rgba(0,0,0,.12);}",
     ".od-cp svg{width:34px;height:34px;}",
+    ".od-cpb{position:absolute;top:-7px;right:-7px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#c50f1f;color:#fff;font:600 12px/18px 'Segoe UI',sans-serif;border:2px solid #fff;}",
+    ".od-cpb[hidden]{display:none;}",
     ".od-cp:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(80,90,200,.3),0 1px 3px rgba(0,0,0,.12);}",
     ".od-pop{position:fixed;right:22px;bottom:90px;z-index:31;width:400px;height:min(560px,calc(100vh - 160px));background:#fff;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;" +
       "box-shadow:0 0 2px rgba(0,0,0,.12),0 14px 28px rgba(0,0,0,.18);}",
