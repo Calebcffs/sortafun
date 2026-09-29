@@ -3,8 +3,9 @@
     "chat": {
       "msgs": {
         ".read": true,
+        ".indexOn": ["t"],
         "$id": {
-          ".write": "auth != null && ((!data.exists() && newData.exists()) || (!newData.exists() && data.child('t').val() < now - 604800000))",
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || (!newData.exists() && data.child('t').val() < now - ((now + 28800000) % 86400000)))",
           ".validate": "newData.hasChildren(['u', 'n', 'm', 't']) && newData.child('u').val() === auth.uid && newData.child('t').val() === now && newData.parent().parent().child('last/' + auth.uid).val() === now",
           "u": { ".validate": true },
           "n": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" },
