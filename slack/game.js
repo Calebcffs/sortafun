@@ -47,12 +47,16 @@ window.SlackBoot = function (V) {
     var tex = {}, loader = new THREE.TextureLoader();
     Object.keys(V.tex || {}).forEach(function (k) { tex[k] = loader.load(V.tex[k]); });
     O = SlackOffice.build(THREE, scene, tex);
-    // coworkers at every other desk, head down
+    // the team, at their desks in order (names come from the vault: V.data.coworkers, null = empty desk)
+    var names = (V.data && V.data.coworkers) || [], ni = 0, SHIRTS = [0x3f5f8a, 0xb5485d, 0x4a7c59, 0x8a6d3b, 0x6a4c93, 0x2f6f8f, 0xc97b2d, 0x5c5f66, 0x8f3b3b];
     O.desks.forEach(function (d, i) {
-      if (d.mine || i % 3 === 2) return;
-      var p = person(0x3f5f8a + i * 0x12203 % 0xffffff, true);
+      if (d.mine || d.lone) return;
+      var name = names[ni++];
+      if (!name) return;
+      var p = person(SHIRTS[i % SHIRTS.length], true);
       p.position.set(d.seat[0], 0, d.seat[1]); p.rotation.y = d.face; scene.add(p);
-      npcs.push({ g: p, t: Math.random() * 6 });
+      var tag = nameTag(name); tag.position.y = 1.62; p.add(tag);
+      npcs.push({ g: p, t: Math.random() * 6, name: name, tag: tag });
     });
     boss = { g: person(0x2c2c34, false, true), path: [], i: 0, t: 0, mode: "walk", wait: 0, sus: 0, cool: 0, heading: 0 };
     boss.g.position.set(O.route[0][0], 0, O.route[0][1]); scene.add(boss.g);
@@ -65,6 +69,16 @@ window.SlackBoot = function (V) {
   function resize() {
     var r = stage.getBoundingClientRect(), w = Math.max(2, r.width), h = Math.max(2, r.height);
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  // a floating name over someone's head, shown when you're close
+  function nameTag(name) {
+    var c = document.createElement("canvas"); c.width = 256; c.height = 64; var g = c.getContext("2d");
+    g.font = "bold 30px Verdana, sans-serif"; var w = Math.min(248, g.measureText(name).width + 28);
+    g.fillStyle = "rgba(20,22,28,.78)"; g.beginPath(); g.roundRect ? g.roundRect(128 - w / 2, 10, w, 44, 14) : g.rect(128 - w / 2, 10, w, 44); g.fill();
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(name, 128, 33);
+    var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+    s.scale.set(0.9, 0.225, 1); s.renderOrder = 10; return s;
   }
   function markTex() {
     var c = document.createElement("canvas"); c.width = c.height = 64; var g = c.getContext("2d");
@@ -200,7 +214,7 @@ window.SlackBoot = function (V) {
   }
 
   // ---------------------------------------------------------------- teams
-  var TEAMS = [
+  var TEAMS = (V.data && V.data.teams) || [
     { from: "mr. goh", q: "got a sec?", a: [["on my way!", 1], ["sure, give me 5 mins", 0], ["busy", -1]] },
     { from: "mr. goh", q: "any update on the quote?", a: [["sending it before EOD", 1], ["what quote?", -1], ["working on it now", 1]] },
     { from: "jia hui (sales)", q: "lunch at the food court later?", a: [["yes!! 12:30", 1], ["can't, drowning in work :(", 1], ["i already ate the fridge", 0]] },
@@ -358,8 +372,8 @@ window.SlackBoot = function (V) {
     if (!S.teams && S.t >= S.teamsAt && !(S.act && S.act.kind === "toilet")) { nextTeams(); S.teamsAt = S.t + 40 + Math.random() * 25; }
     if (S.teams) { S.teams.t += dt; var bar = document.querySelector("#teams .tm-t i"); if (bar) bar.style.width = Math.max(0, 100 - S.teams.t / S.teams.T * 100) + "%"; if (S.teams.t >= S.teams.T) answerTeams(-1); }
     if (S.errand) { S.errand.t += dt; if (S.errand.t >= S.errand.T) { var e = S.errand; S.errand = null; strike("didn't " + e.label); } }
-    // coworkers type away
-    npcs.forEach(function (n) { n.t += dt; var u = n.g.userData; if (u.armL) { u.armL.position.y = 0.85 + Math.abs(Math.sin(n.t * 9)) * 0.02; u.armR.position.y = 0.85 + Math.abs(Math.cos(n.t * 11)) * 0.02; } });
+    // coworkers type away; their names show when you're near
+    npcs.forEach(function (n) { n.t += dt; if (n.tag) { var nd = Math.hypot(n.g.position.x - S.x, n.g.position.z - S.z); n.tag.visible = nd < 6; n.tag.material.opacity = Math.min(1, (6 - nd) / 1.5); } var u = n.g.userData; if (u.armL) { u.armL.position.y = 0.85 + Math.abs(Math.sin(n.t * 9)) * 0.02; u.armR.position.y = 0.85 + Math.abs(Math.cos(n.t * 11)) * 0.02; } });
     // the day ends at 6
     if (S.t >= DAY) endDay(true);
     hud();

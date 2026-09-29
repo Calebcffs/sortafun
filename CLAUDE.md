@@ -902,12 +902,19 @@ builds taka's).
 - `slack/game.js`: `SlackBoot(content)`. 8-minute day (9-6), slack points per
   second of slacking (`ACTS`: phone F, youtube tab at your desk with TAB to
   flip back, nap N, cafe, window, meeting room, fridge, toilet), the manager
-  "mr. goh" (made up, no real people) walks `route`, sometimes stands, visits
+  "mr. goh" (made up) walks `route`, sometimes stands, visits
   your desk or holds a meeting (then he's in the meeting room: be there and
   it's a strike); his view cone (110 deg, 13m) + line of sight fills
   suspicion while you slack, full = strike, 3 = game over. Teams pings (1/2/3)
   and errands (printer / water / meeting room, 60s). Minimap, touch controls.
   No leaderboard yet: when it gets one, key `slack`, rules commit first.
+- **The team (2026-09-29):** real first names are OK here (Caleb's call).
+  They're private data in `slack/src/data.js` (`window.SLACK_DATA`, encrypted
+  into the vault with the textures): `coworkers` fill the desks in order (the
+  6-desk block under the meeting room minus yours, then the 4-desk block;
+  `null` = the empty desk), with a name tag over each head when you're near.
+  `teams` (the Teams pings, some from the team) live there too. Keep names
+  out of `game.js` / `office.js`.
 - `window.__slack`: `step(dt)`, `snap()` (render + toDataURL), `lineOfSight`,
   `sees`, `start`. Test after unlocking via `SlackUnlock` / the lock form.
 - Registered in panic-app FILES and feedback ITEMS; the homepage tile is still

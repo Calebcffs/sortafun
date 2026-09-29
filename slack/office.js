@@ -29,17 +29,18 @@ window.SlackOffice = (function () {
     columns: [[6.9, 8.5]],
     // desk clusters: two rows back to back, n desks a row, rowW metres each, rot turns the whole cluster
     clusters: [
-      { x: 11.0, z: 2.4, n: 4, rowW: 2.6, rot: 0 },             // the long block under the top wall
-      { x: 3.15, z: 8.95, n: 2, rowW: 2.15, rot: Math.PI / 2 }, // the 2x2 block by the left wall
+      { x: 9.4, z: 2.4, n: 3, rowW: 2.4, rot: 0 },              // six desks under the meeting room
+      { x: 3.15, z: 8.95, n: 2, rowW: 2.15, rot: Math.PI / 2 }, // four desks by the left wall, turned 90deg
     ],
     myDesk: { cluster: 0, row: "S", i: 1 },
+    worktable: { x: 14.6, z: 2.4, w: 3.0, d: 1.9 },   // the bigger box at the end of the top block: a shared table
     single: [3.25, 12.9],               // the lone desk near the bottom left
     counter: { x: 0.42, z: 11.3, len: 7.0 }, // the long low cabinet along the left wall
     printer: [8.9, 8.2],
     fridge: [19.3, 0.45],               // the minifridge, top wall, out towards the sharp corner
     water: 0.36,                        // along the window (0 = C end, 1 = A end)
     shelves: [[0.2, 0.3], [0.44, 0.6], [0.66, 0.8]], // low bookshelves along the window, from..to (same 0..1)
-    cafe: [[3.2, 3.2], [2.6, 5.5]],
+    cafe: [[3.2, 3.6]],                  // one round table and its chairs
     screens: [{ x: 1.3, kind: "tv" }, { x: 2.7, kind: "portrait" }], // on the top wall, left of the meeting room
     clock: [0, 6.2],
     route: [[1.3, 1.3], [4.8, 0.9], [10, 0.75], [17, 0.8], [17.2, 3.0], [13.5, 4.6], [9.5, 4.7], [5.6, 5.6],
@@ -185,8 +186,13 @@ window.SlackOffice = (function () {
         }
       });
     });
+    // the shared worktable at the end of the top block: papers, a plant, box files
+    var wt = L.worktable;
+    table(THREE, add, box, WHITE, METAL, wt.x, wt.z, wt.w, wt.d, 0);
+    collide(wt.x, wt.z, wt.w / 2, wt.d / 2);
+    [[-0.9, -0.3, 0xf1f3f5], [-0.6, 0.35, 0xd9b98a], [0.4, -0.4, 0x364fc7], [0.9, 0.3, 0xf1f3f5]].forEach(function (p) { box(0.32, 0.08 + Math.abs(p[0]) * 0.1, 0.24, M(p[2]), wt.x + p[0], 0.8, wt.z + p[1]); });
     // the lone desk and the long cabinet
-    var lone = desk(THREE, add, box, L.single[0], L.single[1], 0, K, false, 77, 1.4); out.desks.push(lone);
+    var lone = desk(THREE, add, box, L.single[0], L.single[1], 0, K, false, 77, 1.4); lone.lone = true; out.desks.push(lone);
     collide(L.single[0], L.single[1], 1.1, 0.45);
     var cab = L.counter;
     box(0.55, 0.9, cab.len, WHITE, cab.x, 0.45, cab.z); box(0.6, 0.03, cab.len + 0.04, WHITE, cab.x, 0.91, cab.z);
