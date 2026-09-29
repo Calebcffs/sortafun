@@ -28,7 +28,7 @@
   .stage { -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   /* keep the camcorder text off the notch and the home bar */
   .fake-fs .osd .tl, .fake-fs .osd .zoom, .fake-fs .osd .bl { left: max(4%, env(safe-area-inset-left)); }
-  .fake-fs .osd .tr, .fake-fs .osd .br { right: max(4%, env(safe-area-inset-right)); }
+  .fake-fs .osd .tr, .fake-fs .osd .parts, .fake-fs .osd .br { right: max(4%, env(safe-area-inset-right)); }
   .fake-fs .osd .bl, .fake-fs .osd .br { bottom: max(6%, env(safe-area-inset-bottom)); }
   .fake-fs .fsbtn { display: none; } /* leave via pause > EJECT or the end card's MENU */
   .rotate { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; background: rgba(0,0,0,.85); z-index: 20; font-size: 26px; padding: 20px; }
@@ -44,6 +44,7 @@
   .osd .bl { bottom: 6%; left: 4%; }
   .osd .br { bottom: 6%; right: 4%; text-align: right; }
   .osd .zoom { top: 12%; left: 4%; font-size: .75em; }
+  .osd .parts { top: 12%; right: 4%; text-align: right; font-size: .75em; }
   .osd .low { color: #ff5a4a; }
   .count { position: absolute; top: 13%; left: 0; right: 0; text-align: center; font-size: clamp(22px, 4vw, 44px); pointer-events: none; }
   .caption { position: absolute; bottom: 20%; left: 0; right: 0; text-align: center; font-size: clamp(18px, 3vw, 34px); pointer-events: none; }
@@ -102,7 +103,7 @@
   .keys b { font-family: var(--chunky); font-weight: 400; }
 </style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=9083a70f"></script>
+<script src="feedback.js?v=331225bd"></script>
 <script src="panic-app.js?v=5a5cc086"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script type="importmap">
@@ -111,8 +112,8 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./deeptime/assets.js": "./deeptime/assets.js?v=451e2f86",
   "./deeptime/audio.js": "./deeptime/audio.js?v=2d8a89e2",
-  "./deeptime/dinos.js": "./deeptime/dinos.js?v=e9cc084b",
-  "./deeptime/main.js": "./deeptime/main.js?v=e2861f7e",
+  "./deeptime/dinos.js": "./deeptime/dinos.js?v=14779ec1",
+  "./deeptime/main.js": "./deeptime/main.js?v=2ed38413",
   "./deeptime/tape.js": "./deeptime/tape.js?v=02ebbebe",
   "./deeptime/world.js": "./deeptime/world.js?v=fdf8f76d"
 } }
@@ -132,6 +133,7 @@
       <div class="tl" id="osd-play">PLAY &#9654;</div>
       <div class="tr" id="osd-batt">BATT [||||]</div>
       <div class="zoom" id="osd-zoom"></div>
+      <div class="parts" id="osd-parts"></div>
       <div class="bl" id="osd-counter">SP  0:00:00</div>
       <div class="br" id="osd-date">OCT.14 1987
 11:47:12 PM</div>
@@ -207,7 +209,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=02699242"></script>
-<script type="module" src="deeptime/main.js?v=e2861f7e"></script>
+<script type="module" src="deeptime/main.js?v=2ed38413"></script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
 if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "deeptime");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>

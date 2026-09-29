@@ -10,8 +10,8 @@
 //
 // The T. rex (class Rex, 2026-09-29) is the only hunter. From the first part
 // on it turns up out of sight behind you (most likely a few seconds after a
-// pickup), always facing you, its outline and eyes faintly lit (a rim light
-// in the skin shader, RIM below) so you can make it out in the dark. The rule:
+// pickup), always facing you, only its eyes faintly lit red in the dark
+// (Caleb didn't want the outline it had in v0.2). The rule:
 // hold your torch on it and it roars and charges; kill the light and it slows
 // to below walking pace, loses you and leaves. With the torch on but pointed
 // elsewhere it stalks you, faster than a walk, slower than a sprint.
@@ -61,23 +61,6 @@ vec3 skinPerturb(vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection)
 }
 `;
 
-// the rex's outline: a fresnel rim plus a faint fill on the faces toward the
-// lens, so it reads as a shape in the dark (like the eyes, it's "there"
-// without your light). RIM.uRim is 0 when it isn't hunting.
-export const RIM = { uRim: { value: 0 }, uRimCol: { value: new THREE.Color(0xa9b2b8) } };
-const RIM_DECL = "uniform float uRim; uniform vec3 uRimCol;";
-const RIM_CODE = `
-  vec3 rimV = normalize(vViewPosition);
-  float rimN = clamp(dot(normal, rimV), 0.0, 1.0);
-  float rimF = pow(1.0 - rimN, 2.4);
-  outgoingLight += uRim * (uRimCol * rimF * 0.9 + (diffuseColor.rgb * 0.8 + vec3(0.035)) * rimN * rimN * 0.35);
-`;
-function rimInto(sh) {
-  sh.uniforms.uRim = RIM.uRim; sh.uniforms.uRimCol = RIM.uRimCol;
-  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + RIM_DECL)
-    .replace("#include <opaque_fragment>", RIM_CODE + "\n#include <opaque_fragment>");
-}
-
 // what each of Quaternius' flat colours becomes
 const PALETTE = {
   trex: {
@@ -92,11 +75,8 @@ const PALETTE = {
 // freq: skin-pattern units per mesh-local unit; axis: the body's long axis in mesh-local space
 function skinMaterial(kind, part, color, freq, axis) {
   const m = new THREE.MeshStandardMaterial({ color, roughness: part === "mouth" ? 0.28 : part === "horn" ? 0.35 : 0.5, metalness: 0 });
-  const rex = kind === "rex";
-  // three caches programs by onBeforeCompile's source text; the rex versions
-  // differ (the rim), so every branch gets its own key
   m.customProgramCacheKey = () => "dt-" + kind + "-" + (part === "mouth" || part === "horn" ? "plain" : A.lite ? "lite" : "skin");
-  if (part === "mouth" || part === "horn") { if (rex) m.onBeforeCompile = (sh) => rimInto(sh); return m; }
+  if (part === "mouth" || part === "horn") return m;
   if (A.lite) {
     // cheap skin for phones: keep the mottling and banding, drop the scales
     m.onBeforeCompile = (sh) => {
@@ -113,7 +93,6 @@ function skinMaterial(kind, part, color, freq, axis) {
         float mott = lvn(vSkinPos * 0.08) * 0.6 + lvn(vSkinPos * 0.31) * 0.4;
         float bands = uBand * smoothstep(0.35, 0.65, sin(dot(vSkinPos, uAxis) * 0.62 + lvn(vSkinPos * 0.04) * 4.0) * 0.5 + 0.5);
         diffuseColor.rgb *= (0.78 + 0.4 * mott) * (1.0 - 0.38 * bands);`);
-      if (rex) rimInto(sh);
     };
     return m;
   }
@@ -149,7 +128,6 @@ function skinMaterial(kind, part, color, freq, axis) {
         normal = skinPerturb(-vViewPosition, normal, vec2(dFdx(skinH), dFdy(skinH)) * uBump * 0.9, faceDirection);`)
       .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
         roughnessFactor = clamp(roughnessFactor + (1.0 - scale) * 0.25 - mott * uWet * 0.4, 0.2, 1.0);`);
-    if (rex) rimInto(sh);
   };
   return m;
 }
@@ -258,13 +236,13 @@ export class Dino {
       }
     }
     this.eyes = [];
-    const size = this.kind === "rex" ? 0.7 : 0.22;
+    const size = this.kind === "rex" ? 0.42 : 0.22;
     // the bone carries the rig's own scale; sprites under it would be scaled by that too
     head.updateMatrixWorld(true);
     const hs = new THREE.Vector3(); head.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), hs);
     const inv = 1 / hs.x;
     for (const e of eyes) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: this.kind === "rex" ? 0xfff1d6 : 0xff2a14, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: this.kind === "rex" ? 0xb8140a : 0xff2a14, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false }));
       s.scale.setScalar(size * inv);
       head.updateMatrixWorld(true);
       s.position.copy(head.worldToLocal(e.clone()));
@@ -299,8 +277,9 @@ export class Dino {
   set visible(v) { this.root.visible = v; }
   get visible() { return this.root.visible; }
 
-  // eyeshine: bright when the flashlight is on and pointing at us
-  shine(amount) { for (const e of this.eyes) e.material.opacity = amount; }
+  // eyeshine: bright when the flashlight is on and pointing at us. the rex's
+  // are a dull red even at full (Caleb: "glowing red but not so bright")
+  shine(amount) { const k = this.kind === "rex" ? 0.6 : 1; for (const e of this.eyes) e.material.opacity = amount * k; }
 
   update(dt) { this.mixer.update(dt); }
 }
@@ -434,7 +413,6 @@ export class Rex {
     this.lookT = 0; this.t = 0; this.v = 0; this.stepPhase = 0;
     this.dist = 99; this.hunting = false; this.lit = false;
     this.last = new THREE.Vector3();
-    RIM.uRim.value = 0;
   }
 
   // a part was picked up: good odds it's behind you a few seconds later
@@ -450,7 +428,6 @@ export class Rex {
     if (this.state === "ladder" || this.state === "present") { d.update(dt); return; }
     if (this.state === "off") {
       d.visible = false; this.dist = 99;
-      RIM.uRim.value = Math.max(0, RIM.uRim.value - dt);
       if (L < 1 || g.phase === "done") return;
       this.cool -= dt;
       if (this.soon >= 0) { this.soon -= dt; if (this.soon < 0 && this.cool <= 0) this.spawn(g); return; }
@@ -468,7 +445,20 @@ export class Rex {
     let speed = 0, face = toYou;
     this.t += dt;
 
-    if (this.state === "stare" || this.state === "stalk") {
+    if (this.state === "lurk") {
+      // right behind you, breathing. turn round and it's there
+      d.play("idle", 0.3, 0.35);
+      this.breathT -= dt;
+      if (this.breathT < 0) { this.breathT = 1.6 + this.R() * 1.2; g.onRexBreath(this); }
+      if (g.seen(this, 3.5) > 0.1) { this.state = "scare"; this.t = 0; d.play("attack", 0.05, 1.5); g.onRexScare(this); }
+      else if (this.t > 9) { if (this.farSpot(g, Math.PI)) this.state = "stare"; else this.gone(g); } // you never turned round
+    } else if (this.state === "scare") {
+      // the snap, then the tape takes it back out into the trees, where you were looking
+      if (this.t > 0.55) {
+        if (this.farSpot(g, 0)) { this.state = "stare"; this.t = 0; g.onRexBlink(this); }
+        else this.gone(g);
+      }
+    } else if (this.state === "stare" || this.state === "stalk") {
       if (this.lit) this.lookT += dt; else this.lookT = Math.max(0, this.lookT - dt * 0.6);
       if (!torch) { this.toSearch(); }
       else if (this.lookT > lerp(1.5, 0.95, L / 8)) { this.state = "windup"; this.t = 0; d.play("attack", 0.15, 0.85); g.onRexRoar(this); }
@@ -522,7 +512,6 @@ export class Rex {
     }
     this.pos.y = floorAt(this.pos.x, this.pos.z) - 0.1;
     this.hunting = this.state !== "leave";
-    RIM.uRim.value += ((this.hunting ? 0.6 : 0.25) - RIM.uRim.value) * Math.min(1, dt * 3);
     d.visible = true;
     if (dist < reach && (this.state === "charge" || this.state === "stalk" || this.state === "windup")) g.caught("rex");
     d.update(dt);
@@ -535,30 +524,55 @@ export class Rex {
     this.next = lerp(60, 26, g.level / 8) * (0.7 + this.R() * 0.6);
   }
 
-  // turn up out of sight, mostly behind you, 16-26m out, somewhere you'll see it when you turn
+  // turn up right behind you, close enough that its jaws would just miss the
+  // lens (Caleb: "so when you turn around there's a real jump scare"). it
+  // stands there breathing (lurk). the moment you see it, it snaps at you
+  // (scare) and the tape glitches it back into the trees, 16-26m out, where
+  // the normal rules start (stare). so the scare is free: the odds of living
+  // through an encounter are the same as before. if there's no room behind
+  // you, it just turns up out there as it always did.
   spawn(g) {
     if (g.inTunnel) { this.next = 5; return; }
+    const P = g.player, bite = this.bite ? this.bite.fwd : this.d.headReach() + 1.5;
+    for (let tries = 0; tries < 16; tries++) {
+      const a = g.yaw + Math.PI + (this.R() - 0.5) * 0.7;
+      const r = bite + 2.8 + this.R() * 0.6; // the snap stops ~3m short, head a bit above yours
+      if (this.place(g, P.x - Math.sin(a) * r, P.z - Math.cos(a) * r, 0.25)) {
+        this.state = "lurk"; this.t = 0; this.breathT = 0.6;
+        g.onRexLurk(this);
+        return;
+      }
+    }
+    if (this.farSpot(g, Math.PI)) { this.state = "stare"; g.onRexArrive(this); return; }
+    this.next = 4;
+  }
+
+  // somewhere out of sight 16-26m away, around `dir` (relative to your view)
+  farSpot(g, dir) {
     const L = g.level, P = g.player;
     const dMin = lerp(22, 15, L / 8), dMax = dMin + 5;
     for (let tries = 0; tries < 40; tries++) {
-      // behind you first; if that's all fence (the gate), anywhere you're not looking
-      const a = tries < 20 ? g.yaw + Math.PI + (this.R() - 0.5) * 2.2 : g.yaw + Math.PI + (this.R() - 0.5) * 4.2;
+      // that way first; if that's all fence (the gate), anywhere you're not looking
+      const a = tries < 20 ? g.yaw + dir + (this.R() - 0.5) * 2.2 : g.yaw + Math.PI + (this.R() - 0.5) * 4.2;
       const r = dMin + this.R() * (dMax - dMin);
-      const x = P.x - Math.sin(a) * r, z = P.z - Math.cos(a) * r;
-      if (Math.abs(x) > FENCE - 4 || Math.abs(z) > FENCE - 4 || inTunnel(x, z)) continue;
-      const t = new THREE.Vector3(x, 0, z);
-      if (collide(t, 1.2) && Math.hypot(t.x - x, t.z - z) > 0.4) continue;
-      if (tries < 32 && g.occlusion(P.x, P.z, x, z) > 0.45) continue; // somewhere you can actually see it
-      this.pos.set(x, floorAt(x, z) - 0.1, z);
-      this.d.root.rotation.y = Math.atan2(P.x - x, P.z - z);
-      this.state = "stare"; this.t = 0; this.lookT = 0; this.v = 0; this.soon = -1;
-      this.last.set(P.x, P.y, P.z);
-      this.d.visible = true;
-      this.d.play("idle", 0.1, 0.5);
-      g.onRexArrive(this);
-      return;
+      if (this.place(g, P.x - Math.sin(a) * r, P.z - Math.cos(a) * r, tries < 32 ? 0.45 : 9)) return true;
     }
-    this.next = 4;
+    return false;
+  }
+
+  place(g, x, z, maxOcc) {
+    const P = g.player;
+    if (Math.abs(x) > FENCE - 4 || Math.abs(z) > FENCE - 4 || inTunnel(x, z)) return false;
+    const t = new THREE.Vector3(x, 0, z);
+    if (collide(t, 1.2) && Math.hypot(t.x - x, t.z - z) > 0.4) return false;
+    if (g.occlusion(P.x, P.z, x, z) > maxOcc) return false; // somewhere you can actually see it
+    this.pos.set(x, floorAt(x, z) - 0.1, z);
+    this.d.root.rotation.y = Math.atan2(P.x - x, P.z - z);
+    this.t = 0; this.lookT = 0; this.v = 0; this.soon = -1;
+    this.last.set(P.x, P.y, P.z);
+    this.d.visible = true;
+    this.d.play("idle", 0.1, 0.5);
+    return true;
   }
 
   // the finale, on the mast ladder: under you, head up, then the snap
@@ -568,7 +582,6 @@ export class Rex {
     this.d.root.rotation.y = heading;
     this.d.visible = true;
     this.d.play("idle", 0.1, 0.8);
-    RIM.uRim.value = 0.35;
   }
   lunge() { this.d.play("attack", 0.05, 1.15); }
 
@@ -579,7 +592,6 @@ export class Rex {
     this.d.root.rotation.y = heading;
     this.d.visible = true;
     this.d.play("idle", 0.1, 0.35);
-    RIM.uRim.value = 0;
   }
 }
 

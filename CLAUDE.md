@@ -723,11 +723,23 @@ out of view at the gate), most likely a few seconds after a pickup
 (`onPickup`). "Looking at it with the torch" is `G.lit(pos, 3.5, 42)`, not
 `G.seen`. Torch on it ~1-1.5s -> roar -> 9.5 m/s charge; torch off -> search
 at 1.7 m/s (stops a head short of where it saw you) -> leave. Torch on,
-pointed away -> stalk at 3.6-4.3 m/s, lost past 30m. Its outline is a
-fresnel rim + front fill in the skin shader driven by one shared uniform
-(`RIM.uRim`, every rex material incl. mouth/horn and the lite branch, each
-with its own `customProgramCacheKey`). Eyes glow faintly while it hunts
-(`fog: false`), bright in the beam. The Watcher class is still there but
+pointed away -> stalk at 3.6-4.3 m/s, lost past 30m. **v0.3.6 (Caleb):**
+no outline any more (the v0.2 fresnel rim is gone from the skin shader);
+only the eyes, dull red (`shine()` caps the rex at 0.6, faint 0.45 while
+hunting, `fog: false`). `spawn()` now puts it right behind you first
+(`lurk`: root `bite.fwd + 2.8m` back, so the snap stops ~3m short),
+breathing, the torch stuttering. When `G.seen` catches it: `scare` (attack
+clip, sting, you flinch toward its face via `lookToward`), then after 0.55s
+the tape glitches it out to a normal 16-26m spot where you're looking
+(`farSpot(g, 0)`) and the usual `stare` rules start, so the odds of living
+through an encounter didn't change. Never turned round in 9s: it moves to a
+far spot behind you. No room behind (fence, trees): the old far spawn. A
+small `PARTS n/8` stays in the OSD under BATT (`#osd-parts`). The
+present-day window: eyes snap on at 17.2s and it cuts to black at 17.7s.
+Lite profile gotcha: three only updates the spot's cookie matrix
+(`shadow.matrix`) for lights that cast shadows, so `placeCamera()` calls
+`flash.shadow.updateMatrices(flash)` itself when shadows are off (before
+that, phones got a blown-out white beam that bleached everything). The Watcher class is still there but
 never switched on. Lamps are all `LAMP_COLOR`; parts never at the mast.
 Finale: `toMast()` (beacon strobe via `WD.beacon(true)`, "GET TO THE MAST"),
 within 4.2m of the mast -> `startFinale()`: ladder rungs on the mast's +z

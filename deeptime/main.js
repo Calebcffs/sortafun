@@ -13,7 +13,7 @@ import * as THREE from "three";
 import * as AS from "./assets.js";
 import { A } from "./assets.js";
 import * as WD from "./world.js";
-import { Watcher, Rex, RIM } from "./dinos.js";
+import { Watcher, Rex } from "./dinos.js";
 import { Audio } from "./audio.js";
 import { Tape } from "./tape.js";
 
@@ -366,6 +366,18 @@ G.onRexStep = (r, dist) => {
   if (Math.random() < 0.15) Audio.oneShot("branch", { pos: r.d.headPos(tmp), vol: 0.8, ref: 6 });
 };
 G.onRexRoar = (r) => { Audio.oneShot("rex_roar", { pos: r.d.headPos(tmp), vol: 1.8, ref: 16, i: 1 }); G.shake(0.6); tape.kick(0.6); };
+// right behind you: no footfall, just breathing, and the woods go quiet
+G.onRexLurk = (r) => { r.boomed = true; G.lurkAt = G.time; };
+G.onRexBreath = (r) => { Audio.oneShot("rex_huff", { pos: r.d.headPos(tmp), vol: 0.75, ref: 4, rate: 0.8 + Math.random() * 0.1 }); };
+// you turned round
+G.onRexScare = (r) => {
+  Audio.oneShot("scare", { bus: "tape", vol: 1.3, i: 0 });
+  Audio.oneShot("rex_roar", { pos: r.d.headPos(tmp), vol: 1.9, ref: 10, i: 0 });
+  Audio.boom(1.0, "tape");
+  G.shake(0.8); tape.kick(0.3); G.fear = 1;
+};
+// and the tape takes it back out into the trees
+G.onRexBlink = (r) => { tape.kick(1.4); G.static = 0.6; r.boomed = true; Audio.oneShot("rex_huff", { pos: r.d.headPos(tmp), vol: 1.1, ref: 10, rate: 0.9 }); };
 G.onRexFound = (r) => { Audio.oneShot("rex_huff", { pos: r.d.headPos(tmp), vol: 1.2, ref: 8 }); tape.kick(0.3); };
 G.caught = (who) => {
   if (G.state !== "play") return;
@@ -625,20 +637,17 @@ function tickFinale(dt) {
     Audio.restoreBuses(); // stopAll muted every bus at the white-out; the loops stay at 0 unless picked below
     loops.crickets.vol(0.3, 1.5); loops.wind.vol(0.12, 1.5);
   });
-  // eyes: stillness first, then they light up, and the shape of it
-  if (t >= 17.2) {
-    const k = clamp01((t - 17.2) / 0.5);
-    rex.d.shine(k);
-    RIM.uRim.value = 0.16 * clamp01((t - 17.4) / 1.2);
-  } else if (t >= 9.7) { rex.d.shine(0); RIM.uRim.value = 0; }
-  step(9, 17.2, () => { Audio.boom(0.85, "tape"); Audio.thump(Audio.now(), 40, 18, 1.1, 2.4, "tape"); tape.kick(0.2); });
-  step(10, 21.2, () => {
+  // eyes: stillness first, then they're just there, for half a second (Caleb's ask), and black
+  if (t >= 17.2) rex.d.shine(clamp01((t - 17.2) / 0.06));
+  else if (t >= 9.7) rex.d.shine(0);
+  step(9, 17.2, () => { Audio.boom(0.85, "tape"); Audio.thump(Audio.now(), 40, 18, 1.1, 2.4, "tape"); Audio.oneShot("scare", { bus: "tape", vol: 0.9, i: 0 }); tape.kick(0.35); G.shake(0.5); });
+  step(10, 17.7, () => {
     Audio.stopAll(0.05);
     tape.u.uBlack.value = 1;
     $("pwin").hidden = true;
     if (G.mode === "night") { try { localStorage.setItem("deeptime-dawn", "1"); } catch (e) {} }
   });
-  step(11, 22.2, () => endCard(true));
+  step(11, 18.7, () => endCard(true));
   rex.update(dt, G);
 }
 
@@ -743,7 +752,7 @@ function introFlash(kind) {
   const a = d.actions.attack;
   d.mixer.stopAllAction(); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.play(); d.current = "attack";
   d.mixer.setTime(kind === "roar" ? b.t * 0.7 : b.t);
-  d.visible = true; d.shine(1); RIM.uRim.value = 0.7;
+  d.visible = true; d.shine(1);
   const wasLight = G.lightOn; G.lightOn = true;
   card.style.visibility = "hidden";
   Audio.oneShot("rex_roar", { bus: "tape", vol: kind === "lunge" ? 1.7 : 1.4, i: kind === "lunge" ? 0 : 1 });
@@ -925,7 +934,12 @@ function placeCamera(dt) {
   let I = on ? G.flashPower * (0.25 + 0.75 * clamp01(G.battery / 0.3)) : 0;
   if (on && G.battery < 0.15 && Math.random() < 0.08) I *= 0.2;
   if (on && G.static > 0.3 && Math.random() < G.static * 0.3) I *= Math.random(); // it messes with the light too
+  if (on && rex && rex.state === "lurk" && G.time - G.lurkAt > 1.2 && Math.random() < 0.05) I *= 0.15; // something's behind you
   flash.intensity = G.mode === "dawn" ? I * 0.3 : I;
+  // the lens cookie is projected with the shadow camera's matrix, which three
+  // only updates when the light casts shadows. the lite profile has none, so
+  // without this the cookie sampled garbage and the beam blew out white
+  if (!flash.castShadow) { flash.updateMatrixWorld(); flash.target.updateMatrixWorld(); flash.shadow.updateMatrices(flash); }
 
 }
 
@@ -981,6 +995,8 @@ function tickPlay(dt) {
   // ---------- the animal
   rex.update(dt, G);
   if (G.state !== "play") return;
+  // ---------- the scare: you flinch toward its face
+  if (rex.state === "scare") lookToward(rex.d.headPos(tmp3), dt * 7);
   // ---------- seeing it: a boom, once per appearance
   if (rex.d.visible && rex.hunting) {
     if (!rex.boomed && G.seen(rex, 3.5) > 0.1) { rex.boomed = true; Audio.boom(0.8); G.fear = Math.max(G.fear, 0.8); tape.kick(0.25); }
@@ -991,7 +1007,7 @@ function tickPlay(dt) {
     const d = hp.distanceTo(camera.position);
     const facing = tmp4.set(Math.sin(rex.d.root.rotation.y), 0, Math.cos(rex.d.root.rotation.y)).dot(tmp5.copy(camera.position).sub(hp).setY(0).normalize());
     const beam = G.litPoint(hp, 48) ? clamp01(facing * 1.4) * clamp01(1.25 - d / 48) : 0;
-    const on = Math.max(rex.hunting ? 0.75 * clamp01(facing * 1.5) : 0, beam);
+    const on = Math.max(rex.hunting ? 0.45 * clamp01(facing * 1.5) : 0, beam);
     rex.shineV = (rex.shineV || 0) + (on - (rex.shineV || 0)) * Math.min(1, dt * 10);
     rex.d.shine(rex.shineV);
   }
@@ -1120,6 +1136,7 @@ function osd() {
   const bars = Math.ceil(G.battery * 4);
   $("osd-batt").textContent = "BATT " + "[" + "|".repeat(bars) + " ".repeat(4 - bars) + "]" + (G.lightOn ? "" : " OFF");
   $("osd-batt").classList.toggle("low", G.battery < 0.2 && (tAll % 1) < 0.5);
+  $("osd-parts").textContent = G.state === "play" || G.state === "caught" ? `PARTS ${G.got}/8` : "";
   $("osd-zoom").textContent = G.zoom > 0.02 ? "ZOOM " + "=".repeat(1 + Math.round(G.zoom * 8)) : "";
   $("osd").hidden = G.state === "end" || G.presentDay;
   if (touch) $("touch").hidden = G.state !== "play";
@@ -1197,4 +1214,4 @@ load().catch((e) => { console.error(e); $("load-pct").textContent = "TRACKING ER
 frame();
 
 // test hooks (headless checks drive the game through these)
-window.deeptime = { PHONE, LITE, isFS, G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get rex() { return rex; }, RIM, keys, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, toMast, startFinale, introFlash, Audio };
+window.deeptime = { PHONE, LITE, isFS, G, step, renderer, flash, hemi, moon, NIGHT, noPause: false, get watcher() { return watcher; }, get rex() { return rex; }, keys, WD, camera, scene, tape, newRun: (m) => newRun(m || "night"), tryPickup, toMast, startFinale, introFlash, Audio };
