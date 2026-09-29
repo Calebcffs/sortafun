@@ -620,7 +620,13 @@
     grid-template-columns: 1fr 1fr;
     gap: 18px;
   }
-  .news ul { margin: 0; padding: 12px 14px 12px 32px; }
+  /* the whole changelog, newest first, scrolling inside the panel */
+  .news ul { margin: 0; padding: 12px 14px 12px 32px; max-height: 250px; overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--ink) transparent;
+    -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); }
+  .news ul::-webkit-scrollbar { width: 8px; }
+  .news ul::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 4px; }
+  .news ul:focus-visible { outline: 3px solid var(--sun); outline-offset: -3px; }
   .news li { margin: 0 0 6px; }
   .news .when {
     display: inline-block;
@@ -723,7 +729,7 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=d81768e3"></script>
+<script src="feedback.js?v=cbf125e7"></script>
 <script src="panic-app.js?v=acd5f40f"></script>
 </head>
 <body>
@@ -856,12 +862,44 @@
   <div class="newsrow">
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
-      <ul>
+      <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">09-29</span> <b>v0.3.2</b>: what's new goes all the way back now. scroll down to the very first version of the site.</li>
         <li><span class="when">09-29</span> <b>v0.3.1</b>: taka-san's dinner is invitation only now. you need the password. name cards on the table too.</li>
         <li><span class="when">09-29</span> <b>v0.3</b>: NEW: <b>taka-san dinner simulator</b>. drive the boss to hand in hand, seat the round table properly, keep his glass full, answer his big questions, then karaoke. do well enough and it's a trip to japan.</li>
         <li><span class="when">09-29</span> <b>v0.2.5</b>: word hive has two ranks past queen bee for you lot: <b>beeber fever</b> (1.5x queen bee) and <b>the bee all end all</b> (2x). only deep cuts will get you there.</li>
         <li><span class="when">09-29</span> <b>v0.2.4</b>: the chatroom follows you round the site. the blue bubble bottom left lights up when someone says something, click it to chat from any page.</li>
         <li><span class="when">09-29</span> <b>v0.2.3</b>: deep time has a new intro and new notes. watch the intro closely. don't blink.</li>
+        <li><span class="when">09-29</span> <b>v0.2.2</b>: the chatroom forgets fast now. every message vanishes a minute after it's sent.</li>
+        <li><span class="when">09-29</span> <b>v0.2.1</b>: deep time fixes. its eyes glow properly now, and the very end has its sound back.</li>
+        <li><span class="when">09-29</span> <b>v0.2</b>: <b>deep time</b> reworked. it's just the t. rex now, and it turns up behind you. keep your torch on it and it charges, so kill the light and run. all 8 parts gets you to the radio mast and a proper ending.</li>
+        <li><span class="when">09-29</span> <b>v0.1</b>: sortafun has a version number now, it goes up with every update. <b>deep time</b> is the featured game, the chatroom got a reset, and the feedback bubble got bigger. use it.</li>
+        <li><span class="when">09-28</span> NEW: <b>deep time</b>. a found-footage horror game. find the 8 parts of the time machine in the woods at night.</li>
+        <li><span class="when">09-28</span> tidied the place up. smaller game tiles so they all fit, a live chatroom in the hangout, and the music stays off till you press the note button. the basement got bricked up.</li>
+        <li><span class="when">09-28</span> NEW: <b>draw and guess</b>. make a room, send your friends the link, one draws and everyone else guesses in the chat. our first party game.</li>
+        <li><span class="when">09-28</span> coming soon: five games we're building right now, with little WIP tiles. tell us which one you want first.</li>
+        <li><span class="when">09-28</span> sortafun is officially in <b>alpha</b>. every game has a feedback bubble now: rate it 0 to 5 stars, report a bug, or pitch an idea.</li>
+        <li><span class="when">09-27</span> city sandbox has a story mode: HALCYON. 12 chapters, three nights, cutscenes, a sniper vigil, a plane, the metro, and a very tall ladder.</li>
+        <li><span class="when">09-26</span> city sandbox: zombies, nights, crews, safehouses and a helicopter out. ride with friends in any car, bike or the plane.</li>
+        <li><span class="when">09-25</span> birdie grew up into <b>CITY SANDBOX</b>. walk, loot, drive, fly and shoot round the city with up to 50 people. you can still be a bird.</li>
+        <li><span class="when">09-25</span> the site makes noise now! clicks, dings and a little 8-bit tune. the speaker button turns it off.</li>
+        <li><span class="when">09-25</span> NEW: <b>birdie</b>. be a bird. fly round a whole island, then take it online with up to 50 other birds.</li>
+        <li><span class="when">09-24</span> new look! sortafun is a proper flash game portal now, and every page matches.</li>
+        <li><span class="when">09-24</span> three new word games: <b>five letters</b>, <b>four sides</b> and <b>word grab</b>. the word games use a real dictionary now, 170,000 words. the fermi quiz is gone.</li>
+        <li><span class="when">09-11</span> anagram sprint is now <b>word hive</b>. seven letters, one in the middle, find every word you can.</li>
+        <li><span class="when">09-10</span> the lobby is a newspaper front page now.</li>
+        <li><span class="when">09-04</span> the lobby has floors now: stairs on the left. eleven new games downstairs and in play.</li>
+        <li><span class="when">09-04</span> guestbook, hit counter, passport, daily board, profile pages, a 404 and a webring.</li>
+        <li><span class="when">09-04</span> typing rebuilt, monkeytype style.</li>
+        <li><span class="when">09-03</span> typing: top 200 or top 1000 word lists. flipbook: undo (ctrl+z) and an eraser slider. boards: date and time on every row, and dead last all time glows gold.</li>
+        <li><span class="when">09-02</span> NEW: the <b>animation studio</b>. draw a flipbook frame by frame, then post it to the animation gallery.</li>
+        <li><span class="when">09-02</span> the art gallery went into hiding. it's still here somewhere.</li>
+        <li><span class="when">09-01</span> the homepage went back to black and white paper.</li>
+        <li><span class="when">08-29</span> NEW: the <b>crossword</b> (snacky but themeless, by caleb). and the forum is open. be nice. or don't.</li>
+        <li><span class="when">08-29</span> the homepage went to space: stars, a spinning 3D title and hand-drawn buttons.</li>
+        <li><span class="when">08-28</span> the tile slider gets a calendar archive. the driving game is a 3D <b>circuit race</b> now.</li>
+        <li><span class="when">08-27</span> leaderboards! typing, driving and the tile slider save your best score.</li>
+        <li><span class="when">08-27</span> an art gallery on the homepage. scroll right.</li>
+        <li><span class="when">08-27</span> <b>sortafun.org</b> is live. a homepage and five little games. that's it. that's the site.</li>
       </ul>
     </section>
     <section class="panel howto">

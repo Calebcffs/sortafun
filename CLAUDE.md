@@ -1149,7 +1149,7 @@ Carried over:
 - **Just Played** uses `SortafunLB.recent(6)`; the newest also goes on the ticker.
 - **Passport stamps**: `-walked` when the footer (`#foot`) scrolls into view.
   The old `spelunker` (basement) stamp became `chatterbox` (`-chat`).
-- **What's New** panel is the changelog. ~3 short lines, newest first, plain ASCII.
+- **What's New** panel is the whole changelog (back to the 08-27 launch), newest first, plain ASCII. It scrolls inside the panel (`.news ul` max-height), so never trim old entries: just add the new line at the top, starting with the bold version.
 
 Game pages: `game.css` puts `.wrap` in a white rounded "window" on the same
 sky, and every game.css page (except `typing.html`, which keeps its dark
