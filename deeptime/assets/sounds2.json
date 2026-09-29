@@ -1,0 +1,98 @@
+{
+"amb_sewer": {
+"loop": true,
+"dur": 25.9
+},
+"amb_tunnel": {
+"loop": true,
+"dur": 30.0
+},
+"amb_drips": {
+"loop": true,
+"dur": 38.0
+},
+"amb_rain": {
+"loop": true,
+"dur": 38.0
+},
+"fluoro_hum": {
+"loop": true,
+"dur": 16.0
+},
+"pump_hum": {
+"loop": true,
+"dur": 25.0
+},
+"step_conc": {
+"slot": 0.5,
+"n": 10
+},
+"step_splash": {
+"slot": 0.5,
+"n": 10
+},
+"step_metal": {
+"slot": 0.5,
+"n": 10
+},
+"drip": {
+"slot": 1.2,
+"n": 6
+},
+"car_pass": {
+"slot": 8.0,
+"n": 2
+},
+"fluoro_flick": {
+"slot": 1.3,
+"n": 3
+},
+"steam": {
+"slot": 2.3,
+"n": 3
+},
+"clank": {
+"slot": 1.4,
+"n": 6
+},
+"pipe_drop": {
+"slot": 1.4,
+"n": 3
+},
+"bin": {
+"slot": 2.0,
+"n": 2
+},
+"rat": {
+"slot": 1.4,
+"n": 6
+},
+"slam": {
+"slot": 2.6,
+"n": 1
+},
+"fence": {
+"slot": 2.3,
+"n": 2
+},
+"chirp": {
+"slot": 1.0,
+"n": 7
+},
+"spark": {
+"slot": 1.0,
+"n": 4
+},
+"siren": {
+"slot": 14.0,
+"n": 1
+},
+"dogs": {
+"slot": 3.5,
+"n": 3
+},
+"glass": {
+"slot": 0.4,
+"n": 3
+}
+}

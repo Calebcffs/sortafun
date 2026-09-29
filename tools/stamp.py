@@ -53,19 +53,21 @@ def stamp_refs(html):
 IMPORTMAP = re.compile(rb'(<script type="importmap">\s*)(\{.*?\})(\s*</script>)', re.S)
 
 
-MODULE_DIRS = {"city.html": "city", "deeptime.html": "deeptime"}
+# deeptime2.html (part 2) loads deeptime/l2/ and part 1's shared modules
+MODULE_DIRS = {"city.html": ["city"], "deeptime.html": ["deeptime"], "deeptime2.html": ["deeptime", "deeptime/l2"]}
 
 
-def stamp_modules(html, folder):
+def stamp_modules(html, folders):
     m = IMPORTMAP.search(html)
     if not m:
         return html
     data = json.loads(m.group(2))
     imports = {k: v for k, v in data["imports"].items()
-               if "\\" not in k and not k.startswith("./birdie/") and not k.startswith("./" + folder + "/")}
-    for path in sorted(glob.glob(folder + "/*.js")):
-        path = path.replace(os.sep, "/")
-        imports["./" + path] = "./" + path + "?v=" + digest(path)
+               if "\\" not in k and not k.startswith("./birdie/") and not any(k.startswith("./" + f + "/") for f in folders)}
+    for folder in folders:
+        for path in sorted(glob.glob(folder + "/*.js")):
+            path = path.replace(os.sep, "/")
+            imports["./" + path] = "./" + path + "?v=" + digest(path)
     data["imports"] = imports
     body = "{ \"imports\": {\n" + ",\n".join("  %s: %s" % (json.dumps(k), json.dumps(v)) for k, v in imports.items()) + "\n} }"
     return html[:m.start(2)] + body.encode() + html[m.end(2):]

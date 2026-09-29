@@ -854,6 +854,67 @@ Testing: headless Chrome with swiftshader (`--use-angle=swiftshader`), click
 logic runs stub `deeptime.tape.render = () => {}` (0.3ms per step). The
 page's own rAF loop keeps stepping too, so timed screenshots drift.
 
+### Deep Time: Part 2 (`deeptime2.html` + `deeptime/l2/`)
+
+Caleb asked (2026-09-29) for a level two: a town, back alleys as the intro,
+then ~80% in the sewers and control rooms, velociraptors, prehistoric horror.
+He picked the "Samples" plot, **5 samples, and wanted the effort on a varied
+underground map**. Design, story and numbers: `deeptime/PLAN2.md` (read it
+first). Credits for the new assets are at the end of `deeptime/CREDITS.md`;
+sounds are `tools/deeptime/sounds2.txt` -> `build_sounds2.py` ->
+`deeptime/assets/sounds2.json` (part 1's `sounds.json` untouched;
+`assets.manifest(file)` merges the two).
+
+Files: `l2/map.js` (the ASCII grid, 3m cells, zones, `floorAt`/`ceilAt`/
+`surfaceAt`, ramps, channel profiles, cave noise, `lineClear`, `distField`,
+`canStep`; no three.js so node can load it), `l2/level.js` (builds every cell's
+floor/walls/ceiling/steps/headers into merged per-8x8-chunk geometry, brick
+vaults with arch cut-outs, cave displacement, all props/lamps/decals/set
+dressing per zone, `SAMPLE_SPOTS`, `collide()`, `tick()`), `l2/pack.js`
+(`Raptor`, `Hatchling`, `TUNE`), `l2/main.js` (the game: input/fullscreen/
+touch copied from part 1, samples, noise, the pack's numbers, the director's
+set pieces, CCTV render target, finale/escape, body-cam OSD). The page's
+import map covers both `deeptime/` and `deeptime/l2/` (stamp.py
+`MODULE_DIRS` now takes a list of folders per page).
+
+Rules that matter:
+- Grid: `#` rock, `B` building, `F` fence, `W` window cells are solid; `d`
+  (lab door) opens at 4 samples (`setDoor`), `D` (pump house street door) only
+  in the finale (`setExit`). Heights come from `baseHeight` + `RAMPS` + the
+  channel profiles (brick 0.5m, culvert 0.25m) + cave noise. Movement rejects
+  steps up over 0.62m and drops over 1.3m, so the gantry edge and stair sides
+  are walls; `canStep()` bakes the same rule into the path field, or the pack
+  (and the test bot) try to walk up the side of the gantry.
+- Level building: walls only get cut at `EDGE_T` points where the floor
+  bends (`bendy()`); every wall/step sample is clamped inside its own cell
+  (a corner sample once read the sky's Infinity ceiling -> NaN geometry).
+  Poly Haven "models" are sometimes kits or variant rows: steel_frame_shelves
+  (an 11m warehouse), rocks1/2_lo (8m piles), street_lamp_02 (a wall lantern),
+  industrial_caged_sconce (three variants). Shelves, street lamps and cage
+  lamps are built in code; `VARIANT` in level.js keeps one of a row
+  (hydrant, bins, boots, shutter, fluorescent tube). Check a model's size
+  before giving it a collider.
+- Lights: a pool of 3 PointLights (`LV.L.pool`) for the nearest lit lamps.
+  Cistern shafts are fake additive cones plus a pooled "shaft" lamp so a
+  raptor walking through is actually lit.
+- Director timings use `later(sec, fn)` / `script()` (game time), never
+  setTimeout: headless tests step time by hand, and pause must stop them.
+- Torch: power 120, decay 1.75 (part 1's was too hot at tunnel distances and
+  bleached the raptors white). Raptor eyes are 0.45x size, dull red.
+- Skinned Dinos never frustum-cull (dinos.js sets it off), so hide what's far
+  (the tank's specimen; hatchlings once you leave the cave).
+- Budget: ~30-80k tris per view (the cave ~130k with the nest), 120-260 draw
+  calls. Facade windows are merged into the chunk geometry.
+
+Testing (headless swiftshader, as part 1): `window.deeptime` has `G`, `step`,
+`M`, `LV`, `TUNE`, `raptors`, `phantom`, `newRun`, `tryPickup`, `startFinale`,
+`openLab`, `keys`, `cctv`; `deeptime.bright = true` floods the scene with
+white hemi light for checking geometry. The 2026-09-29 session's walkthrough
+bot (grid BFS on `M.distField`, W + shift, sidestep when blocked) collects all
+5 samples in random layouts and escapes; zero the sight/hearing numbers in
+`TUNE` for a peaceful run. Leaderboard fetches 400 on localhost until the
+rules deploy.
+
 ### Sound (`sfx.js`)
 
 Every page loads `sfx.js` in its `<head>` (`/sfx.js` on the 404). Everything

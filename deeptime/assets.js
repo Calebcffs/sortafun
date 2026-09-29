@@ -42,9 +42,10 @@ export function pbr(name, repeat = 1, parts = ["diff", "nor", "rough"]) {
   return Promise.all(jobs).then(() => (textures[name] = out));
 }
 
-export async function manifest() {
-  const r = await track(fetch(BASE + "sounds.json").then((r) => r.json()));
-  A.manifest = r;
+// part 2 reads part 1's list and its own (sounds2.json); the two merge
+export async function manifest(file = "sounds.json") {
+  const r = await track(fetch(BASE + file).then((r) => r.json()));
+  A.manifest = Object.assign(A.manifest || {}, r);
   return r;
 }
 

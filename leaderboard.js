@@ -55,6 +55,12 @@
       var p = Math.ceil(v / 10000), s = p * 10000 - v;
       return p + "/8, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
     } },
+    // part 2: samples * 10000 - seconds, the same idea
+    deeptime2: { label: "deep time part 2", unit: "samples", better: "high", format: function (v) {
+      if (v <= 0) return "0/5";
+      var p = Math.ceil(v / 10000), s = p * 10000 - v;
+      return p + "/5, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    } },
   };
 
   var SDK = "https://www.gstatic.com/firebasejs/10.12.2/";

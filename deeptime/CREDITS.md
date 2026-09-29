@@ -121,3 +121,52 @@ Synthesised in code (audio.js), not recorded: the escalation drum, drone, whine 
 ## Fonts
 
 - VT323 and Rock Salt, Google Fonts (SIL Open Font License).
+
+## Part 2 (Harlan, deeptime2.html)
+
+All CC0 as well. The raptors are the same Quaternius velociraptor.
+
+Textures (Poly Haven, 1k diffuse + 512 normal/roughness webp): asphalt_02, concrete_pavement,
+dark_brick_wall, mossy_brick, brick_floor, concrete_wall_006, concrete_floor_worn_001,
+old_stone_wall, metal_grate_rusty, metal_plate, concrete_block_wall_02, concrete_wall_004,
+anti_slip_concrete, green_metal_rust, long_white_tiles, large_grey_tiles, rock_wall_08,
+brown_mud_rocks_01.
+
+Models (Poly Haven, decimated with tools/deeptime/bl_prop.py): fire_hydrant, metal_trash_can,
+WetFloorSign_01, concrete_road_barrier, water_manhole_cover, mounted_fluorescent_lights,
+hanging_industrial_lamp, security_camera_01, power_box_01, metal_office_desk, television_02,
+chemistry_set, old_gas_mask, rubber_boots, cardboard_box_01, plastic_crate_01, old_tyre,
+can_rusted, street_rat, industrial_microscope, medical_box, clipboard, security_light,
+rollershutter_door. The shelves, street lamps, cage lamps, pumps, pipes, eggs and the tank are built in code (l2/level.js).
+
+Sounds (Freesound, CC0; cut by tools/deeptime/build_sounds2.py into sounds2.json):
+
+- sewer_stream: https://freesound.org/s/545663/
+- tunnel_water: https://freesound.org/s/327935/
+- cave_drips: https://freesound.org/s/177958/
+- drip_one: https://freesound.org/s/249806/
+- rain_city: https://freesound.org/s/197213/
+- cars_rain: https://freesound.org/s/399822/
+- steps_concrete: https://freesound.org/s/459964/
+- steps_splash: https://freesound.org/s/861369/
+- steps_puddle: https://freesound.org/s/553238/
+- steps_metal: https://freesound.org/s/698697/
+- steps_grate_run: https://freesound.org/s/786977/
+- fluoro_hum: https://freesound.org/s/638895/
+- fluoro_starter: https://freesound.org/s/125064/
+- pump_steady: https://freesound.org/s/568860/
+- steam_vent: https://freesound.org/s/438786/
+- metal_pipes: https://freesound.org/s/848209/
+- pipes_drop: https://freesound.org/s/269692/
+- bin_knocked: https://freesound.org/s/464576/
+- cans_knocked: https://freesound.org/s/761734/
+- rat_squeak: https://freesound.org/s/288941/
+- rat_squeaks: https://freesound.org/s/217767/
+- door_slam: https://freesound.org/s/406197/
+- fence_shake: https://freesound.org/s/571421/
+- chicks: https://freesound.org/s/519193/
+- baby_creature: https://freesound.org/s/824911/
+- sparks: https://freesound.org/s/449719/
+- siren_far: https://freesound.org/s/635741/
+- dogs_far: https://freesound.org/s/705299/
+- glass_tap: https://freesound.org/s/596517/

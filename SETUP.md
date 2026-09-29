@@ -93,7 +93,7 @@ Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram` (retired, see
 `CLAUDE.md`), `mines`, `fermi` (retired), `minute`, `callit`, `watch` (all three retired
 2026-09-28 with the basement), `hive`,
-`five`, `sides`, `grab`, `deeptime`. The enum
+`five`, `sides`, `grab`, `deeptime`, `taka`, `deeptime2`. The enum
 lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
 sync, and **update `firestore.rules` in the same commit whenever a game is

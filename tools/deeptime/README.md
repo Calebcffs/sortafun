@@ -23,3 +23,8 @@ Everything in `deeptime/assets/` is CC0 and was built with these scripts
 
 Budgets that matter (see CLAUDE.md "Deep Time"): anything instanced across
 the forest has to stay tiny (fern ~1000 tris, shrub ~800, branches ~600).
+
+Part 2 (2026-09-29): `sounds2.txt` + `build_sounds2.py` (writes
+`deeptime/assets/sounds2.json`; run it from a scratch folder holding snd/,
+fetched the same way as fetch_sounds.py). Its textures are 1k diffuse with
+512 normal/roughness to keep the download down (~3.3MB for 18 sets).
