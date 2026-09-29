@@ -1016,12 +1016,12 @@ room on the Realtime Database (the City Sandbox one) with anonymous auth:
 `chat/msgs` (push ids, `{u, n, m, t}`, last 60 shown), `chat/last/<uid>`
 (rules make messages 1.5s apart: the message and `last` go in one
 multi-path update and the message's rule checks `last` === now),
-`chat/online/<uid>` (onDisconnect remove, the "N here now" count). **The
-room only lasts a day (2026-09-29):** it queries `orderByChild("t")` from
-Singapore midnight (`.indexOn: t` in the rules), wipes the screen and
-reconnects when the day flips, and anyone may delete a message from before
-today's SGT midnight (the rule computes it: `now - ((now + 28800000) %
-86400000)`). Each sender and each newcomer tidies up to 5 old ones.
+`chat/online/<uid>` (onDisconnect remove, the "N here now" count). **Messages
+last one minute (2026-09-29, Caleb; briefly a day before that):** it
+queries `orderByChild("t")` from now - 60s (`.indexOn: t` in the rules),
+each `li` carries its `data-t` and a 1s timer removes it at 60s old, and
+anyone may delete a message older than 60s (`now - 60000` in the rule).
+Each sender and each newcomer tidies up to 5 old ones.
 **Spark allows 100 concurrent RTDB connections, shared with City Sandbox and Draw and Guess**,
 so the room only connects when it scrolls into view and hangs up after 60s
 hidden or 10 min idle (click in it to wake). Name = the leaderboards'

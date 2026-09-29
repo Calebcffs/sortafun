@@ -4,10 +4,11 @@
  *   chat/msgs/<pushId>  { u: uid, n: name, m: text, t: server time }
  *   chat/last/<uid>     server time of your last message (rules: 1.5s apart)
  *   chat/online/<uid>   server time, removed on disconnect (the "here now" count)
- * The room only lasts a day: it loads messages from Singapore midnight on
- * (orderByChild t, indexed), wipes the screen when the day flips, and anyone
- * may delete a message from before today (rules in database.rules.json), which
- * every sender and every newcomer tidies a few of, so the room never grows.
+ * Messages only last a minute (2026-09-29): the room loads the last minute
+ * (orderByChild t, indexed), each message disappears from the screen once
+ * it's 60s old, and anyone may delete a message older than that (rules in
+ * database.rules.json), which every sender and every newcomer tidies up, so
+ * the room never grows.
  *
  * The free plan caps the database at 100 live connections, shared with City
  * Sandbox and Draw and Guess, so the room only connects once it scrolls into view and hangs up
@@ -21,9 +22,7 @@
 
   var SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
   var SHOW = 60;                     // messages loaded on connect
-  var DAY = 86400000, SGT = 8 * 3600000;
-  // Singapore midnight (the site's day) at or before t
-  function dayStart(t) { return Math.floor((t + SGT) / DAY) * DAY - SGT; }
+  var LIFE = 60 * 1000;               // how long a message lasts
   var HIDDEN_HANGUP = 60 * 1000;     // tab hidden this long = hang up
   var IDLE_HANGUP = 10 * 60 * 1000;  // no mouse/keys this long = hang up
   var NAME_KEY = "sortafun-name";    // same name the leaderboards use
@@ -104,8 +103,6 @@
     var sendBtn = root.querySelector("#chatSend");
     nameIn.value = readName();
 
-    var today = 0;         // Singapore midnight the room is showing
-    var note = "";         // said once the room reconnects (the day flip)
     var c = null;          // the connection, once we have it
     var live = false;      // listeners attached and online
     var subs = [];         // unsubscribe functions
@@ -124,6 +121,8 @@
 
     function addMsg(id, v) {
       if (!v || typeof v.m !== "string" || shown[id]) return;
+      var born = typeof v.t === "number" ? v.t : (c ? c.now() : Date.now());
+      if (c && c.now() - born > LIFE) return; // already gone
       var empty = log.querySelector(".chat-empty");
       if (empty) empty.remove();
       var stick = nearBottom() || (c && v.u === c.uid);
@@ -131,6 +130,7 @@
       li.innerHTML = '<span class="chat-t">' + hhmm(v.t || Date.now()) + "</span> " +
         '<b style="color:' + colFor(v.n || "") + '">' + esc(v.n || "someone") + "</b> " + esc(v.m);
       if (c && v.u === c.uid) li.className = "me";
+      li.dataset.t = born;
       // keep them in key order (push ids sort by time), even if one lands late
       var next = null;
       Object.keys(shown).forEach(function (k) { if (k > id && (!next || k < next.id)) next = { id: k, li: shown[k] }; });
@@ -142,15 +142,16 @@
       if (!loading && c && v.u !== c.uid && window.SortafunSFX) SortafunSFX.play("pop");
     }
 
-    // midnight in Singapore: a clean room
+    // a message is gone a minute after it was sent
+    function emptyHint() { sys("quiet in here. messages vanish after a minute, so say something.", "chat-empty"); }
     setInterval(function () {
-      if (!live || !c || dayStart(c.now()) === today) return;
-      hangUp();
-      log.innerHTML = "";
-      shown = {};
-      note = "(it's a new day. the room's been wiped clean.)";
-      goLive();
-    }, 20000);
+      if (!c) return;
+      var now = c.now(), any = false;
+      Object.keys(shown).forEach(function (k) {
+        if (now - Number(shown[k].dataset.t) > LIFE) { shown[k].remove(); delete shown[k]; any = true; }
+      });
+      if (any && live && !Object.keys(shown).length && !log.querySelector(".chat-empty")) emptyHint();
+    }, 1000);
 
     function goLive() {
       if (live) return;
@@ -162,19 +163,17 @@
         var db = c.db;
         db.goOnline(c.database);
         if (!Object.keys(shown).length) log.innerHTML = "";
-        if (note) { sys(note); note = ""; }
         loading = true;
-        today = dayStart(c.now());
-        var q = db.query(c.ref("msgs"), db.orderByChild("t"), db.startAt(today), db.limitToLast(SHOW));
+        var q = db.query(c.ref("msgs"), db.orderByChild("t"), db.startAt(c.now() - LIFE), db.limitToLast(SHOW));
         subs.push(db.onChildAdded(q, function (s) { addMsg(s.key, s.val()); }));
         subs.push(db.onChildRemoved(q, function (s) {
           // only drop what the server deleted, not what just scrolled out of the last SHOW
-          if (shown[s.key] && s.val() && s.val().t < today) { shown[s.key].remove(); delete shown[s.key]; }
+          if (shown[s.key] && s.val() && c.now() - s.val().t > LIFE - 5000) { shown[s.key].remove(); delete shown[s.key]; }
         }));
         db.get(q).then(function (snap) {
           loading = false;
           tidy();
-          if (!snap.exists() && !Object.keys(shown).length) sys("nobody's said anything today. the room wipes clean at midnight. go on, be first.", "chat-empty");
+          if (!Object.keys(shown).length) emptyHint();
         }).catch(function () { loading = false; });
 
         // presence: "3 here now"
@@ -269,7 +268,7 @@
       db.get(db.query(c.ref("msgs"), db.limitToFirst(5))).then(function (snap) {
         snap.forEach(function (ch) {
           var v = ch.val();
-          if (v && v.t < dayStart(c.now()) - 60000) db.remove(ch.ref).catch(function () {});
+          if (v && c.now() - v.t > LIFE + 5000) db.remove(ch.ref).catch(function () {});
         });
       }).catch(function () {});
     }
