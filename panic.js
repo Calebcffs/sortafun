@@ -1,4 +1,4 @@
-/* sortafun panic mode - press T on the homepage and it turns into OneDrive.
+/* sortafun panic mode - press 0 on the homepage and it turns into OneDrive.
  *
  * html.panic hides .site and shows #od, a look-alike of the OneDrive web
  * home page (top bar, left rail, "For you" cards, Recent list). Every "file"
@@ -7,8 +7,8 @@
  * in the corner opens the real chatroom (the #chat node from the Hangout is
  * moved into the popup and put back on the way out, never mounted twice).
  *
- * T toggles (not while typing, not with ctrl/alt/cmd). Tapping the OneDrive
- * name also goes back, for phones. The state lives in sessionStorage
+ * 0 toggles (the key lives in panic-app.js, shared with the game pages).
+ * Tapping the OneDrive name also goes back, for phones. The state lives in sessionStorage
  * (sortafun-panic), and a tiny script in index.html's <head> sets html.panic
  * before first paint, so coming back from a game never flashes the real site.
  * While it's on: the tab title and favicon change, sound is hushed
@@ -321,14 +321,7 @@
     }
   }
 
-  document.addEventListener("keydown", function (e) {
-    if (e.key !== "t" && e.key !== "T") return;
-    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
-    var t = e.target;
-    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-    e.preventDefault();
-    set(!root.classList.contains("panic"));
-  });
+  // the key (0) lives in panic-app.js, which calls set() on this page
 
   // the footer tip doubles as a button (no T key on a phone)
   var tip = document.getElementById("bosskey");

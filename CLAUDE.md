@@ -986,13 +986,12 @@ emulators are already running, load new rules with a `Bearer owner` PUT to
 `gallery.html` is still an easter egg: the only link is the seedling emoji in
 the footer (`#plant`, `aria-hidden`, `tabindex="-1"`).
 
-**Panic mode / boss key** (`panic.js`, 2026-09-29): press **T** on the
-homepage (or tap the T in the footer tip) and the page turns into a look-alike
-of the OneDrive home page. T again (or tapping the "OneDrive" name) goes back.
+**Panic mode / boss key** (`panic.js`, 2026-09-29): press **0** on the
+homepage (or tap the 0 in the footer tip) and the page turns into a look-alike
+of the OneDrive home page. 0 again (or tapping the "OneDrive" name) goes back.
 `html.panic` hides `.site` and shows `#od`, built once from `GAMES` / `ART` /
-`HANGOUT`. The category picks the file icon: word = Word, puzzle = Excel,
-skill = PowerPoint, online = Loop, art = OneNote, hang = PDF. New games show
-up there by themselves. The Copilot button borrows the real `#chat` node into
+`HANGOUT`. Each file's icon is the app it opens in (`FILES` in
+`panic-app.js`, below). New games show up there by themselves. The Copilot button borrows the real `#chat` node into
 its popup and puts it back on exit (never mount the chat twice). State is in
 sessionStorage `sortafun-panic`, applied by a tiny script in `<head>` before
 first paint. While it's on, it swaps the tab title and favicon, hides the
@@ -1008,8 +1007,14 @@ leaderboards, word = word games + text pages, ppt = action / online / art.
 app. It draws the title bar, tabs and ribbon, plus Excel's formula bar, grid
 and sheet tabs, Word's page and status bar, or PowerPoint's slide pane and
 slide. Then it restyles `.wrap` as the sheet object / page / slide and leaves
-the game inside alone. There's no key on game pages (games need their
-letters). The waffle and the app icon go back to the OneDrive page. **A new
+the game inside alone. **The key is 0 everywhere**, and `panic-app.js` owns
+it: a capture listener on `window` registered in `<head>`, so it runs before
+any game's own keys and swallows the 0 (City Sandbox loses 0 = fists; Q and
+the wheel still do it). It's ignored while typing in a visible box (the typing
+test's off-screen input still panics). On a game page it switches the disguise
+on and off in place, and going in it exits fullscreen and pointer lock. On
+the homepage it calls `SortafunPanic.set`. The waffle and the app icon go
+back to the OneDrive page. **A new
 game needs a `FILES` row** and the `panic-app.js` script tag, or it opens
 undisguised.
 

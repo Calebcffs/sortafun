@@ -1,14 +1,17 @@
 /* sortafun panic mode, part two: the game pages dress up as Office for the web.
  *
- * The homepage (panic.js) turns into OneDrive when you press T. Open a "file"
+ * The homepage (panic.js) turns into OneDrive when you press 0. Open a "file"
  * from there and this script, loaded in every page's <head>, picks the page
  * up in the same disguise: the Excel / Word / PowerPoint web app around it
  * (title bar, tabs, ribbon, formula bar / page / slide pane, status bar) and
  * the game itself sitting where the spreadsheet, page or slide would be.
  *
- * There's no key on game pages (the games need their letters, City uses T).
- * It's on when sessionStorage sortafun-panic is "1", which only the homepage
- * sets and clears. The waffle and the app icon go back to the OneDrive page.
+ * The panic key is 0, on every page, and this file owns it (on the homepage
+ * it calls panic.js). Ignored while you type in a box you can see, and it
+ * beats the games' own keys (City's 0 = fists). On a game page it switches
+ * the disguise on and off in place, and drops out of fullscreen / mouse lock
+ * going in. sessionStorage sortafun-panic carries it from page to page. The
+ * waffle and the app icon go back to the OneDrive page.
  *
  * FILES says which app each page opens in; panic.js reads it (and ICON) too,
  * so the icon you click on the homepage is the app you land in. While on:
@@ -83,17 +86,40 @@
   window.SortafunOffice = { FILES: FILES, ICON: ICON, appFor: appFor };
 
   // ---------------------------------------------------------------
-  // is this page in disguise?
+  // the panic key: 0, on every page (the homepage hands it to panic.js)
   // ---------------------------------------------------------------
-  var on = false;
-  try { on = sessionStorage.getItem("sortafun-panic") === "1"; } catch (e) {}
+  var KEY = "sortafun-panic";
+  var root = document.documentElement;
   var me = FILES[pageOf(location.pathname)];
-  if (!on || !me) return;
+
+  // typing into a box you can see? then 0 is just a 0. (the typing test's
+  // input sits off screen, and its words have no digits, so it still panics)
+  function typingHere(t) {
+    if (!t || !t.tagName) return false;
+    var editable = t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+    if (!editable) return false;
+    if (t.tagName === "INPUT" && /^(checkbox|radio|range|button|submit|reset|color|file)$/i.test(t.type)) return false;
+    var r = t.getBoundingClientRect();
+    var cs = getComputedStyle(t);
+    return r.width > 2 && r.height > 2 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight &&
+      cs.opacity !== "0" && cs.visibility !== "hidden";
+  }
+  // capture on window, registered in <head>: runs before any game's own keys
+  // (City Sandbox's 0 = fists never sees it; Q and the wheel still do fists)
+  window.addEventListener("keydown", function (e) {
+    if (e.key !== "0" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (typingHere(e.target)) return;
+    if (!me && !window.SortafunPanic) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.repeat) return;
+    if (window.SortafunPanic) SortafunPanic.set(!SortafunPanic.on());
+    else setApp(!appOn);
+  }, true);
+
+  if (!me) return;
 
   var NAME = me[0], APP = me[1];
-  var root = document.documentElement;
-  root.classList.add("panic", "od-app", "od-" + APP);
-
   var APPS = {
     excel: { title: "Excel", ext: ".xlsx", color: "#107c41", hover: "#0e6b38", search: "Search for tools, help, and more (Alt + Q)",
       tabs: ["File", "Home", "Insert", "Share", "Page Layout", "Formulas", "Data", "Review", "View", "Automate", "Help", "Draw"] },
@@ -104,18 +130,43 @@
   };
   var A = APPS[APP];
 
-  // tab title + favicon, straight away
-  document.title = NAME + A.ext;
+  // tab title + favicon: swapped in while on, the real ones put back after
   var favHref = "data:image/svg+xml," + encodeURIComponent(ICON[APP].replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" '));
-  function setFav() {
-    document.querySelectorAll("link[rel~='icon']").forEach(function (l) { l.parentNode.removeChild(l); });
-    var l = document.createElement("link");
-    l.rel = "icon";
-    l.href = favHref;
-    document.head.appendChild(l);
+  var ourFav = null, realIcons = [], realTitle = null;
+  function dress() {
+    if (realTitle === null) realTitle = document.title;
+    document.title = NAME + A.ext;
+    document.querySelectorAll("link[rel~='icon']").forEach(function (l) {
+      if (l !== ourFav) { realIcons.push(l); l.parentNode.removeChild(l); }
+    });
+    if (!ourFav) { ourFav = document.createElement("link"); ourFav.rel = "icon"; ourFav.href = favHref; }
+    if (!ourFav.parentNode) document.head.appendChild(ourFav);
   }
-  setFav();
-  if (window.SortafunSFX && SortafunSFX.hush) SortafunSFX.hush(true);
+  function undress() {
+    if (realTitle !== null) document.title = realTitle;
+    realTitle = null;
+    if (ourFav && ourFav.parentNode) ourFav.parentNode.removeChild(ourFav);
+    realIcons.forEach(function (l) { document.head.appendChild(l); });
+    realIcons = [];
+  }
+
+  var appOn = false;
+  function setApp(v) {
+    appOn = !!v;
+    try { if (appOn) sessionStorage.setItem(KEY, "1"); else sessionStorage.removeItem(KEY); } catch (e) {}
+    root.classList.toggle("panic", appOn);
+    root.classList.toggle("od-app", appOn);
+    root.classList.toggle("od-" + APP, appOn);
+    if (window.SortafunSFX && SortafunSFX.hush) SortafunSFX.hush(appOn);
+    if (!appOn) { undress(); return; }
+    dress();
+    ensureBuilt();
+    // a fullscreen or mouse-locked game would sit on top of the disguise
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {}); } catch (e) {}
+    try { if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen(); } catch (e) {}
+    try { if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } catch (e) {}
+    if (window.SortafunFB && SortafunFB.close) { try { SortafunFB.close(); } catch (e) {} }
+  }
 
   // ---------------------------------------------------------------
   // ribbon + chrome icons (Fluent-ish outlines, 20px)
@@ -329,6 +380,7 @@
   var BOT = APP === "excel" ? 36 + 26 : 28;
   var FONT = "'Segoe UI','Segoe UI Web (West European)',-apple-system,BlinkMacSystemFont,Roboto,'Helvetica Neue',sans-serif";
   var css = [
+    "html:not(.od-app) .od-chrome,html:not(.od-app) .od-foot,html:not(.od-app) .od-thumbs,html:not(.od-app) .od-rows{display:none!important;}",
     // hide the sortafun shell
     "html.od-app .homebar,html.od-app .sitefoot,html.od-app .fb-bubble,html.od-app .fb-strip,html.od-app .fb-navbtn,html.od-app .wrap .back{display:none!important;}",
     "html.od-app,html.od-app body{background:#f5f5f5!important;background-image:none!important;}",
@@ -467,8 +519,22 @@
   st.textContent = css;
   document.head.appendChild(st);
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", build);
-  else build();
-  // some pages set their own title / icon after load; keep ours
-  window.addEventListener("load", function () { document.title = NAME + A.ext; setFav(); });
+  // the chrome is built the first time it's needed, once the page is there
+  var built = false, waiting = false;
+  function ensureBuilt() {
+    if (built) return;
+    if (document.readyState === "loading") {
+      if (!waiting) { waiting = true; document.addEventListener("DOMContentLoaded", ensureBuilt); }
+      return;
+    }
+    built = true;
+    build();
+  }
+
+  // came here with panic on (from the OneDrive page, or a reload): dress up now
+  var start = false;
+  try { start = sessionStorage.getItem(KEY) === "1"; } catch (e) {}
+  if (start) setApp(true);
+  // some pages set their own title / icon after load; keep ours while on
+  window.addEventListener("load", function () { if (appOn) dress(); });
 })();
