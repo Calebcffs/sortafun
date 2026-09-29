@@ -210,9 +210,17 @@
   var MINGAP = { tick: 0.035, type: 0.02 };
   var lastAt = {};
   var lastResult = 0;
+  // hush(true) silences everything for now without touching the saved
+  // sound / music switches (the homepage's panic mode uses it)
+  var hushed = false;
+  function hush(on) {
+    hushed = !!on;
+    if (hushed) musicStop();
+    else if (wantsMusic && musicOn && soundOn && unlocked && !document.hidden) musicStart();
+  }
 
   function play(name) {
-    if (!soundOn || !unlocked) return;
+    if (!soundOn || !unlocked || hushed) return;
     var fn = SOUNDS[name];
     if (!fn || !ac()) return;
     // (still resuming after the first gesture is fine: the notes wait for it)
@@ -336,7 +344,7 @@
   }
 
   function musicStart() {
-    if (music.timer || !ac() || !unlocked) return;
+    if (hushed || music.timer || !ac() || !unlocked) return;
     buildSong();
     restorePos();
     if (ctx.state !== "running") ctx.resume();
@@ -557,6 +565,7 @@
     whenReady: whenReady,
     enabled: function () { return soundOn; },
     setEnabled: setSound,
+    hush: hush,
     music: { auto: musicAuto, start: function () { setMusic(true); }, stop: function () { setMusic(false); }, playing: function () { return !!music.timer; },
       position: function () { return { step: music.step, loop: music.loop, level: musicLevel }; } },
     sounds: Object.keys(SOUNDS),

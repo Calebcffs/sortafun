@@ -986,6 +986,20 @@ emulators are already running, load new rules with a `Bearer owner` PUT to
 `gallery.html` is still an easter egg: the only link is the seedling emoji in
 the footer (`#plant`, `aria-hidden`, `tabindex="-1"`).
 
+**Panic mode / boss key** (`panic.js`, 2026-09-29): press **T** on the
+homepage (or tap the T in the footer tip) and the page turns into a look-alike
+of the OneDrive home page. T again (or tapping the "OneDrive" name) goes back.
+`html.panic` hides `.site` and shows `#od`, built once from `GAMES` / `ART` /
+`HANGOUT`. The category picks the file icon: word = Word, puzzle = Excel,
+skill = PowerPoint, online = Loop, art = OneNote, hang = PDF. New games show
+up there by themselves. The Copilot button borrows the real `#chat` node into
+its popup and puts it back on exit (never mount the chat twice). State is in
+sessionStorage `sortafun-panic`, applied by a tiny script in `<head>` before
+first paint. While it's on, it swaps the tab title and favicon, hides the
+feedback bubble and calls `SortafunSFX.hush(true)`, which mutes without
+touching the saved sound switches. Every icon is drawn inline and all the
+people in it are made up.
+
 Carried over:
 - **Hit counter** -> `#hits` ("you are visitor no."), once per session
   (`sessionStorage sortafun-visited`, `SortafunLB.bumpHits` / `getHits`).

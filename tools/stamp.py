@@ -32,7 +32,9 @@ os.chdir(ROOT)
 
 def digest(path):
     with open(path, "rb") as f:
-        return hashlib.sha1(f.read()).hexdigest()[:8]
+        # hash with LF endings: a Windows checkout (autocrlf) has CRLF on disk,
+        # but git stores and Pages serves LF, and the stamp must match that
+        return hashlib.sha1(f.read().replace(b"\r\n", b"\n")).hexdigest()[:8]
 
 
 # src="x.js" / href="/game.css" / src="birdie/main.js?v=old" ... local files only
