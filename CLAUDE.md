@@ -1000,6 +1000,19 @@ feedback bubble and calls `SortafunSFX.hush(true)`, which mutes without
 touching the saved sound switches. Every icon is drawn inline and all the
 people in it are made up.
 
+Open a "file" while it's on and the game page comes up disguised as Office
+for the web (`panic-app.js`, in every page's `<head>` after `feedback.js`).
+Its `FILES` table maps each page to a name and an app: excel = grid games +
+leaderboards, word = word games + text pages, ppt = action / online / art.
+`panic.js` reads the same table and `ICON`s, so the homepage icon matches the
+app. It draws the title bar, tabs and ribbon, plus Excel's formula bar, grid
+and sheet tabs, Word's page and status bar, or PowerPoint's slide pane and
+slide. Then it restyles `.wrap` as the sheet object / page / slide and leaves
+the game inside alone. There's no key on game pages (games need their
+letters). The waffle and the app icon go back to the OneDrive page. **A new
+game needs a `FILES` row** and the `panic-app.js` script tag, or it opens
+undisguised.
+
 Carried over:
 - **Hit counter** -> `#hits` ("you are visitor no."), once per session
   (`sessionStorage sortafun-visited`, `SortafunLB.bumpHits` / `getHits`).
