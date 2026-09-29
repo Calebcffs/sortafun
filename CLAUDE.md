@@ -873,6 +873,17 @@ The homepage has an **Online** filter chip (`cat: "online"`, colour
 `--online` / `body.k-online` in `game.css`); City Sandbox and Draw and Guess
 are in it.
 
+### The site version (`feedback.js` `VERSION`)
+
+Since 2026-09-29 the site has a version, starting at **v0.1**. It lives in
+one place, `VERSION` at the top of `feedback.js` (loaded on every page), which
+writes "(Alpha) v0.1" next to every logo (`.hb-logo small`, homepage
+`.logo h1 .alpha`) and sends `ver` with every piece of feedback, so a bug
+report says which version it came from. **Every update that ships bumps it**
+(Caleb's ask): +0.0.1 for fixes and small changes (v0.1 -> v0.1.1), +0.1 for
+something big (a new game or system). Start the What's New line with the new
+version in bold. Then `tools/stamp.py` as usual (feedback.js changed).
+
 ### Feedback (`feedback.js`)
 
 Sortafun is badged **alpha** (logo is "Sortafun (Alpha)" everywhere: the
@@ -883,7 +894,10 @@ It adds, on DOMContentLoaded:
 
 - a pink "Rate" (game pages) / "Feedback" button in `.homebar .hb-nav` (or the
   homepage `nav.nav`, before the search box)
-- a floating speech bubble, bottom right. The homepage always shows it; other
+- a floating speech bubble, bottom right, big on purpose (Caleb wanted it more
+  prominent, 2026-09-29), and it wiggles every 20s (`wiggleNow`, which waves
+  the nav button instead when the bubble is tucked away; skipped while the
+  form is open, typing, fullscreen or panic mode). The homepage always shows it; other
   pages only when there is clear sky right of the `.wrap` / `.room` window
   (so it never covers a game), and never in fullscreen / pointer lock or
   while `body.typing`
@@ -974,14 +988,25 @@ room on the Realtime Database (the City Sandbox one) with anonymous auth:
 `chat/msgs` (push ids, `{u, n, m, t}`, last 60 shown), `chat/last/<uid>`
 (rules make messages 1.5s apart: the message and `last` go in one
 multi-path update and the message's rule checks `last` === now),
-`chat/online/<uid>` (onDisconnect remove, the "N here now" count). Anyone
-may delete a message older than a week; each sender tidies up to 5.
+`chat/online/<uid>` (onDisconnect remove, the "N here now" count). **The
+room only lasts a day (2026-09-29):** it queries `orderByChild("t")` from
+Singapore midnight (`.indexOn: t` in the rules), wipes the screen and
+reconnects when the day flips, and anyone may delete a message from before
+today's SGT midnight (the rule computes it: `now - ((now + 28800000) %
+86400000)`). Each sender and each newcomer tidies up to 5 old ones.
 **Spark allows 100 concurrent RTDB connections, shared with City Sandbox and Draw and Guess**,
 so the room only connects when it scrolls into view and hangs up after 60s
 hidden or 10 min idle (click in it to wake). Name = the leaderboards'
 `sortafun-name`. Test with the emulators: `index.html?emu` on localhost (if
 emulators are already running, load new rules with a `Bearer owner` PUT to
 `/.settings/rules.json?ns=sortafun-ba7cb-default-rtdb`).
+
+**Featured game** (`#featured`, top of the homepage): Deep Time since
+2026-09-29 (was City Sandbox). The art is Deep Time's own `THUMB` drawing
+blown up to 16:9 (`#featshot`, drawn in by the script) under a CSS camcorder
+overlay; headless Chrome can't grab a real WebGL frame of it (the canvas
+capture stays stale). Drop `<img>`s into `.feature-shot` for real
+screenshots: the cross-fade script rotates any number of them.
 
 `gallery.html` is still an easter egg: the only link is the seedling emoji in
 the footer (`#plant`, `aria-hidden`, `tabindex="-1"`).

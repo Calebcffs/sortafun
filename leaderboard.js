@@ -374,6 +374,7 @@
         name: String(f.name || "").trim().slice(0, 20),
         page: String(f.page || location.pathname || "/").slice(0, 80),
         day: dayStr(),
+        ver: String(window.SORTAFUN_VERSION || "").slice(0, 12),
         ts: fs.serverTimestamp(),
       });
     });

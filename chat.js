@@ -4,8 +4,10 @@
  *   chat/msgs/<pushId>  { u: uid, n: name, m: text, t: server time }
  *   chat/last/<uid>     server time of your last message (rules: 1.5s apart)
  *   chat/online/<uid>   server time, removed on disconnect (the "here now" count)
- * Rules are in database.rules.json. Anyone may delete a message older than a
- * week, and every sender tidies a few of those up, so the room never grows.
+ * The room only lasts a day: it loads messages from Singapore midnight on
+ * (orderByChild t, indexed), wipes the screen when the day flips, and anyone
+ * may delete a message from before today (rules in database.rules.json), which
+ * every sender and every newcomer tidies a few of, so the room never grows.
  *
  * The free plan caps the database at 100 live connections, shared with City
  * Sandbox and Draw and Guess, so the room only connects once it scrolls into view and hangs up
@@ -19,7 +21,9 @@
 
   var SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
   var SHOW = 60;                     // messages loaded on connect
-  var WEEK = 7 * 86400000;
+  var DAY = 86400000, SGT = 8 * 3600000;
+  // Singapore midnight (the site's day) at or before t
+  function dayStart(t) { return Math.floor((t + SGT) / DAY) * DAY - SGT; }
   var HIDDEN_HANGUP = 60 * 1000;     // tab hidden this long = hang up
   var IDLE_HANGUP = 10 * 60 * 1000;  // no mouse/keys this long = hang up
   var NAME_KEY = "sortafun-name";    // same name the leaderboards use
@@ -100,6 +104,8 @@
     var sendBtn = root.querySelector("#chatSend");
     nameIn.value = readName();
 
+    var today = 0;         // Singapore midnight the room is showing
+    var note = "";         // said once the room reconnects (the day flip)
     var c = null;          // the connection, once we have it
     var live = false;      // listeners attached and online
     var subs = [];         // unsubscribe functions
@@ -136,6 +142,16 @@
       if (!loading && c && v.u !== c.uid && window.SortafunSFX) SortafunSFX.play("pop");
     }
 
+    // midnight in Singapore: a clean room
+    setInterval(function () {
+      if (!live || !c || dayStart(c.now()) === today) return;
+      hangUp();
+      log.innerHTML = "";
+      shown = {};
+      note = "(it's a new day. the room's been wiped clean.)";
+      goLive();
+    }, 20000);
+
     function goLive() {
       if (live) return;
       live = true;
@@ -146,16 +162,19 @@
         var db = c.db;
         db.goOnline(c.database);
         if (!Object.keys(shown).length) log.innerHTML = "";
+        if (note) { sys(note); note = ""; }
         loading = true;
-        var q = db.query(c.ref("msgs"), db.limitToLast(SHOW));
+        today = dayStart(c.now());
+        var q = db.query(c.ref("msgs"), db.orderByChild("t"), db.startAt(today), db.limitToLast(SHOW));
         subs.push(db.onChildAdded(q, function (s) { addMsg(s.key, s.val()); }));
         subs.push(db.onChildRemoved(q, function (s) {
           // only drop what the server deleted, not what just scrolled out of the last SHOW
-          if (shown[s.key] && s.val() && c.now() - s.val().t > WEEK) { shown[s.key].remove(); delete shown[s.key]; }
+          if (shown[s.key] && s.val() && s.val().t < today) { shown[s.key].remove(); delete shown[s.key]; }
         }));
         db.get(q).then(function (snap) {
           loading = false;
-          if (!snap.exists() && !Object.keys(shown).length) sys("nobody's said anything this week. go on, be first.", "chat-empty");
+          tidy();
+          if (!snap.exists() && !Object.keys(shown).length) sys("nobody's said anything today. the room wipes clean at midnight. go on, be first.", "chat-empty");
         }).catch(function () { loading = false; });
 
         // presence: "3 here now"
@@ -250,7 +269,7 @@
       db.get(db.query(c.ref("msgs"), db.limitToFirst(5))).then(function (snap) {
         snap.forEach(function (ch) {
           var v = ch.val();
-          if (v && c.now() - v.t > WEEK + 60000) db.remove(ch.ref).catch(function () {});
+          if (v && v.t < dayStart(c.now()) - 60000) db.remove(ch.ref).catch(function () {});
         });
       }).catch(function () {});
     }

@@ -314,6 +314,19 @@
   .feature-shot { position: relative; overflow: hidden; border-right: 3px solid var(--ink); aspect-ratio: 16 / 9; background: #7fb4e0; }
   .feature-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 1.2s, transform 6s; }
   .feature-shot img.off { opacity: 0; }
+  .feature-shot > svg { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform 6s; }
+  .feature-body:hover .feature-shot > svg { transform: scale(1.04); }
+  .dt-shot { background: #101814; }
+  .dt-shot .vhs {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    font: 700 15px/1.2 "Courier New", monospace; color: #f2f2e8; text-shadow: 2px 2px 0 #000;
+    background: repeating-linear-gradient(transparent 0 2px, rgba(0,0,0,.18) 2px 4px);
+  }
+  .dt-shot .vhs b { position: absolute; right: 40px; top: 12px; font-weight: 700; }
+  .dt-shot .vhs i { position: absolute; left: 16px; bottom: 12px; font-style: normal; }
+  .dt-shot .vhs em { position: absolute; right: 16px; bottom: 12px; font-style: normal; text-align: right; }
+  .dt-shot .vhs::after { content: ""; position: absolute; right: 18px; top: 14px; width: 12px; height: 12px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 6px #ff3b30; animation: rec 1s steps(1) infinite; }
+  @keyframes rec { 50% { opacity: 0; } }
   .feature-body:hover .feature-shot img { transform: scale(1.04); }
   .feature-shot .ribbon {
     position: absolute; top: 14px; left: -34px; transform: rotate(-35deg);
@@ -787,7 +800,7 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=8e2793bd"></script>
+<script src="feedback.js?v=37bc65a6"></script>
 <script src="panic-app.js?v=46971910"></script>
 </head>
 <body>
@@ -845,20 +858,19 @@
 
   <!-- ================= FEATURED ================= -->
   <section class="panel feature" id="featured">
-    <div class="panel-head"><h2>&#9733; Featured Game</h2><p>our biggest one yet. a whole 3D world in your browser.</p></div>
-    <a class="feature-body" href="city.html">
-      <span class="feature-shot">
-        <img src="city/city-feature.jpg" alt="a player with an assault rifle on a city street in city sandbox" width="960" height="540">
-        <img class="off" src="city/city-plane.jpg" alt="the secret prop plane flying over the city in city sandbox" width="960" height="540" loading="lazy">
+    <div class="panel-head"><h2>&#9733; Featured Game</h2><p>our scariest one yet. headphones on, lights off.</p></div>
+    <a class="feature-body" href="deeptime.html">
+      <span class="feature-shot dt-shot" id="featshot">
+        <span class="vhs" aria-hidden="true"><b>PLAY &#9654;</b><i>SP 0:14:23</i><em>OCT 14 1987<br>11:52:07 PM</em></span>
         <span class="ribbon">NEW!</span>
       </span>
       <span class="feature-text">
-        <h3>City Sandbox</h3>
-        <p>a whole open world city at golden hour, overrun by zombies, online with up to 50 people. loot it, barricade it, get down into the metro.</p>
+        <h3>Deep Time</h3>
+        <p>a camcorder tape from a forest in montana, october 1987. something came through a hole in time. find the 8 parts of the machine before it finds you.</p>
         <ul>
-          <li>gun cases, chests and boxes full of cash, guns and loot</li>
-          <li>hijack cars, ride bikes, find the plane in the secret hangar</li>
-          <li>a shop for guns, rides and outfits. the wardens are watching</li>
+          <li>a flashlight, a camcorder, and eight parts hidden across the woods</li>
+          <li>the tall one skips closer every time you look away</li>
+          <li>and she is out there too. you'll hear her first</li>
         </ul>
         <span class="play-big">PLAY NOW! &#9654;</span>
       </span>
@@ -922,11 +934,11 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul>
+        <li><span class="when">09-29</span> <b>v0.1</b>: sortafun has a version number now, it goes up with every update. <b>deep time</b> is the featured game, the chatroom wipes clean at midnight every night, and the feedback bubble got bigger. use it.</li>
         <li><span class="when">09-28</span> NEW: <b>deep time</b>. a found-footage horror game. find the 8 parts of the time machine in the woods at night. the tall one skips closer every time you look away. and she is out there too.</li>
         <li><span class="when">09-28</span> tidied the place up. smaller game tiles so they all fit, a live chatroom in the hangout, and the music stays off till you press the note button. the basement got bricked up.</li>
         <li><span class="when">09-28</span> NEW: <b>draw and guess</b>. make a room, send your friends the link, one draws and everyone else guesses in the chat. our first party game.</li>
         <li><span class="when">09-28</span> sortafun is officially in <b>alpha</b>. every game has a feedback bubble now: rate it 0 to 5 stars, report a bug, or pitch an idea.</li>
-        <li><span class="when">09-27</span> city sandbox has a story mode: HALCYON. 12 chapters, three nights, cutscenes, a sniper vigil, a plane, the metro, and a very tall ladder.</li>
       </ul>
     </section>
     <section class="panel howto">
@@ -955,8 +967,8 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=f52f1ce8"></script>
-<script src="chat.js?v=2d14dd27"></script>
+<script src="leaderboard.js?v=9dddb334"></script>
+<script src="chat.js?v=c91bdfe8"></script>
 <script>
 "use strict";
 
@@ -1575,6 +1587,14 @@ if (window.SortafunChat) SortafunChat.mount(document.getElementById("chat"));
   el.innerHTML =
     '<span class="thumb">' + thumb(g.id) + "</span>" +
     "<div><h3>" + esc(g.name) + "</h3><p>" + esc(g.blurb) + '</p><span class="play-big">PLAY NOW! &#9654;</span></div>';
+})();
+
+/* featured banner: Deep Time's tile art, big (swap for screenshots later: the
+   cross-fade below takes any number of <img>s) */
+(function () {
+  var shot = document.getElementById("featshot");
+  if (shot && THUMB.deeptime) shot.insertAdjacentHTML("afterbegin",
+    '<svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="a t. rex silhouette against a misty moon in the pine woods, seen through a camcorder">' + THUMB.deeptime() + "</svg>");
 })();
 
 /* featured banner: cross-fade between screenshots */

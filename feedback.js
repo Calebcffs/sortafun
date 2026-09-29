@@ -1,5 +1,9 @@
 /* sortafun feedback: the "rate this game" bubble on every page.
  *
+ * It also owns the site version: SORTAFUN_VERSION below is written next to
+ * the logo on every page ("(Alpha) v0.1") and sent with each piece of
+ * feedback. Bump it with every update that ships (see CLAUDE.md).
+ *
  * Load it in <head> (like sfx.js) on every page:
  *   <script src="feedback.js"></script>
  * It works out which game/page it's on from the filename (PAGES below), or
@@ -25,6 +29,11 @@
  */
 (function () {
   "use strict";
+
+  // the site version. every update that ships bumps it: +0.0.1 for fixes and
+  // small things, +0.1 for a big one (a new game, a new system)
+  var VERSION = "0.1";
+  window.SORTAFUN_VERSION = VERSION;
 
   // every page, keyed by id. game: true = a thing you play (gets the star strip
   // and "rate this game"). The ids match the homepage's tile ids.
@@ -109,24 +118,26 @@
         "--fb-body:Verdana,Tahoma,'DejaVu Sans',Geneva,sans-serif;font-family:var(--fb-body);color:var(--fb-ink);}",
 
       /* the floating speech bubble */
-      ".fb-bubble{position:fixed;right:18px;bottom:18px;z-index:9000;display:flex;align-items:center;gap:7px;",
-        "font:400 17px/1 var(--fb-chunky);color:#fff;letter-spacing:.3px;text-shadow:0 2px 0 rgba(0,0,0,.3);",
-        "background:linear-gradient(var(--fb-hot2),var(--fb-hot));border:3px solid var(--fb-ink);border-radius:18px;",
-        "padding:10px 15px 9px 12px;cursor:pointer;box-shadow:0 5px 0 var(--fb-ink);transition:transform .12s,opacity .2s;}",
-      ".fb-bubble::after{content:'';position:absolute;right:22px;bottom:-13px;width:16px;height:16px;",
-        "background:var(--fb-hot);border-right:3px solid var(--fb-ink);border-bottom:3px solid var(--fb-ink);",
+      ".fb-bubble{position:fixed;right:20px;bottom:24px;z-index:9000;display:flex;align-items:center;gap:10px;",
+        "font:400 25px/1 var(--fb-chunky);color:#fff;letter-spacing:.4px;text-shadow:0 2px 0 rgba(0,0,0,.3);",
+        "background:linear-gradient(var(--fb-hot2),var(--fb-hot));border:4px solid var(--fb-ink);border-radius:24px;",
+        "padding:15px 22px 14px 17px;cursor:pointer;box-shadow:0 6px 0 var(--fb-ink);transition:transform .12s,opacity .2s;}",
+      ".fb-bubble::after{content:'';position:absolute;right:30px;bottom:-17px;width:21px;height:21px;",
+        "background:var(--fb-hot);border-right:4px solid var(--fb-ink);border-bottom:4px solid var(--fb-ink);",
         "transform:skewY(40deg) rotate(8deg);border-radius:0 0 4px 0;}",
       ".fb-bubble:hover{transform:translateY(-3px) rotate(-2deg);}",
       ".fb-bubble:active{transform:translateY(2px);box-shadow:0 2px 0 var(--fb-ink);}",
       ".fb-bubble:focus-visible{outline:3px solid #ffd43b;outline-offset:3px;}",
-      ".fb-bubble svg{width:20px;height:20px;flex:none;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25));}",
-      ".fb-bubble small{display:block;font:700 10px/1.1 var(--fb-body);letter-spacing:0;text-shadow:none;opacity:.95;margin-top:2px;}",
+      ".fb-bubble svg{width:30px;height:30px;flex:none;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25));}",
+      ".fb-bubble small{display:block;font:700 12.5px/1.15 var(--fb-body);letter-spacing:0;text-shadow:none;opacity:.95;margin-top:4px;}",
       ".fb-bubble.fb-hide{opacity:0;pointer-events:none;transform:translateY(20px);}",
       ".fb-bubble.fb-init{transition:none;}",
       ".fb-bubble.fb-wave,.fb-navbtn.fb-wave{animation:fb-wave .9s ease-in-out 3;}",
       "@keyframes fb-wave{25%{transform:rotate(-6deg) scale(1.08);}75%{transform:rotate(5deg) scale(1.08);}}",
+      "@media (prefers-reduced-motion:reduce){.fb-bubble.fb-wave,.fb-navbtn.fb-wave{animation:none;}}",
       "body.typing .fb-bubble,body.typing .fb-strip{opacity:0;pointer-events:none;}",
-      "@media (max-width:640px){.fb-bubble{right:10px;bottom:12px;font-size:15px;padding:8px 12px 7px 10px;}",
+      "@media (max-width:640px){.fb-bubble{right:10px;bottom:14px;font-size:19px;padding:10px 15px 9px 12px;border-width:3px;}",
+        ".fb-bubble svg{width:22px;height:22px;}",
         ".fb-bubble small{display:none;}}",
 
       /* the button in the yellow nav bar */
@@ -520,12 +531,30 @@
     el.classList.add("fb-wave");
   }
 
+  // every 20s the bubble (or the nav button, if the bubble's tucked away)
+  // gives a little wiggle, so nobody can say they didn't see it
+  function wiggleNow() {
+    if (document.hidden || openState || document.fullscreenElement || document.pointerLockElement) return;
+    if (document.body.classList.contains("typing") || document.documentElement.classList.contains("panic")) return;
+    nudge();
+  }
+
+  // "(Alpha)" next to the logo becomes "(Alpha) v0.1"
+  function showVersion() {
+    document.querySelectorAll(".hb-logo small, .logo h1 .alpha").forEach(function (el) {
+      el.textContent = "(Alpha) v" + VERSION;
+    });
+  }
+
   function boot() {
     here = pageItem();
     injectStyle();
+    showVersion();
     addNavButton();
     addBubble();
     addStrip();
+    setTimeout(wiggleNow, 6000);
+    setInterval(wiggleNow, 20000);
     if (location.hash === "#feedback") open();
   }
 
