@@ -1559,7 +1559,7 @@ export function tick(dt, t, cam) {
       l.t = l.flick < 0.8 ? 0.03 + Math.random() * 0.12 : (l.mode === "flicker" ? 0.1 + Math.random() * 0.9 : 0.4 + Math.random() * 3);
     }
     l.on += (l.target - l.on) * Math.min(1, dt * 4);
-    const k = l.on * l.flick * (l.boost || 1);
+    const k = l.on * l.flick * (l.boost === undefined ? 1 : l.boost); // (boost 0 = switched off for a while; || 1 used to turn it back on)
     l.bulb.visible = k > 0.05 || l.mode === "dead";
     l.halo.visible = k > 0.05;
     l.halo.material.opacity = 0.55 * k;
@@ -1571,6 +1571,6 @@ export function tick(dt, t, cam) {
     if (!e || e[0] > 40 * 40) { P.intensity = 0; return; }
     const l = e[1];
     P.position.copy(l.pos); P.color.copy(l.color); P.distance = l.K.range;
-    P.intensity = l.K.power * l.on * l.flick * (l.boost || 1);
+    P.intensity = l.K.power * l.on * l.flick * (l.boost === undefined ? 1 : l.boost);
   });
 }

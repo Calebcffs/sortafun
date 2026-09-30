@@ -302,6 +302,13 @@ function tryPickup() {
   G.got++; G.level = G.got;
   G.noiseSpike = Math.max(G.noiseSpike, 0.45);
   Audio.oneShot("pickup", { vol: 0.8 });
+  // taking a sample costs you light: every lamp nearby goes out for a while, and the tunnels get a little darker for good
+  for (const l of LV.L.lamps) {
+    if (!["hang", "cage", "fluoro", "sodium"].includes(l.kind)) continue;
+    if (Math.hypot(l.pos.x - G.player.x, l.pos.z - G.player.z) < 26) { l.boost = 0; const back = 6 + Math.random() * 9; later(back, () => { l.boost = 1; }); }
+    if (l.mode === "on" && hashCell(l.pos.x, l.pos.z) < 0.09 * G.got) { l.mode = "flicker"; }
+  }
+  later(0.5, () => Audio.boom(0.55));
   const el = $("note"); el.innerHTML = ""; el.appendChild(bagCanvas(G.got, s.kind, FINDINGS[G.got - 1])); el.hidden = false;
   G.noteT = 4.2;
   G.countT = 4;
@@ -777,7 +784,10 @@ function tickPlay(dt) {
   for (const r of raptors) if (r.active) { near = Math.min(near, r.dist); if (r.state === "chase" || r.state === "alert" || r.state === "finale") hunting = true; }
   const fearT = Math.max(clamp01(1 - near / 18) * 0.8, hunting ? 1 : 0, fin ? 0.9 : 0);
   G.fear += (fearT - G.fear) * Math.min(1, dt * 1.5);
-  G.static += ((hunting ? clamp01(1 - near / 12) * 0.35 : 0) - G.static) * Math.min(1, dt * 3);
+  const prox = clamp01(1 - near / 15);                       // one close by, noticed you or not
+  G.static += ((hunting ? clamp01(1 - near / 12) * 0.35 : prox * prox * 0.3) - G.static) * Math.min(1, dt * 3);
+  if (prox > 0.2 && Math.random() < dt * (0.5 + prox * 5)) G.flickerT = 0.12 + Math.random() * 0.3; // the torch stutters as it gets close
+  dreadDirector(dt, under, near);
   // ---------- sound
   ambience(dt, zone, under, near);
   Audio.tickMusic(Math.min(8, Math.round(G.level * 1.6)), G.fear);
@@ -1022,6 +1032,82 @@ function steam(dt) {
     p.s.material.opacity = Math.max(0, 0.35 * (1 - p.t / 2.5));
     if (p.t > 2.5) { scene.remove(p.s); puffs.splice(i, 1); }
   }
+}
+
+// ------------------------------------------------------------------
+// small frights that aren't set pieces: eyes at the edge of your beam, something crossing the tunnel ahead,
+// something skittering behind you. rare, and never while one is already on you
+// ------------------------------------------------------------------
+const hashCell = (x, z) => { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); };
+let glints = null;
+function dreadDirector(dt, under, near) {
+  if (!under || G.got < 1 || G.underT < 25 || near < 34) { if (glints) hideGlints(); return; }
+  G.glintT = (G.glintT === undefined ? 20 : G.glintT) - dt;
+  if (glints) tickGlints(dt);
+  if (G.glintT > 0 || glints) return;
+  G.glintT = 28 + Math.random() * 30 - G.got * 3;
+  const r = Math.random();
+  if (r < 0.4) spawnGlints();
+  else if (r < 0.7) crossAhead();
+  else behindSkitter();
+}
+// two dull red eyes down the tunnel, gone the moment your beam finds them
+function spawnGlints() {
+  for (let k = 0; k < 14; k++) {
+    const a = G.yaw + (Math.random() - 0.5) * 0.7, d = 11 + Math.random() * 9;
+    const x = G.player.x - Math.sin(a) * d, z = G.player.z - Math.cos(a) * d;
+    if (M.solid(M.charAt(x, z)) || M.zoneAt(x, z) === "surface" || !M.lineClear(G.player.x, G.player.z, x, z)) continue;
+    if (Math.abs(M.floorAt(x, z) - G.player.y) > 1.5) continue;
+    const y = M.floorAt(x, z) + 1.6, sp = [];
+    for (const s of [-1, 1]) {
+      const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0xc01810, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, fog: false }));
+      e.scale.setScalar(0.16); e.position.set(x + Math.cos(a) * 0.16 * s, y, z - Math.sin(a) * 0.16 * s); scene.add(e); sp.push(e);
+    }
+    glints = { sp, t: 0, life: 1.6 + Math.random() * 1.2, pos: new THREE.Vector3(x, y - 0.6, z), lit: 0 };
+    Audio.oneShot("rap_growl", { pos: glints.pos, vol: 0.35, ref: 3, rate: 1.2 });
+    return;
+  }
+  G.glintT = 4;
+}
+function tickGlints(dt) {
+  const g = glints; g.t += dt;
+  if (G.beamOn(g.pos, 0.6)) g.lit += dt;
+  const blink = g.t > 0.7 && g.t < 0.85; // one blink
+  for (const e of g.sp) e.visible = !blink;
+  if (g.lit > 0.25 || g.t > g.life) {
+    // it moves off fast: claws going away
+    if (g.lit > 0.25) { Audio.oneShot("claws", { pos: g.pos, vol: 0.8, ref: 3, rate: 1.35, len: 0.5 }); G.noiseSpike = Math.max(G.noiseSpike, 0.1); tape.kick(0.25); }
+    hideGlints();
+  }
+}
+function hideGlints() { if (!glints) return; for (const e of glints.sp) scene.remove(e); glints = null; }
+// something big goes across a junction ahead of you, at a run, in and out of your light
+function crossAhead() {
+  if (phantom.state !== "off" && phantom.d.visible) { G.glintT = 5; return; }
+  const fx = -Math.sin(G.yaw), fz = -Math.cos(G.yaw);
+  for (let d = 8; d <= 17; d++) {
+    const x = G.player.x + fx * d, z = G.player.z + fz * d, cx = M.cellOf(x), cz = M.cellOf(z);
+    if (M.solid(M.at(cx, cz))) break;
+    // a cell with an opening to each side of the way you're facing
+    const px = -fz, pz = fx;
+    const ax = (cx + 0.5) * C, az = (cz + 0.5) * C;
+    const a = [ax + px * 5.2, az + pz * 5.2], b = [ax - px * 5.2, az - pz * 5.2];
+    if (M.solid(M.charAt(a[0], a[1])) || M.solid(M.charAt(b[0], b[1]))) continue;
+    if (!M.lineClear(a[0], a[1], b[0], b[1]) || M.zoneAt(ax, az) === "surface") continue;
+    walkPhantom(Math.random() < 0.5 ? a : b, Math.random() < 0.5 ? b : a, 9.5, "run");
+    Audio.oneShot("rap_hiss", { pos: tmp.set(ax, G.player.y + 1.2, az), vol: 0.35, ref: 4, rate: 1.1, delay: 0.3 });
+    return;
+  }
+  G.glintT = 6;
+}
+// claws behind you, close, then nothing
+function behindSkitter() {
+  const behind = G.yaw + Math.PI + (Math.random() - 0.5) * 0.8;
+  for (let i = 0; i < 4; i++) {
+    const d = 9 - i * 1.6, x = G.player.x - Math.sin(behind) * d, z = G.player.z - Math.cos(behind) * d;
+    Audio.oneShot("claws", { pos: tmp.set(x, G.player.y + 0.1, z), vol: 0.7, ref: 2.5, rate: 1.15 + Math.random() * 0.15, delay: i * 0.22, len: 0.4, reverb: 0.8 });
+  }
+  tape.kick(0.15);
 }
 
 // ------------------------------------------------------------------

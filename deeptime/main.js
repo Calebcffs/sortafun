@@ -509,6 +509,8 @@ function tryPickup() {
   $("count").textContent = `PARTS ${G.got}/8`;
   if (G.got === 1) G.roarT = 50;
   rex.onPickup(G);
+  G.hushT = 7;                                  // the forest goes quiet
+  Audio.oneShot("rex_huff", { pos: tmp.set(G.player.x - Math.sin(G.yaw + Math.PI) * 60, G.player.y + 1, G.player.z - Math.cos(G.yaw + Math.PI) * 60), vol: 0.5, ref: 12, rate: 0.7, delay: 1.2 });
   if (G.got === 8) toMast();
 }
 // all 8: the mast light starts strobing, go
@@ -939,7 +941,7 @@ function placeCamera(dt) {
   const on = G.lightOn && !G.presentDay;
   let I = on ? G.flashPower * (0.25 + 0.75 * clamp01(G.battery / 0.3)) : 0;
   if (on && G.battery < 0.15 && Math.random() < 0.08) I *= 0.2;
-  if (on && G.static > 0.3 && Math.random() < G.static * 0.3) I *= Math.random(); // it messes with the light too
+  if (on && G.static > 0.12 && Math.random() < G.static * 0.45) I *= Math.random(); // it messes with the light too
   if (on && rex && rex.state === "lurk" && G.time - G.lurkAt > 1.2 && Math.random() < 0.05) I *= 0.15; // something's behind you
   flash.intensity = G.mode === "dawn" ? I * 0.3 : I;
   // the lens cookie is projected with the shadow camera's matrix, which three
@@ -947,6 +949,44 @@ function placeCamera(dt) {
   // without this the cookie sampled garbage and the beam blew out white
   if (!flash.castShadow) { flash.updateMatrixWorld(); flash.target.updateMatrixWorld(); flash.shadow.updateMatrices(flash); }
 
+}
+
+// two dull red eyes out in the trees at the edge of your view, now and then. shine the torch on them and they're gone
+let glintObj = null;
+function fakeGlint(dt) {
+  if (G.level < 1 || G.state !== "play" || G.inTunnel) { if (glintObj) { scene.remove(glintObj.a); scene.remove(glintObj.b); glintObj = null; } return; }
+  if (glintObj) {
+    const g = glintObj; g.t += dt;
+    if (G.litPoint(g.pos, 45)) g.lit += dt;
+    g.a.visible = g.b.visible = !(g.t > 0.8 && g.t < 0.95);
+    if (g.lit > 0.3 || g.t > g.life) {
+      if (g.lit > 0.3) { Audio.oneShot("rustle", { pos: g.pos, vol: 0.9, ref: 3, rate: 1.2 }); Audio.oneShot("twig", { pos: g.pos, vol: 0.8, ref: 3, delay: 0.3 }); G.noiseSpike = 0; tape.kick(0.3); }
+      scene.remove(g.a); scene.remove(g.b); glintObj = null;
+    }
+    return;
+  }
+  G.glintT = (G.glintT === undefined ? 25 : G.glintT) - dt;
+  if (G.glintT > 0 || rex.state !== "off") return;
+  G.glintT = 30 + Math.random() * 35 - G.level * 3;
+  for (let k = 0; k < 12; k++) {
+    const a = G.yaw + (Math.random() - 0.5) * 1.0, d = 15 + Math.random() * 12;
+    const x = G.player.x - Math.sin(a) * d, z = G.player.z - Math.cos(a) * d;
+    if (Math.abs(x) > 100 || Math.abs(z) > 100 || G.occlusion(G.player.x, G.player.z, x, z) > 0.5) continue;
+    const y = WD.height(x, z) + 1.5;
+    const mk = (s) => { const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: eyeTex(), color: 0xc01810, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, fog: false })); e.scale.setScalar(0.22); e.position.set(x + Math.cos(a) * 0.22 * s, y, z - Math.sin(a) * 0.22 * s); scene.add(e); return e; };
+    glintObj = { a: mk(-1), b: mk(1), t: 0, life: 2 + Math.random() * 1.5, lit: 0, pos: new THREE.Vector3(x, y, z) };
+    Audio.oneShot("twig", { pos: glintObj.pos, vol: 0.6, ref: 3 });
+    return;
+  }
+}
+let eyeT = null;
+function eyeTex() {
+  if (eyeT) return eyeT;
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,255,255,0.6)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  eyeT = new THREE.CanvasTexture(c); return eyeT;
 }
 
 function tickPlay(dt) {
@@ -1020,7 +1060,9 @@ function tickPlay(dt) {
   // ---------- static (a charge breaks the tape up) and fear
   const qd = rex.state !== "off" ? rex.dist : 99;
   const charging = rex.state === "charge" || rex.state === "windup";
-  G.static += ((charging ? clamp01(1 - qd / 28) * 0.45 : 0) - G.static) * Math.min(1, dt * 3);
+  const closeK = rex.state !== "off" && rex.state !== "leave" ? clamp01(1 - qd / 26) : 0;
+  G.static += ((charging ? clamp01(1 - qd / 28) * 0.45 : closeK * closeK * 0.3) - G.static) * Math.min(1, dt * 3);
+  fakeGlint(dt);
   const fearT = rex.state === "off" ? 0 : Math.max(clamp01(1 - qd / 45) * 0.7, charging ? 1 : 0);
   G.fear += (clamp01(fearT) - G.fear) * Math.min(1, dt * 1.5);
   const wd = 99;
@@ -1073,11 +1115,13 @@ function footstep(running) {
 // the forest: beds that duck when something big is near, and things that happen around you
 function ambience(dt, wd, qd, running) {
   const big = Math.min(wd, qd);
-  const quiet = clamp01((big - 12) / 40);             // the crickets stop first
+  G.hushT = Math.max(0, (G.hushT || 0) - dt);
+  const hush = G.hushT > 0 ? 0.12 : 1;                // right after a part, the night holds its breath
+  const quiet = clamp01((big - 12) / 40) * hush;      // the crickets stop first
   const night = G.mode === "night";
   loops.crickets.vol((night ? 0.34 : 0.08) * quiet * (G.inTunnel ? 0.4 : 1), 0.8);
-  loops.wind.vol(0.2 * (G.inTunnel ? 0.3 : 1));
-  loops.gusts.vol(0.1 + 0.08 * Math.sin(tAll * 0.13));
+  loops.wind.vol(0.2 * (G.inTunnel ? 0.3 : 1) * hush);
+  loops.gusts.vol((0.1 + 0.08 * Math.sin(tAll * 0.13)) * hush);
   loops.static.vol((0.1 * G.static + 0.55 * THREE.MathUtils.smoothstep(G.static, 0.55, 1)) * 0.9, 0.05);
   const exert = clamp01(1 - G.stamina);
   loops.run.vol(clamp01(exert * 1.3) * 0.5, 0.5);

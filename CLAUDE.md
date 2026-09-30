@@ -906,6 +906,13 @@ Rules that matter:
 - Budget: ~30-80k tris per view (the cave ~130k with the nest), 120-260 draw
   calls. Facade windows are merged into the chunk geometry.
 
+Fear pass 2026-09-30 (Caleb: "not scary enough"): part 2 `dreadDirector()` (eyes at the edge of the beam, a
+crossing silhouette at a junction ahead, claws behind you; every ~25-55s, never with a raptor within 34m),
+lamps within 26m die for 6-15s on each sample and more lamps go nervous per sample, torch stutter + tape static
+when one is within 15m even unaware; part 1 the forest goes quiet 7s after a part (`G.hushT`), `fakeGlint()`
+red eyes in the trees, torch/static react to the rex from 26m. Lamp `boost` 0 now really means off (it used to
+fall back to 1).
+
 Design pass 2026-09-30: `tape.u.uBright` (menu BRIGHTNESS slider, settings key `bright`, default 1.15) is a
 global multiplier in the tape pass, both parts; one-time plain-words hints (`G.hint1-3`, `G.taughtAlert`,
 part 1 `G.taughtRoar`) fire at the moments players got stuck. Raptor is 5.4m long (`TUNE.size`), spawns
