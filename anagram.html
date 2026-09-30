@@ -95,8 +95,8 @@
     .m-next { margin-top: 6px; }
   }
 </style>
-<script src="sfx.js?v=157a95fd"></script>
-<script src="feedback.js?v=c22c7922"></script>
+<script src="sfx.js?v=27fe66d5"></script>
+<script src="feedback.js?v=ea18b78f"></script>
 <script src="panic-app.js?v=5a5cc086"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -149,7 +149,7 @@
 <script src="dict.js?v=8295ff80"></script>
 <script src="freq.js?v=8508f925"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=de97a356"></script>
+<script src="leaderboard.js?v=24a89ead"></script>
 <script>
 "use strict";
 
@@ -420,8 +420,57 @@ function submitWord() {
   flash("good", (isPan ? "pangram! +" : deep ? "ooh, deep cut. +" : "nice, +") + pts +
     (up ? ". you're " + aOrAn(tierFor(score)) + " now!" : ""));
   if (up) popRank();
+  if (up && rankIndex(score) === RANKS.length - 1) beeSwarm();
   // new rank beats a pangram beats a plain word
   sfx(up ? "levelup" : isPan ? "great" : "good");
+}
+
+// the bee all end all: a swarm crosses the whole screen, with the sound of it
+var swarming = false;
+function beeSwarm() {
+  if (swarming) return;
+  swarming = true;
+  if (window.SortafunSFX) SortafunSFX.play("swarm");
+  var cv = document.createElement("canvas");
+  cv.style.cssText = "position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999";
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+  document.body.appendChild(cv);
+  var g = cv.getContext("2d");
+  var W = innerWidth, H = innerHeight, N = 90, DUR = 6.4, bees = [];
+  for (var i = 0; i < N; i++) {
+    bees.push({ d: Math.random() * 1.8, y: 0.15 + Math.random() * 0.7, sz: 7 + Math.random() * 8,
+      ph: Math.random() * 6.28, sp: 0.85 + Math.random() * 0.35, wob: 20 + Math.random() * 50, fr: 1.6 + Math.random() * 2 });
+  }
+  var t0 = performance.now();
+  function bee(x, y, sz, flap, dir) {
+    g.save(); g.translate(x, y); g.scale(dir, 1);
+    g.fillStyle = "rgba(230,240,255,.75)";
+    var w = sz * (0.5 + 0.6 * Math.abs(flap));
+    g.beginPath(); g.ellipse(-sz * 0.1, -sz * 0.55, sz * 0.45, w * 0.7, -0.5, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(sz * 0.2, -sz * 0.5, sz * 0.4, w * 0.6, 0.3, 0, 7); g.fill();
+    g.fillStyle = "#ffc400"; g.strokeStyle = "#1d1b2e"; g.lineWidth = Math.max(1, sz * 0.13);
+    g.beginPath(); g.ellipse(0, 0, sz * 0.85, sz * 0.5, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = "#1d1b2e";
+    g.fillRect(-sz * 0.3, -sz * 0.45, sz * 0.2, sz * 0.9); g.fillRect(sz * 0.05, -sz * 0.47, sz * 0.2, sz * 0.94);
+    g.beginPath(); g.arc(sz * 0.85, -sz * 0.05, sz * 0.32, 0, 7); g.fill();
+    g.beginPath(); g.moveTo(-sz * 0.85, 0); g.lineTo(-sz * 1.15, sz * 0.08); g.lineTo(-sz * 0.85, sz * 0.16); g.fill();
+    g.restore();
+  }
+  function frame(now) {
+    var t = (now - t0) / 1000;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    for (var i = 0; i < bees.length; i++) {
+      var b = bees[i], k = (t - b.d) / (DUR - 2) * b.sp;
+      if (k < 0 || k > 1.05) continue;
+      var x = -40 + k * (W + 80);
+      var y = b.y * H + Math.sin(k * 9 + b.ph) * b.wob + Math.sin(t * 7 + b.ph) * 6;
+      bee(x, y, b.sz, Math.sin(t * 60 * b.fr + b.ph), 1);
+    }
+    if (t < DUR + 0.2) requestAnimationFrame(frame);
+    else { cv.remove(); swarming = false; }
+  }
+  requestAnimationFrame(frame);
 }
 
 function addFoundChip(w, pts) {
@@ -498,7 +547,7 @@ function finish() {
   document.getElementById("shuffle").disabled = true;
   hiveEl.querySelectorAll(".cell").forEach(function (c) { c.disabled = true; });
   lbEl.innerHTML = "";
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "hive", { score: score });
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "hive", { score: score, bee: rankIndex(score) === RANKS.length - 1 });
   else lbEl.textContent = "leaderboard offline";
 }
 

@@ -198,6 +198,32 @@
       tone(B(), "F4", t + 0.5, 0.22, o);
       tone(B(), "E4", t + 0.75, 0.7, { wave: 0.5, vol: 0.1, vib: 9, vibHz: 7, decay: true });
     },
+    // the bee all end all: a swarm passing overhead, left to right, about 6 seconds
+    swarm: function (t) {
+      var dur = 6.2, out = ctx.createGain(), pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      out.gain.setValueAtTime(0.0001, t);
+      out.gain.linearRampToValueAtTime(0.9, t + 1.6);
+      out.gain.setValueAtTime(0.9, t + 3.4);
+      out.gain.linearRampToValueAtTime(0.0001, t + dur);
+      var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1500; lp.Q.value = 0.8;
+      lp.connect(out);
+      if (pan) { pan.pan.setValueAtTime(-0.9, t); pan.pan.linearRampToValueAtTime(0.9, t + dur); out.connect(pan); pan.connect(B()); } else out.connect(B());
+      for (var i = 0; i < 16; i++) {
+        var o = ctx.createOscillator(); o.type = "sawtooth";
+        var f = 165 + Math.random() * 110;
+        o.frequency.setValueAtTime(f, t);
+        // the doppler-ish sweep as they pass, each bee a little different
+        o.frequency.linearRampToValueAtTime(f * 1.06, t + dur * 0.45);
+        o.frequency.linearRampToValueAtTime(f * 0.94, t + dur);
+        var lfo = ctx.createOscillator(), lg = ctx.createGain();
+        lfo.frequency.value = 18 + Math.random() * 14; lg.gain.value = 5 + Math.random() * 7;
+        lfo.connect(lg); lg.connect(o.frequency);
+        var g = ctx.createGain(); g.gain.value = 0.012;
+        o.connect(g); g.connect(lp);
+        o.start(t); o.stop(t + dur + 0.05); lfo.start(t); lfo.stop(t + dur + 0.05);
+      }
+      noise(out, t, dur, { ft: "bandpass", f: 900, q: 2.5, vol: 0.05 });
+    },
     highscore: function (t) {
       var s = 0.07, o = { wave: 0.25, vol: 0.13 };
       var e = run(B(), t, [["G5", 1], ["C6", 1], ["E6", 1], ["G6", 1], ["E6", 1], ["G6", 1], ["C7", 3], [null, 1],

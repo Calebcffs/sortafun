@@ -134,7 +134,7 @@
     return GAMES[game].better === "low" ? -score : score;
   }
 
-  function submit(game, name, score) {
+  function submit(game, name, score, extra) {
     return init().then(function () {
       var fs = state.fs;
       name = String(name).trim().slice(0, 20);
@@ -142,14 +142,17 @@
       if (!GAMES[game]) throw new Error("unknown game");
       score = Math.round(Number(score));
       if (!isFinite(score)) throw new Error("bad score");
-      return fs.addDoc(fs.collection(state.db, "scores"), {
+      var doc = {
         game: game,
         name: name,
         score: score,
         rankValue: rankValueFor(game, score),
         day: dayStr(),
         ts: fs.serverTimestamp(),
-      }).then(function (ref) {
+      };
+      // word hive's "bee all end all" (2x queen bee): a gold, buzzing row on the board
+      if (game === "hive" && extra && extra.bee) doc.bee = true;
+      return fs.addDoc(fs.collection(state.db, "scores"), doc).then(function (ref) {
         // passport stamps (local only, best-effort)
         try {
           localStorage.setItem("sortafun-stamp-scored", "1");
@@ -175,7 +178,7 @@
         var out = [];
         snap.forEach(function (doc) {
           var d = doc.data();
-          out.push({ name: d.name, score: d.score, ts: d.ts || null });
+          out.push({ name: d.name, score: d.score, ts: d.ts || null, bee: d.bee === true });
         });
         return out;
       });
@@ -601,6 +604,11 @@
         if (worst && r.name === worst.name && r.score === worst.score) {
           li.classList.add("lb-last");
         }
+        if (r.bee) {
+          li.classList.add("lb-bee");
+          line.firstChild.setAttribute("title", "the bee all end all");
+          for (var bi = 0; bi < 3; bi++) li.appendChild(el("span", "lb-bz lb-bz" + bi, "\uD83D\uDC1D"));
+        }
         listEl.appendChild(li);
       });
     }
@@ -658,7 +666,7 @@
         go.disabled = true;
         go.textContent = "sending...";
         try { localStorage.setItem("sortafun-name", name); } catch (e) {}
-        submit(game, name, opts.score).then(function () {
+        submit(game, name, opts.score, { bee: opts.bee }).then(function () {
           sfx("coin");
           justSent = { name: name, score: Math.round(Number(opts.score)) };
           if (period !== "day") { tabs.forEach(function (x) { x.classList.toggle("on", x.dataset.p === "day"); }); period = "day"; }
@@ -749,6 +757,19 @@
         "font-weight:normal;font-size:10px;color:#a67c00;}",
       ".lb-last .lb-score{color:#7a5c00;}",
       ".lb-last .lb-when{color:#a67c00;}",
+      ".lb-list li.lb-bee{position:relative;overflow:hidden;border-radius:8px;margin:2px 6px;padding:5px 8px;",
+        "background:linear-gradient(105deg,#ffe27a 0%,#fff6c4 22%,#ffc21a 44%,#fff3b0 62%,#ffb300 84%,#ffe27a 100%)!important;background-size:250% 100%;",
+        "animation:lb-shim 2.6s linear infinite,lb-glow 1.3s ease-in-out infinite alternate;}",
+      "@keyframes lb-shim{from{background-position:0% 0;}to{background-position:250% 0;}}",
+      "@keyframes lb-glow{from{box-shadow:0 0 6px 1px rgba(255,190,0,.55);}to{box-shadow:0 0 16px 5px rgba(255,205,40,.95);}}",
+      ".lb-bee .lb-name{color:#5a3e00;text-shadow:0 0 6px rgba(255,255,255,.9);}",
+      ".lb-bee .lb-name::after{content:' the bee all end all';font-weight:normal;font-size:10px;color:#8a5f00;}",
+      ".lb-bee .lb-score{color:#5a3e00;}",
+      ".lb-bee .lb-when{color:#8a5f00;}",
+      ".lb-bz{position:absolute;font-size:17px;pointer-events:none;animation:lb-fly 4.2s linear infinite;top:6px;left:-20px;}",
+      ".lb-bz1{animation-delay:-1.4s;top:14px;font-size:14px;}",
+      ".lb-bz2{animation-delay:-2.8s;top:0;font-size:15px;}",
+      "@keyframes lb-fly{0%{transform:translate(0,0) rotate(8deg);}25%{transform:translate(90px,-5px) rotate(-6deg);}50%{transform:translate(200px,4px) rotate(8deg);}75%{transform:translate(310px,-4px) rotate(-6deg);}100%{transform:translate(430px,0) rotate(8deg);}}",
       ".lb-msg{padding:0 12px 10px;font-size:12px;color:#6c6982;min-height:8px;}",
       ".lb-submit{display:flex;gap:6px;padding:10px;background:#fff9db;border-bottom:3px solid #1d1b2e;}",
       ".lb-input{flex:1;font:14px Verdana,Tahoma,sans-serif;border:3px solid #1d1b2e;border-radius:9px;",
