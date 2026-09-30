@@ -18,9 +18,11 @@
   .cell {
     position: absolute; width: 80px; height: 70px; padding: 0;
     background: none; border: none; outline: none; cursor: pointer;
+    box-shadow: none; border-radius: 0; /* game.css gives every button a square drop shadow; a cell is just the hexagon */
     font-family: var(--body); font-size: 26px; font-weight: bold; text-transform: uppercase;
     display: flex; align-items: center; justify-content: center;
   }
+  .cell:hover, .cell:active { background: none; box-shadow: none; transform: none; }
   .cell svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .cell polygon { fill: #fff; stroke: #000; stroke-width: 3; }
   .cell:hover polygon { fill: #f0f0f0; }
@@ -29,7 +31,7 @@
   .cell .letter { position: relative; }
 
   .row { display: flex; gap: 8px; justify-content: center; margin-top: 4px; }
-  .row button { min-width: 74px; }
+  .row button { min-width: 74px; white-space: nowrap; padding-left: 10px; padding-right: 10px; }
 
   #found { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 480px; margin: 14px auto 0; padding: 0; list-style: none; }
   #found li { border: 3px solid var(--ink); border-radius: 8px; padding: 3px 8px; font-size: 13px; background: #fff; }
@@ -96,7 +98,7 @@
   }
 </style>
 <script src="sfx.js?v=27fe66d5"></script>
-<script src="feedback.js?v=df756786"></script>
+<script src="feedback.js?v=78cfe26a"></script>
 <script src="panic-app.js?v=5ee9d5ae"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -123,6 +125,7 @@
 
   <div class="row">
     <button id="del">delete</button>
+    <button id="clear" title="clear all (space)">clear all</button>
     <button id="shuffle">shuffle</button>
     <button id="enter">enter</button>
   </div>
@@ -379,7 +382,7 @@ function renderCur() {
 
 function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 hiveEl.setAttribute("data-nosfx", "");
-["enter", "del"].forEach(function (id) { document.getElementById(id).setAttribute("data-nosfx", ""); });
+["enter", "del", "clear"].forEach(function (id) { document.getElementById(id).setAttribute("data-nosfx", ""); });
 function flash(cls, msg) {
   if (msg != null) statusEl.textContent = msg;
   if (cls === "bad") sfx("bad");
@@ -401,6 +404,13 @@ function backspace() {
   if (done) return;
   if (typed) sfx("type");
   typed = typed.slice(0, -1);
+  renderCur();
+}
+
+function clearAll() {
+  if (done) return;
+  if (typed) sfx("type");
+  typed = "";
   renderCur();
 }
 
@@ -554,6 +564,7 @@ function finish() {
   document.getElementById("finish").disabled = true;
   document.getElementById("enter").disabled = true;
   document.getElementById("del").disabled = true;
+  document.getElementById("clear").disabled = true;
   document.getElementById("shuffle").disabled = true;
   hiveEl.querySelectorAll(".cell").forEach(function (c) { c.disabled = true; });
   lbEl.innerHTML = "";
@@ -565,11 +576,15 @@ document.addEventListener("keydown", function (e) {
   if (done) return;
   if (e.key === "Enter") { e.preventDefault(); submitWord(); return; }
   if (e.key === "Backspace") { e.preventDefault(); backspace(); return; }
+  if (e.key === " ") { e.preventDefault(); clearAll(); return; }
   var k = e.key.toLowerCase();
   if (k.length === 1 && allowed[k]) appendLetter(k);
 });
 document.getElementById("enter").addEventListener("click", submitWord);
 document.getElementById("del").addEventListener("click", backspace);
+document.getElementById("clear").addEventListener("click", clearAll);
+// a focused button would also "click" on space (on key up in some browsers): space is clear all here
+document.addEventListener("keyup", function (e) { if (e.key === " " && !done) e.preventDefault(); });
 document.getElementById("shuffle").addEventListener("click", renderHive);
 document.getElementById("finish").addEventListener("click", finish);
 
