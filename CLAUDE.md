@@ -1094,6 +1094,16 @@ report says which version it came from. **Every update that ships bumps it**
 something big (a new game or system). Start the What's New line with the new
 version in bold. Then `tools/stamp.py` as usual (feedback.js changed).
 
+### Admin dashboard (`admin.html`, 2026-09-30)
+
+Plain, unlinked, noindex page for Caleb: sign in with a password (his; not in the repo) and it shows overview
+cards, the feedback inbox (mark done, turn into a to-do), ratings per page, to-dos, activity charts (scores
+submitted per day / per game, "plays" = submitted scores) and latest scores + guestbook. Security is real, not
+just a client check: it signs in to Firebase Auth as `admin@sortafun.org` (email/password provider, account made
+with the service-account key) and `firestore.rules` `isAdmin()` lets only that account read `feedback` and
+read/write `admin_todos` / `admin_state` (feedback "done" flags; feedback docs themselves stay immutable).
+Uses its own named Firebase app, session persistence only.
+
 ### Feedback (`feedback.js`)
 
 Sortafun is badged **alpha** (logo is "Sortafun (Alpha)" everywhere: the
