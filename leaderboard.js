@@ -311,6 +311,21 @@
    * collection "guestbook", one doc per signing: { name, msg, ts }. Append
    * only, world readable. Same client-only, forgeable-but-fine trade.
    */
+  // word hive progress saved under a codephrase (hive_saves/<adjective-noun>): { day, words[], ts }.
+  // anyone with the phrase can load or add to it; that's the whole point (continue on any device)
+  function hiveSaveGet(code) {
+    return init().then(function () {
+      var fs = state.fs;
+      return fs.getDoc(fs.doc(state.db, "hive_saves", code)).then(function (s) { return s.exists() ? s.data() : null; });
+    });
+  }
+  function hiveSaveSet(code, day, words) {
+    return init().then(function () {
+      var fs = state.fs;
+      return fs.setDoc(fs.doc(state.db, "hive_saves", code), { day: day, words: words, ts: fs.serverTimestamp() });
+    });
+  }
+
   function guestbookSign(name, msg) {
     return init().then(function () {
       var fs = state.fs;
@@ -801,6 +816,8 @@
     recent: recent,
     byName: byName,
     guestbookSign: guestbookSign,
+    hiveSaveGet: hiveSaveGet,
+    hiveSaveSet: hiveSaveSet,
     guestbookList: guestbookList,
     getHits: getHits,
     bumpHits: bumpHits,

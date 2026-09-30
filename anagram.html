@@ -78,6 +78,12 @@
   .m-tiers li.cur.pop .m-dot { animation: pop .6s ease; }
   @keyframes pop { 40% { transform: scale(1.8); } }
   .m-next { margin-top: 8px; font-size: 12px; line-height: 1.35; }
+  .savebox { margin-top: 10px; padding-top: 8px; border-top: 2px dashed var(--ink); font-size: 12px; line-height: 1.35; }
+  .savebox b { font-size: 14px; user-select: all; }
+  .cont { font-size: 13px; margin: 2px 0 8px; text-align: center; }
+  .cont input { font: inherit; width: 150px; padding: 3px 6px; border: 3px solid var(--ink); border-radius: 8px; }
+  .cont button { padding: 3px 10px; }
+  #cmsg { color: #b00; }
   .m-now { display: none; }
 
   @media (max-width: 560px) {
@@ -98,7 +104,7 @@
   }
 </style>
 <script src="sfx.js?v=27fe66d5"></script>
-<script src="feedback.js?v=78cfe26a"></script>
+<script src="feedback.js?v=a29bfd6d"></script>
 <script src="panic-app.js?v=5ee9d5ae"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -112,6 +118,7 @@
     no clock, stop whenever and submit your score. same seven letters for everyone today.
     the ranks on the meter scale with the day's letters: a hard hive gets you to the top with fewer points.</p>
 
+  <div class="cont">got a codephrase? <input id="cin" placeholder="fluffy-antelope" maxlength="26" autocomplete="off" spellcheck="false"> <button id="cgo">continue</button> <span id="cmsg"></span></div>
   <div class="play">
   <div class="board">
   <div class="hud">
@@ -140,6 +147,7 @@
     <div class="m-diff" id="mdiff"></div>
     <ol class="m-tiers" id="mtiers"><div class="m-fill" id="mfill"></div></ol>
     <div class="m-next" id="mnext"></div>
+    <div class="savebox" id="savebox" hidden>saved with codephrase <b id="scode"></b>. type it into "continue" on any device to pick up your progress. this device also remembers it automatically.</div>
   </aside>
   </div>
 
@@ -155,7 +163,7 @@
 <script src="dict.js?v=8295ff80"></script>
 <script src="freq.js?v=8508f925"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=04e5cb41"></script>
+<script src="leaderboard.js?v=694c795b"></script>
 <script>
 "use strict";
 
@@ -443,6 +451,7 @@ function submitWord() {
   if (up && rankIndex(score) === RANKS.length - 1) beeSwarm();
   // new rank beats a pangram beats a plain word
   sfx(up ? "levelup" : isPan ? "great" : "good");
+  persistProgress();
 }
 
 // the bee all end all: a swarm crosses the whole screen, with the sound of it
@@ -592,6 +601,92 @@ renderHive();
 renderCur();
 buildMeter();
 updateHud();
+</script>
+<script>
+// ---- saving your progress: automatically on this device (localStorage, one entry per day),
+// and under a codephrase (Firestore hive_saves) so you can pick it up anywhere ----
+var SAVE_KEY = "sortafun-hive-" + VIEW_DAY;
+var saveCode = null, saveTimer = null, codeMaking = false;
+var ADJ = "fluffy sleepy grumpy cheeky tiny giant shiny dusty mellow zesty jolly sneaky lucky brave calm clever crispy dizzy fancy fuzzy gentle golden happy humble icy jazzy kind lively lumpy merry misty nimble noisy odd peppy plucky proud quiet rusty salty shy silly slow smooth snappy soft spicy sunny swift tidy velvet warm wild witty woolly young bouncy breezy bubbly chilly cosy crunchy curly dapper eager frosty giddy glossy gritty hasty hungry jumpy leafy mighty minty mossy muddy nutty perky pickled plush rowdy scruffy shaggy sparkly speedy sticky stormy sturdy sweet tangy thorny toasty twisty wobbly wonky zippy amber ancient bashful blazing bright chunky clumsy cuddly daring drowsy elegant feisty funky glad groovy hollow hushed itchy keen lofty loyal magic nifty noble polite quirky royal sassy spooky stubborn tender vivid wiggly".split(" ");
+var NOUN = "antelope badger beetle bison camel cobra condor coyote crane dolphin donkey eagle falcon ferret finch gecko gibbon goose gopher heron hornet iguana jackal koala lemur lizard llama lobster magpie marmot meerkat moose newt ocelot osprey otter owl panda parrot pelican penguin pigeon possum puffin quail rabbit raccoon raven salmon seal sloth sparrow squid stork swan tapir toad turtle viper walrus weasel whale wombat yak zebra acorn anchor basket bucket button candle carpet cheese cookie feather fiddle garden hammer jigsaw kettle ladder lantern marble muffin noodle orchard pebble pickle pillow pretzel pudding puzzle quilt radish ribbon saddle scarf sandal spoon sprout teapot thimble toast tulip turnip umbrella walnut wagon whistle windmill yogurt biscuit blanket bongo cactus canyon comet cricket dragon galaxy meadow rocket".split(" ");
+var CODE_RE = /^[a-z]{3,12}-[a-z]{3,12}$/;
+function pickWord(a) { return a[Math.floor(Math.random() * a.length)]; }
+function showCode() {
+  if (!saveCode) return;
+  document.getElementById("scode").textContent = saveCode;
+  document.getElementById("savebox").hidden = false;
+}
+function localSave() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ code: saveCode, words: Object.keys(foundWords) })); } catch (e) {}
+}
+function cloudSave() {
+  if (!saveCode || !window.SortafunLB || !SortafunLB.hiveSaveSet) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function () { SortafunLB.hiveSaveSet(saveCode, VIEW_DAY, Object.keys(foundWords)).catch(function (e) { console.warn("[hive] cloud save failed", e); }); }, 1200);
+}
+// after every word: this device now, and the codephrase (made the first time you find one)
+function persistProgress() {
+  localSave();
+  if (saveCode) { cloudSave(); return; }
+  if (codeMaking || !window.SortafunLB || !SortafunLB.hiveSaveGet) return;
+  codeMaking = true;
+  (function tryMake(n) {
+    var c = pickWord(ADJ) + "-" + pickWord(NOUN);
+    SortafunLB.hiveSaveGet(c).then(function (d) {
+      if (d && n < 8) return tryMake(n + 1);       // taken, try another
+      saveCode = c; codeMaking = false;
+      showCode(); localSave(); cloudSave();
+    }).catch(function () { codeMaking = false; });   // offline: it will try again after the next word
+  })(0);
+}
+// put saved words back (only ones that are real answers today)
+function restoreWords(list) {
+  var n = 0;
+  (list || []).forEach(function (w) {
+    if (typeof w !== "string" || foundWords[w] != null || !(w in puzzle.answers)) return;
+    var pts = puzzle.answers[w];
+    foundWords[w] = pts; score += pts; addFoundChip(w, pts); n++;
+  });
+  updateHud();
+  return n;
+}
+function continueWith(code) {
+  var msg = document.getElementById("cmsg");
+  code = String(code || "").trim().toLowerCase().replace(/\s+/g, "-");
+  if (!CODE_RE.test(code)) { msg.textContent = "that doesn't look like a codephrase (like fluffy-antelope)"; return; }
+  msg.textContent = "looking...";
+  if (!window.SortafunLB || !SortafunLB.hiveSaveGet) { msg.textContent = "saves are offline right now"; return; }
+  SortafunLB.hiveSaveGet(code).then(function (d) {
+    if (!d) { msg.textContent = "no save with that codephrase"; return; }
+    if (d.day !== VIEW_DAY) {
+      // it belongs to another day's hive: go there, and it loads on arrival
+      if (new URLSearchParams(location.search).get("code") === code) { msg.textContent = "that save is for " + d.day + ", which isn't in the archive"; return; }
+      location.href = "anagram.html?" + (d.day === TODAY ? "" : "date=" + d.day + "&") + "code=" + code;
+      return;
+    }
+    saveCode = code;
+    var n = restoreWords(d.words);
+    msg.textContent = n ? "welcome back, " + n + " word" + (n === 1 ? "" : "s") + " restored" : "that save has nothing new in it";
+    msg.style.color = "#1faf3a";
+    showCode(); localSave(); cloudSave();
+  }).catch(function () { msg.textContent = "couldn't reach the save"; });
+}
+document.getElementById("cgo").addEventListener("click", function () { continueWith(document.getElementById("cin").value); });
+document.getElementById("cin").addEventListener("keydown", function (e) {
+  e.stopPropagation(); // typing a codephrase isn't playing the game
+  if (e.key === "Enter") { e.preventDefault(); document.getElementById("cgo").click(); }
+});
+(function boot() {
+  var local = null;
+  try { local = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
+  if (local && Array.isArray(local.words) && local.words.length) {
+    if (local.code && CODE_RE.test(local.code)) saveCode = local.code;
+    restoreWords(local.words);
+    showCode();
+  }
+  var q = new URLSearchParams(location.search).get("code");
+  if (q) { document.getElementById("cin").value = q; continueWith(q); }
+})();
 </script>
 <script>if (IS_ARCHIVE) { var an = document.getElementById("archnote"); an.hidden = false; an.textContent = "archive hive from " + VIEW_DAY + ". your score counts toward the all time board, but not today's."; document.querySelector("h1").textContent = "word hive (archive)"; }</script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
