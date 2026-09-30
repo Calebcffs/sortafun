@@ -59,9 +59,19 @@ service cloud.firestore {
     // rules change here. rating is 0..5, or null for "didn't rate" (a
     // deliberate 0 is a real answer). Needs a rating or some words.
     match /feedback/{id} {
-      allow read, update, delete: if false;
+      allow read: if isAdmin();   // admin.html signs in as the site owner; nobody else can read it
+      allow update, delete: if false;
       allow create: if isValidFeedback(request.resource.data);
     }
+
+    // --- admin.html (the dashboard): only the owner's email/password account may touch these ---
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'admin@sortafun.org'
+        && request.auth.token.email_verified == true;
+    }
+    match /admin_todos/{id} { allow read, write: if isAdmin(); }
+    match /admin_state/{id} { allow read, write: if isAdmin(); }
     function isValidFeedback(d) {
       return d.keys().hasOnly(['game', 'rating', 'kind', 'msg', 'name', 'page', 'day', 'ts', 'ver'])
         && d.keys().hasAll(['game', 'rating', 'kind', 'msg', 'day', 'ts'])

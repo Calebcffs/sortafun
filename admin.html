@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>sortafun admin</title>
+<style>
+  body { font: 14px/1.45 Verdana, Tahoma, sans-serif; margin: 0; padding: 16px; background: #f4f4f4; color: #111; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 26px 0 8px; border-bottom: 2px solid #111; padding-bottom: 3px; }
+  .bar { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .muted { color: #666; }
+  .cards { display: flex; flex-wrap: wrap; gap: 10px; }
+  .card { background: #fff; border: 1px solid #bbb; padding: 8px 12px; min-width: 120px; }
+  .card b { display: block; font-size: 22px; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border: 1px solid #ccc; padding: 4px 7px; text-align: left; vertical-align: top; }
+  th { background: #e8e8e8; font-size: 12px; }
+  td.msg { max-width: 520px; white-space: pre-wrap; word-break: break-word; }
+  tr.done td { color: #999; background: #fafafa; }
+  .tag { display: inline-block; padding: 0 6px; border: 1px solid #999; font-size: 11px; }
+  .tag.bug { border-color: #c00; color: #c00; } .tag.change { border-color: #06c; color: #06c; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; padding: 2px 8px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0; align-items: center; }
+  #login { max-width: 320px; margin: 18vh auto 0; background: #fff; padding: 18px; border: 1px solid #bbb; }
+  #login input { width: 100%; box-sizing: border-box; margin: 8px 0; padding: 6px; }
+  .err { color: #c00; min-height: 18px; }
+  .charts { display: flex; flex-wrap: wrap; gap: 16px; }
+  .chart { background: #fff; border: 1px solid #bbb; padding: 8px; }
+  .chart h3 { font-size: 13px; margin: 0 0 4px; }
+  svg text { font: 10px Verdana, sans-serif; fill: #333; }
+  ul.todos { list-style: none; padding: 0; margin: 0; background: #fff; border: 1px solid #ccc; }
+  ul.todos li { padding: 5px 8px; border-bottom: 1px solid #eee; display: flex; gap: 8px; align-items: baseline; }
+  ul.todos li.done span.t { text-decoration: line-through; color: #999; }
+  ul.todos li span.t { flex: 1; word-break: break-word; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>sortafun admin</h1>
+  <form id="lf"><input id="pw" type="password" placeholder="password" autocomplete="current-password" autofocus>
+  <button>sign in</button></form>
+  <div class="err" id="lerr"></div>
+</div>
+
+<div id="app" hidden>
+  <div class="bar"><h1>sortafun admin</h1><span class="muted" id="who"></span>
+    <button id="reload">reload data</button> <button id="out">sign out</button></div>
+  <div class="muted" id="status">loading...</div>
+
+  <h2>overview</h2>
+  <div class="cards" id="cards"></div>
+
+  <h2>feedback</h2>
+  <div class="row">
+    show <select id="f-state"><option value="open">open</option><option value="all">all</option><option value="done">done</option></select>
+    kind <select id="f-kind"><option value="">any</option><option>bug</option><option>change</option><option>general</option></select>
+    about <select id="f-game"><option value="">anything</option></select>
+    <span class="muted" id="f-count"></span>
+  </div>
+  <table id="ftable"><thead><tr><th>when (SGT)</th><th>about</th><th>rating</th><th>kind</th><th>message</th><th>from</th><th>ver</th><th></th></tr></thead><tbody></tbody></table>
+  <h3 style="font-size:13px;margin:14px 0 4px">ratings by page</h3>
+  <table id="rtable" style="width:auto"><thead><tr><th>about</th><th>rated</th><th>average</th><th>all feedback</th></tr></thead><tbody></tbody></table>
+
+  <h2>to-do</h2>
+  <div class="row"><input id="td-text" size="52" placeholder="new to-do"> <select id="td-pri"><option value="2">normal</option><option value="1">high</option><option value="3">low</option></select> <button id="td-add">add</button>
+  <label><input type="checkbox" id="td-showdone"> show done</label></div>
+  <ul class="todos" id="todos"></ul>
+
+  <h2>activity</h2>
+  <div class="charts" id="charts"></div>
+  <div class="muted" style="margin-top:6px">a "play" here means a submitted score (the site has no play counter), so it undercounts anyone who didn't post.</div>
+
+  <h2>latest scores</h2>
+  <table id="stable"><thead><tr><th>when (SGT)</th><th>game</th><th>name</th><th>score</th></tr></thead><tbody></tbody></table>
+
+  <h2>latest guestbook</h2>
+  <table id="gtable"><thead><tr><th>when (SGT)</th><th>name</th><th>message</th></tr></thead><tbody></tbody></table>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, query, orderBy, limit, getDocs, getCountFromServer, doc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import "./firebase-config.js";
+
+const ADMIN_EMAIL = "admin@sortafun.org";
+const app = initializeApp(window.SORTAFUN_FIREBASE, "admin");
+const auth = getAuth(app), db = getFirestore(app);
+const $ = (id) => document.getElementById(id);
+const SG = 8 * 3600 * 1000;
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const when = (ts) => { const d = ts && ts.toDate ? ts.toDate() : null; if (!d) return ""; const s = new Date(d.getTime() + SG).toISOString(); return s.slice(0, 10) + " " + s.slice(11, 16); };
+const dayOf = (ts) => { const d = ts && ts.toDate ? ts.toDate() : null; return d ? new Date(d.getTime() + SG).toISOString().slice(0, 10) : null; };
+
+// ---------------- sign in ----------------
+$("lf").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("lerr").textContent = "";
+  try {
+    await setPersistence(auth, browserSessionPersistence);
+    await signInWithEmailAndPassword(auth, ADMIN_EMAIL, $("pw").value);
+  } catch (err) { $("lerr").textContent = "no."; $("pw").select(); }
+});
+$("out").addEventListener("click", () => signOut(auth));
+$("reload").addEventListener("click", () => loadAll());
+onAuthStateChanged(auth, (u) => {
+  const ok = u && u.email === ADMIN_EMAIL;
+  $("login").hidden = !!ok; $("app").hidden = !ok;
+  if (ok) { $("who").textContent = u.email; loadAll(); } else { $("pw").value = ""; }
+});
+
+// ---------------- data ----------------
+let FB = [], STATE = {}, SC = [], TODOS = [];
+async function count(name) { try { return (await getCountFromServer(collection(db, name))).data().count; } catch (e) { return "?"; } }
+
+async function loadAll() {
+  $("status").textContent = "loading...";
+  try {
+    const [fbSnap, stSnap, scSnap, gbSnap, tdSnap, hits, nScores, nFb, nGb, nAnim] = await Promise.all([
+      getDocs(query(collection(db, "feedback"), orderBy("ts", "desc"), limit(1000))),
+      getDocs(collection(db, "admin_state")),
+      getDocs(query(collection(db, "scores"), orderBy("ts", "desc"), limit(3000))),
+      getDocs(query(collection(db, "guestbook"), orderBy("ts", "desc"), limit(15))),
+      getDocs(collection(db, "admin_todos")),
+      getDoc(doc(db, "stats", "hits")),
+      count("scores"), count("feedback"), count("guestbook"), count("animations"),
+    ]);
+    FB = fbSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    STATE = {}; stSnap.forEach((d) => { STATE[d.id] = d.data(); });
+    SC = scSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    TODOS = tdSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderCards({ hits: hits.exists() ? hits.data().count : "?", nScores, nFb, nGb, nAnim });
+    renderFilters(); renderFeedback(); renderRatings(); renderTodos(); renderCharts(); renderScores();
+    renderGuestbook(gbSnap.docs.map((d) => d.data()));
+    $("status").textContent = "loaded " + new Date().toLocaleTimeString() + ". feedback shows the newest 1000, scores the newest 3000.";
+  } catch (e) {
+    console.error(e);
+    $("status").textContent = "error: " + (e.code || e.message) + " (rules not deployed yet? give it a minute and reload)";
+  }
+}
+
+let CARDS = null;
+function renderCards(c) {
+  CARDS = c;
+  const today = new Date(Date.now() + SG).toISOString().slice(0, 10);
+  const daysAgo = (n) => new Date(Date.now() + SG - n * 864e5).toISOString().slice(0, 10);
+  const open = FB.filter((f) => !STATE[f.id] || !STATE[f.id].done).length;
+  const rated = FB.filter((f) => f.rating != null && f.rating > 0);
+  const avg = rated.length ? (rated.reduce((a, f) => a + f.rating, 0) / rated.length).toFixed(2) : "-";
+  const s7 = SC.filter((s) => (s.day || "") >= daysAgo(6)).length, sToday = SC.filter((s) => s.day === today).length;
+  const cards = [
+    ["site visits (counter)", c.hits], ["feedback, all time", c.nFb], ["feedback open", open], ["average rating", avg],
+    ["scores today", sToday], ["scores, 7 days", s7 + (SC.length >= 3000 ? "+" : "")], ["scores, all time", c.nScores],
+    ["guestbook signs", c.nGb], ["animations posted", c.nAnim], ["to-dos open", TODOS.filter((t) => !t.done).length],
+  ];
+  $("cards").innerHTML = cards.map(([k, v]) => `<div class="card"><b>${esc(v)}</b>${esc(k)}</div>`).join("");
+}
+
+// ---------------- feedback ----------------
+function renderFilters() {
+  const games = [...new Set(FB.map((f) => f.game))].sort();
+  const cur = $("f-game").value;
+  $("f-game").innerHTML = '<option value="">anything</option>' + games.map((g) => `<option${g === cur ? " selected" : ""}>${esc(g)}</option>`).join("");
+}
+for (const id of ["f-state", "f-kind", "f-game"]) $(id).addEventListener("change", renderFeedback);
+const stars = (n) => n == null ? "-" : n === 0 ? "0" : "★".repeat(n) + "☆".repeat(5 - n);
+function renderFeedback() {
+  const st = $("f-state").value, kind = $("f-kind").value, game = $("f-game").value;
+  const rows = FB.filter((f) => {
+    const done = !!(STATE[f.id] && STATE[f.id].done);
+    return (st === "all" || (st === "done") === done) && (!kind || f.kind === kind) && (!game || f.game === game);
+  });
+  $("f-count").textContent = rows.length + " shown of " + FB.length;
+  $("ftable").tBodies[0].innerHTML = rows.map((f) => {
+    const done = !!(STATE[f.id] && STATE[f.id].done);
+    return `<tr class="${done ? "done" : ""}"><td>${esc(when(f.ts))}</td><td>${esc(f.game)}<div class="muted">${esc(f.page || "")}</div></td><td>${stars(f.rating)}</td>` +
+      `<td><span class="tag ${esc(f.kind)}">${esc(f.kind)}</span></td><td class="msg">${esc(f.msg)}</td><td>${esc(f.name || "")}</td><td>${esc(f.ver || "")}</td>` +
+      `<td><button data-done="${f.id}">${done ? "reopen" : "done"}</button> <button data-todo="${f.id}">to-do</button></td></tr>`;
+  }).join("") || '<tr><td colspan="8" class="muted">nothing here</td></tr>';
+}
+$("ftable").addEventListener("click", async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.done) {
+    const id = b.dataset.done, was = !!(STATE[id] && STATE[id].done);
+    await setDoc(doc(db, "admin_state", id), { done: !was, ts: serverTimestamp() });
+    STATE[id] = { done: !was }; renderFeedback(); renderCards(CARDS);
+  } else if (b.dataset.todo) {
+    const f = FB.find((x) => x.id === b.dataset.todo);
+    const text = `[${f.game}] ${f.msg || stars(f.rating)}`.slice(0, 200);
+    await addTodo(text, 2);
+    b.textContent = "added";
+  }
+});
+function renderRatings() {
+  const by = {};
+  for (const f of FB) { const g = by[f.game] = by[f.game] || { n: 0, sum: 0, all: 0 }; g.all++; if (f.rating > 0) { g.n++; g.sum += f.rating; } }
+  $("rtable").tBodies[0].innerHTML = Object.entries(by).sort((a, b) => b[1].all - a[1].all).map(([g, v]) =>
+    `<tr><td>${esc(g)}</td><td>${v.n}</td><td>${v.n ? (v.sum / v.n).toFixed(2) : "-"}</td><td>${v.all}</td></tr>`).join("");
+}
+
+// ---------------- to-dos ----------------
+async function addTodo(text, pri) {
+  const ref = await addDoc(collection(db, "admin_todos"), { text, pri, done: false, ts: serverTimestamp() });
+  TODOS.push({ id: ref.id, text, pri, done: false, ts: null }); renderTodos();
+}
+$("td-add").addEventListener("click", () => { const t = $("td-text").value.trim(); if (t) { addTodo(t, +$("td-pri").value); $("td-text").value = ""; } });
+$("td-text").addEventListener("keydown", (e) => { if (e.key === "Enter") $("td-add").click(); });
+$("td-showdone").addEventListener("change", renderTodos);
+function renderTodos() {
+  const showDone = $("td-showdone").checked;
+  const rows = TODOS.filter((t) => showDone || !t.done).sort((a, b) => (a.done - b.done) || (a.pri || 2) - (b.pri || 2));
+  $("todos").innerHTML = rows.map((t) => `<li class="${t.done ? "done" : ""}"><input type="checkbox" data-tg="${t.id}"${t.done ? " checked" : ""}>` +
+    `<span class="tag">${["", "high", "normal", "low"][t.pri || 2]}</span><span class="t">${esc(t.text)}</span><button data-del="${t.id}">x</button></li>`).join("") || '<li class="muted">nothing to do</li>';
+}
+$("todos").addEventListener("click", async (e) => {
+  const tg = e.target.dataset && e.target.dataset.tg, del = e.target.dataset && e.target.dataset.del;
+  if (tg) { const t = TODOS.find((x) => x.id === tg); t.done = e.target.checked; await updateDoc(doc(db, "admin_todos", tg), { done: t.done }); renderTodos(); }
+  if (del) { await deleteDoc(doc(db, "admin_todos", del)); TODOS = TODOS.filter((x) => x.id !== del); renderTodos(); }
+});
+
+// ---------------- charts (plain svg) ----------------
+function bars(title, items, o = {}) {
+  const W = o.w || 560, H = 150, pad = 22, n = items.length, max = Math.max(1, ...items.map((i) => i[1]));
+  const bw = (W - pad * 2) / Math.max(1, n);
+  let s = `<svg width="${W}" height="${H + 22}">`;
+  items.forEach(([k, v], i) => {
+    const h = (v / max) * (H - 24), x = pad + i * bw;
+    s += `<rect x="${x + 1}" y="${H - h}" width="${Math.max(1, bw - 2)}" height="${h}" fill="#444"><title>${esc(k)}: ${v}</title></rect>`;
+    if (n <= 16 || i % Math.ceil(n / 12) === 0) s += `<text x="${x + bw / 2}" y="${H + 12}" text-anchor="middle">${esc(String(k).slice(o.lab || 5))}</text>`;
+  });
+  s += `<text x="2" y="10">${max}</text><line x1="${pad}" y1="${H}" x2="${W - pad}" y2="${H}" stroke="#999"/></svg>`;
+  return `<div class="chart"><h3>${esc(title)}</h3>${s}</div>`;
+}
+function hbars(title, items) {
+  const W = 420, rowH = 17, max = Math.max(1, ...items.map((i) => i[1]));
+  let s = `<svg width="${W}" height="${items.length * rowH + 4}">`;
+  items.forEach(([k, v], i) => {
+    const w = (v / max) * (W - 130);
+    s += `<text x="0" y="${i * rowH + 12}">${esc(k)}</text><rect x="100" y="${i * rowH + 2}" width="${Math.max(1, w)}" height="12" fill="#444"/><text x="${104 + w}" y="${i * rowH + 12}">${v}</text>`;
+  });
+  return `<div class="chart"><h3>${esc(title)}</h3>${s}</svg></div>`;
+}
+function lastDays(n) { const out = []; for (let i = n - 1; i >= 0; i--) out.push(new Date(Date.now() + SG - i * 864e5).toISOString().slice(0, 10)); return out; }
+function renderCharts() {
+  const days = lastDays(30);
+  const perDay = (rows, f) => { const m = {}; rows.forEach((r) => { const d = f(r); if (d) m[d] = (m[d] || 0) + 1; }); return days.map((d) => [d, m[d] || 0]); };
+  const byGame = {}; const g30 = {};
+  SC.forEach((s) => { byGame[s.game] = (byGame[s.game] || 0) + 1; if ((s.day || "") >= days[0]) g30[s.game] = (g30[s.game] || 0) + 1; });
+  const top = (m) => Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 16);
+  $("charts").innerHTML =
+    bars("scores submitted per day, last 30 days", perDay(SC, (s) => s.day), { lab: 5 }) +
+    bars("feedback per day, last 30 days", perDay(FB, (f) => dayOf(f.ts)), { lab: 5 }) +
+    hbars("scores by game, last 30 days", top(g30)) +
+    hbars("scores by game, all loaded", top(byGame));
+}
+function renderScores() {
+  $("stable").tBodies[0].innerHTML = SC.slice(0, 25).map((s) => `<tr><td>${esc(when(s.ts))}</td><td>${esc(s.game)}</td><td>${esc(s.name)}${s.bee ? " (bee all end all)" : ""}</td><td>${esc(s.score)}</td></tr>`).join("");
+}
+function renderGuestbook(rows) {
+  $("gtable").tBodies[0].innerHTML = rows.map((g) => `<tr><td>${esc(when(g.ts))}</td><td>${esc(g.name)}</td><td class="msg">${esc(g.msg)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">nothing</td></tr>';
+}
+</script>
+</body>
+</html>
