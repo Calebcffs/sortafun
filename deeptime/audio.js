@@ -230,6 +230,32 @@ export const Audio = {
     M.whine = wg;
   },
 
+  // the dread: a sub-bass drone that comes in when you go underground and swells (and throbs faster) as a raptor gets close.
+  // part 2 only; nothing calls it in part 1
+  startDread() {
+    if (this.dr || !ctx) return;
+    const out = ctx.createGain(); out.gain.value = 0; out.connect(bus.music);
+    const throb = ctx.createGain(); throb.gain.value = 0.72; throb.connect(out);
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 110; lp.Q.value = 1.4; lp.connect(throb);
+    const oscs = [];
+    for (const [f, type, g0] of [[30.5, "sine", 1], [31.4, "sine", 0.9], [46.0, "sine", 0.5], [61.2, "triangle", 0.28], [92.5, "triangle", 0.12]]) {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = f;
+      const g = ctx.createGain(); g.gain.value = g0; o.connect(g); g.connect(lp); o.start(); oscs.push([o, f]);
+    }
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 0.12; lg.gain.value = 0.26; lfo.connect(lg); lg.connect(throb.gain); lfo.start();
+    this.dr = { out, lp, lfo, oscs, level: 0 };
+  },
+  // under: 0/1 (in the drains), near: 0..1 (how close the closest one is)
+  dread(under, near) {
+    const D = this.dr; if (!D) return;
+    const t = ctx.currentTime;
+    const want = under * (0.16 + 0.5 * near * near);
+    D.out.gain.setTargetAtTime(want, t, under ? (near > 0.05 ? 0.8 : 4) : 2);
+    D.lfo.frequency.setTargetAtTime(0.12 + near * 1.6, t, 0.6);
+    D.lp.frequency.setTargetAtTime(110 + near * 150, t, 0.6);
+    for (const [o, f] of D.oscs) o.frequency.setTargetAtTime(f * (1 + near * 0.12), t, 1.2);
+  },
+
   // call every frame: level = parts, fear 0..1 drives the heart
   tickMusic(level, fear, silent = false) {
     const M = this.music; if (!M) return;

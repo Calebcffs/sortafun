@@ -25,11 +25,12 @@ const clamp01 = (x) => Math.max(0, Math.min(1, x));
 // tuning, all in one place
 export const TUNE = {
   hearMetres: 22,       // noise 1.0 carries this far down the tunnels
-  walkSpeed: 1.9, listenSpeed: 3.3, chaseSpeed: 6.1, finaleSpeed: 5.3, lostSpeed: 4.4,
+  walkSpeed: 1.9, listenSpeed: 3.3, chaseSpeed: 6.3, chaseDark: 4.9, finaleSpeed: 5.3, lostSpeed: 4.4, // torch off: it can't keep up with a sprint (5.8)
   alertTime: 0.85,      // the screech before it comes
   lostAfter: 1.3,       // seconds without seeing you before it goes to the last spot
   sniffTime: 7,
-  catchDist: 1.35,
+  catchDist: 2.1,       // it's big now: the head is a long way ahead of the feet
+  size: 5.4, radius: 0.8, // long enough that its back nearly scrapes the vault, and it fills the tunnel
   sightTorchBeam: 20, sightTorch: 10, sightDarkMoving: 4, sightDarkStill: 1.7,
 };
 
@@ -50,7 +51,7 @@ const raptorOK = (cx, cz) => !M.blocked(cx, cz) && M.zone(M.at(cx, cz)) !== "sur
 export class Raptor {
   constructor(scene, i) {
     this.i = i;
-    this.d = new Dino("raptor", "raptor", 3.4);
+    this.d = new Dino("raptor", "raptor", TUNE.size);
     for (const e of this.d.eyes) { e.scale.multiplyScalar(0.45); e.material.color.setHex(0xb01810); }
     this.d.visible = false;
     scene.add(this.d.root);
@@ -60,7 +61,7 @@ export class Raptor {
     this.target = new THREE.Vector3();
     this.last = new THREE.Vector3();
     this.seenT = 0; this.unseenT = 0;
-    this.callT = 4 + Math.random() * 6;
+    this.callT = 22 + Math.random() * 14;
     this.stepT = 0;
     this.dist = 99;
   }
@@ -68,8 +69,35 @@ export class Raptor {
 
   hide() { this.state = "off"; this.d.visible = false; this.dist = 99; }
 
+  // it turns up BEHIND you, down the tunnel and out of the beam, with no sound at all, and comes looking
+  // for where you were. only your torch and your feet tell it where you are now
+  spawnBehind(g) {
+    const F = g.field, P = g.player, fx = -Math.sin(g.yaw), fz = -Math.cos(g.yaw);
+    let cands = [];
+    for (const behind of [-0.5, -0.15]) {
+      for (let cz = 0; cz < M.GH; cz++) for (let cx = 0; cx < M.GW; cx++) {
+        if (!raptorOK(cx, cz)) continue;
+        const d = F[M.idx(cx, cz)];
+        if (d < 8 || d > 15 || d === Infinity) continue;
+        const x = (cx + 0.5) * C, z = (cz + 0.5) * C, dx = x - P.x, dz = z - P.z, e = Math.hypot(dx, dz) || 1;
+        if ((dx * fx + dz * fz) / e > behind) continue;                     // not in front of you
+        if (e < 22 && M.lineClear(P.x, P.z, x, z)) continue;                // and not somewhere you'd see it
+        cands.push([x, z]);
+      }
+      if (cands.length) break;
+    }
+    if (!cands.length) return this.spawn(g, 15, true);
+    const [x, z] = cands[Math.floor(Math.random() * cands.length)];
+    this.pos.set(x, M.floorAt(x, z), z);
+    this.d.visible = true;
+    this.d.root.rotation.y = Math.atan2(P.x - x, P.z - z);
+    this.state = "listen"; this.t = 0; this.v = 0;
+    this.target.set(P.x, 0, P.z);
+    return true;
+  }
+
   // turn up somewhere far off along the tunnels, out of sight, and let you hear it
-  spawn(g, minCells = 16) {
+  spawn(g, minCells = 16, silent = false) {
     const F = g.field;
     const cands = [];
     for (let cz = 0; cz < M.GH; cz++) for (let cx = 0; cx < M.GW; cx++) {
@@ -86,7 +114,7 @@ export class Raptor {
     this.d.visible = true;
     this.state = "roam"; this.t = 0; this.v = 0;
     this.pickRoam(g);
-    g.onRaptorCall(this, true);
+    if (!silent) g.onRaptorCall(this, true);
     return true;
   }
 
@@ -145,7 +173,7 @@ export class Raptor {
       this.face(Math.atan2(dx, dz), dt * 8);
       if (this.t > TUNE.alertTime) { this.state = "chase"; this.t = 0; }
     } else if (s === "chase") {
-      speed = TUNE.chaseSpeed; goal = sees || this.unseenT < 0.4 ? P : this.last;
+      speed = g.lightOn && g.battery >= 0.03 ? TUNE.chaseSpeed : TUNE.chaseDark; goal = sees || this.unseenT < 0.4 ? P : this.last;
       if (this.unseenT > TUNE.lostAfter) { this.state = "lost"; this.t = 0; }
       if (sees && dist < TUNE.catchDist) g.caught(this);
     } else if (s === "lost") {
@@ -195,7 +223,7 @@ export class Raptor {
       const hx = Math.sin(d.root.rotation.y), hz = Math.cos(d.root.rotation.y);
       const nx = this.pos.x + hx * this.v * dt, nz = this.pos.z + hz * this.v * dt;
       const tmp = new THREE.Vector3(nx, this.pos.y, nz);
-      collide(tmp, 0.45);
+      collide(tmp, TUNE.radius);
       // no walking through rock or up walls
       const nf = M.floorAt(tmp.x, tmp.z);
       if (Math.abs(nf - M.floorAt(this.pos.x, this.pos.z)) < 0.8 && raptorOK(M.cellOf(tmp.x), M.cellOf(tmp.z))) { this.pos.x = tmp.x; this.pos.z = tmp.z; }

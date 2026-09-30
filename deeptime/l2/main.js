@@ -354,7 +354,7 @@ function startLoops() {
     drips: Audio.loop("amb_drips", { vol: 0 }),
     hiss: Audio.loop("tape_hiss", { bus: "tape", vol: 0.02 }),
     static: Audio.loop("static", { bus: "tape", vol: 0 }),
-    calm: Audio.loop("breath_calm", { bus: "me", vol: 0.1 }),
+    calm: Audio.loop("breath_calm", { bus: "me", vol: 0.04 }),
     run: Audio.loop("breath_run", { bus: "me", vol: 0 }),
     scared: Audio.loop("breath_scared", { bus: "me", vol: 0 }),
     rapBreath: Audio.loop("rap_breath", { pos: new THREE.Vector3(0, -50, 0), ref: 2.2, vol: 0 }),
@@ -362,6 +362,7 @@ function startLoops() {
     pump: Audio.loop("pump_hum", { pos: new THREE.Vector3(46 * C, M.BASE + 2, 28 * C), ref: 6, vol: 0, reverb: 0.5 }),
   };
   Audio.startMusic();
+  Audio.startDread();
 }
 
 // ------------------------------------------------------------------
@@ -804,7 +805,7 @@ function pack(dt, under) {
     G.spawnT -= dt;
     if (G.spawnT <= 0) {
       const r = raptors.find((q) => !q.active);
-      if (r && r.spawn(G, 15)) G.spawnT = 14 + Math.random() * 12; else G.spawnT = 3;
+      if (r && r.spawnBehind(G)) G.spawnT = 14 + Math.random() * 12; else G.spawnT = 3;
     }
   } else G.spawnT = Math.max(G.spawnT, 6);
   // one that's wandered miles off comes back round
@@ -1114,12 +1115,15 @@ function ambience(dt, zone, under, near) {
   loops.hiss.vol(0.02);
   loops.static.vol(G.static * 0.5, 0.1);
   const exert = clamp01(1 - G.stamina);
-  loops.run.vol(clamp01(exert * 1.3) * 0.5, 0.5);
-  loops.scared.vol(clamp01(G.fear * 1.2) * 0.45, 0.6);
-  loops.calm.vol(0.08 * (1 - exert) * (1 - G.fear), 0.6);
+  loops.run.vol(clamp01(exert * 1.3) * 0.2, 0.5);        // quieter breathing (Caleb): it was drowning out the tunnel
+  loops.scared.vol(clamp01(G.fear * 1.2) * 0.17, 0.6);
+  loops.calm.vol(0.03 * (1 - exert) * (1 - G.fear), 0.6);
   // the nearest raptor breathing
   let nr = null; for (const r of raptors) if (r.active && (!nr || r.dist < nr.dist)) nr = r;
-  if (nr && nr.dist < 12) { loops.rapBreath.at(nr.d.headPos(tmp)); loops.rapBreath.vol(clamp01(1 - nr.dist / 12) * 0.9, 0.3); } else loops.rapBreath.vol(0, 0.4);
+  if (nr && nr.dist < 12) { loops.rapBreath.at(nr.d.headPos(tmp)); loops.rapBreath.vol(clamp01(1 - nr.dist / 12) * 0.4, 0.3); } else loops.rapBreath.vol(0, 0.4);
+  // the deep bass under everything down here: it comes in slowly as you go under, and swells as one closes in
+  let nd = 99; for (const r of raptors) if (r.active) nd = Math.min(nd, r.dist);
+  Audio.dread(under ? 1 : 0, clamp01(1 - nd / 32));
   // tube lights buzz
   let fl = null, fd = 12; for (const l of LV.L.lamps) if (l.kind === "fluoro" && l.on * l.flick > 0.3) { const d = l.pos.distanceTo(camera.position); if (d < fd) { fd = d; fl = l; } }
   if (fl) { loops.fluoro.at(fl.pos); loops.fluoro.vol(0.35, 0.3); } else loops.fluoro.vol(0, 0.3);
@@ -1240,7 +1244,7 @@ function tickCaught(dt) {
   G.lightOn = true;
   if (t < 0.9) G.shake(dt * 2);
   r.d.update(dt);
-  if (t > 0.85 && !G.loud) { G.loud = true; loops.static.vol(1.1, 0.02); for (const k of ["rain", "sewer", "tunnel", "drips", "calm", "run", "scared", "rapBreath", "fluoro", "pump"]) loops[k].vol(0, 0.05); Audio.tickMusic(0, 0, true); stopAlarm(); }
+  if (t > 0.85 && !G.loud) { G.loud = true; loops.static.vol(1.1, 0.02); for (const k of ["rain", "sewer", "tunnel", "drips", "calm", "run", "scared", "rapBreath", "fluoro", "pump"]) loops[k].vol(0, 0.05); Audio.dread(0, 0); Audio.tickMusic(0, 0, true); stopAlarm(); }
   if (t > 2.5) { G.loud = false; Audio.stopAll(0.05); tape.u.uBlack.value = 1; G.static = 0; endCard(false); }
 }
 

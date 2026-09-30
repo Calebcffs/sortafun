@@ -15,6 +15,8 @@
 //   b  brick sewer (vaulted, a channel down the middle)   j  brick junction (grate)
 //   C  cistern floor (standing water)   g  cistern gantry (raised)   P  pillar
 //   i  pipe gallery          p  pump hall          o  control room
+//   H  concrete chamber (the hub, the valve room)  R  brick hall (old town, the kennel)
+//   Q  short pillar inside H / R
 //   W  control room window (solid)                 v  cave   n  the nest
 //   d  lab door (shut until you have 4 samples)    x  lab    e  the stair up
 //   D  the pump house's street door (locked till the end)
@@ -44,27 +46,27 @@ export const ROWS = [
   "#########b####b#####k#################k#########################",
   "#########b####b#####k#################k#########################",
   "#########b####b#####k#################k#########################",
-  "#########b####b#####k#################k#########################",
-  "#########b####b#####k#################kkkpppppppppp#############",
-  "#########b####b#####k####################pppppppppp#############",
-  "###jbbbbbjbbbbj#####k####################ppPppPppPpWoooo########",
-  "###b#####b####b#####k####################ppppppppppWoooo########",
-  "###b#####b####b#####k####################ppppppppppooooo########",
-  "###b#####b####b#####k#######iiiiiiiii####ppppppppppWoooo########",
-  "###b#####b####b#####k#######i#######i####ppPppPppPpWoooo########",
-  "###b#####b####b#####k#######i#######iiiiipppppppppp#############",
-  "###b#####b####b#####k#######i############pppppppppp#############",
-  "###jbbbbbjbbbbjbbbbbjiiiiiiii############pppppppppp#############",
-  "###b#####b##########k#########################d#################",
-  "###b#####b##########k#######################xxxxx###############",
+  "#########b####b#####k#HHHHH###########k#########################",
+  "#######RRRRR##b#####k#HQHQH###########kkkpppppppppp#############",
+  "#######RQRQR##b#####kkHHHHH##############pppppppppp#############",
+  "#######RRRRR##b#####k#HQHQH##############ppPppPppPpWoooo########",
+  "#######RQRQR##b#####k#HHHHH##############ppppppppppWoooo########",
+  "#######RRRRR##b#####k####################ppppppppppooooo########",
+  "#########b####b#####k#######iiiiiiiii####ppppppppppWoooo########",
+  "#########b####b#####k#######i#######i####ppPppPppPpWoooo########",
+  "#########b####b###HHHHH#####i#######iiiiipppppppppp#############",
+  "#########b####b###HQHQH#####i############pppppppppp#############",
+  "###jbbbbbjbbbbjbbbHHHHHiiiiii############pppppppppp#############",
+  "###b#####b########HQHQH#######################d#################",
+  "###b#####b########HHHHH#####################xxxxx###############",
   "###b#####b##########k#######################xxxxx###############",
   "###b#####b##########k#######################xxxxx#xxxxx#########",
   "###b################k#######################xxxxxxxxxxx#########",
-  "###b################k#######################xxxxx#xxxxx#########",
-  "###b################k#######################xxxxx#xxxxx#########",
-  "###jbbb#############k#######################xxxxx###x###########",
-  "###################cc#############################xxxxx#########",
-  "###################cc#############################xxxxx#########",
+  "###b#RRRRR##########k#######################xxxxx#xxxxx#########",
+  "###b#RQRQR##########k#######################xxxxx#xxxxx#########",
+  "###jbRRRRR##########k#######################xxxxx###x###########",
+  "#####RQRQR#########cc#############################xxxxx#########",
+  "#####RRRRR#########cc#############################xxxxx#########",
   "###################cc#############################xxxxx#########",
   "###################cc###############################e###########",
   "############FFFFFFFccFFFFFF#########################e###########",
@@ -76,10 +78,10 @@ export const ROWS = [
   "#BBBBBBBBBBBBBBBaaBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBhhhhBBBBBBBBB#",
   "#BBBBBBBBBBBBBBBaaBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBhhhhBBBBBBBBB#",
   "#BBBBBBBBBBBBBBBaaBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDBBBBBBBBBB#",
-  "#ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss#",
-  "#rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr#",
-  "#rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr#",
-  "#ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss#",
+  "BssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssB",
+  "BrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrB",
+  "BrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrB",
+  "BssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssB",
   "#BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB#",
   "################################################################"
 ];
@@ -102,15 +104,15 @@ export function isDoorOpen() { return doorOpen; }
 export function solid(c) { return SOLID.has(c) || (c === "d" && !doorOpen) || (c === "D" && !exitOpen); }
 export function solidAt(cx, cz) { return solid(at(cx, cz)); }
 // the raptors path around pillars
-export function blocked(cx, cz) { const c = at(cx, cz); return solid(c) || c === "P"; }
+export function blocked(cx, cz) { const c = at(cx, cz); return solid(c) || c === "P" || c === "Q"; }
 
 const SKY = new Set(["r", "s", "a", "l", "c", "F"]);
 export function sky(c) { return SKY.has(c); }
 export function zone(c) {
   switch (c) {
     case "r": case "s": case "a": case "l": case "c": case "F": case "B": case "h": case "D": return "surface";
-    case "k": return "culvert";
-    case "b": case "j": return "brick";
+    case "k": case "H": return "culvert";
+    case "b": case "j": case "R": case "Q": return "brick";
     case "C": case "g": case "P": return "cistern";
     case "i": return "gallery";
     case "p": case "o": case "W": return "pump";
@@ -128,7 +130,7 @@ export const zoneAt = (x, z) => zone(charAt(x, z));
 // the other, along x or z (world metres, edges of the rectangle)
 export const RAMPS = [
   { x0: 19, z0: 41, x1: 20, z1: 49, axis: "z", h0: -3, h1: 0 },          // the flood channel, down toward the culvert
-  { x0: 20, z0: 33, x1: 20, z1: 40, axis: "z", h0: BASE, h1: -3 },       // the culvert, down into the drains
+  { x0: 20, z0: 35, x1: 20, z1: 40, axis: "z", h0: BASE, h1: -3 },       // the culvert, down into the drains (the hub sits at its foot)
   { x0: 15, z0: 18, x1: 16, z1: 18, axis: "x", h0: BASE, h1: GANTRY },   // brick passage up to the gantry
   { x0: 9, z0: 11, x1: 9, z1: 15, axis: "z", h0: GANTRY, h1: BASE },     // the cave, down to the brick stub
   { x0: 18, z0: 18, x1: 19, z1: 18, axis: "x", h0: GANTRY, h1: BASE },   // cistern stairs, south-west
@@ -249,6 +251,7 @@ export function headroom(c) {
     case "k": return 2.7;
     case "b": return CROWN;
     case "j": return CROWN + 0.3;
+    case "H": case "R": case "Q": return 5;
     case "C": case "P": return 10;
     case "g": return 10 - 2.4;
     case "i": return 2.5;
@@ -280,7 +283,7 @@ export function lineClear(ax, az, bx, bz) {
     const t = i / n, x = ax + dx * t, z = az + dz * t;
     const cx = cellOf(x), cz = cellOf(z), c = at(cx, cz);
     if (solid(c)) return false;
-    if (c === "P") { const px = cx * CELL + 1.5, pz = cz * CELL + 1.5; if (Math.hypot(x - px, z - pz) < 1.0) return false; }
+    if (c === "P" || c === "Q") { const px = cx * CELL + 1.5, pz = cz * CELL + 1.5; if (Math.hypot(x - px, z - pz) < (c === "Q" ? 0.8 : 1.0)) return false; }
   }
   return true;
 }
@@ -318,7 +321,7 @@ export function canStep(cx, cz, dx, dz) {
 // the tunnels, not through rock, and the raptors walk the same field
 export function distField(cx0, cz0, maxD = 1e9) {
   const D = new Float32Array(GW * GH).fill(Infinity);
-  if (blocked(cx0, cz0) && !(at(cx0, cz0) === "P")) return D;
+  if (blocked(cx0, cz0) && !(at(cx0, cz0) === "P" || at(cx0, cz0) === "Q")) return D;
   const q = [cx0 + cz0 * GW];
   D[q[0]] = 0;
   for (let qi = 0; qi < q.length; qi++) {

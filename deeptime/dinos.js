@@ -148,7 +148,7 @@ function glow() {
 // one dinosaur: a clone of the rig, skinned, scaled, facing +z, with actions
 // ------------------------------------------------------------------
 export class Dino {
-  constructor(name, kind, length) {
+  constructor(name, kind, length, opts = {}) {
     const src = A.models[name];
     this.kind = kind;
     this.root = new THREE.Group();          // position/heading in the world
@@ -199,6 +199,7 @@ export class Dino {
       this.meshes.push(o);
     });
     this.addEyes();
+    if (kind === "raptor" && !opts.noTeeth) this.addTeeth();
     this.play("idle");
     this.speedMul = 1;
   }
@@ -250,6 +251,59 @@ export class Dino {
       head.add(s);
       this.eyes.push(s);
     }
+  }
+
+  // the model's mouth is shut and has no jaw bone, so a snarl is built from teeth: two rows of
+  // curved cones along the lip line, sitting on the Head bone, pale and a bit too long
+  addTeeth() {
+    const head = this.bones.Head;
+    this.body.updateMatrixWorld(true);
+    const hp = head.getWorldPosition(new THREE.Vector3());
+    const pts = [], v = new THREE.Vector3();
+    for (const m of this.meshes) {
+      if (m.userData.part === "horn") continue;
+      const pos = m.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i += 2) {
+        v.fromBufferAttribute(pos, i); m.applyBoneTransform(i, v); v.applyMatrix4(m.matrixWorld);
+        if (v.z > hp.z - 0.02 && v.y > hp.y - this.height * 0.25) pts.push(v.clone());
+      }
+    }
+    if (!pts.length) return;
+    const snout = Math.max(...pts.map((p) => p.z)), len = snout - hp.z;
+    head.updateMatrixWorld(true);
+    const hs = new THREE.Vector3(); head.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), hs);
+    const inv = 1 / hs.x;
+    const toothM = new THREE.MeshStandardMaterial({ color: 0xe9e0c4, roughness: 0.35 });
+    const gumM = new THREE.MeshStandardMaterial({ color: 0x3a0b0a, roughness: 0.4 });
+    const tl = this.length * 0.036;              // tooth length in metres
+    const geoT = new THREE.ConeGeometry(tl * 0.2, tl, 6); geoT.translate(0, -tl / 2, 0); // tip points down (-y), base at the origin
+    this.teeth = [];
+    for (let k = 0; k < 9; k++) {
+      const z = hp.z + len * (0.34 + k * 0.075);
+      const slice = pts.filter((p) => Math.abs(p.z - z) < len * 0.035);
+      if (slice.length < 3) continue;
+      const top = Math.max(...slice.map((p) => p.y)), bot = Math.min(...slice.map((p) => p.y));
+      const mouthY = bot + (top - bot) * 0.36;
+      const band = slice.filter((p) => Math.abs(p.y - mouthY) < (top - bot) * 0.14);
+      const half = Math.max(...(band.length ? band : slice).map((p) => Math.abs(p.x - hp.x)));
+      const size = 1 - k * 0.05;
+      for (const sx of [-1, 1]) {
+        for (const up of [0, 1]) {
+          const t = new THREE.Mesh(geoT, toothM);
+          const w = new THREE.Vector3(hp.x + sx * (half * 0.97), mouthY + (up ? -tl * 0.15 : tl * 0.5), z + (up ? len * 0.02 : 0));
+          t.position.copy(head.worldToLocal(w));
+          t.scale.setScalar(inv * size * (up ? 0.8 : 1)); if (up) t.rotation.x = Math.PI;
+          t.rotation.z = -sx * 0.18;
+          head.add(t); this.teeth.push(t);
+        }
+      }
+    }
+    // two big fangs at the front, and a dark lip line so the row reads against the skin
+    for (const sx of [-1, 1]) {
+      const w = new THREE.Vector3(hp.x + sx * 0.02 * this.length, hp.y - this.height * 0.02, snout - len * 0.03);
+      const t = new THREE.Mesh(geoT, toothM); t.position.copy(head.worldToLocal(w)); t.scale.setScalar(inv * 1.5); head.add(t); this.teeth.push(t);
+    }
+    void gumM;
   }
 
   play(name, fade = 0.3, timeScale = 1) {
