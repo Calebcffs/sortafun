@@ -152,6 +152,9 @@
       };
       // word hive's "bee all end all" (2x queen bee): a gold, buzzing row on the board
       if (game === "hive" && extra && extra.bee) doc.bee = true;
+      // an archive round (hive-archive.html): filed under the day it was the puzzle for, so it shows on the
+      // all-time board and that day's board, never on today's
+      if (game === "hive" && extra && extra.day && /^\d{4}-\d{2}-\d{2}$/.test(extra.day)) { doc.day = extra.day; doc.arch = true; }
       return fs.addDoc(fs.collection(state.db, "scores"), doc).then(function (ref) {
         // passport stamps (local only, best-effort)
         try {
@@ -666,10 +669,11 @@
         go.disabled = true;
         go.textContent = "sending...";
         try { localStorage.setItem("sortafun-name", name); } catch (e) {}
-        submit(game, name, opts.score, { bee: opts.bee }).then(function () {
+        submit(game, name, opts.score, { bee: opts.bee, day: opts.day }).then(function () {
           sfx("coin");
           justSent = { name: name, score: Math.round(Number(opts.score)) };
-          if (period !== "day") { tabs.forEach(function (x) { x.classList.toggle("on", x.dataset.p === "day"); }); period = "day"; }
+          var showP = opts.day ? "all" : "day"; // archive rounds only appear on the all time board
+          if (period !== showP) { tabs.forEach(function (x) { x.classList.toggle("on", x.dataset.p === showP); }); period = showP; }
           form.innerHTML = '<span class="lb-ok">saved! ' + name + " · " + fmtScore(g, opts.score) + "</span>";
           if (opts.onSubmitted) opts.onSubmitted();
           load();

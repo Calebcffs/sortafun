@@ -96,14 +96,15 @@
   }
 </style>
 <script src="sfx.js?v=27fe66d5"></script>
-<script src="feedback.js?v=ea18b78f"></script>
-<script src="panic-app.js?v=5a5cc086"></script>
+<script src="feedback.js?v=df756786"></script>
+<script src="panic-app.js?v=5ee9d5ae"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
 <body class="k-word">
 <header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
 <div class="wrap">
   <h1>word hive</h1>
+  <p class="sub" id="archnote" hidden></p>
   <p class="sub">seven letters, one of them mandatory (gold). find every word you can, 4+ letters,
     reuse letters as often as you like. any real word counts, no names.
     no clock, stop whenever and submit your score. same seven letters for everyone today.
@@ -143,13 +144,15 @@
 
   <div id="lb"></div>
 
+  <a class="back" href="hive-archive.html">archive: play a past day</a>
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
+
 
 <script src="dict.js?v=8295ff80"></script>
 <script src="freq.js?v=8508f925"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=24a89ead"></script>
+<script src="leaderboard.js?v=04e5cb41"></script>
 <script>
 "use strict";
 
@@ -162,10 +165,17 @@ function mulberry32(a) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
-function daySeed() {
-  var s = (window.SortafunLB ? SortafunLB.dayStr() : new Date().toISOString().slice(0, 10));
-  return Number(s.replace(/-/g, ""));
-}
+// Which day are we playing? Today by default; a past ?date= (up to a year back) plays that day's
+// hive from hive-archive.html. Archive rounds count toward the all-time board but not the daily one.
+var TODAY = (window.SortafunLB ? SortafunLB.dayStr() : new Date().toISOString().slice(0, 10));
+var VIEW_DAY = (function () {
+  var q = new URLSearchParams(location.search).get("date");
+  if (!q || !/^\d{4}-\d{2}-\d{2}$/.test(q) || q >= TODAY) return TODAY;
+  var t = TODAY.split("-"), floor = new Date(Date.UTC(+t[0], +t[1] - 1, +t[2]) - 365 * 864e5).toISOString().slice(0, 10);
+  return q >= floor ? q : TODAY;
+})();
+var IS_ARCHIVE = VIEW_DAY !== TODAY;
+function daySeed() { return Number(VIEW_DAY.replace(/-/g, "")); }
 
 // dictionary: dict.js (see CLAUDE.md, "the dictionary"). any real word is
 // accepted; the puzzle itself and the rank tiers are built from the common
@@ -547,7 +557,7 @@ function finish() {
   document.getElementById("shuffle").disabled = true;
   hiveEl.querySelectorAll(".cell").forEach(function (c) { c.disabled = true; });
   lbEl.innerHTML = "";
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "hive", { score: score, bee: rankIndex(score) === RANKS.length - 1 });
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "hive", { score: score, bee: rankIndex(score) === RANKS.length - 1, day: IS_ARCHIVE ? VIEW_DAY : undefined });
   else lbEl.textContent = "leaderboard offline";
 }
 
@@ -568,6 +578,7 @@ renderCur();
 buildMeter();
 updateHud();
 </script>
+<script>if (IS_ARCHIVE) { var an = document.getElementById("archnote"); an.hidden = false; an.textContent = "archive hive from " + VIEW_DAY + ". your score counts toward the all time board, but not today's."; document.querySelector("h1").textContent = "word hive (archive)"; }</script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
 if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "hive");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>

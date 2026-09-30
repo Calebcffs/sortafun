@@ -22,8 +22,9 @@ service cloud.firestore {
     }
 
     function isValidScore(d) {
-      return d.keys().hasOnly(['game', 'name', 'score', 'rankValue', 'day', 'ts', 'bee'])
+      return d.keys().hasOnly(['game', 'name', 'score', 'rankValue', 'day', 'ts', 'bee', 'arch'])
         && (!('bee' in d) || (d.bee == true && d.game == 'hive'))
+        && (!('arch' in d) || (d.arch == true && d.game == 'hive'))
         && d.game in ['typing', 'typing1000', 'driving', 'puzzle', 'circuit',
                       'reaction', 'maze', 'aim', 'stopbar', 'ladder', 'anagram',
                       'mines', 'fermi', 'minute', 'callit', 'watch', 'hive',

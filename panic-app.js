@@ -33,6 +33,7 @@
     "sides.html": ["Four Sides", "word"],
     "grab.html": ["Word Grab", "word"],
     "anagram.html": ["Word Hive", "word"],
+    "hive-archive.html": ["Word Hive archive", "word"],
     "ladder.html": ["Word Ladder", "word"],
     "typing.html": ["Typing Test", "word"],
     "forum.html": ["The Forum", "word"],
