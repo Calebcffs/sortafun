@@ -33,7 +33,7 @@ const C = M.CELL;
 // ------------------------------------------------------------------
 const PHONE = matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 820;
 const saved = (() => { try { return JSON.parse(localStorage.getItem("deeptime-settings")) || {}; } catch (e) { return {}; } })();
-const S = Object.assign({ sens: PHONE ? 1.3 : 1, vol: 0.9, quality: PHONE ? "low" : "high" }, saved);
+const S = Object.assign({ sens: PHONE ? 1.3 : 1, vol: 0.9, bright: 1.15, quality: PHONE ? "low" : "high" }, saved);
 const LITE = PHONE || S.quality === "low";
 A.lite = LITE;
 function saveSettings() { try { localStorage.setItem("deeptime-settings", JSON.stringify(S)); } catch (e) {} }
@@ -179,6 +179,7 @@ G.onRaptorAlert = (r, again) => {
   Audio.oneShot("rap_hiss", { pos: r.d.headPos(tmp), vol: 1.4, ref: 6, rate: 1.05, reverb: 0.7 });
   if (!again) { Audio.oneShot("sting", { bus: "tape", vol: 0.9 }); Audio.boom(0.7); }
   tape.kick(0.4); G.fear = 1;
+  if (!G.taughtAlert) { G.taughtAlert = true; caption("TORCH OFF. RUN. BREAK LINE OF SIGHT.", 3.2); }
 };
 G.caught = (r) => {
   if (G.state !== "play" && G.state !== "finale") return;
@@ -340,6 +341,8 @@ function newRun() {
   phantom.hide(); for (const h of hatchlings) h.d.visible = false;
   layoutSamples();
   $("caption").textContent = "collect 5 samples"; $("caption").hidden = false; G.captionT = 6;
+  later(6.5, () => { if (G.got === 0 && G.surf > 0.5) caption("the police lights lead to the sewer", 5); });
+  later(30, () => { if (G.got === 0 && G.surf > 0.5) caption("follow the flares and arrows. the drain is past the fence", 5); });
   Audio.restoreBuses();
   startLoops();
   lockPointer();
@@ -556,6 +559,8 @@ $("btn-again").addEventListener("click", () => { $("end").hidden = true; tape.u.
 $("btn-menu").addEventListener("click", () => { $("end").hidden = true; exitFS(); $("title").hidden = false; tape.u.uBlack.value = 0; G.state = "title"; parkTitle(); });
 $("btn-resume").addEventListener("click", () => pause(false));
 $("btn-quit").addEventListener("click", () => { $("pause").hidden = true; exitFS(); Audio.resume(); Audio.stopAll(0.1); G.state = "title"; $("title").hidden = false; parkTitle(); });
+$("set-bright").value = S.bright; tape.u.uBright.value = S.bright;
+$("set-bright").addEventListener("input", (e) => { S.bright = +e.target.value; tape.u.uBright.value = S.bright; saveSettings(); });
 $("set-sens").value = S.sens; $("set-vol").value = S.vol; $("set-q").value = S.quality;
 $("set-sens").addEventListener("input", (e) => { S.sens = +e.target.value; saveSettings(); });
 $("set-vol").addEventListener("input", (e) => { S.vol = +e.target.value; saveSettings(); Audio.volume(siteSoundOn() ? S.vol : 0); });
@@ -724,6 +729,10 @@ function tickPlay(dt) {
   const zone = M.zoneAt(G.player.x, G.player.z);
   const under = G.surf < 0.5;
   if (under) G.underT += dt;
+  // a few plain-words hints, each once: what the glow is, and where the trail goes
+  if (under && G.underT > 4 && !G.hint1) { G.hint1 = true; caption("green glow sticks mark samples. [E] bags one. the blood trail leads on", 6); }
+  if (under && G.got === 0 && G.underT > 110 && !G.hint2) { G.hint2 = true; caption("look for the green glow. try the side tunnels marked with claw marks", 6); }
+  if (G.got === 4 && !G.hint3 && G.time - (G.labOpenAt || 0) > 12) { G.hint3 = true; caption("the lab door in the pump station is open. follow the blood", 6); }
   Audio.tunnel(under && zone !== "cistern" && zone !== "pump");
   // ---------- stamina (none of that in the final run)
   const running = run && G.realSpeed > 3.5;

@@ -16,11 +16,11 @@ precision highp float;
 varying vec2 vUv;
 uniform sampler2D tScene;
 uniform vec2 uRes;
-uniform float uTime, uStatic, uGlitch, uWhite, uBlack, uDawn, uExposure, uDigital;
+uniform float uTime, uStatic, uGlitch, uWhite, uBlack, uDawn, uExposure, uDigital, uBright;
 // the scene target is linear HDR (three skips tone mapping off-screen), so: exposure, ACES, sRGB here
 vec3 aces(vec3 x) { x *= 0.6; return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 vec3 srgb(vec3 c) { return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
-vec3 tex(vec2 uv) { return srgb(aces(texture2D(tScene, uv).rgb * uExposure)); }
+vec3 tex(vec2 uv) { return srgb(aces(texture2D(tScene, uv).rgb * uExposure * uBright)); }
 float h1(float n) { return fract(sin(n) * 43758.5453); }
 float h2(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float vn(float x) { float i = floor(x), f = fract(x); return mix(h1(i), h1(i + 1.0), f * f * (3.0 - 2.0 * f)); }
@@ -95,7 +95,7 @@ export class Tape {
     this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
     this.u = {
       tScene: { value: this.rt.texture }, uRes: { value: new THREE.Vector2(640, 360) }, uTime: { value: 0 },
-      uStatic: { value: 0 }, uGlitch: { value: 0 }, uWhite: { value: 0 }, uBlack: { value: 0 }, uDawn: { value: 0 }, uExposure: { value: 1 }, uDigital: { value: 0 },
+      uStatic: { value: 0 }, uGlitch: { value: 0 }, uWhite: { value: 0 }, uBlack: { value: 0 }, uDawn: { value: 0 }, uExposure: { value: 1 }, uDigital: { value: 0 }, uBright: { value: 1 },
     };
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: this.u, depthTest: false, depthWrite: false }));
     this.qScene = new THREE.Scene(); this.qScene.add(this.quad);

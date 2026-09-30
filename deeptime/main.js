@@ -30,7 +30,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 // simpler dinosaur skin and tape pass, a shorter view distance.
 const PHONE = matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 820;
 const saved = (() => { try { return JSON.parse(localStorage.getItem("deeptime-settings")) || {}; } catch (e) { return {}; } })();
-const S = Object.assign({ sens: PHONE ? 1.3 : 1, vol: 0.9, quality: PHONE ? "low" : "high" }, saved);
+const S = Object.assign({ sens: PHONE ? 1.3 : 1, vol: 0.9, bright: 1.15, quality: PHONE ? "low" : "high" }, saved);
 const LITE = PHONE || S.quality === "low";
 A.lite = LITE;
 function saveSettings() { try { localStorage.setItem("deeptime-settings", JSON.stringify(S)); } catch (e) {} }
@@ -365,7 +365,11 @@ G.onRexStep = (r, dist) => {
   G.shake(clamp01(1 - dist / 50) * 0.28);
   if (Math.random() < 0.15) Audio.oneShot("branch", { pos: r.d.headPos(tmp), vol: 0.8, ref: 6 });
 };
-G.onRexRoar = (r) => { Audio.oneShot("rex_roar", { pos: r.d.headPos(tmp), vol: 1.8, ref: 16, i: 1 }); G.shake(0.6); tape.kick(0.6); };
+G.onRexRoar = (r) => {
+  Audio.oneShot("rex_roar", { pos: r.d.headPos(tmp), vol: 1.8, ref: 16, i: 1 }); G.shake(0.6); tape.kick(0.6);
+  // the first time it charges: say what to do (later ones you know)
+  if (!G.taughtRoar) { G.taughtRoar = true; $("caption").textContent = "TORCH OFF. RUN."; $("caption").hidden = false; G.captionT = 3; }
+};
 // right behind you: no footfall, just breathing, and the woods go quiet
 G.onRexLurk = (r) => { r.boomed = true; G.lurkAt = G.time; };
 G.onRexBreath = (r) => { Audio.oneShot("rex_huff", { pos: r.d.headPos(tmp), vol: 0.75, ref: 4, rate: 0.8 + Math.random() * 0.1 }); };
@@ -866,6 +870,8 @@ $("btn-again").addEventListener("click", () => { $("end").hidden = true; tape.u.
 $("btn-menu").addEventListener("click", () => { $("end").hidden = true; exitFS(); $("title").hidden = false; tape.u.uBlack.value = 0; G.state = "title"; });
 $("btn-resume").addEventListener("click", () => pause(false));
 $("btn-quit").addEventListener("click", () => { $("pause").hidden = true; exitFS(); Audio.resume(); Audio.stopAll(0.1); G.state = "title"; $("title").hidden = false; });
+$("set-bright").value = S.bright; tape.u.uBright.value = S.bright;
+$("set-bright").addEventListener("input", (e) => { S.bright = +e.target.value; tape.u.uBright.value = S.bright; saveSettings(); });
 $("set-sens").value = S.sens; $("set-vol").value = S.vol; $("set-q").value = S.quality;
 $("set-sens").addEventListener("input", (e) => { S.sens = +e.target.value; saveSettings(); });
 $("set-vol").addEventListener("input", (e) => { S.vol = +e.target.value; saveSettings(); Audio.volume(siteSoundOn() ? S.vol : 0); });

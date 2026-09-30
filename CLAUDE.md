@@ -906,6 +906,12 @@ Rules that matter:
 - Budget: ~30-80k tris per view (the cave ~130k with the nest), 120-260 draw
   calls. Facade windows are merged into the chunk geometry.
 
+Design pass 2026-09-30: `tape.u.uBright` (menu BRIGHTNESS slider, settings key `bright`, default 1.15) is a
+global multiplier in the tape pass, both parts; one-time plain-words hints (`G.hint1-3`, `G.taughtAlert`,
+part 1 `G.taughtRoar`) fire at the moments players got stuck. Raptor is 5.4m long (`TUNE.size`), spawns
+silently behind you (`spawnBehind`), chases at 6.3 with the torch on / 4.9 off (you sprint 5.8), and the
+sub-bass drone is `Audio.startDread()/dread()`.
+
 Testing (headless swiftshader, as part 1): `window.deeptime` has `G`, `step`,
 `M`, `LV`, `TUNE`, `raptors`, `phantom`, `newRun`, `tryPickup`, `startFinale`,
 `openLab`, `keys`, `cctv`; `deeptime.bright = true` floods the scene with
