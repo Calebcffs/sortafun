@@ -199,7 +199,7 @@
   }
 </style>
 <script src="sfx.js?v=27fe66d5"></script>
-<script src="feedback.js?v=df4a6393"></script>
+<script src="feedback.js?v=d00ebbed"></script>
 <script src="panic-app.js?v=0b45ce91"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -440,7 +440,7 @@
   var ec = $("#ec"), bye = $("#bye"), body = document.body;
 
   /* ---------------- the music (YouTube IFrame API) ---------------- */
-  var player = null, ytReady = false, ytDead = false, ytState = -9;
+  var player = null, ytReady = false, ytDead = false, ytState = -9, wantPlay = false, mutedStart = false;
   window.onYouTubeIframeAPIReady = function () {
     try {
       var vars = { playsinline: 1, rel: 0, modestbranding: 1 };
@@ -448,9 +448,12 @@
       player = new YT.Player("ytp", {
         videoId: VIDEO, width: "100%", height: "100%", playerVars: vars,
         events: {
-          onReady: function () { ytReady = true; },
-          onStateChange: function (e) { ytState = e.data; if (e.data === 1) $("#np").classList.remove("nosound"); },
-          onError: function () { ytDead = true; ytReady = true; $("#np").classList.remove("nosound"); }
+          onReady: function () { ytReady = true; if (wantPlay) playMusic(); },
+          onStateChange: function (e) {
+            ytState = e.data;
+            if (e.data === 1) { $("#np").classList.remove("nosound"); stopSynth(); if (mutedStart) { mutedStart = false; setTimeout(function () { try { player.unMute(); player.setVolume(100); } catch (x) {} }, 350); } }
+          },
+          onError: function () { ytDead = true; ytReady = true; if (state === "bye") startSynth(); }
         }
       });
     } catch (e) { ytDead = true; ytReady = true; }
@@ -459,13 +462,93 @@
     var s = document.createElement("script");
     s.src = "https://www.youtube.com/iframe_api";
     s.onerror = function () { ytDead = true; ytReady = true; };
+    setTimeout(function () { if (!ytReady) { ytDead = true; ytReady = true; } }, 8000);
     document.head.appendChild(s);
   })();
+  // ENTER is a click too: use it to unlock the player (muted play, straight to pause),
+  // so the second click can start it with sound even where autoplay rules are strict
+  function unlockMusic() {
+    try { if (player && player.playVideo) { player.mute(); player.playVideo(); setTimeout(function () { if (state === "site") try { player.pauseVideo(); } catch (x) {} }, 500); } } catch (e) {}
+  }
   function playMusic() {
-    try { if (player && player.playVideo) { player.unMute && player.unMute(); player.setVolume(100); player.playVideo(); } } catch (e) {}
+    wantPlay = true;
+    if (ytDead) { startSynth(); return; }
+    try { if (player && player.playVideo) { player.unMute(); player.setVolume(100); player.seekTo(0, true); player.playVideo(); } } catch (e) {}
+  }
+  // belt and braces if the sound doesn't start: retry muted then unmute, then the pill, then our own loop
+  function watchSound() {
+    setTimeout(function () {
+      if (ytState === 1 || ytState === 3 || ytDead) return;
+      try { mutedStart = true; player.mute(); player.playVideo(); } catch (e) {}
+    }, 900);
+    setTimeout(function () {
+      if (ytState === 1 || ytState === 3 || synthOn) return;
+      $("#np").classList.add("nosound");
+      startSynth();
+    }, 3200);
   }
   // the pill only helps once: after this tap the player's own play button is what's left to press
   $("#tap").addEventListener("click", function (e) { e.stopPropagation(); playMusic(); $("#np").classList.remove("nosound"); });
+
+  /* ---------------- our own house loop (only if YouTube won't play) ---------------- */
+  var actx = null, synthOn = false, synthTimer = 0, nextT = 0, step = 0, master = null;
+  var BASS = [55, 43.65, 65.41, 49], CHORDS = [[220, 261.63, 329.63, 392], [174.61, 220, 261.63, 329.63], [261.63, 329.63, 392, 493.88], [196, 246.94, 293.66, 369.99]];
+  function audioCtx() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    return actx;
+  }
+  function note(f, t, d, type, vol, dest) {
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + d + 0.05);
+  }
+  function noise(t, d, vol, hp, dest) {
+    var n = Math.floor(actx.sampleRate * d), buf = actx.createBuffer(1, n, actx.sampleRate), ch = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1;
+    var src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    src.buffer = buf; f.type = "highpass"; f.frequency.value = hp;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    src.connect(f); f.connect(g); g.connect(dest); src.start(t);
+  }
+  function sched(st, t) {
+    var bar = Math.floor(st / 16) % 4, s = st % 16, ch = CHORDS[bar];
+    if (s % 4 === 0) { // kick
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+      g.gain.setValueAtTime(0.95, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.3);
+    }
+    if (s === 4 || s === 12) noise(t, 0.16, 0.35, 1800, master);                  // clap
+    if (s % 4 === 2) noise(t, 0.09, 0.22, 7000, master);                          // open hat on the off-beat
+    else if (s % 2 === 0) noise(t, 0.03, 0.08, 9000, master);                     // closed hat
+    if (s % 4 === 2) note(BASS[bar], t, 0.26, "sawtooth", 0.28, bassF);            // off-beat bass
+    if (s === 3 || s === 6 || s === 11 || s === 14) ch.forEach(function (f, i) { note(f, t + i * 0.004, 0.22, i % 2 ? "triangle" : "square", 0.045, stabF); }); // piano-ish stabs
+    if (s % 2 === 1) note(ch[(st >> 1) % 4] * 2, t, 0.14, "sine", 0.05, stabF);   // sparkle
+  }
+  var bassF = null, stabF = null;
+  function startSynth() {
+    if (synthOn || !audioCtx()) return;
+    synthOn = true;
+    try { actx.resume(); } catch (e) {}
+    master = actx.createGain(); master.gain.value = 0.55;
+    var comp = actx.createDynamicsCompressor(); master.connect(comp); comp.connect(actx.destination);
+    bassF = actx.createBiquadFilter(); bassF.type = "lowpass"; bassF.frequency.value = 260; bassF.connect(master);
+    stabF = actx.createBiquadFilter(); stabF.type = "lowpass"; stabF.frequency.value = 2400; stabF.connect(master);
+    nextT = actx.currentTime + 0.1; step = 0;
+    var spb = 60 / 124 / 4;
+    synthTimer = setInterval(function () {
+      while (nextT < actx.currentTime + 0.2) { sched(step++, nextT); nextT += spb; }
+    }, 40);
+    $("#np .meta span:first-child").lastChild.nodeValue = "a house loop, just for you";
+    $("#np").classList.remove("nosound");
+  }
+  function stopSynth() {
+    if (!synthOn) return;
+    synthOn = false; clearInterval(synthTimer);
+    try { master.gain.setTargetAtTime(0.0001, actx.currentTime, 0.4); } catch (e) {}
+    $("#np .meta span:first-child").lastChild.nodeValue = "Fred again.. – Jungle";
+  }
 
   /* ---------------- loading ---------------- */
   var MSGS = ["warming up the espresso machine", "chalking up", "loading the global website", "finding the bass drop", "tightening the harness", "proofreading one last time", "polishing the logo"];
@@ -492,6 +575,8 @@
     if (state !== "ready") return;
     state = "site";
     goFull();
+    unlockMusic();
+    try { var ac = audioCtx(); if (ac && ac.state === "suspended") ac.resume(); } catch (e) {}
     body.classList.add("ec-on");
     ec.hidden = false; bye.hidden = false;
     ec.scrollTop = 0;
@@ -505,6 +590,7 @@
     if (e) { e.preventDefault(); e.stopPropagation(); }
     state = "bye";
     playMusic(); // inside the click, so the browser lets it play
+    watchSound();
     body.classList.add("ec-bye");
     // send each visible module off the top of the screen, like a crane lifting it away
     var mods = [].slice.call(ec.querySelectorAll(".mod")), vis = 0;
@@ -525,16 +611,10 @@
     setTimeout(function () { buildTitle(true); }, reduce ? 0 : Math.min(900, lift * 0.5));
     setTimeout(function () { bye.classList.add("show"); }, reduce ? 100 : Math.min(900, lift * 0.5) + 2300);
     setTimeout(function () { burst(); }, reduce ? 300 : Math.min(900, lift * 0.5) + 3000);
-    setTimeout(checkSound, 3500 + lift);
   }
   ec.addEventListener("click", trigger, true);
   ec.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") trigger(e); });
   $("#cookie button").addEventListener("click", trigger);
-  function checkSound() {
-    if (ytDead) { $("#np").classList.remove("nosound"); return; }
-    if (ytState !== 1 && ytState !== 3) $("#np").classList.add("nosound");
-  }
-
   /* ---------------- THANK YOU, built from modules ---------------- */
   var FONT = {
     T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
@@ -636,11 +716,11 @@
   /* panic mode (the 0 key) hushes the music too */
   new MutationObserver(function () {
     var h = document.documentElement.classList;
-    if (h.contains("panic") || h.contains("od-app")) { try { if (player && player.pauseVideo) player.pauseVideo(); } catch (e) {} }
+    if (h.contains("panic") || h.contains("od-app")) { try { if (player && player.pauseVideo) player.pauseVideo(); } catch (e) {} try { if (synthOn) { stopSynth(); } } catch (e) {} }
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
   /* test hook */
-  window.__ec = { state: function () { return state; }, ready: function () { return state === "ready"; }, trigger: trigger, player: function () { return player; }, ytState: function () { return ytState; }, enter: function () { $("#ld-go").click(); } };
+  window.__ec = { state: function () { return state; }, ready: function () { return state === "ready"; }, trigger: trigger, player: function () { return player; }, ytState: function () { return ytState; }, synth: function () { return synthOn; }, enter: function () { $("#ld-go").click(); } };
 })();
 </script>
 </body>
