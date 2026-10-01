@@ -262,6 +262,7 @@
     "rewind & play again": "倒带并重播", "left thumb: walk · right thumb: look": "左拇指：行走 · 右拇指：视角", "they hunt by sound.": "它们靠声音捕猎。",
     "a key": "A键", "d key": "D键", "f key": "F键", "s key": "S键", "key": "键",
     "taka-san's glass": "高桥先生的杯子", "bottles:": "酒瓶：", "seat the table": "安排座位",
+    "typing (top 200)": "打字（前200词）", "typing (top 1000)": "打字（前1000词）", "driving game": "驾驶游戏", "anagram sprint": "字谜冲刺", "fermi quiz": "费米问答",
     "loading past scores...": "正在加载历史分数...", "404": "404", "sfsg slacking simulator (work in progress)": "SFSG 摸鱼模拟器（制作中）",
   });
 
@@ -305,6 +306,9 @@
     "just in:": "最新：", "someone": "某人",
   });
 
+  // every scoreboard says social credits, so every "score" (分数) in the lines above is too
+  for (var dk in D) if (D[dk].indexOf("分数") >= 0) D[dk] = D[dk].replace(/分数/g, "社会信用");
+
   // ---------------------------------------------------------------
   // pattern rules for lines with a number or a name in them
   // ---------------------------------------------------------------
@@ -331,6 +335,9 @@
     }
     if ((m = /^rate (.+)$/i.exec(core)) && D[m[1].toLowerCase()]) return "评分：" + D[m[1].toLowerCase()];
     if ((m = /^you gave it (\d) stars?\. tap to rate again$/.exec(core))) return "你给了 " + m[1] + " 星。点击可重新评分";
+    // the profile page's table: "126 wpm" in a cell, "1 game · 1 scores" under the name
+    if (el && el.closest && el.closest("td") && (m = /^(.+?) (wpm|moves|ms|hits|pts|rungs|words|guesses|cash|parts|samples|streak|score|points)$/.exec(core))) return m[1] + " 社会信用";
+    if ((m = /^(\d+) games? · (\d+) scores?$/.exec(core))) return m[1] + " 个游戏 · " + m[2] + " 笔社会信用";
     if ((m = /^(\d+) here now$/.exec(core))) return m[1] + " 人在线";
     if ((m = /^comments? \((\d+)\)$/.exec(core))) return "评论 (" + m[1] + ")";
     if ((m = /^(\d+) of (\d+) stamps\s*·\s*scored on (\d+) \/ (\d+) games$/.exec(core))) return m[1] + " / " + m[2] + " 枚印章 · 已在 " + m[3] + " / " + m[4] + " 个游戏中获得社会信用";
@@ -359,7 +366,7 @@
   // anything a visitor typed (names, chat, guestbook) and code
   var SKIP = "script,style,noscript,textarea,input,code,pre,svg text," +
     "#words,#found,#missed,#cur,#grid,#board,#keys,#box,#chain,#startW,#endW,#hive,#across,#down,#cluebar,.xw,#calBody," +
-    ".lb-name,[data-noxlate],.fb-count,.chat-msg,.chat-log li:not(.chat-sys),.entry,.gb-entry,.msg-body";
+    ".lb-name,#word,.picks,.card u,#log,#people,.ttl,.by,.cmt-body,[data-noxlate],.fb-count,.chat-msg,.chat-log li:not(.chat-sys),.entry,.gb-entry,.msg-body";
 
   var origText = new WeakMap();   // text node -> original string
   var origAttr = new WeakMap();   // element -> { attr: original }
@@ -367,7 +374,11 @@
   var busy = false;
 
   // (panic mode's fake Office / OneDrive pages are left alone too)
-  function skipped(el) { return !el || root.classList.contains("panic") || (el.closest && el.closest(SKIP)); }
+  // the forum is people's posts: only its bar and footer get translated
+  var CHROME_ONLY = /forum\.html$/.test(location.pathname) ? ".homebar,.sitefoot,.fb-root,.sfc-dock,.sfc-pop,.sfc-toast" : null;
+  function skipped(el) {
+    return !el || root.classList.contains("panic") || (el.closest && (el.closest(SKIP) || (CHROME_ONLY && !el.closest(CHROME_ONLY))));
+  }
 
   function xlate(str, el) {
     var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(str);
@@ -616,7 +627,8 @@
     btn.className = "zh-btn";
     btn.setAttribute("data-nosfx", "");
     btn.setAttribute("data-noxlate", ""); // ("English" is also a typing test word in the dictionary)
-    btn.addEventListener("click", function () { set(!on, true); });
+    // (blur: Space / Enter in a game must not press this button again)
+    btn.addEventListener("click", function () { set(!on, true); btn.blur(); });
     var sfxBox = host.querySelector(".sfx-box");
     if (sfxBox) host.insertBefore(btn, sfxBox); else host.appendChild(btn);
     drawButton();
