@@ -973,7 +973,7 @@ function fakeGlint(dt) {
     const x = G.player.x - Math.sin(a) * d, z = G.player.z - Math.cos(a) * d;
     if (Math.abs(x) > 100 || Math.abs(z) > 100 || G.occlusion(G.player.x, G.player.z, x, z) > 0.5) continue;
     const y = WD.height(x, z) + 1.5;
-    const mk = (s) => { const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: eyeTex(), color: 0xc01810, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, fog: false })); e.scale.setScalar(0.22); e.position.set(x + Math.cos(a) * 0.22 * s, y, z - Math.sin(a) * 0.22 * s); scene.add(e); return e; };
+    const mk = (s) => { const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: eyeTex(), color: 0xc01810, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, fog: false })); e.scale.setScalar(0.22); e.position.set(x + Math.cos(a) * 0.165 * s, y, z - Math.sin(a) * 0.165 * s); scene.add(e); return e; };
     glintObj = { a: mk(-1), b: mk(1), t: 0, life: 2 + Math.random() * 1.5, lit: 0, pos: new THREE.Vector3(x, y, z) };
     Audio.oneShot("twig", { pos: glintObj.pos, vol: 0.6, ref: 3 });
     return;

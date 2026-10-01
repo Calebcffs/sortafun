@@ -900,7 +900,7 @@ function scares(dt, zone) {
   if (O && Math.hypot(P.x - O.x, P.z - O.z) < 10 && !G.done.outflow && G.seen(tmp.set(O.x, O.y - 1, O.z)) > 0.4) {
     G.done.outflow = true;
     const eye = (dx) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0xc01810, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, fog: false })); s.scale.setScalar(0.12); s.position.set(O.x + dx, O.y + 0.05, O.z + 1.4); scene.add(s); return s; };
-    const e1 = eye(-0.07), e2 = eye(0.07);
+    const e1 = eye(-0.0525), e2 = eye(0.0525);
     Audio.oneShot("rap_growl", { pos: tmp.set(O.x, O.y, O.z + 1.5), vol: 0.8, ref: 2, rate: 1.1 });
     script((dt, t) => { if (t > 1.1 && t < 1.2) { e1.visible = e2.visible = false; } if (t > 1.3 && t < 1.4) e1.visible = e2.visible = true; if (t > 1.8) { scene.remove(e1); scene.remove(e2); return true; } return false; });
   }
@@ -1061,7 +1061,7 @@ function spawnGlints() {
     const y = M.floorAt(x, z) + 1.6, sp = [];
     for (const s of [-1, 1]) {
       const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0xc01810, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, fog: false }));
-      e.scale.setScalar(0.16); e.position.set(x + Math.cos(a) * 0.16 * s, y, z - Math.sin(a) * 0.16 * s); scene.add(e); sp.push(e);
+      e.scale.setScalar(0.16); e.position.set(x + Math.cos(a) * 0.12 * s, y, z - Math.sin(a) * 0.12 * s); scene.add(e); sp.push(e);
     }
     glints = { sp, t: 0, life: 1.6 + Math.random() * 1.2, pos: new THREE.Vector3(x, y - 0.6, z), lit: 0 };
     Audio.oneShot("rap_growl", { pos: glints.pos, vol: 0.35, ref: 3, rate: 1.2 });

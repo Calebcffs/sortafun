@@ -233,7 +233,17 @@ export class Dino {
         const half = Math.max(...(band.length ? band : slice).map((p) => Math.abs(p.x - hp.x)));
         // out of the skin a little (world metres, the rig is already scaled), or the head hides them
         const out = this.kind === "rex" ? 0.16 : 0.05;
-        for (const sx of [-1, 1]) eyes.push(new THREE.Vector3(hp.x + sx * (half * 0.92 + out), ey + out * 0.3, ez + out * 0.6));
+        // a hunter's eyes face front and sit close: 25% nearer than the old side-of-the-skull
+        // spot. the skull narrows towards the snout, so slide forward to where its half-width
+        // (at eye height) is down to that spacing, and the eyes ride on the front of the face
+        const gap = (half * 0.92 + out) * 0.75;
+        const halfAt = (z) => {
+          const s = pts.filter((p) => Math.abs(p.z - z) < len * 0.04 && Math.abs(p.y - ey) < (top - bot) * 0.25);
+          return s.length ? Math.max(...s.map((p) => Math.abs(p.x - hp.x))) : 0;
+        };
+        let fz = ez;
+        while (fz < hp.z + len * 0.6 && halfAt(fz) * 0.92 + out > gap) fz += len * 0.02;
+        for (const sx of [-1, 1]) eyes.push(new THREE.Vector3(hp.x + sx * gap, ey + out * 0.3, fz + out * 0.6));
       }
     }
     this.eyes = [];
