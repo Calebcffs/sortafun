@@ -87,34 +87,13 @@ key `hotdog` (high = cash in one day).
 
 ---
 
-## 3. Sushi Go Round (remake)
-
-**Pitch:** run a sushi bar. Customers sit at the conveyor belt and order;
-you roll the sushi from memory and send it round before they leave.
-
-**Core loop:** the recipe book lists each roll's ingredients (rice, nori,
-roe, salmon, shrimp, unagi). Click the ingredients onto the mat, roll it, and
-it goes on the belt. Plates must reach the right customer before their
-patience runs out. **Ingredients run out:** order more on the phone (normal
-or express delivery, which costs more). Clear the empty plates or new
-customers can't sit down. Hit the day's money target to go to the next day,
-where new recipes unlock.
-
-**Name note:** same as Hot Dog Bush: "Sushi Go Round" is the Miniclip
-original. Working title only; pick an original name before it ships.
-
-**Tech:** one static page, DOM + CSS animation for the belt. Leaderboard key
-`sushi` (high = best day's takings).
-
----
-
-## 4. Taka-san Dinner Simulator
+## 3. Taka-san Dinner Simulator
 
 Shipped 2026-09-29 as `taka.html` (see CLAUDE.md).
 
 ---
 
-## 5. Frontier Pets (a Neopets clone, Sankyo Frontier themed)
+## 4. Frontier Pets (a Neopets clone, Sankyo Frontier themed)
 
 **Pitch:** adopt a little virtual pet and look after it, in a world built out
 of modular buildings, the thing Sankyo Frontier makes.

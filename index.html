@@ -729,8 +729,8 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=f3d207fe"></script>
-<script src="feedback.js?v=a20481c0"></script>
+<script src="china.js?v=27cfcd3b"></script>
+<script src="feedback.js?v=ec6fd65d"></script>
 <script src="panic-app.js?v=0b45ce91"></script>
 </head>
 <body>
@@ -825,7 +825,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>eighteen games, two of them online with friends. your best today lands on the leaderboards.</p>
+      <p>twenty games, two of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -864,6 +864,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-02</span> <b>v0.8</b>: NEW: sushi goes round. you run a conveyor belt sushi bar. roll what each customer asks for, send it round the belt, phone the supplier before the salmon runs out, and pour sake on anyone about to storm off. career mode, endless service and a daily lunch rush with its own leaderboards.</li>
         <li><span class="when">10-01</span> <b>v0.7</b>: chinese mode got busy. it is a proper cluttered chinese games portal now, with an I love BJ banner up top, and the music is the real thing (Midu Echoing, played from YouTube) the moment you press the button.</li>
         <li><span class="when">10-01</span> <b>v0.6</b>: a new button in the top bar turns the whole site Chinese. red and gold, an 8-bit Chinese tune, the guy in a robe and hat, and every scoreboard says social credits. in there the site is called you dian fan.</li>
         <li><span class="when">10-01</span> <b>v0.5.2</b>: the new thing is better at making sound.</li>
@@ -947,7 +948,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=694c795b"></script>
+<script src="leaderboard.js?v=e7b3ca6a"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -962,6 +963,7 @@
  * ------------------------------------------------------------------ */
 
 var GAMES = [
+  { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
   { id: "taka",      name: "Taka-san Dinner", url: "taka.html",     cat: "skill",  key: "taka",     badge: "new",   blurb: "drive the boss to dinner, seat the table right, keep his glass full, answer his big questions, then karaoke. win a trip to japan." },
   { id: "deeptime2", name: "Deep Time 2",    url: "deeptime2.html", cat: "skill",  key: "deeptime2", badge: "new",  blurb: "part 2: body camera footage from the storm drains under a montana town. five samples. they hunt by sound." },
@@ -1000,7 +1002,6 @@ var HANGOUT = [
 var SOON = [
   { id: "slack",  name: "SFSG Slacking Simulator",   cat: "soon", blurb: "the office, rebuilt in 3D. alt-tab before the manager walks past, answer Teams in time, and sneak down to Starbucks." },
   { id: "hotdog", name: "Hot Dog Bush",              cat: "soon", blurb: "the old political hot dog stand. grill it, dress it, serve it before the queue loses its patience." },
-  { id: "sushi",  name: "Sushi Go Round",            cat: "soon", blurb: "roll sushi from the recipe book, send it round the belt, and don't run out of salmon." },
   { id: "pets",   name: "Frontier Pets",             cat: "soon", blurb: "adopt a pet and build it a home out of modular units. feed it with points from every game on the site." }
 ];
 
@@ -1157,20 +1158,30 @@ var THUMB = {
       outlined(126, 56, "$", 20, "#1fb85a");
   },
   sushi: function () {
-    // the conveyor belt with plates going round
+    // a customer with an onigiri bubble at the counter, and plates going round the belt
     var plates = "";
-    [[28, "#e03131"], [66, "#ff922b"], [104, "#ffd43b"], [142, "#e03131"]].forEach(function (p, i) {
-      plates += '<ellipse cx="' + p[0] + '" cy="84" rx="15" ry="6" fill="#fff"' + S + '/>' +
-        '<rect x="' + (p[0] - 9) + '" y="72" width="18" height="10" rx="3" fill="#1d1b2e"/>' +
-        '<ellipse cx="' + p[0] + '" cy="72" rx="9" ry="4" fill="#fff" stroke="' + K + '" stroke-width="2"/>' +
-        '<ellipse cx="' + p[0] + '" cy="72" rx="4" ry="2" fill="' + p[1] + '"/>';
+    [[26, "#e03131", 0], [80, "#4d8fe8", 1], [134, "#f2c14e", 2]].forEach(function (p) {
+      plates += '<ellipse cx="' + p[0] + '" cy="95" rx="19" ry="7" fill="' + p[1] + '"' + S + '/>' +
+        '<ellipse cx="' + p[0] + '" cy="94" rx="12" ry="4" fill="#fff" stroke="' + K + '" stroke-width="1.5"/>';
+      if (p[2] === 0) plates += '<rect x="' + (p[0] - 10) + '" y="84" width="20" height="10" rx="5" fill="#fff"' + S + '/><path d="M' + (p[0] - 11) + ' 86 Q' + p[0] + ' 77 ' + (p[0] + 11) + ' 86 Z" fill="#ff8f7a"' + S + '/>';
+      if (p[2] === 1) plates += '<circle cx="' + p[0] + '" cy="86" r="9" fill="#1f3a2a"' + S + '/><circle cx="' + p[0] + '" cy="86" r="5.5" fill="#fff"/><circle cx="' + p[0] + '" cy="86" r="2.5" fill="#ff8f7a"/>';
+      if (p[2] === 2) plates += '<rect x="' + (p[0] - 8) + '" y="84" width="16" height="10" rx="4" fill="#fff"' + S + '/><circle cx="' + (p[0] - 4) + '" cy="82" r="3.4" fill="#ff7a1a"/><circle cx="' + (p[0] + 3) + '" cy="82" r="3.4" fill="#ff8f2a"/><circle cx="' + p[0] + '" cy="78" r="3.4" fill="#ff7a1a"/>';
     });
-    return bg("#fff0e0") + '<rect x="0" y="0" width="160" height="50" fill="#b5462c"/>' +
-      '<path d="M10 14h40M10 22h40M110 14h40M110 22h40" stroke="#ffd9a8" stroke-width="3"/>' +
-      '<circle cx="80" cy="24" r="16" fill="#fff"' + S + '/>' + txt(80, 30, "sushi", 10, "#b5462c") +
-      '<rect x="0" y="88" width="160" height="14" fill="#8a879c"' + S + '/>' +
-      '<path d="M8 95h14M36 95h14M64 95h14M92 95h14M120 95h14M148 95h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' +
-      plates + '<rect x="0" y="102" width="160" height="18" fill="#c49a6c"/>';
+    return bg("#fff0e0") + '<rect x="0" y="0" width="160" height="22" fill="#b5462c"/>' +
+      '<path d="M8 22v14M30 22v14M52 22v14M74 22v14M96 22v14M118 22v14M140 22v14" stroke="#fff" stroke-width="9" stroke-linecap="square"/>' +
+      '<circle cx="12" cy="8" r="3" fill="#ffd9a8"/><circle cx="80" cy="8" r="3" fill="#ffd9a8"/><circle cx="148" cy="8" r="3" fill="#ffd9a8"/>' +
+      // the customer
+      '<path d="M44 82 Q44 64 62 62 Q80 64 80 82 Z" fill="#4d8fe8"' + S + '/>' +
+      '<circle cx="62" cy="50" r="14" fill="#ffd8a8"' + S + '/>' +
+      '<path d="M48 48 Q50 33 62 34 Q74 33 76 48 Q70 41 62 42 Q54 41 48 48 Z" fill="#2a2230"' + S + '/>' +
+      '<circle cx="57" cy="51" r="1.8" fill="' + K + '"/><circle cx="67" cy="51" r="1.8" fill="' + K + '"/>' +
+      '<path d="M57 57 Q62 61 67 57" fill="none" stroke="' + K + '" stroke-width="2" stroke-linecap="round"/>' +
+      // speech bubble with an onigiri
+      '<rect x="86" y="24" width="38" height="30" rx="10" fill="#fff"' + S + '/><path d="M90 52 L80 62 L98 53 Z" fill="#fff"' + S + '/><rect x="88" y="50" width="12" height="4" fill="#fff"/>' +
+      '<path d="M105 30 Q108 30 114 44 L96 44 Q102 30 105 30 Z" fill="#fff"' + S + '/><rect x="98" y="39" width="14" height="5" fill="#1f3a2a"/>' +
+      '<rect x="0" y="86" width="160" height="16" fill="#5d5a7a"' + S + '/>' +
+      '<path d="M6 94h12M34 94h12M62 94h12M90 94h12M118 94h12M146 94h12" stroke="#8f8cb0" stroke-width="2" stroke-linecap="round"/>' +
+      plates + '<rect x="0" y="104" width="160" height="16" fill="#c49a6c"/>';
   },
   taka: function () {
     // the round table from above: the glass lazy susan, dim sum, two beers, a mic

@@ -307,6 +307,35 @@
     "just in:": "最新：", "someone": "某人",
   });
 
+  // sushi goes round (sushi.html): the static lines. Dish names, buttons, HUD labels, the menu cards.
+  add({
+    "sushi goes round": "回转寿司",
+    "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush.": "经营一家回转寿司店。按顾客点的菜卷寿司，送上传送带，三文鱼不够就打电话订货。有生涯模式、无尽模式和每日午餐高峰。",
+    "you're the new chef at a conveyor belt sushi bar. roll what each customer asks for and send it round the belt. don't run out of rice, don't let anyone's stars run out, and phone the supplier before the salmon is gone.": "你是回转寿司店的新厨师。按每位顾客点的菜卷寿司，送上传送带。别让米饭用完，别让任何人的星星掉光，三文鱼用完之前记得给供应商打电话。",
+    "best on a wider screen or with your phone sideways. tap to click.": "屏幕宽一点或者把手机横过来更好玩。点一下就是点击。",
+    "neko maru kaiten sushi, now hiring one (1) chef": "猫丸回转寿司，现招聘厨师一（1）名",
+    "career": "生涯模式", "endless service": "无尽营业", "lunch rush": "午餐高峰",
+    "continue": "继续", "new career": "重新开始生涯", "how to play": "玩法", "got it": "知道了",
+    "fifteen days to prove yourself. new dishes every few days, more seats, grumpier customers. hit the money goal to move on.": "十五天证明自己。每隔几天有新菜，座位更多，顾客更暴躁。达到金额目标才能进入下一天。",
+    "one long night, getting busier. play until your reputation runs out. score is the yen you took in.": "漫长的一晚，越来越忙。一直玩到口碑耗尽。分数就是你收进来的日元。",
+    "two minutes, full menu, same customers for everyone today. earn as much as you can. daily board.": "两分钟，完整菜单，今天所有人面对同样的顾客。尽可能多赚钱。每日榜。",
+    "music": "音乐", "music: on": "音乐：开", "music: off": "音乐：关", "pause": "暂停", "full screen": "全屏", "paused": "已暂停",
+    "keep cooking": "继续做菜", "quit to menu": "返回菜单", "restart the day": "重新开始这一天", "restart run": "重新开始",
+    "time": "时间", "goal": "目标", "rep": "口碑", "wallet": "钱包", "earned": "已赚", "open for": "营业时间",
+    "open the doors": "开门营业", "to the kitchen": "进厨房", "menu": "菜单", "try again": "再试一次", "play again": "再玩一次",
+    "recipe book": "食谱", "back to the kitchen": "回到厨房", "phone the supplier": "给供应商打电话",
+    "recipes": "食谱", "phone": "电话", "bin": "垃圾桶", "the mat": "寿司帘", "on the menu": "菜单上有", "new on the menu": "菜单上新增",
+    "rice": "米饭", "nori": "海苔", "roe": "鱼子", "salmon": "三文鱼", "shrimp": "虾", "unagi": "鳗鱼", "sake": "清酒",
+    "onigiri": "饭团", "california roll": "加州卷", "gunkan maki": "军舰卷", "salmon roll": "三文鱼卷", "shrimp sushi": "虾寿司",
+    "combo sushi": "综合寿司", "unagi roll": "鳗鱼卷", "dragon roll": "龙卷", "rainbow roll": "彩虹卷", "emperor roll": "皇帝卷",
+    "money taken": "营业额", "tips": "小费", "lucky cat bonuses": "招财猫奖金", "happy customers": "满意的顾客", "stormed out": "气走的顾客",
+    "dishes eaten": "吃掉的菜", "best lucky streak": "最长连胜", "closed for the night": "今晚打烊", "that's lunch": "午餐结束",
+    "paused.": "已暂停。", "sushi goes round, endless service - most yen": "回转寿司，无尽营业：社会信用最高",
+    "sushi goes round, lunch rush - most yen": "回转寿司，午餐高峰：社会信用最高",
+    ": new: sushi goes round. you run a conveyor belt sushi bar. roll what each customer asks for, send it round the belt, phone the supplier before the salmon runs out, and pour sake on anyone about to storm off. career mode, endless service and a daily lunch rush with its own leaderboards.": "：新游戏：回转寿司。你来经营一家回转寿司店。按每位顾客点的菜卷寿司，送上传送带，三文鱼用完之前打电话向供应商订货，谁快要气走就给谁倒杯清酒。有生涯模式、无尽营业和每日午餐高峰，各有自己的社会信用榜。",
+    "twenty games, two of them online with friends. your best today lands on the leaderboards.": "二十个游戏，其中两个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
+  });
+
   // every scoreboard says social credits, so every "score" (分数) in the lines above is too
   for (var dk in D) if (D[dk].indexOf("分数") >= 0) D[dk] = D[dk].replace(/分数/g, "社会信用");
 

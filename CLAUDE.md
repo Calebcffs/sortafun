@@ -1097,6 +1097,52 @@ replies, lines, songs) are in `taka/src/data.js` (encrypted into the vault), in 
 - `window.__taka` is the test hook (`go(scene)`, `S()`, `dinnerTick`,
   `answer(k)`, `pour`, `turn`, `waitress`).
 
+### Sushi Goes Round (`sushi.html` + `sushi/`, 2026-10-02, v0.8)
+
+A faithful remake of the Miniclip flash game Sushi Go Round (name shifted by one
+letter on purpose: "Goes"). Design + original-mechanics notes in
+`sushi/PLAN.md`. Plain scripts, no build: `data.js` (recipes, customer types,
+the 15 career days, belt geometry, UI hit positions), `sim.js` (all the rules,
+**no DOM**), `art.js` (every drawing: customers are generated from a seed, dishes
+from the recipe id), `audio.js` (WebAudio, music OFF by default), `game.js`
+(screens, input, render loop, effects, saving, leaderboards). Page is one 960x600
+canvas plus DOM overlays (title, day card, recipe book, phone panel, pause,
+results) in `.sg-stage`. Dialogs go full screen under 900px wide.
+
+- **Rules in one breath:** click ingredients (1-6) onto the mat (max 4), click the
+  mat (space) to roll; the plate waits in the chute until an empty belt slot passes
+  the entry, rides the 14-slot belt, and a customer grabs it as it crosses their seat
+  if it is on their bubble. Plates go off after 2 laps. Customers pay per dish +
+  tip by stars left (0.08 x stars, max 40 percent), leave empty plates that must be
+  **clicked away** or the seat stays blocked. 0 stars = storm off, reputation drops
+  (-20, critic -35). Phone orders come in lots of 10: 7s delivery or +50 yen rush
+  (instant; everything is instant in the pre-open prep phase). Sake refills stars.
+- **Modes:** Career (15 days, goal = revenue, stars 1/1.3x/1.6x, saved in
+  localStorage `sortafun-sushi-v1`), Endless Service (key `sushi`) and Lunch Rush
+  (key `sushirush`, 2 min, the same customers for everyone that day: the seed is the
+  Singapore date and customers come from their own RNG stream). Score = yen,
+  `leaderboard.js` GAMES + `firestore.rules` already have both keys.
+- **Balance is by numbers.** `node tools/sushi-bot.mjs` plays every day in node with a
+  configurable seconds-per-click (`--click 0.9 --runs 20`, `--career`, `--endless`,
+  `--rush`). `tools/sushi-bot-core.js` is the shared brain, also injected into the real
+  page for visual tests. The `goal` values in `data.js` were set from the 0.9 s/click
+  bot: it should pass most days, 0.45 should get 3 stars late. Re-run it after any
+  change to prices, timings or customers and retune `goal`.
+- **Test hook** `window.__sushi`: `startCareer(day)`, `startMode("endless"|"rush")`,
+  `open()` (skip the prep phase), `speed(n)` (game speed), `sim()`, `act({k:"stack",seat})`.
+  Headless Chrome via puppeteer-core as usual; inject `tools/sushi-bot-core.js` and
+  `SG.makeBot(__sushi.sim(), 0.6, {})` then call `bot.tick(dt)` on an interval.
+- **Day one coach:** the lucky cat walks a first-timer through book, open, make,
+  roll, serve, clear (`coach` in game.js, stops for good once seen, `save.seen.coach`).
+- **Sounds** are all synthesised and checked by rendering offline
+  (`SG.audio._render(name)`); peaks sit around 0.05 to 0.3. I could not hear them,
+  so Caleb's ears are the real test. The page sets `<html data-nomusic>` so the site
+  loop does not fight the game's own koto loop.
+- **New dishes / customers:** a recipe is one row in `RECIPES` (multiset of
+  `R N E S P U`, all multisets must differ, mat holds 4) plus a `dish()` branch in
+  `art.js`; add it to a day's `menu` count (the order of `RECIPES` is the unlock order).
+  `china.js` has the dish and UI strings; the day cards and bubbles are English.
+
 ### The farewell card (`clarissa.html`, 2026-10-01, v0.5)
 
 An e-card dressed up as a game, made for a colleague's last day. **Unlisted on purpose**:
@@ -1242,7 +1288,7 @@ per-game stamps from the boards by name),
 
 Stamp flags are set by: `leaderboard.js submit()` (`-scored`, `-game-<key>`),
 `index.html` (`-walked`), `chat.js` (`-chat`, first message sent), `gallery.html` (`-gallery`),
-`guestbook.html` (`-guestbook`), `feedback.js` (`-feedback`), `passport.html` itself (`-night`).
+`guestbook.html` (`-guestbook`), `feedback.js` (`-feedback`), `sushi/game.js` (`-sushi`, finishing day 15), `passport.html` itself (`-night`).
 
 The hit counter (`#hits`, top-right of the homepage) reads/increments
 `stats/hits` via `SortafunLB.bumpHits`/`getHits`, once per browser session
