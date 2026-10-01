@@ -1078,8 +1078,10 @@ and shows `#bye`: dawn gradient + sun, "THANK YOU" built from 5x7 bitmap-font cu
 drop in then ripple (`buildTitle`, rebuilt on resize, one line wide / two lines narrow),
 a paper note, three SVG cartoon stickers (coffee, climbing, dancing, hand-drawn, CSS
 animated at the 130bpm pulse), canvas confetti, and the YouTube player (Fred again..
-"Jungle", video id `VIDEO`) as a visible widget. If the embed refuses or autoplay is
-blocked, the "tap for music" pill / YouTube link covers it. Panic mode (0) pauses it.
+"Jungle", video id `VIDEO`) as a visible widget. ENTER also unlocks the player (muted play, then pause) so the second click can play with
+sound. If YouTube is blocked or errors, or nothing plays within ~3s of the click, an
+original WebAudio house loop (124bpm, Am-F-C-G, `startSynth`) plays instead and stops
+the moment YouTube reaches PLAYING. The "tap for music" pill is the last resort. Panic mode (0) pauses it.
 
 Gotchas hit while building: `game.css` styles every `canvas` (white box, ink border),
 so `#confetti` has to reset background/border; the margin reset is `:where()` so class
