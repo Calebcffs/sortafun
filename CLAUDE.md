@@ -1084,7 +1084,7 @@ blocked, the "tap for music" pill / YouTube link covers it. Panic mode (0) pause
 Gotchas hit while building: `game.css` styles every `canvas` (white box, ink border),
 so `#confetti` has to reset background/border; the margin reset is `:where()` so class
 rules still win. Test hook `window.__ec` (`ready()`, `enter()`, `trigger()`, `ytState()`).
-Verified headless over CDP (real mouse events), desktop and 390px, with ytState 1.
+Verified headless over CDP with real mouse events (desktop and 390px, panic key pauses the music); the music started (ytState 1) even without Chrome's autoplay override, but only desktop Chrome was tried, so iOS may fall back to the pill.
 
 ### Draw and Guess (`draw.html` + `draw-words.js`)
 

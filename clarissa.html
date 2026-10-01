@@ -52,8 +52,8 @@
   .sx-btn { display: inline-block; margin-top: 28px; background: #2fc4b2; color: #06303a !important; font-weight: 800; padding: 14px 30px; border-radius: 999px; animation: nudge 2.2s ease-in-out infinite; }
   @keyframes nudge { 50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(47,196,178,.18); } }
   .sx-hero svg { width: 100%; height: auto; max-height: 420px; }
-  .sx-hook { transform-origin: 292px 40px; animation: sway 4s ease-in-out infinite; }
-  @keyframes sway { 50% { transform: rotate(3deg); } }
+  .sx-hook { transform-origin: 292px 40px; animation: hooksway 4s ease-in-out infinite; }
+  @keyframes hooksway { 50% { transform: rotate(3deg); } }
   .sx-feat { margin-top: -54px; position: relative; z-index: 2; }
   .sx-feat .sx-in { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
   .sx-card { background: #fff; border-radius: 14px; box-shadow: 0 10px 30px rgba(11,58,102,.16); padding: 26px; border-top: 5px solid #2fc4b2; }
@@ -464,7 +464,8 @@
   function playMusic() {
     try { if (player && player.playVideo) { player.unMute && player.unMute(); player.setVolume(100); player.playVideo(); } } catch (e) {}
   }
-  $("#tap").addEventListener("click", function (e) { e.stopPropagation(); playMusic(); });
+  // the pill only helps once: after this tap the player's own play button is what's left to press
+  $("#tap").addEventListener("click", function (e) { e.stopPropagation(); playMusic(); $("#np").classList.remove("nosound"); });
 
   /* ---------------- loading ---------------- */
   var MSGS = ["warming up the espresso machine", "chalking up", "loading the global website", "finding the bass drop", "tightening the harness", "proofreading one last time", "polishing the logo"];
