@@ -977,6 +977,19 @@ page right after `sfx.js` in `<head>` (not clarissa, admin, birdie), adds a "中
   Played, the ticker) and every score unit (wpm, moves, pts...) becomes 社会信用. Stored numbers are untouched.
 - **Music:** `SortafunSFX.theme("zh")` swaps to `SONG_ZH` in `sfx.js` (C pentatonic, plucked leads, taiko, gong,
   separate resume key). Turning Chinese on from the button also starts the music (and plays a gong).
+  **v0.7 (Caleb's ask): in Chinese mode the music is "Midu Echoing"** (弥渡山歌, YouTube `GYwVZ1ium3k`, a 1 hour
+  loop), played through YouTube's own embedded player (hidden, nothing hosted here). `sfx.js` has an external
+  music hook (`SortafunSFX.external({ok,start,stop,level})`, `extFailed()`); `china.js` registers the YouTube
+  player in it. If YouTube is blocked or errors, the 8-bit `SONG_ZH` plays instead. The click that turns Chinese
+  on starts it (the player is warmed up on hover); on the next page it resumes from the saved position on the
+  first click or key press (browsers refuse autoplay on a fresh page). `SortafunZH.song()` is a test hook.
+- **The portal (v0.7):** under `html.zh` every page gets a red "I ♥ BJ" banner with a drawn cartoon portrait
+  (the `MAO` svg, not a photo) and a now-playing pill, a tiny utility strip (decorative, disabled login boxes),
+  a dense footer (friend links, the real "healthy gaming" notice, a joke ICP number) and side ads on wide
+  screens. The homepage (`#gamegrid` present, `html.zh-home`) also gets a 4399-style block: hot searches, a
+  scrolling announcement, six category rows of links (game names plus suffixes like 无敌版) and an icon grid
+  from the `thumb()` svgs, and its panels / tiles are squeezed tighter. All of it is built by `buildPortal()`
+  in `china.js`, hidden by CSS unless zh, and marked `data-noxlate`.
 - **The guy:** `SortafunZH.outfit()` draws a red changshan robe, gold collar and a black futou hat (two flat
   wings); the logo `svg.mascot` gets it injected at load, `feedback.js` thanks card and the homepage
   `stick()` thumbnails carry `.zh-outfit` parts that only show under `html.zh`.

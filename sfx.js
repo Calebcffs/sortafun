@@ -331,6 +331,10 @@
     Dq: ["D", "G", "A"], Gq: ["G", "C", "D"], Eq: ["E", "G", "A"], // pentatonic-only chords
   };
   var music = { timer: null, step: 0, next: 0, loop: 0, events: null };
+  // an outside player can take the music's place (china.js plays a YouTube track in
+  // Chinese mode): { ok(), start(level), stop(), level(l) }. If it fails it calls
+  // SortafunSFX.extFailed() and the built-in tune carries on instead
+  var ext = null, extOn = false;
 
   function buildSong() {
     if (music.events) return music.events;
@@ -434,6 +438,7 @@
 
   function musicStart() {
     if (hushed || music.timer || !ac() || !unlocked) return;
+    if (ext && ext.ok()) { if (!extOn) { extOn = true; try { ext.start(musicLevel); } catch (e) {} } return; }
     buildSong();
     restorePos();
     if (ctx.state !== "running") ctx.resume();
@@ -445,6 +450,7 @@
     tickMusic();
   }
   function musicStop() {
+    if (extOn) { extOn = false; try { ext.stop(); } catch (e) {} }
     if (!music.timer) return;
     savePos();
     clearInterval(music.timer);
@@ -460,7 +466,7 @@
   function setTheme(name) {
     name = SONGS[name] ? name : "en";
     if (name === theme) return;
-    var was = !!music.timer;
+    var was = !!music.timer || extOn;
     if (was) musicStop();
     theme = name;
     SONG = SONGS[name];
@@ -474,6 +480,7 @@
   function musicAuto(level) {
     wantsMusic = true;
     if (level != null) musicLevel = level;
+    if (extOn && ext.level) { try { ext.level(musicLevel); } catch (e) {} }
     if (music.timer && ctx) {
       musicBus.gain.cancelScheduledValues(ctx.currentTime);
       musicBus.gain.setValueAtTime(musicBus.gain.value, ctx.currentTime);
@@ -667,8 +674,14 @@
     enabled: function () { return soundOn; },
     setEnabled: setSound,
     hush: hush,
+    external: function (o) { ext = o || null; },
+    extFailed: function () {
+      if (!extOn) return;
+      extOn = false;
+      if (wantsMusic && musicOn && soundOn && unlocked && !document.hidden) musicStart();
+    },
     theme: function (name) { if (name === undefined) return theme; setTheme(name); return theme; },
-    music: { auto: musicAuto, start: function () { setMusic(true); }, stop: function () { setMusic(false); }, playing: function () { return !!music.timer; },
+    music: { auto: musicAuto, start: function () { setMusic(true); }, stop: function () { setMusic(false); }, playing: function () { return !!music.timer || extOn; },
       position: function () { return { step: music.step, loop: music.loop, level: musicLevel }; } },
     sounds: Object.keys(SOUNDS),
   };

@@ -106,6 +106,7 @@
 
   // the news ticker and What's New list (newest first)
   add({
+    ": chinese mode got busy. it is a proper cluttered chinese games portal now, with an i love bj banner up top, and the music is the real thing (midu echoing, played from youtube) the moment you press the button.": "：中文模式变热闹了。现在是一个标准的密密麻麻的中文游戏门户，顶部有“I ♥ BJ”横幅，按下按钮的瞬间就会播放真正的《弥渡山歌》（来自YouTube）。",
     ": a new button in the top bar turns the whole site chinese. red and gold, an 8-bit chinese tune, the guy in a robe and hat, and every scoreboard says social credits. in there the site is called you dian fan.": "：顶栏新增一个按钮，可以把整个网站变成中文。红金配色，8位中国风音乐，小人穿上长袍戴上帽子，所有计分榜都显示社会信用。在中文模式里，网站叫「有点烦」。",
     ": the new thing is better at making sound.": "：新东西的声音更好了。",
     ": a couple of small fixes to the new thing.": "：对新东西做了几个小修复。",
@@ -562,7 +563,7 @@
     if (style) return;
     style = document.createElement("style");
     style.id = "zh-style";
-    style.textContent = css();
+    style.textContent = css() + "\n" + portalCss();
     (document.head || root).appendChild(style);
   }
   function addLanterns() {
@@ -629,6 +630,8 @@
     btn.setAttribute("data-noxlate", ""); // ("English" is also a typing test word in the dictionary)
     // (blur: Space / Enter in a game must not press this button again)
     btn.addEventListener("click", function () { set(!on, true); btn.blur(); });
+    // warm the YouTube player up as the pointer arrives, so the song starts the instant it's clicked
+    btn.addEventListener("pointerenter", function () { if (!on) ytLoad(); }, { once: true });
     var sfxBox = host.querySelector(".sfx-box");
     if (sfxBox) host.insertBefore(btn, sfxBox); else host.appendChild(btn);
     drawButton();
@@ -665,6 +668,291 @@
     }
   }
 
+  // ---------------------------------------------------------------
+  // the music: in Chinese mode the note button plays 弥渡山歌 (Midu Echoing) from
+  // YouTube's own embedded player (nothing is hosted here). sfx.js asks this object
+  // whether to take over; if YouTube is blocked or errors, the 8-bit tune plays instead
+  // ---------------------------------------------------------------
+  var YT_ID = "GYwVZ1ium3k", YT_POS = "sortafun-yt-pos";
+  var yt = { player: null, ready: false, dead: false, loading: false, want: false, level: 0.5 };
+  var ytArmed = false;
+  function ytVol() { return Math.round(Math.min(1, yt.level * 1.4) * 80); }
+  function ytSavedPos() {
+    try {
+      var p = JSON.parse(sessionStorage.getItem(YT_POS) || "null");
+      if (p && Date.now() - p.at < 10 * 60 * 1000) return Math.max(0, Math.floor(p.t + (Date.now() - p.at) / 1000));
+    } catch (e) {}
+    return 0;
+  }
+  function ytSavePos() {
+    try {
+      if (yt.player && yt.ready && yt.want) sessionStorage.setItem(YT_POS, JSON.stringify({ t: yt.player.getCurrentTime(), at: Date.now() }));
+    } catch (e) {}
+  }
+  function ytFail() {
+    yt.dead = true;
+    if (window.SortafunSFX && SortafunSFX.extFailed) SortafunSFX.extFailed();
+  }
+  // autoplay can be refused on a fresh page: the next click or key press starts it
+  function ytArm() {
+    if (ytArmed) return;
+    ytArmed = true;
+    var go = function () {
+      ytArmed = false;
+      window.removeEventListener("pointerdown", go, true);
+      window.removeEventListener("keydown", go, true);
+      if (yt.want && yt.player) try { yt.player.playVideo(); } catch (e) {}
+    };
+    window.addEventListener("pointerdown", go, true);
+    window.addEventListener("keydown", go, true);
+  }
+  function ytPlay() {
+    if (!yt.player || !yt.ready) return;
+    try { yt.player.setVolume(ytVol()); yt.player.unMute(); yt.player.playVideo(); } catch (e) {}
+    setTimeout(function () {
+      if (!yt.want || !yt.player) return;
+      var st = -1;
+      try { st = yt.player.getPlayerState(); } catch (e) {}
+      if (st !== 1 && st !== 3) ytArm();
+    }, 2500);
+  }
+  function ytLoad() {
+    if (yt.loading || yt.dead) return;
+    yt.loading = true;
+    var wrap = document.createElement("div");
+    wrap.id = "zh-ytwrap";
+    wrap.setAttribute("aria-hidden", "true");
+    wrap.setAttribute("data-noxlate", "");
+    wrap.style.cssText = "position:fixed;left:-9999px;top:0;width:200px;height:200px;overflow:hidden;pointer-events:none";
+    wrap.innerHTML = '<div id="zh-yt"></div>';
+    (document.body || root).appendChild(wrap);
+    var prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () {
+      if (typeof prev === "function") { try { prev(); } catch (e) {} }
+      try {
+        var vars = { autoplay: 0, controls: 0, playsinline: 1, rel: 0, loop: 1, playlist: YT_ID, start: ytSavedPos() };
+        if (/^https?:/.test(location.origin)) vars.origin = location.origin;
+        yt.player = new YT.Player("zh-yt", {
+          videoId: YT_ID, width: 200, height: 200, playerVars: vars,
+          events: {
+            onReady: function () { yt.ready = true; if (yt.want) ytPlay(); },
+            onStateChange: function (e) { if (e.data === 0) { try { yt.player.seekTo(0); yt.player.playVideo(); } catch (x) {} } },
+            onError: function () { ytFail(); }
+          }
+        });
+      } catch (e) { ytFail(); }
+    };
+    var sc = document.createElement("script");
+    sc.src = "https://www.youtube.com/iframe_api";
+    sc.onerror = ytFail;
+    document.head.appendChild(sc);
+  }
+  var ytExt = {
+    ok: function () { return on && !yt.dead; },
+    start: function (level) {
+      yt.want = true;
+      if (level != null) yt.level = level;
+      ytLoad();
+      if (yt.ready) ytPlay();
+      setTimeout(function () { if (yt.want && !yt.ready) ytFail(); }, 9000); // never loaded: use the 8-bit tune
+    },
+    stop: function () {
+      ytSavePos();
+      yt.want = false;
+      try { if (yt.player && yt.ready) yt.player.pauseVideo(); } catch (e) {}
+    },
+    level: function (l) {
+      yt.level = l;
+      try { if (yt.player && yt.ready) yt.player.setVolume(ytVol()); } catch (e) {}
+    }
+  };
+  if (window.SortafunSFX && SortafunSFX.external) SortafunSFX.external(ytExt);
+  window.addEventListener("pagehide", ytSavePos);
+
+  // ---------------------------------------------------------------
+  // a Chinese web portal: dense, loud and cluttered, like a 4399-style games site.
+  // Everything here is hidden unless <html class="zh"> (see portalCss); all of it is
+  // decoration (the login boxes are disabled, the side ads only close)
+  // ---------------------------------------------------------------
+  var MAO = "<svg class='zh-mao' viewBox='0 0 80 90' role='img' aria-label='cartoon portrait'>" +
+    "<rect x='2' y='2' width='76' height='86' rx='6' fill='#ffd23f' stroke='#1d1b2e' stroke-width='3'/>" +
+    "<rect x='7' y='7' width='66' height='76' rx='3' fill='#d4141c'/>" +
+    "<path d='M22 11l2.2 5 5.3.5-4 3.6 1.2 5.3-4.7-2.8-4.7 2.8 1.2-5.3-4-3.6 5.3-.5z' fill='#ffd23f' transform='translate(-4 -3) scale(.9)'/>" +
+    "<path d='M9 83L11 71Q22 63 33 62L40 70L47 62Q58 63 69 71L71 83Z' fill='#6f7c5e' stroke='#1d1b2e' stroke-width='2.5' stroke-linejoin='round'/>" +
+    "<path d='M32 60L40 72L35 77L27 65Z M48 60L40 72L45 77L53 65Z' fill='#8a977a' stroke='#1d1b2e' stroke-width='2' stroke-linejoin='round'/>" +
+    "<rect x='34' y='52' width='12' height='11' fill='#f1c79a' stroke='#1d1b2e' stroke-width='2'/>" +
+    "<ellipse cx='22.5' cy='40' rx='3' ry='5' fill='#f1c79a' stroke='#1d1b2e' stroke-width='2'/><ellipse cx='57.5' cy='40' rx='3' ry='5' fill='#f1c79a' stroke='#1d1b2e' stroke-width='2'/>" +
+    "<ellipse cx='40' cy='37' rx='18' ry='21' fill='#f6d3aa' stroke='#1d1b2e' stroke-width='2.5'/>" +
+    "<path d='M21.5 35Q19 12 40 13Q61 12 58.5 35Q55 23 40 23Q25 23 21.5 35Z' fill='#1d1b2e'/>" +
+    "<path d='M29 32l8-1.5M43 30.5l8 1.5' stroke='#1d1b2e' stroke-width='2' stroke-linecap='round'/>" +
+    "<circle cx='33' cy='37' r='1.9' fill='#1d1b2e'/><circle cx='47' cy='37' r='1.9' fill='#1d1b2e'/>" +
+    "<path d='M40 38v6l-2 1.5' fill='none' stroke='#b9855a' stroke-width='1.6' stroke-linecap='round'/>" +
+    "<circle cx='30' cy='45' r='3' fill='#f2a58f' opacity='.55'/><circle cx='50' cy='45' r='3' fill='#f2a58f' opacity='.55'/>" +
+    "<path d='M33.5 49.5Q40 55 46.5 49.5' fill='none' stroke='#1d1b2e' stroke-width='2' stroke-linecap='round'/>" +
+    "<circle cx='41.5' cy='55' r='1.2' fill='#8a4b2a'/></svg>";
+
+  function zhName(g) { return D[String(g.name).toLowerCase()] || g.name; }
+  function listGames() {
+    var a = [];
+    try { a = (window.GAMES || []).concat(window.ART || [], window.HANGOUT || []); } catch (e) {}
+    return a.filter(function (g) { return g && g.url; });
+  }
+
+  function bannerHtml() {
+    return "<div class='zh-b-mao'>" + MAO + "</div>" +
+      "<div class='zh-b-mid'><div class='zh-b-title'><span>I</span><span class='h'>♥</span><span>BJ</span></div>" +
+      "<div class='zh-b-sub'>我爱北京天安门 · 北京欢迎你</div></div>" +
+      "<div class='zh-b-right'><div class='zh-b-stars'>★★★★★</div>" +
+      "<div class='zh-np'>♪ 弥渡山歌 Midu Echoing</div>" +
+      "<div class='zh-b-tag'>欢迎光临 · 永久免费</div></div>";
+  }
+  function utilHtml() {
+    return "<span class='zh-u-l'><b>欢迎来到有点烦！</b> <i>设为首页</i>|<i>加入收藏</i>|<i>手机版</i>|<i>联系客服</i>|<i>客服QQ：88888888</i></span>" +
+      "<span class='zh-u-r' title='只是装饰，不能登录'>用户名 <input disabled size='8'> 密码 <input disabled type='password' size='8'> " +
+      "<button type='button' disabled>登录</button> <i>注册</i> <i>忘记密码</i></span>";
+  }
+
+  var VARIANTS = ["", "2", "无敌版", "在线玩", "双人版", "中文版", "HD", "最新版", "小游戏", "修改版", "全集", "攻略"];
+  function linkRow(pool, n, seed) {
+    var h = "";
+    if (!pool.length) return h;
+    for (var i = 0; i < n; i++) {
+      var g = pool[(i + seed) % pool.length], v = VARIANTS[Math.floor((i + seed) / pool.length) % VARIANTS.length];
+      var t = zhName(g) + v;
+      var cls = i % 5 === 2 ? " class='r'" : i % 7 === 3 ? " class='o'" : "";
+      h += "<a href='" + g.url + "'" + cls + ">" + t + "</a>" + (i % 7 === 3 ? "<em class='zh-new'>NEW</em>" : "");
+    }
+    return h;
+  }
+  function portalHtml(all) {
+    var by = function (cats) { return all.filter(function (g) { return cats.indexOf(g.cat) >= 0; }); };
+    var rows = [
+      ["专辑", "#d4141c", all, 0], ["文字", "#e85d04", by(["word"]), 1], ["解谜", "#9d0208", by(["puzzle"]), 2],
+      ["技巧", "#0f8a5f", by(["skill"]), 3], ["联机", "#c9971c", by(["online"]), 4], ["艺术", "#6a040f", by(["art", "hang"]), 5]
+    ];
+    var h = "<div class='zh-hot'><b>热门搜索：</b>";
+    all.slice(0, 9).forEach(function (g, i) { h += "<a href='" + g.url + "'" + (i % 3 === 0 ? " class='r'" : "") + ">" + zhName(g) + "</a>"; });
+    h += "<span class='zh-hot-r'><i>登录</i> <i>注册</i> <i>忘记密码</i></span></div>";
+    h += "<div class='zh-marq'><span><b>【公告】</b>欢迎来到有点烦！本站所有游戏永久免费！ 【活动】每日新加坡时间零点社会信用榜刷新 【新游】深度时间 第二部已上线 【提示】适度游戏益脑，沉迷游戏伤身。 【下载】无需下载，点开即玩！</span></div>";
+    h += "<div class='zh-cats'>";
+    rows.forEach(function (r) {
+      h += "<div class='zh-cat'><b style='background:" + r[1] + "'>" + r[0] + "</b><div class='zh-links'>" + linkRow(r[2], 14, r[3] * 3) + "</div><span class='zh-more'>更多&gt;&gt;</span></div>";
+    });
+    h += "</div><div class='zh-icons'>";
+    var withThumb = typeof window.thumb === "function";
+    all.slice(0, 20).forEach(function (g, i) {
+      h += "<a href='" + g.url + "'><span class='zh-ic'>" + (withThumb ? window.thumb(g.id) : "") + "</span><span class='zh-icn'>" + zhName(g) + (i % 4 === 1 ? "2" : "") + "</span></a>";
+    });
+    h += "</div>";
+    return h;
+  }
+  function footHtml(all) {
+    var h = "<div class='zh-f-links'><b>友情链接：</b>";
+    all.forEach(function (g) { h += "<a href='" + g.url + "'>" + zhName(g) + "</a>"; });
+    h += "</div><div class='zh-f-links'><i>关于我们</i>|<i>联系我们</i>|<i>广告服务</i>|<i>招聘人才</i>|<i>帮助中心</i>|<i>版权声明</i>|<i>隐私政策</i>|<i>网站地图</i></div>" +
+      "<div class='zh-f-warn'>健康游戏忠告：抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。</div>" +
+      "<div class='zh-f-icp'>京 ICP 备 88888888 号 · 京公网安备 88888888 号 · Copyright © 2026 有点烦 All Rights Reserved. · 不是真的备案号，只是玩笑</div>";
+    return h;
+  }
+  function floatHtml(side) {
+    return "<button type='button' class='zh-x' aria-label='close'>×</button><div class='zh-fl-t'>" + (side === "l" ? "新手礼包" : "客服在线") + "</div>" +
+      "<div class='zh-fl-b'>" + (side === "l" ? "点击领取<br>永久免费" : "QQ：<br>88888888") + "</div><div class='zh-fl-s'>★ HOT ★</div>";
+  }
+
+  var portalBuilt = false;
+  function buildPortal() {
+    if (portalBuilt || !document.body) return;
+    portalBuilt = true;
+    var all = listGames();
+    var b = document.createElement("div");
+    b.className = "zh-banner"; b.setAttribute("data-noxlate", ""); b.innerHTML = bannerHtml();
+    var u = document.createElement("div");
+    u.className = "zh-util"; u.setAttribute("data-noxlate", ""); u.innerHTML = utilHtml();
+    document.body.insertBefore(u, document.body.firstChild);
+    document.body.insertBefore(b, document.body.firstChild);
+    var home = document.getElementById("gamegrid");
+    if (home) {
+      root.classList.add("zh-home");
+      var nav = document.querySelector("nav.nav");
+      var p = document.createElement("div");
+      p.className = "zh-portal"; p.setAttribute("data-noxlate", ""); p.innerHTML = portalHtml(all);
+      if (nav && nav.parentNode) nav.parentNode.insertBefore(p, nav.nextSibling);
+    }
+    var f = document.createElement("div");
+    f.className = "zh-foot"; f.setAttribute("data-noxlate", ""); f.innerHTML = footHtml(all);
+    document.body.appendChild(f);
+    ["l", "r"].forEach(function (s) {
+      var d = document.createElement("div");
+      d.className = "zh-float " + s; d.setAttribute("data-noxlate", ""); d.innerHTML = floatHtml(s);
+      d.querySelector(".zh-x").addEventListener("click", function () { d.style.display = "none"; });
+      document.body.appendChild(d);
+    });
+  }
+
+  function portalCss() {
+    var Z = "html.zh:not(.panic) ", H = "html.zh.zh-home:not(.panic) ";
+    var star = "url(\"data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='46' height='46'><path d='M23 8l3.2 7.4 8 .7-6 5.3 1.8 7.9-7-4.2-7 4.2 1.8-7.9-6-5.3 8-.7z' fill='#ffd23f' fill-opacity='.22'/></svg>") + "\")";
+    return [
+      ".zh-banner,.zh-util,.zh-portal,.zh-foot,.zh-float{display:none}",
+      Z + ".zh-banner{display:flex;align-items:center;gap:14px;padding:6px 16px;background:" + star + ",linear-gradient(#e8222b,#a50d16);border-bottom:3px solid #ffd23f;position:relative;z-index:6;color:#ffd23f}",
+      ".zh-mao{width:58px;height:65px;display:block;transform:rotate(-3deg);filter:drop-shadow(0 3px 0 rgba(0,0,0,.35))}",
+      ".zh-b-mid{flex:1;text-align:center;min-width:0}",
+      ".zh-b-title{font:400 46px/1 'Lilita One','Arial Black',sans-serif;color:#fff;-webkit-text-stroke:3px #7d0a12;paint-order:stroke fill;text-shadow:0 4px 0 #7d0a12;letter-spacing:3px}",
+      ".zh-b-title .h{color:#ffd23f;display:inline-block;margin:0 .15em;animation:zh-beat 1s ease-in-out infinite}",
+      "@keyframes zh-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}",
+      ".zh-b-sub{font-size:13px;font-weight:700;color:#ffe9a8;letter-spacing:2px}",
+      ".zh-b-right{text-align:right;font-size:12px;line-height:1.5;white-space:nowrap}",
+      ".zh-b-stars{font-size:16px;letter-spacing:3px;animation:zh-blink 1.2s steps(2,start) infinite}",
+      "@keyframes zh-blink{50%{opacity:.35}}",
+      ".zh-np{background:#7d0a12;border:2px solid #ffd23f;border-radius:12px;padding:1px 10px;color:#fff;font-weight:700}",
+      ".zh-b-tag{color:#ffe9a8}",
+      "@media (max-width:640px){.zh-b-right{display:none}.zh-b-title{font-size:32px}.zh-mao{width:44px;height:50px}.zh-b-sub{font-size:11px}}",
+      Z + ".zh-util{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px;padding:3px 14px;background:#fff3d6;border-bottom:1px solid #e8b44c;font:12px/1.6 'Microsoft YaHei','PingFang SC',Verdana,sans-serif;color:#7a5200}",
+      ".zh-util i,.zh-portal i,.zh-foot i{font-style:normal;cursor:default;color:#1a3d8f;margin:0 5px}.zh-util b{color:#d4141c;margin-right:6px}",
+      ".zh-util input{width:74px;height:16px;font-size:11px;border:1px solid #c9a24d;background:#fff}.zh-util button{font-size:11px;padding:0 6px}",
+      Z + ".zh-portal{display:block;max-width:1000px;margin:8px auto 0;border:2px solid #e8b44c;background:#fffdf5;font:12px/1.5 'Microsoft YaHei','PingFang SC',Verdana,sans-serif}",
+      ".zh-portal a{color:#1a3d8f;text-decoration:none;margin:0 6px;white-space:nowrap}.zh-portal a:hover{color:#d4141c;text-decoration:underline}",
+      ".zh-portal a.r,.zh-links a.r{color:#d4141c;font-weight:700}.zh-portal a.o{color:#e85d04;font-weight:700}",
+      ".zh-hot{display:flex;flex-wrap:wrap;align-items:center;padding:4px 8px;background:#fff0c2;border-bottom:1px solid #e8b44c}.zh-hot b{color:#d4141c}.zh-hot-r{margin-left:auto}",
+      ".zh-marq{overflow:hidden;white-space:nowrap;padding:3px 0;background:#fff;border-bottom:1px solid #f0d9a0;color:#d4141c}",
+      ".zh-marq span{display:inline-block;padding-left:100%;animation:zh-run 28s linear infinite}.zh-marq b{color:#e85d04}",
+      "@keyframes zh-run{to{transform:translateX(-100%)}}",
+      ".zh-cat{display:flex;align-items:flex-start;gap:6px;padding:4px 8px;border-bottom:1px dashed #f0d9a0}.zh-cat:nth-child(odd){background:#fff8e6}",
+      ".zh-cat>b{flex:none;width:42px;text-align:center;color:#fff;font-size:12px;padding:1px 0;border-radius:2px}",
+      ".zh-links{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;line-height:1.7}.zh-more{flex:none;color:#888;font-size:11px}",
+      ".zh-new{font:700 9px/1 Arial,sans-serif;color:#fff;background:#d4141c;border-radius:2px;padding:1px 3px;font-style:normal;margin-left:-3px;animation:zh-blink .9s steps(2,start) infinite}",
+      ".zh-icons{display:grid;grid-template-columns:repeat(10,1fr);gap:6px 4px;padding:8px}",
+      ".zh-icons a{display:flex;flex-direction:column;align-items:center;margin:0;text-align:center;min-width:0}",
+      ".zh-ic{display:block;width:100%;max-width:74px;aspect-ratio:4/3;border:1px solid #c9a24d;border-radius:4px;overflow:hidden;background:#fff}.zh-ic svg{display:block;width:100%;height:100%}",
+      ".zh-icn{display:block;margin-top:2px;font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis}",
+      "@media (max-width:760px){.zh-icons{grid-template-columns:repeat(5,1fr)}.zh-cat>b{width:34px}}",
+      Z + ".zh-foot{display:block;margin:14px 0 0;padding:10px 14px 18px;background:#7d0a12;border-top:3px solid #ffd23f;color:#ffe9a8;font:12px/1.9 'Microsoft YaHei','PingFang SC',Verdana,sans-serif;text-align:center}",
+      ".zh-foot a{color:#ffd23f;margin:0 6px;text-decoration:none}.zh-foot a:hover{text-decoration:underline}.zh-foot i{color:#ffd23f}.zh-f-warn{color:#fff;opacity:.9;margin-top:4px}.zh-f-icp{font-size:11px;opacity:.8}",
+      Z + ".zh-float{display:none;position:fixed;top:190px;width:92px;padding:6px 4px 8px;text-align:center;background:linear-gradient(#ffe9a8,#ffd23f);border:3px solid #d4141c;border-radius:6px;z-index:30;font:12px/1.4 'Microsoft YaHei','PingFang SC',sans-serif;color:#7d0a12;box-shadow:0 3px 0 rgba(0,0,0,.3)}",
+      ".zh-float.l{left:6px}.zh-float.r{right:6px}.zh-fl-t{font-weight:900;font-size:14px;color:#d4141c}.zh-fl-b{margin:4px 0}.zh-fl-s{color:#d4141c;animation:zh-blink 1s steps(2,start) infinite;font-weight:700}",
+      ".zh-x{all:unset;cursor:pointer;position:absolute;top:-2px;right:3px;font:700 16px/1 Arial,sans-serif;color:#7d0a12}",
+      "@media (min-width:1320px){" + Z + ".zh-float{display:block}}",
+      // lanterns hang below the banner now
+      Z + ".zh-lantern{top:112px}",
+      // the homepage: tighter and busier everywhere
+      H + "body{font-size:12px}",
+      H + ".site{padding:0 6px 24px}",
+      H + ".top{padding:6px 4px;gap:8px}",
+      H + ".slogan{font-size:14px}",
+      H + ".panel{margin-top:6px;border-width:2px;border-radius:5px;box-shadow:none}",
+      H + ".panel-head{padding:3px 8px}",
+      H + ".panel-head h2{font-size:14px}",
+      H + ".panel-head p{font-size:11px}",
+      H + ".panel-body{padding:6px}",
+      H + ".grid{grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:5px 4px}",
+      H + ".tile{border-width:1px;border-radius:3px;box-shadow:none;padding:2px}",
+      H + ".tile .name{font-size:11px;line-height:1.15}",
+      H + ".feature-text{padding:8px 10px;gap:4px}.feature-text h3{font-size:22px}.feature-text p,.feature-text ul{font-size:11.5px}",
+      H + ".ticker,.alphabar{margin-top:6px}",
+      H + ".nav{padding:4px;gap:4px}.nav a{font-size:14px;padding:3px 10px 3px}",
+    ].join("\n");
+  }
+
   injectStyle();
   music(on ? "zh" : "en");
 
@@ -672,6 +960,8 @@
     injectButton();
     addLanterns();
     dressMascots();
+    buildPortal();
+    try { if (on && localStorage.getItem("sortafun-music") === "1") ytLoad(); } catch (e) {}
     if (on) { walk(document.body); startObserver(); doTitle(); }
     root.lang = on ? "zh-CN" : "en";
   }
@@ -685,6 +975,10 @@
     set: function (v) { set(v, false); },
     toggle: function () { set(!on, true); },
     outfit: outfit,
+    song: function () { // test hook: where the YouTube player is (1 = playing, 3 = buffering)
+      var st = null; try { st = yt.player && yt.ready ? yt.player.getPlayerState() : null; } catch (e) {}
+      return { want: yt.want, ready: yt.ready, dead: yt.dead, state: st, vol: yt.ready ? yt.player.getVolume() : null };
+    },
     dict: D,
     translate: function (s) { return xlate(s, null); },
   };
