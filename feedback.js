@@ -32,7 +32,7 @@
 
   // the site version. every update that ships bumps it: +0.0.1 for fixes and
   // small things, +0.1 for a big one (a new game, a new system)
-  var VERSION = "0.5.2";
+  var VERSION = "0.6";
   window.SORTAFUN_VERSION = VERSION;
 
   // every page, keyed by id. game: true = a thing you play (gets the star strip
@@ -257,7 +257,8 @@
   // the stick guy from the logo, doing a thumbs up
   var THANKS_GUY = '<svg viewBox="0 0 62 70" fill="none" stroke="#1d1b2e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<circle cx="30" cy="13" r="10" fill="#fff"/><circle cx="26.5" cy="12" r="1.3" fill="#1d1b2e" stroke="none"/><circle cx="33.5" cy="12" r="1.3" fill="#1d1b2e" stroke="none"/>' +
-    '<path d="M25 16q5 5 10 0" stroke-width="2.4"/><path d="M30 23v25M30 48l-9 18M30 48l9 18M30 30l-12 10M30 30l14-8v-8"/><path d="M44 14l3-3" stroke-width="3"/></svg>';
+    '<path d="M25 16q5 5 10 0" stroke-width="2.4"/><path d="M30 23v25M30 48l-9 18M30 48l9 18M30 30l-12 10M30 30l14-8v-8"/><path d="M44 14l3-3" stroke-width="3"/>' +
+    (window.SortafunZH ? window.SortafunZH.outfit("thumb") : "") + '</svg>';
 
   /* ---------------- the form ---------------- */
   var here = null;         // this page's item

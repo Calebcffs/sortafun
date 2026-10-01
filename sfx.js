@@ -171,6 +171,13 @@
       noise(B(), t + 0.6, 0.12, { ft: "lowpass", f: 700, vol: 0.2 });
     },
     tock: function (t) { tone(B(), 1000, t, 0.03, { wave: "sine", vol: 0.15, decay: true }); },
+    // the Chinese-mode switch (china.js): a gong, then a little rising pentatonic run
+    gong: function (t) {
+      tone(B(), "D3", t, 1.6, { wave: "sine", vol: 0.28, decay: true });
+      tone(B(), "A3", t, 1.2, { wave: "triangle", vol: 0.12, decay: true });
+      noise(B(), t, 0.5, { ft: "bandpass", f: 2200, q: 1.5, vol: 0.1 });
+      run(B(), t + 0.35, [["D5", 1], ["E5", 1], ["G5", 1], ["A5", 1], ["D6", 3]], 0.07, { wave: 0.125, vol: 0.1, decay: true });
+    },
     whoosh: function (t) { noise(B(), t, 0.35, { ft: "bandpass", f: 400, fTo: 3000, q: 1.2, vol: 0.9 }); },
     boom: function (t) {
       noise(B(), t, 0.7, { ft: "lowpass", f: 1400, fTo: 80, vol: 0.5 });
@@ -289,9 +296,39 @@
       "B5:2 D6:2 F6:2 D6:2 B5:4 G5:4",
     ],
   };
+  // the Chinese-mode tune (china.js): 16 bars, C major pentatonic only (C D E G A),
+  // so there is no F or B anywhere. plucked leads like a pipa, long notes bow-vibrato
+  // like an erhu, taiko on the downbeats, a gong every other time round
+  var SONG_ZH = {
+    zh: true,
+    bpm: 108,
+    chords: ["C", "C", "Am", "Am", "Dq", "Dq", "Gq", "C", "Am", "Am", "Eq", "Eq", "Dq", "Gq", "Am", "C"],
+    lead: [
+      "E5:4 G5:2 A5:2 G5:4 E5:4",
+      "D5:4 E5:2 G5:2 E5:8",
+      "A5:4 C6:2 D6:2 C6:4 A5:4",
+      "G5:4 A5:2 G5:2 E5:8",
+      "D6:4 C6:2 A5:2 G5:4 A5:4",
+      "D5:2 E5:2 G5:4 A5:4 G5:4",
+      "G5:4 A5:2 C6:2 D6:4 E6:4",
+      "C6:4 A5:2 G5:2 C6:8",
+      "A5:2 A5:2 A5:2 C6:2 E6:4 D6:4",
+      "C6:4 D6:2 C6:2 A5:8",
+      "E6:4 D6:2 C6:2 D6:4 E6:4",
+      "G6:4 E6:2 D6:2 E6:8",
+      "D6:2 E6:2 D6:2 C6:2 A5:4 G5:4",
+      "G5:4 A5:2 G5:2 D5:4 E5:4",
+      "A5:4 C6:2 D6:2 E6:4 C6:4",
+      "D6:4 C6:2 A5:2 C6:8",
+    ],
+  };
+  var SONGS = { en: SONG, zh: SONG_ZH };
+  var theme = "en";
+  var PENTA = ["C5", "D5", "E5", "G5", "A5", "C6", "D6", "E6"];
   var CHORD = {
     C: ["C", "E", "G"], Am: ["A", "C", "E"], F: ["F", "A", "C"], G: ["G", "B", "D"],
     Em: ["E", "G", "B"], G7: ["G", "B", "D", "F"],
+    Dq: ["D", "G", "A"], Gq: ["G", "C", "D"], Eq: ["E", "G", "A"], // pentatonic-only chords
   };
   var music = { timer: null, step: 0, next: 0, loop: 0, events: null };
 
@@ -321,7 +358,33 @@
     return ev;
   }
 
+  function scheduleStepZh(i, t, stepDur) {
+    var bar = Math.floor(i / 16), s = i % 16;
+    var list = music.events[i];
+    var arpOn = bar >= 8 || music.loop % 2 === 1;
+    for (var k = 0; k < list.length; k++) {
+      var e = list[k];
+      if (e[0] === "lead") {
+        if (e[2] >= 4) tone(musicBus, e[1], t, stepDur * e[2] * 0.95, { wave: 0.25, vol: 0.1, att: 0.02, vib: 7, vibHz: 6 });
+        else tone(musicBus, e[1], t, stepDur * e[2] * 1.1, { wave: 0.125, vol: 0.17, decay: true });
+      }
+      else if (e[0] === "bass") { if (e[2] && s % 4 === 0) tone(musicBus, e[1], t, stepDur * 3, { wave: "triangle", vol: 0.27, decay: true }); }
+      else if (e[0] === "arp" && arpOn && s % 2 === 1) tone(musicBus, e[1], t, stepDur * 1.5, { wave: 0.125, vol: 0.045, decay: true });
+    }
+    // a guzheng run up the scale at the end of every fourth bar
+    if (bar % 4 === 3 && s >= 8) tone(musicBus, PENTA[s - 8], t, stepDur * 2, { wave: 0.125, vol: 0.075, decay: true });
+    // taiko on the downbeats, wood block on 2 and 4, little cymbal, gong every other time round
+    if (s === 0 || (s === 8 && bar % 2 === 1)) tone(musicBus, 110, t, 0.2, { wave: "sine", to: 42, vol: 0.34, decay: true });
+    if (s === 4 || s === 12) tone(musicBus, 1150, t, 0.05, { wave: 0.5, vol: 0.05, decay: true });
+    if (s === 0 && bar % 4 === 0) noise(musicBus, t, 0.3, { f: 6500, vol: 0.04 });
+    if (s === 0 && bar === 0 && music.loop % 2 === 0) {
+      tone(musicBus, "D3", t, 2.2, { wave: "sine", vol: 0.2, decay: true });
+      tone(musicBus, "A3", t, 1.6, { wave: "triangle", vol: 0.08, decay: true });
+    }
+  }
+
   function scheduleStep(i, t, stepDur) {
+    if (SONG.zh) return scheduleStepZh(i, t, stepDur);
     var bar = Math.floor(i / 16), s = i % 16;
     var list = music.events[i];
     var arpOn = bar >= 8 || music.loop % 2 === 1;
@@ -354,14 +417,14 @@
 
   // the tune carries on from page to page: where it was and when is kept in
   // sessionStorage, and the next page picks it up as if it never stopped
-  var POS_KEY = "sortafun-music-pos";
+  function posKey() { return "sortafun-music-pos" + (theme === "zh" ? "-zh" : ""); }
   function savePos() {
     if (!music.timer) return;
-    try { sessionStorage.setItem(POS_KEY, JSON.stringify({ step: music.step, loop: music.loop, at: Date.now() })); } catch (e) {}
+    try { sessionStorage.setItem(posKey(), JSON.stringify({ step: music.step, loop: music.loop, at: Date.now() })); } catch (e) {}
   }
   function restorePos() {
     var p = null;
-    try { p = JSON.parse(sessionStorage.getItem(POS_KEY) || "null"); } catch (e) {}
+    try { p = JSON.parse(sessionStorage.getItem(posKey()) || "null"); } catch (e) {}
     if (!p || !(Date.now() - p.at < 10 * 60 * 1000)) return;
     var n = music.events.length, stepDur = 60 / SONG.bpm / 4;
     var s = p.step + Math.floor((Date.now() - p.at) / 1000 / stepDur);
@@ -391,6 +454,18 @@
       musicBus.gain.setValueAtTime(musicBus.gain.value, ctx.currentTime);
       musicBus.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
     }
+  }
+
+  // swap the tune ("en" or "zh", china.js does this); picks up again from the start if it was playing
+  function setTheme(name) {
+    name = SONGS[name] ? name : "en";
+    if (name === theme) return;
+    var was = !!music.timer;
+    if (was) musicStop();
+    theme = name;
+    SONG = SONGS[name];
+    music.events = null; music.step = 0; music.loop = 0;
+    if (was) musicStart();
   }
 
   // every page plays the tune: at half volume, except the homepage (which
@@ -592,6 +667,7 @@
     enabled: function () { return soundOn; },
     setEnabled: setSound,
     hush: hush,
+    theme: function (name) { if (name === undefined) return theme; setTheme(name); return theme; },
     music: { auto: musicAuto, start: function () { setMusic(true); }, stop: function () { setMusic(false); }, playing: function () { return !!music.timer; },
       position: function () { return { step: music.step, loop: music.loop, level: musicLevel }; } },
     sounds: Object.keys(SOUNDS),

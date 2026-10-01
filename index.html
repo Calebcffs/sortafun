@@ -728,8 +728,9 @@
   try { if (sessionStorage.getItem("sortafun-panic") === "1") document.documentElement.classList.add("panic"); } catch (e) {}
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
-<script src="sfx.js?v=27fe66d5"></script>
-<script src="feedback.js?v=d00ebbed"></script>
+<script src="sfx.js?v=6dbe3181"></script>
+<script src="china.js?v=673e88d9"></script>
+<script src="feedback.js?v=bf1dd098"></script>
 <script src="panic-app.js?v=0b45ce91"></script>
 </head>
 <body>
@@ -863,6 +864,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-01</span> <b>v0.6</b>: a new button in the top bar turns the whole site Chinese. red and gold, an 8-bit Chinese tune, the guy in a robe and hat, and every scoreboard says social credits. in there the site is called you dian fan.</li>
         <li><span class="when">10-01</span> <b>v0.5.2</b>: the new thing is better at making sound.</li>
         <li><span class="when">10-01</span> <b>v0.5.1</b>: a couple of small fixes to the new thing.</li>
         <li><span class="when">10-01</span> <b>v0.5</b>: something new is tucked away for a special day. you won't find it on the homepage.</li>
@@ -1029,7 +1031,11 @@ function stick(x, y, s, pose) {
   var legs = pose === "run" ? "M0-14 L-8 0 M0-14 L9-2" : "M0-14 L-6 0 M0-14 L6 0";
   var arms = pose === "run" ? "M0-26 L-9-19 M0-26 L10-31" : pose === "wave" ? "M0-26 L-8-19 M0-26 L9-36" : "M0-26 L-8-18 M0-26 L8-18";
   return '<g ' + h + ' fill="none" stroke="' + K + '" stroke-width="3" stroke-linecap="round">' +
-    '<circle cx="0" cy="-35" r="6" fill="#fff"/><path d="M0-29 L0-14 ' + legs + ' ' + arms + '"/></g>';
+    '<circle cx="0" cy="-35" r="6" fill="#fff"/><path d="M0-29 L0-14 ' + legs + ' ' + arms + '"/>' +
+    // the Chinese-mode robe and hat (china.js shows them under html.zh)
+    '<path class="zh-outfit" d="M-5-29Q0-31 5-29L8-6Q0-4 -8-6Z" fill="#d4141c" stroke-width="2"/>' +
+    '<path class="zh-outfit" d="M-7-41h14" stroke-width="2.2"/>' +
+    '<path class="zh-outfit" d="M-4.5-37Q-4.5-45 0-45Q4.5-45 4.5-37Z" fill="' + K + '" stroke-width="1.5"/></g>';
 }
 function hex(cx, cy, r, fill) {
   var p = [];

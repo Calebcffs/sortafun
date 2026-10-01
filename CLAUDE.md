@@ -955,6 +955,33 @@ circuit racer have their own synth audio but follow the speaker button (the
 green light: a cue would help you cheat. `SortafunSFX._render(seconds, name?)` renders offline for level
 checks (keep sfx peaks under ~0.35).
 
+### Chinese mode (`china.js`, 2026-10-01, v0.6)
+
+Caleb asked for a small button at the top that turns the whole site Chinese. `china.js` is loaded on every
+page right after `sfx.js` in `<head>` (not clarissa, admin, birdie), adds a "中文" / "English" button to
+`.homebar` / `nav.nav` next to the speaker, and remembers the choice in localStorage `sortafun-zh`
+(`<html class="zh">` is set before first paint).
+
+- **The name** in there is 有点烦 (yǒu diǎn fán, "a bit annoying", the sortafun pun), with pinyin under the
+  homepage logo. Caleb gave the tones as yǒu (3rd) diǎn (3rd) fán (2nd).
+- **Look** is all CSS in `china.js` under `html.zh:not(.panic)`: red and gold, a coin and 福/喜 tile
+  background, hanging lanterns (only wide screens), the colour variables remapped. Panic mode is never touched.
+- **Text** is translated by EXACT whole-line match against the dictionary `D` (lowercase english -> chinese),
+  plus a few regex rules (numbers, dates, scoreboard units, page titles). Never substrings: the typing test's
+  words, found words, tiles and clues must stay English, so those containers are in `SKIP` (add
+  `data-noxlate` to any new one). Originals are kept per node, so the button flips back exactly. A
+  MutationObserver translates what pages build later. Lines not in `D` just stay English (the older
+  What's New entries, city / deep time long help text and story, forum, anything users typed). **A new page or
+  string needs a `D` entry; a new page also needs the `china.js` tag after `sfx.js`.**
+- **Social credits:** in zh every scoreboard says 社会信用 (the `.lb` panel heading, leaderboards page, Just
+  Played, the ticker) and every score unit (wpm, moves, pts...) becomes 社会信用. Stored numbers are untouched.
+- **Music:** `SortafunSFX.theme("zh")` swaps to `SONG_ZH` in `sfx.js` (C pentatonic, plucked leads, taiko, gong,
+  separate resume key). Turning Chinese on from the button also starts the music (and plays a gong).
+- **The guy:** `SortafunZH.outfit()` draws a red changshan robe, gold collar and a black futou hat (two flat
+  wings); the logo `svg.mascot` gets it injected at load, `feedback.js` thanks card and the homepage
+  `stick()` thumbnails carry `.zh-outfit` parts that only show under `html.zh`.
+- Keep house voice: no em / en dashes or ellipsis characters in the code or news line; Chinese uses 。，！？.
+
 ### SFSG Slacking Simulator (`slack.html` + `slack/`, WORK IN PROGRESS, 2026-09-29)
 
 Caleb's office rebuilt in 3D, first person, from 13 photos he took (they're
