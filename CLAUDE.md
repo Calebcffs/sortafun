@@ -1057,6 +1057,35 @@ replies, lines, songs) are in `taka/src/data.js` (encrypted into the vault), in 
 - `window.__taka` is the test hook (`go(scene)`, `S()`, `dinnerTick`,
   `answer(k)`, `pour`, `turn`, `waitress`).
 
+### The farewell card (`clarissa.html`, 2026-10-01, v0.5)
+
+An e-card dressed up as a game, made for a colleague's last day. **Unlisted on purpose**:
+no homepage tile, no leaderboard, no `leaderboards.html` row, `noindex`; the What's New
+line is deliberately vague (the page is public, and so are commit messages, so her name
+stays out of both). Caleb sends her the link. In `panic-app.js` FILES ("Farewell card")
+and `feedback.js` ITEMS (not `game: true`, so no star strip).
+
+Flow, all in one file with inline CSS/JS: a normal sortafun window with a fake loading
+bar (waits for page load + fonts + the YouTube API, min ~2.6s) and an ENTER button. ENTER
+is the user gesture that calls `requestFullscreen()` and shows `#ec`, a fixed full-screen
+clone of a corporate modular-buildings site (hero, three cards, about, articles,
+solutions, advantages, vision, footer, cookie banner). It is **rebuilt in own code and
+re-worded**; "Thank You Frontier" is a pun on the real company's name (sankyu = thank
+you), and no real name, logo, image or paragraph is used (grep `sankyo` before
+committing). Any click / Enter / Space on it calls `trigger()`: starts the music inside
+the click, flies each visible `.mod` block off the top (stagger via `--d/--dy/--dx/--rot`),
+and shows `#bye`: dawn gradient + sun, "THANK YOU" built from 5x7 bitmap-font cubes that
+drop in then ripple (`buildTitle`, rebuilt on resize, one line wide / two lines narrow),
+a paper note, three SVG cartoon stickers (coffee, climbing, dancing, hand-drawn, CSS
+animated at the 130bpm pulse), canvas confetti, and the YouTube player (Fred again..
+"Jungle", video id `VIDEO`) as a visible widget. If the embed refuses or autoplay is
+blocked, the "tap for music" pill / YouTube link covers it. Panic mode (0) pauses it.
+
+Gotchas hit while building: `game.css` styles every `canvas` (white box, ink border),
+so `#confetti` has to reset background/border; the margin reset is `:where()` so class
+rules still win. Test hook `window.__ec` (`ready()`, `enter()`, `trigger()`, `ytState()`).
+Verified headless over CDP (real mouse events), desktop and 390px, with ytState 1.
+
 ### Draw and Guess (`draw.html` + `draw-words.js`)
 
 A skribbl.io-style party game, 2 to 8 players, private rooms only (4-letter
