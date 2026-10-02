@@ -25,18 +25,28 @@ export const TEX = {
   metal:    { d: "rusty_metal_02", size: 2.0, tint: [0.9, 0.9, 0.85], rough: 0.7, metal: 0.4 },
   plank:    { d: "brown_planks_09", size: 2.0, tint: [1.1, 1.0, 0.85], rough: 0.88 },
   cracked:  { d: "rough_plaster_broken", size: 3.0, tint: [1.2, 1.1, 0.9], rough: 0.95 },
+  redbrick: { d: "red_brick_03", size: 2.2, tint: [1.45, 1.3, 1.2], rough: 0.9 },
+  asphalt:  { d: "asphalt_02", size: 3.0, tint: [1.6, 1.55, 1.5], rough: 0.95 },
+  grass:    { d: "aerial_grass_rock", size: 3.0, tint: [1.15, 1.2, 0.85], rough: 1.0 },
+  snow:     { d: "snow_02", size: 3.0, tint: [1.0, 1.02, 1.1], rough: 0.9 },
+  plate:    { d: "metal_plate", size: 1.6, tint: [1.5, 1.5, 1.4], rough: 0.6, metal: 0.35 },
+  rock:     { d: "rock_wall_08", size: 2.6, tint: [1.9, 1.8, 1.7], rough: 0.95 },
+  green:    { d: "painted_concrete", size: 3.0, tint: [1.05, 1.1, 1.0], rough: 0.9 },
+  cred:     { d: "corrugated_iron_02", size: 1.6, tint: [1.7, 0.5, 0.4], rough: 0.6, metal: 0.35 },
+  cgreen:   { d: "corrugated_iron_02", size: 1.6, tint: [0.55, 1.3, 0.6], rough: 0.6, metal: 0.35 },
+  corange:  { d: "corrugated_iron_02", size: 1.6, tint: [1.8, 1.0, 0.35], rough: 0.6, metal: 0.35 },
   blue:     { d: "corrugated_iron_02", size: 1.6, tint: [0.45, 0.8, 1.6], rough: 0.6, metal: 0.35 },
   car:      { d: "painted_metal_shutter", size: 2.0, tint: [1.4, 1.3, 1.0], rough: 0.55, metal: 0.3 },
   barrel:   { d: "corrugated_iron_02", size: 1.2, tint: [0.6, 1.0, 0.55], rough: 0.65, metal: 0.4 },
   door:     { d: "blue_painted_planks", size: 1.6, tint: [0.55, 1.15, 1.0], rough: 0.8 },
   trim:     { d: "weathered_planks", size: 1.4, tint: [0.9, 0.7, 0.5], rough: 0.85 },
 };
-// times of day: a Poly Haven sky (CC0, equirect .hdr) plus the lighting that suits it. The sun's direction is
-// read out of the picture itself (its brightest patch), so shadows fall the way the clouds say they should.
+// The sky: one Poly Haven sunset (CC0, equirect .hdr, "Industrial Sunset 02 (Pure Sky)") and the warm low light that goes
+// with it. It is the only sky now: Caleb asked for one nice sunset, not a menu. The sun's direction is read out of the
+// picture itself (its brightest patch) and then held up at minEl degrees, so the shadows are long but never stretch
+// off across the whole map.
 export const SKIES = {
-  noon: { name: "Cloudy noon", sun: 0xfff1da, sunI: 3.5, hemiSky: 0xe3ecf8, hemiGround: 0xd6b27c, hemiI: 0.75, env: 0.5, exposure: 0.95, fog: 0xcad9ea, fill: 0xffdcae, fillI: 0.8, minEl: 38, bg: 1 },
-  sunset: { name: "Sunset", sun: 0xffa45c, sunI: 3.4, hemiSky: 0xffc7a0, hemiGround: 0xa86a44, hemiI: 0.62, env: 0.55, exposure: 1.0, fog: 0xe9b08c, fill: 0x7aa0ff, fillI: 0.55, minEl: 9, bg: 0.55 },
-  storm: { name: "Stormy", sun: 0xdbe6ff, sunI: 2.3, hemiSky: 0xb6c3d6, hemiGround: 0x9a8a70, hemiI: 0.85, env: 0.6, exposure: 0.98, fog: 0xa4afbf, fill: 0xc8d0e0, fillI: 0.5, minEl: 30, bg: 0.85 },
+  sunset: { name: "Sunset", sun: 0xffa045, sunI: 3.3, hemiSky: 0xffc9a4, hemiGround: 0xa86a44, hemiI: 0.66, env: 0.55, exposure: 1.0, fog: 0xe3a98a, fill: 0x7aa0ff, fillI: 0.55, minEl: 10, bg: 0.6 },
 };
 
 // the wall base band that goes under plain plaster
@@ -286,7 +296,7 @@ export class World {
         if (h > 1.8) this._box("trim", p.x0 - 0.012, p.y0 + h / 2 - post / 2, p.z0 - 0.012, p.x1 + 0.012, p.y0 + h / 2 + post / 2, p.z1 + 0.012, dark);
       } else if (p.kind === "container") {
         const long = d > w;
-        this._box("blue", p.x0, p.y0 + 0.2, p.z0, p.x1, p.y1, p.z1, [1, 1, 1]);
+        this._box(TEX[p.mat] && p.mat !== "container" ? p.mat : "blue", p.x0, p.y0 + 0.2, p.z0, p.x1, p.y1, p.z1, [1, 1, 1]);
         this._box("trim", p.x0 - 0.02, p.y0, p.z0 - 0.02, p.x1 + 0.02, p.y0 + 0.2, p.z1 + 0.02, [0.6, 0.6, 0.6]);
         this._box("trim", p.x0 - 0.02, p.y1 - 0.06, p.z0 - 0.02, p.x1 + 0.02, p.y1 + 0.02, p.z1 + 0.02, [0.6, 0.6, 0.6]);
         void long;
@@ -379,12 +389,12 @@ export class World {
     this.sun = new THREE.DirectionalLight(0xffeccc, 3.7);
     const el = (50 * Math.PI) / 180, az = (215 * Math.PI) / 180;
     this.sunDir = new THREE.Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az));
-    this.sun.position.copy(this.sunDir).multiplyScalar(80);
+    this.sun.position.copy(this.sunDir).multiplyScalar(110);
     if (high && !this.opts.noShadows) {
       this.sun.castShadow = true;
       const s = this.sun.shadow, R = this.quality === "medium" ? 26 : 34;
       s.mapSize.set(this.quality === "medium" ? 1536 : 2048, this.quality === "medium" ? 1536 : 2048);
-      s.camera.left = -R; s.camera.right = R; s.camera.top = R; s.camera.bottom = -R; s.camera.near = 1; s.camera.far = 170;
+      s.camera.left = -R; s.camera.right = R; s.camera.top = R; s.camera.bottom = -R; s.camera.near = 1; s.camera.far = 240; // far enough back that a wall well up-sun still throws its long shadow on you
       s.bias = -0.0005; s.normalBias = 0.05; s.radius = 2.2;
     }
     this.group.add(this.sun, this.sun.target);
@@ -407,7 +417,7 @@ export class World {
     const texel = ((s.camera.right - s.camera.left) / s.mapSize.x) || 0.03;
     const sx = Math.round(x / texel) * texel, sz = Math.round(z / texel) * texel;
     this.sun.target.position.set(sx, y, sz);
-    this.sun.position.set(sx + this.sunDir.x * 80, y + this.sunDir.y * 80, sz + this.sunDir.z * 80);
+    this.sun.position.set(sx + this.sunDir.x * 110, y + this.sunDir.y * 110, sz + this.sunDir.z * 110);
     this.sun.target.updateMatrixWorld();
   }
 
@@ -427,17 +437,17 @@ export class World {
       scene.environment = pm.fromScene(es, 0, 1, 1000).texture;
       pm.dispose();
     } catch (e) { /* no environment: the hemisphere light still lights everything */ }
-    this.setSky(this.opts.sky || "noon");
+    this.setSky(this.opts.sky || "sunset");
   }
 
   // swap to one of SKIES. Safe to call again whenever the server's time of day changes.
   setSky(kind) {
-    if (!SKIES[kind]) kind = "noon";
+    if (!SKIES[kind]) kind = "sunset";
     if (this.skyKind === kind) return;
     this.skyKind = kind;
     const P = SKIES[kind], renderer = this.renderer, scene = this.scene;
     this.applySkyLight(P, this.sunDir);
-    new RGBELoader().load(TEXDIR.replace("tex/", "sky/") + kind + ".hdr", (tex) => {
+    new RGBELoader().load(TEXDIR.replace("tex/", "sky/") + (P.file || kind) + ".hdr", (tex) => {
       if (this.skyKind !== kind) return;
       tex.mapping = THREE.EquirectangularReflectionMapping;
       // where is the sun? the brightest patch of the picture
@@ -482,12 +492,14 @@ export class World {
     d.normalize();
     this.sunDir.copy(d);
     this.sun.color.setHex(P.sun); this.sun.intensity = P.sunI;
-    this.hemi.color.setHex(P.hemiSky); this.hemi.groundColor.setHex(P.hemiGround); this.hemi.baseI = P.hemiI; this.hemi.intensity = P.hemiI;
+    // a roofed map (map.meta.ambient > 1) gets extra fill, since the low sun barely gets in
+    const amb = (this.map.meta && this.map.meta.ambient) || 1;
+    this.hemi.color.setHex(P.hemiSky); this.hemi.groundColor.setHex(P.hemiGround); this.hemi.baseI = P.hemiI * amb; this.hemi.intensity = P.hemiI * amb;
     this.fill.color.setHex(P.fill); this.fill.intensity = P.fillI;
     this.fill.position.set(-d.x * 50, 18, -d.z * 50);
     if (this.scene && this.scene.fog) this.scene.fog.color.setHex(P.fog);
     if (this.renderer) this.renderer.toneMappingExposure = P.exposure;
-    for (const m of Object.values(this.mats)) m.envMapIntensity = P.env;
-    this.envI = P.env;
+    for (const m of Object.values(this.mats)) m.envMapIntensity = P.env * Math.min(2, amb);
+    this.envI = P.env * Math.min(2, amb);
   }
 }

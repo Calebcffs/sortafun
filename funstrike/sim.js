@@ -848,7 +848,7 @@ export class Game {
     }
     const s = {
       t: Math.round(this.t * 1000), ph: this.phase, pe: Math.round(this.phaseEnd * 1000), rd: this.round, sc: this.score,
-      p: pl, rv: this.rv, sk: this.opts.sky || "noon",
+      p: pl, rv: this.rv,
       ev: this.events.filter((e) => this.t - e.at < Math.min(e.keep, 2)).map(stripEvent), // each event rides in ~2s of snapshots at most, the client dedupes by seq
     };
     if (this.waiting) s.wait = 1;
@@ -882,7 +882,7 @@ export class Game {
   summary() {
     const hs = this.humans();
     return {
-      name: this.opts.name, mode: this.modeId, map: "dust2", players: hs.length, bots: this.players.size - hs.length, max: this.opts.slots,
+      name: this.opts.name, mode: this.modeId, map: this.map.id || "dust2", players: hs.length, bots: this.players.size - hs.length, max: this.opts.slots,
       phase: this.phase, round: this.round, sc: this.score,
     };
   }

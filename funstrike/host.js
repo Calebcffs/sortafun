@@ -117,7 +117,7 @@ export class HostRuntime {
 }
 
 export async function createOnline(map, opts, hostName) {
-  const summary = { name: opts.name, mode: opts.mode, map: "dust2", players: 1, bots: opts.bots, max: opts.slots, phase: "warmup", diff: opts.diff, hostName };
+  const summary = { name: opts.name, mode: opts.mode, map: map.id || "dust2", players: 1, bots: opts.bots, max: opts.slots, phase: "warmup", diff: opts.diff, hostName };
   const chan = await HostChannel.create(summary);
   return new HostRuntime(map, opts, chan, hostName);
 }

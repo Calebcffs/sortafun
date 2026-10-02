@@ -108,6 +108,7 @@ body.fs-playing .fs-fullbtn { opacity: .2; }
 .fs-cross .l { right: var(--gap); top: calc(var(--th) / -2); width: var(--len); height: var(--th); } .fs-cross .r { left: var(--gap); top: calc(var(--th) / -2); width: var(--len); height: var(--th); }
 .fs-cross .u { bottom: var(--gap); left: calc(var(--th) / -2); height: var(--len); width: var(--th); } .fs-cross .d { top: var(--gap); left: calc(var(--th) / -2); height: var(--len); width: var(--th); }
 .fs-cross .c { left: -1px; top: -1px; width: 2px; height: 2px; display: var(--dot, none); }
+.fs-cross.ads i:not(.c) { display: none; } .fs-cross.ads .c { display: block; left: -1.5px; top: -1.5px; width: 3px; height: 3px; border-radius: 50%; }
 .fs-hitm { left: 50%; top: 50%; width: 0; height: 0; opacity: 0; } .fs-hitm.on { opacity: 1; }
 .fs-hitm i { position: absolute; width: 9px; height: 2px; background: #fff; box-shadow: 0 0 2px #000; } .fs-hitm.head i, .fs-hitm.kill i { background: #ff4a3a; }
 .fs-hitm i:nth-child(1) { transform: translate(-16px, -16px) rotate(45deg); } .fs-hitm i:nth-child(2) { transform: translate(8px, -16px) rotate(-45deg); }

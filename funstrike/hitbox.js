@@ -68,10 +68,15 @@ export function raySphere(ox, oy, oz, dx, dy, dz, cx, cy, cz, r, maxT) {
 
 // nearest hit of a ray (unit dir) on one player's boxes: {t, name} or null
 export function rayPlayer(ox, oy, oz, dx, dy, dz, px, py, pz, crouch, maxT) {
-  let best = null;
+  let best = null, head = null;
   for (const hb of hitboxes(px, py, pz, crouch)) {
     const t = rayCapsule(ox, oy, oz, dx, dy, dz, hb.a, hb.b, hb.r, maxT);
-    if (t >= 0 && (!best || t < best.t)) best = { t, name: hb.name };
+    if (t < 0) continue;
+    if (hb.name === "head") head = { t, name: "head" };
+    if (!best || t < best.t) best = { t, name: hb.name };
   }
+  // the chest capsule's top and the head overlap, and the ray used to meet the chest a few millimetres before the
+  // head when it was aimed dead at the middle of the head. If the ray touches the head at all, it is a head shot.
+  if (head && best && best.name !== "head" && head.t <= best.t + 0.4) best = head;
   return best;
 }

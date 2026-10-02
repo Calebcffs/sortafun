@@ -16,6 +16,10 @@ const POSE = {
   pistol: [0.155, -0.155, -0.4], knife: [0.17, -0.23, -0.45], grenade: [0.16, -0.23, -0.46], bomb: [0.0, -0.24, -0.46],
 };
 
+// how far in front of the eye the rear sight sits when aiming, and how far under its top edge the notch is (metres)
+const ADS_DIST = { pistol: 0.22, smg: 0.17, rifle: 0.18, shotgun: 0.34, sniper: 0.2 };
+const NOTCH = 0.005;
+
 function glow() {
   const c = document.createElement("canvas"); c.width = c.height = 64;
   const g = c.getContext("2d"), grd = g.createRadialGradient(32, 32, 1, 32, 32, 31);
@@ -40,7 +44,7 @@ export class Viewmodel {
     for (const a of this.arms) { this.rig.add(a.upper, a.fore, a.glove); }
     this.flash = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.28), new THREE.MeshBasicMaterial({ map: glow(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.flash.visible = false; this.scene.add(this.flash);
-    this.t = 0; this.bob = 0; this.kickZ = 0; this.kickR = 0; this.sway = new THREE.Vector2(); this.swayV = new THREE.Vector2();
+    this.t = 0; this.bob = 0; this.kickZ = 0; this.kickR = 0; this.kickY = 0; this.sway = new THREE.Vector2(); this.swayV = new THREE.Vector2();
     this.reloadT = -1; this.reloadDur = 2; this.knifeT = -1; this.knifeHeavy = false; this.throwT = -1; this.flashT = 0;
     this.grip = new THREE.Vector3(); this.fore = new THREE.Vector3(); this.muz = new THREE.Vector3(0, 0, -0.6); this.kind = "rifle";
     this.shoulders = [new THREE.Vector3(0.32, -0.55, 0.15), new THREE.Vector3(-0.3, -0.57, 0.15)];
@@ -79,9 +83,12 @@ export class Viewmodel {
 
   drawBase() { const p = POSE[this.kind] || POSE.rifle; this.base = new THREE.Vector3(p[0], p[1], p[2]); }
 
-  kick(kind) {
-    const k = kind === "sniper" ? 2.2 : kind === "shotgun" ? 2 : kind === "pistol" ? 1.3 : kind === "rifle" ? 1 : 0.7;
-    this.kickZ += 0.035 * k; this.kickR += 0.045 * k; this.flashT = 0.05;
+  // one shot: the gun is thrown back and up a bit (the camera climbs too, see client.js), and the flash is lit for
+  // this shot alone: short enough that the next shot of a fast gun is a new flash, never one long glow
+  kick(kind, cycle = 0.1) {
+    const k = kind === "sniper" ? 2.2 : kind === "shotgun" ? 2 : kind === "pistol" ? 1.3 : kind === "rifle" ? 1 : 0.8;
+    this.kickZ += 0.03 * k; this.kickR = Math.min(0.2, this.kickR + 0.05 * k); this.kickY += 0.006 * k;
+    this.flashT = Math.min(0.05, Math.max(0.025, cycle * 0.5));
   }
   reload(dur) { this.reloadT = 0; this.reloadDur = Math.max(0.5, dur); }
   cancelReload() { this.reloadT = -1; }
@@ -105,9 +112,9 @@ export class Viewmodel {
     const idle = Math.sin(this.t * 1.4) * 0.0012 * (1 - ads);
     // view swing: the gun lags the camera
     const tx = Math.max(-1, Math.min(1, s.yawRate * 0.012)), ty = Math.max(-1, Math.min(1, s.pitchRate * 0.01));
-    this.sway.x += (tx - this.sway.x) * Math.min(1, dt * 10); this.sway.y += (ty - this.sway.y) * Math.min(1, dt * 10);
+    this.sway.x += (tx * (1 - ads) - this.sway.x) * Math.min(1, dt * 10); this.sway.y += (ty * (1 - ads) - this.sway.y) * Math.min(1, dt * 10); // no lag when aiming: the sights stay on the middle
     const decay = Math.exp(-dt * 16);
-    this.kickZ *= decay; this.kickR *= decay;
+    this.kickZ *= decay; this.kickR *= decay; this.kickY *= decay;
     // draw: rises from below
     const df = s.drawFrac, up = (1 - df) * (1 - df);
     let reloadY = 0, reloadRX = 0, reloadRZ = 0, rl = 0;
@@ -130,17 +137,27 @@ export class Viewmodel {
       if (this.throwT >= 1) this.throwT = -1;
     }
     const p = [this.base.x, this.base.y, this.base.z];
-    const rx = reloadRX + this.kickR - up * 0.8 + krx + this.sway.y * 0.04, ry = -this.sway.x * 0.05 + kry, rz = reloadRZ + krz;
+    const kickMul = 1 - 0.6 * ads; // sights stay readable while firing from them
+    let rx = reloadRX + this.kickR * kickMul - up * 0.8 + krx + this.sway.y * 0.04, ry = -this.sway.x * 0.05 + kry, rz = reloadRZ + krz;
     this.rig.position.set(0, 0, 0); this.rig.rotation.set(0, 0, 0);
     // put the gun so its grip is at base + motion
     const g = this.gun; if (!g) return;
     const m = g.userData.marks;
     const gripGun = this.kind === "knife" || this.kind === "grenade" || this.kind === "bomb" ? new THREE.Vector3() : m.trigger.clone().add(new THREE.Vector3(0, -0.04, 0.03));
-    const handR = new THREE.Vector3(p[0] + bx + kx - this.sway.x * 0.012, p[1] + by + idle + reloadY - up * 0.3 + ky - this.sway.y * 0.01, p[2] + this.kickZ + kz);
-    if (ads > 0.001) { // the gun swings to the middle of the screen with its sights on the line of sight
-      const o = this.kind === "pistol" ? [0, -0.07, -0.32] : [0, -0.1, -0.31];
-      const tgt = new THREE.Vector3(o[0] + gripGun.x, o[1] + gripGun.y, o[2] + gripGun.z + this.kickZ * 0.6);
-      handR.lerp(tgt, ads);
+    const handR = new THREE.Vector3(p[0] + bx + kx - this.sway.x * 0.012, p[1] + by + idle + reloadY - up * 0.3 + ky - this.sway.y * 0.01 + this.kickY * kickMul, p[2] + this.kickZ * kickMul + kz);
+    if (ads > 0.001 && m.sightF && m.sightR) {
+      // Aiming: the gun swings in front of the eye and tips so that the line from the rear sight (just under its
+      // top edge, where the notch is) to the tip of the front post runs straight down the middle of the screen.
+      // The view model camera sits at the origin looking down -z, and the middle of the screen is where bullets go,
+      // so the post tip ends up exactly on the reticle and the rear sight is centred round it.
+      const R = m.sightR.clone(); R.y -= NOTCH;
+      const F = m.sightF, run = Math.max(0.05, R.z - F.z);
+      const ax = -Math.atan2(F.y - R.y, run), ay = (F.x - R.x) / run;
+      const rotA = new THREE.Euler(ax, ay, 0);
+      const Rr = R.clone().applyEuler(rotA), d = ADS_DIST[this.kind] || 0.18;
+      const origin = new THREE.Vector3(-Rr.x, -Rr.y, -d - Rr.z);
+      handR.lerp(origin.add(gripGun.clone().applyEuler(rotA)), ads);
+      rx += ax * ads; ry += ay * ads;
     }
     g.rotation.set(rx + (this.kind === "knife" ? -0.6 : 0), ry, rz);
     g.position.copy(gripGun).multiplyScalar(-1).applyEuler(g.rotation).add(handR);
@@ -153,10 +170,10 @@ export class Viewmodel {
       this.arm(this.arms[1], this.shoulders[1], new THREE.Vector3(-0.22, -0.42, -0.06), -1);
     }
     // muzzle flash
-    if (s.flash || this.flashT > 0) {
+    if (this.flashT > 0) {
       this.flashT = Math.max(0, this.flashT - dt);
       const mz = g.localToWorld(this.muzL.clone());
-      this.flash.position.copy(mz); this.flash.position.z -= 0.02; this.flash.visible = true; this.flash.rotation.z = Math.random() * 6; this.flash.scale.setScalar(0.7 + Math.random() * 0.6);
+      this.flash.position.copy(mz); this.flash.position.z -= 0.02; this.flash.visible = true; this.flash.scale.setScalar(1);
       this.flash.quaternion.copy(this.camera.quaternion); this.flash.rotateZ(Math.random() * 6);
     } else this.flash.visible = false;
   }

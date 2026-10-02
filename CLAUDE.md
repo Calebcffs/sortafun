@@ -931,7 +931,7 @@ rules deploy.
 ### Fun Strike (`funstrike.html` + `funstrike/`, 2026-10-02, v0.9)
 
 Caleb asked for "a simple Counter-Strike type game, as close to CSGO as possible", called **Fun Strike**: Dust2
-only, Defuse + Team Deathmatch + Deathmatch (FFA), multiplayer with a server list (ping, players, bots, map),
+only (v0.9.2 added nine more maps, below), Defuse + Team Deathmatch + Deathmatch (FFA), multiplayer with a server list (ping, players, bots, map),
 create-your-own-server, bots, join-mid-round = spectate until next round, free assets, good looking but smooth.
 Honest scope notes: the map is **our own rebuild of Dust II's layout** (Valve's geometry/art is not free to use),
 the soldier is Quaternius' SWAT recoloured per team, guns are Pichuliru's CC0 set, sounds are Freesound CC0.
@@ -992,6 +992,48 @@ safety, strap) from noise and rings. Looked for ready-made map models: the Sketc
 Valve's map (CC-BY label or not, not safe to ship) and a generic mesh map would need mesh collision + a nav mesh for the bots.
 Not done / ideas: weapon recoil patterns are generated curves, not CS's real ones; no wallbang; no bomb
 carrier on the minimap; sounds untested by ear (picked by onset detection); only Dust II, no leaderboard key.
+
+**v0.9.2 (Caleb's playtest notes: sounds, accuracy, recoil, light, sights, maps):**
+- **Gunshots**: one `gun_*.wav` per kind of gun, every one starting on the bang (`tools/funstrike/build_gun_sounds.py` cuts them
+  from single-shot Freesound clips; the old mp3 variants were multi-shot recordings whose first sound was anywhere from 0 to
+  190ms in, picked at random with random pitch). `audio.js` `GUNS` maps each weapon id to [file, pitch, level]; weapons that
+  share a recording differ by a fixed pitch. `audio.gun(id, {who, x, y, z})` is the only way a shot should be played: fixed
+  pitch (no jitter), never dropped by the voice cap, and it fades the shooter's previous shot over 35ms so a spray is a row of
+  separate bangs. The context uses `latencyHint: "interactive"`. Muzzle flash is lit per shot for `clamp(cycle/2, 25, 50ms)`
+  (viewmodel `kick(kind, cycle)`), fixed size; remote shooters flash at point blank too.
+- **Aim**: bullets and camera use `client.aimAngles()` (look + recoil punch, same factor), camera shake only moves/rolls the
+  camera, never turns it, so a shot goes exactly through the middle of the screen (checked: end point within a centimetre).
+  Spread = `spreadDeg(...)` with n = shots before this one in the current FULL-AUTO burst (`burstN`, reset 0.2s after you let
+  go of the trigger, semi-autos never build any): first two shots dead on, moving / jumping add slivers, a mag dump tops out
+  under 0.5 degrees, ADS cuts 70%. Pellets and the spread are an even disc. `hitbox.js rayPlayer` now gives the head to a ray
+  that touches it (the chest capsule's top used to beat the head by millimetres when aimed dead at the middle of it).
+  Raw mouse: `lock()` asks for `unadjustedMovement`, sensitivity is a flat 0.022 deg/count x setting, scaled only by the zoom ratio.
+- **Recoil**: `RECOIL_VIEW` 0.8 of the `sprayAt` curve lifts the view per shot and eases back when you stop; the viewmodel gets
+  a stronger upward kick (`kickR`, `kickY`, `kickZ`, 40% of it while aiming).
+- **Sights**: `models.js sightMarks()` finds each gun's front post and rear sight from the mesh; `viewmodel.js` tips and places
+  the gun so the line from just under the rear sight's top to the post tip runs down the middle of the screen (`ADS_DIST` per
+  kind), no sway while aiming, and the HUD crosshair turns into a 3px dot. ADS zoom is `ADS_ZOOM` 0.2 (about 1.3x).
+- **Look**: one sky, Poly Haven "Industrial Sunset 02 (Pure Sky)" 2k (`SKIES.sunset`, no sky option any more; the server no
+  longer sends `sk`), sun held at 10 degrees so shadows are about 5.7x as long as what casts them, shadow light 110m back.
+  Roofed maps set `map.meta.ambient` (>1) for extra fill. New materials on the end of `MATERIALS`: redbrick asphalt grass snow
+  plate rock green; containers take `mat` cred / cgreen / corange / blue.
+- **Maps**: `maps.js` is the registry (`MAPS`, `buildMap(id)`): Dust II plus nine hand written TDM / DM maps (Cargo Hall,
+  Harbor, Canyon, Bunker, Village, The Pit, Foundry, Ruins, Station), each ~45-70m across with its own materials and a mix of
+  roofed / open. Only Dust II has bomb sites, so only it offers Defuse. The server row's `map` id picks the map on both ends
+  (`main.js getMap`, `client.setMap` rebuilds the world), the create screen filters modes by map, PROTOCOL is 2 now.
+  A new map = one builder in maps.js (carve / ramp / raise / wall / props, `spawns()` for the two ends, `B.finish({minCeil: 2.9})`
+  for roofed ones) + a row in `MAPS`; `buildMap` fills in roam points from the deathmatch spawns and drops DM spawns the
+  bots can't walk to. `node tools/funstrike-test.mjs` checks every map (spawns on open floor outside props, T reaches CT),
+  `node tools/funstrike-sim.mjs tdm 4 1 <map id>` runs bots on one, `preview-map.mjs out.ppm 8 <id>` draws it. Ramps need
+  about 5 cells per metre of rise (bots and players step 0.5m at most). A prop whose centre is inside a wall is skipped with a
+  console warning (it used to put NaN in the geometry). **Caleb asked for the maps to be found and downloaded; none could be:**
+  Sketchfab / BlendSwap need a login or 403, Poly Pizza has only castles and town centres (no maps), and anything ripped from
+  Valve can't be shipped. A mesh map would also need mesh collision and bot navigation, the game's rays, movement and A* are
+  all grid based. So the nine are original layouts. If a real CC0 map turns up, the way in is to rasterise it onto the grid
+  (floor height per cell, walls where something blocks 0.5-1.8m up) rather than load the mesh.
+- Headless test harness lives in the session scratchpad only; the pattern is in the **Testing** paragraph above (`funstrike.client`
+  after `startMatch`). Set `client.locked = true` and `client.mouse.b = 2` to aim, `client.shootBullets(w, 0)` with a spy on
+  `link.send` to check where a shot lands. Bots shoot you while you teleport around, which is fine.
 
 ### Sound (`sfx.js`)
 

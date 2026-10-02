@@ -14,7 +14,7 @@
 // echoed back in the snapshot).
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
-export const PROTOCOL = 1;
+export const PROTOCOL = 2; // 2: servers carry a map id and every client builds that map
 const STALE_MS = 25000;
 
 let conn = null;

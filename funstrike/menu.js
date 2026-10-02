@@ -4,6 +4,7 @@
 // collects choices.
 
 import { MODES } from "./sim.js";
+import { MAPS } from "./maps.js";
 import { watchServers, sweepStale } from "./net.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -52,7 +53,7 @@ export class Menus {
         <div class="row"><button data-go="settings">Settings</button><button data-go="controls">Controls</button><button data-go="credits">Credits</button></div>
       </div>
       <div class="fs-name"><label>Your name <input id="fs-nm" maxlength="16" value="${esc(this.cb.getName ? this.cb.getName() : "")}"></label></div>
-      <div class="fs-foot">Dust II · Defuse · Team Deathmatch · Deathmatch · bots included</div>`;
+      <div class="fs-foot">10 maps · Defuse on Dust II · Team Deathmatch · Deathmatch · bots included</div>`;
     const nm = this.root.querySelector("#fs-nm");
     nm.addEventListener("input", () => this.cb.setName && this.cb.setName(nm.value));
     this.root.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
@@ -108,7 +109,7 @@ export class Menus {
     rows.innerHTML = list.map((s) => {
       const full = s.players + s.bots >= s.max, m = MODES[s.mode];
       const pc = s.ping < 80 ? "good" : s.ping < 160 ? "ok" : "bad";
-      return `<tr data-id="${s.id}" class="${s.id === this.sel ? "sel" : ""}${full ? " full" : ""}"><td class="n">${esc(s.name)}<small>host ${esc(s.host)}</small></td><td>${esc(m ? m.name : s.mode)}</td><td>Dust II</td><td>${s.players + s.bots}/${s.max}${full ? " (full)" : ""}</td><td>${s.bots}</td><td class="${pc}">${s.ping} ms</td><td>${DIFF[s.diff] || "-"}</td></tr>`;
+      return `<tr data-id="${s.id}" class="${s.id === this.sel ? "sel" : ""}${full ? " full" : ""}"><td class="n">${esc(s.name)}<small>host ${esc(s.host)}</small></td><td>${esc(m ? m.name : s.mode)}</td><td>${esc((MAPS[s.map] || MAPS.dust2).name)}</td><td>${s.players + s.bots}/${s.max}${full ? " (full)" : ""}</td><td>${s.bots}</td><td class="${pc}">${s.ping} ms</td><td>${DIFF[s.diff] || "-"}</td></tr>`;
     }).join("");
     rows.querySelectorAll("tr[data-id]").forEach((tr) => {
       tr.onclick = () => { this.sel = tr.dataset.id; this.renderRows(); };
@@ -126,11 +127,10 @@ export class Menus {
         <header><h2>${prac ? "Practice match" : "Create a server"}</h2><button class="x" data-back>back</button></header>
         <div class="fs-form">
           ${prac ? "" : `<label>Server name <input id="c-name" maxlength="28" value="${esc(nm)}'s server"></label>`}
-          <label>Map <select id="c-map" disabled><option>Dust II</option></select></label>
-          <label>Game mode <select id="c-mode">${Object.entries(MODES).map(([k, m]) => `<option value="${k}">${esc(m.name)}</option>`).join("")}</select></label>
+          <label>Map <select id="c-map">${Object.entries(MAPS).map(([k, m]) => `<option value="${k}">${esc(m.name)}</option>`).join("")}</select></label>
+          <label>Game mode <select id="c-mode"></select></label>
           <p class="blurb" id="c-blurb"></p>
           <label>Max players <input type="range" id="c-slots" min="2" max="10" value="10"><output id="o-slots">10</output></label>
-          <label>Sky <select id="c-sky"><option value="noon">Cloudy noon</option><option value="sunset">Sunset</option><option value="storm">Stormy</option></select></label>
           <label>Bots <input type="range" id="c-bots" min="0" max="9" value="6"><output id="o-bots">6</output></label>
           <label>Bot skill <select id="c-diff">${DIFF.map((d, i) => `<option value="${i}"${i === 1 ? " selected" : ""}>${d}</option>`).join("")}</select></label>
           <label id="l-rounds">Match length <select id="c-rounds"><option value="5">Short (first to 6 rounds)</option><option value="10">Medium (first to 11)</option><option value="15" selected>Long (first to 16)</option></select></label>
@@ -143,18 +143,25 @@ export class Menus {
       </div>`;
     const q = (s) => this.root.querySelector(s);
     q("[data-back]").onclick = () => this.go("title");
+    // the maps with no bomb sites only offer the two deathmatch modes
+    const fillModes = () => {
+      const keep = q("#c-mode").value, mp = MAPS[q("#c-map").value] || MAPS.dust2;
+      q("#c-mode").innerHTML = mp.modes.map((k) => `<option value="${k}">${esc(MODES[k].name)}</option>`).join("");
+      q("#c-mode").value = mp.modes.includes(keep) ? keep : mp.modes[0];
+    };
+    q("#c-map").addEventListener("input", () => { fillModes(); upd(); });
     const upd = () => {
       const m = q("#c-mode").value;
-      q("#c-blurb").textContent = MODES[m].blurb;
+      q("#c-blurb").textContent = MODES[m].blurb + " " + (MAPS[q("#c-map").value] || MAPS.dust2).blurb;
       q("#l-rounds").style.display = MODES[m].rounds ? "" : "none"; q("#l-time").style.display = MODES[m].rounds ? "none" : "";
       const slots = +q("#c-slots").value; q("#o-slots").textContent = slots;
       q("#c-bots").max = slots - (prac ? 1 : 0); if (+q("#c-bots").value > +q("#c-bots").max) q("#c-bots").value = q("#c-bots").max;
       q("#o-bots").textContent = q("#c-bots").value;
     };
-    ["c-mode", "c-slots", "c-bots"].forEach((id) => q("#" + id).addEventListener("input", upd)); upd();
+    ["c-mode", "c-slots", "c-bots"].forEach((id) => q("#" + id).addEventListener("input", upd)); fillModes(); upd();
     if (prac) q("#c-slots").value = 10, upd();
     q("#c-go").onclick = () => {
-      const opts = { mode: q("#c-mode").value, slots: +q("#c-slots").value, bots: +q("#c-bots").value, diff: +q("#c-diff").value, sky: q("#c-sky").value, rounds: +q("#c-rounds").value, time: +q("#c-time").value, name: prac ? nm + "'s practice" : (q("#c-name").value.trim() || nm + "'s server") };
+      const opts = { map: q("#c-map").value, mode: q("#c-mode").value, slots: +q("#c-slots").value, bots: +q("#c-bots").value, diff: +q("#c-diff").value, rounds: +q("#c-rounds").value, time: +q("#c-time").value, name: prac ? nm + "'s practice" : (q("#c-name").value.trim() || nm + "'s server") };
       this.cb.create && this.cb.create(opts, !prac);
     };
   }
@@ -167,6 +174,7 @@ export class Menus {
         <header><h2>Settings</h2><button class="x" data-back>back</button></header>
         <div class="fs-form">
           <label>Mouse sensitivity <input type="range" id="s-sens" min="0.3" max="8" step="0.05" value="${s.sens}"><output id="o-sens">${s.sens}</output></label>
+          <p class="blurb">Raw input: no mouse acceleration and no smoothing, what you move is what you see.</p>
           <label>Field of view <input type="range" id="s-fov" min="70" max="110" step="1" value="${s.fov}"><output id="o-fov">${s.fov}</output></label>
           <label>Volume <input type="range" id="s-vol" min="0" max="1" step="0.05" value="${s.volume}"><output id="o-vol">${Math.round(s.volume * 100)}%</output></label>
           <label>Graphics <select id="s-q"><option value="auto">Auto (adjusts to your frame rate)</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low (no shadows)</option></select></label>

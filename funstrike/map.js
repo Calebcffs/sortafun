@@ -223,8 +223,8 @@ export class MapBuilder {
   }
   // call once when the level is written: marks the cells props block for the
   // bots and lays out deathmatch spawns
-  finish() {
-    const m = this.map, w = m.w, d = m.d;
+  finish(o = {}) {
+    const m = this.map, w = m.w, d = m.d, minCeil = o.minCeil === undefined ? 90 : o.minCeil; // indoor maps pass a lower roof height
     m.nav = new Uint8Array(w * d);
     for (const p of m.props) {
       if (p.nohit) continue;
@@ -238,7 +238,7 @@ export class MapBuilder {
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
     const cand = [];
     for (let z = 2; z < d - 2; z++) for (let x = 2; x < w - 2; x++) {
-      let ok = !m.solid[z * w + x] && !m.nav[z * w + x] && m.ceil[z * w + x] > 90;
+      let ok = !m.solid[z * w + x] && !m.nav[z * w + x] && m.ceil[z * w + x] > minCeil;
       for (let dz = -1; dz <= 1 && ok; dz++) for (let dx = -1; dx <= 1; dx++) if (m.solid[(z + dz) * w + x + dx] || m.nav[(z + dz) * w + x + dx]) { ok = false; break; }
       if (ok) cand.push([x + 0.5, z + 0.5]);
     }
@@ -254,6 +254,7 @@ export class MapBuilder {
   box(kind, x, z, w, d, h, o = {}) {
     const m = this.map;
     const y0 = o.y0 !== undefined ? o.y0 : Math.max(0, m.groundAt(x, z));
+    if (!isFinite(y0)) { console.warn("prop " + kind + " at " + x + "," + z + " is inside a wall, skipped"); return null; }
     const p = { kind, x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0, y1: y0 + h, mat: o.mat || kind, rot: o.rot || 0, tag: o.tag || "" };
     if (o.nohit) p.nohit = true;
     if (o.round) p.round = true;

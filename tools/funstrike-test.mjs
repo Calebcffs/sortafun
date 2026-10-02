@@ -59,5 +59,23 @@ ok(spreadDeg(WEAPONS.ak47, 1, true, false, 0, false) > 0 && spreadDeg(WEAPONS.ak
 ok(spreadDeg(WEAPONS.ak47, 0, true, false, 8, false) > 0, "a long spray widens a little");
 ok(spreadDeg(WEAPONS.ak47, 0, true, false, 8, false, 1) < spreadDeg(WEAPONS.ak47, 0, true, false, 8, false, 0), "aiming down sights tightens it");
 ok(WEAPONS.awp.scope.length === 1, "AWP has a single zoom level");
+ok(spreadDeg(WEAPONS.ak47, 0, true, false, 1, false) === 0, "the second shot of a burst is still dead on");
+ok(spreadDeg(WEAPONS.ak47, 0, true, false, 14, false) < 0.6, "even a full mag dump stays under 0.6 deg (" + spreadDeg(WEAPONS.ak47, 0, true, false, 14, false).toFixed(2) + ")");
+// 5. an aim dead at the middle of the head is a head shot, not a chest shot (the capsules used to overlap and the chest won)
+import { rayPlayer } from "../funstrike/hitbox.js";
+for (const d of [3, 10, 30]) { const h = rayPlayer(50, 1.66, 50 + d, 0, 0, -1, 50, 0, 50, 0, 100); ok(h && h.name === "head", "aimed at the head from " + d + "m: " + (h && h.name)); }
+const hc = rayPlayer(50, 1.35, 60, 0, 0, -1, 50, 0, 50, 0, 100); ok(hc && hc.name === "chest", "aimed at the chest: " + (hc && hc.name));
+const hl = rayPlayer(50, 0.4, 60, 0, 0, -1, 50, 0, 50, 0, 100); ok(hl && hl.name === "legs", "aimed at the legs: " + (hl && hl.name));
+// 6. every map: spawns are on open floor and not inside a prop, the teams can reach each other, there are enough deathmatch spawns
+import { buildMap, MAP_IDS, MAPS } from "../funstrike/maps.js";
+for (const id of MAP_IDS) {
+  const mp = buildMap(id), t0 = mp.meta.spawnsT[0], c0 = mp.meta.spawnsCT[0];
+  const inProp = (x, z) => mp.props.some((p) => x > p.x0 - 0.45 && x < p.x1 + 0.45 && z > p.z0 - 0.45 && z < p.z1 + 0.45 && p.y1 - Math.max(0, mp.groundAt(x, z)) > 0.55);
+  const badSpawn = [...mp.meta.spawnsT, ...mp.meta.spawnsCT, ...mp.meta.spawnsDM].filter((s) => !isFinite(mp.groundAt(s.x, s.z)) || inProp(s.x, s.z));
+  ok(badSpawn.length === 0, id + ": all spawns are on open floor outside props (" + badSpawn.length + " bad)");
+  ok(!!findPath(mp, t0.x, t0.z, c0.x, c0.z), id + ": T spawn reaches CT spawn");
+  ok(mp.meta.spawnsDM.length >= 10 && mp.meta.spawnsT.length >= 5 && mp.meta.spawnsCT.length >= 5, id + ": enough spawns (" + mp.meta.spawnsDM.length + " dm)");
+  ok(MAPS[id].modes.includes("defuse") === (mp.meta.sites.length > 0), id + ": offers Defuse only if it has bomb sites");
+}
 console.log(fails ? fails + " FAILED" : "all passed");
 process.exit(fails ? 1 : 0);

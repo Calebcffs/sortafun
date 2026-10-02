@@ -86,7 +86,8 @@ export class HUD {
   crosshair(spreadPx, s, hidden, ads = 0) {
     const c = this.q("h-cross");
     c.style.display = hidden ? "none" : "block";
-    c.style.opacity = ads > 0.3 ? 0.35 : 1;
+    c.style.opacity = 1;
+    c.classList.toggle("ads", ads > 0.5); // aiming: just a dot, sat exactly on the tip of the front sight
     const gap = (s.gap || 3) + spreadPx;
     c.style.setProperty("--gap", gap.toFixed(1) + "px"); c.style.setProperty("--len", (s.size || 6) + "px"); c.style.setProperty("--th", (s.thick || 2) + "px");
     c.style.setProperty("--col", s.color || "#4cff7a"); c.style.setProperty("--dot", s.dot ? "block" : "none");

@@ -21,6 +21,10 @@ import { Viewmodel } from "./viewmodel.js";
 
 const RAD = Math.PI / 180;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// how much of a weapon's spray curve (weapons.js sprayAt) shows up as the view climbing
+const RECOIL_VIEW = 0.8;
+// aiming down the sights narrows the field of view by this much (a gentle zoom, about 1.3x)
+const ADS_ZOOM = 0.2;
 const GKEYS = ["he", "flash", "smoke", "fire"];
 const GIDS = ["he", "flash", "smoke", null]; // the 4th is molotov or incendiary, by team
 const STATE_EVERY = 66;
@@ -34,7 +38,7 @@ export class Client {
     this.body = newBody(); this.punch = [0, 0]; this.punchT = [0, 0]; this.look = { yaw: 0, pitch: 0 };
     this.me = { team: TEAM.SPEC, alive: false, hp: 100, armor: 0, helmet: false, kit: false, money: 0, inv: null, waiting: false, c4: false };
     this.ammo = {}; this.cur = "knife"; this.reloadEnd = 0; this.reloadId = ""; this.nextFire = 0; this.drawEnd = 0; this.fireLatch = false;
-    this.sprayN = 0; this.lastShot = -9; this.scoped = 0; this.ads = 0; this.grenadeIdx = 0;
+    this.sprayN = 0; this.burstN = 0; this.lastShot = -9; this.scoped = 0; this.ads = 0; this.grenadeIdx = 0;
     this.off = null; this.interp = 0.12; this.clockSet = false;
     this.phase = "warmup"; this.phaseEnd = 0; this.round = 0; this.score = [0, 0];
     this.bomb = null; this.drops = []; this.grenades = new Map(); this.smokes = new Map(); this.fires = new Map(); this.dropMeshes = new Map();
@@ -57,7 +61,8 @@ export class Client {
     r.shadowMap.enabled = q !== "low"; r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.pr = this.maxPR(); r.setPixelRatio(this.pr);
     this.scene = new THREE.Scene();
-    this.world = new World(this.map, MATERIALS, { quality: q === "auto" ? "high" : q, aniso: Math.min(8, r.capabilities.getMaxAnisotropy()) });
+    this.worldOpts = { quality: q === "auto" ? "high" : q, aniso: Math.min(8, r.capabilities.getMaxAnisotropy()) };
+    this.world = new World(this.map, MATERIALS, this.worldOpts);
     this.world.build();
     this.world.setupScene(this.scene, r);
     this.fx = new FX(this.scene);
@@ -70,6 +75,23 @@ export class Client {
     this.bombLight = new THREE.PointLight(0xff2200, 0, 6, 2); this.bombLight.position.set(0, 0.3, 0); this.bombMesh.add(this.bombLight);
     this.resize();
     this.bind();
+  }
+
+  // switch to another map: throw the old world away and build the new one (the maps are cached in main.js, the
+  // textures come from the browser cache, so this is quick)
+  setMap(map) {
+    if (!map || map === this.map) return;
+    this.map = map;
+    const old = this.world;
+    this.scene.remove(old.group);
+    old.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    for (const m of Object.values(old.mats)) { for (const k of ["map", "normalMap"]) if (m[k]) m[k].dispose(); m.dispose(); }
+    if (old.hdrEnv) old.hdrEnv.dispose();
+    this.world = new World(map, MATERIALS, this.worldOpts);
+    this.world.build();
+    this.world.setupScene(this.scene, this.renderer);
+    this.radarBase = this.makeRadarBase();
+    this.fx.clearAll();
   }
 
   maxPR() {
@@ -89,7 +111,7 @@ export class Client {
   makeRadarBase() {
     const m = this.map, S = 4, c = document.createElement("canvas");
     c.width = m.w * S; c.height = m.d * S;
-    const g = c.getContext("2d"), pal = { sand: "#c8b48a", plaster: "#b9a47c", stone: "#a89570", brick: "#a89570", concrete: "#8a8a86", tile: "#cdbb94", dirt: "#b49c70", wood: "#8a6a40", metal: "#667", plank: "#8a6a40", cracked: "#b39c74" };
+    const g = c.getContext("2d"), pal = { sand: "#c8b48a", plaster: "#b9a47c", stone: "#a89570", brick: "#a89570", concrete: "#8a8a86", tile: "#cdbb94", dirt: "#b49c70", wood: "#8a6a40", metal: "#667", plank: "#8a6a40", cracked: "#b39c74", redbrick: "#a0603f", asphalt: "#77777a", grass: "#7f8c4a", snow: "#dfe6ee", plate: "#6a6a58", rock: "#6f675e", green: "#6f9a7a" };
     for (let z = 0; z < m.d; z++) for (let x = 0; x < m.w; x++) {
       const i = z * m.w + x;
       if (m.solid[i]) continue;
@@ -274,7 +296,6 @@ export class Client {
     if (this.off === null) this.off = sample;
     else if (sample > this.off) this.off = sample; else this.off += (sample - this.off) * 0.02;
     this.lastSnapAt = now;
-    if (s.sk && this.world) this.world.setSky(s.sk);
     this.phase = s.ph; this.phaseEnd = s.pe; this.round = s.rd; this.score = s.sc; this.waiting = !!s.wait; this.winText = s.win; this.roundWin = s.rw;
     if (s.pg && this.myId) for (const [id, ct] of s.pg) if (id === this.myId) { const rtt = (Math.round(performance.now()) & 0x3fffffff) - ct; if (rtt >= 0 && rtt < 5000) this.pingMs = Math.round(this.pingMs * 0.7 + rtt * 0.3); }
     if (this.link.kind === "local") this.pingMs = 0;
@@ -343,11 +364,13 @@ export class Client {
         const r = this.remote.get(e.id); if (!r) break;
         const w = byWid(e.w); if (!w) break;
         const p = [r.pos.x, r.pos.y + 1.4, r.pos.z];
-        A.play(w.snd || "pistol", { x: p[0], y: p[1], z: p[2], ref: w.kind === "sniper" || w.id === "awp" ? 14 : 7, vol: w.silenced || w.snd === "pistol_sil" ? 0.45 : 1 });
+        // the bang and the flash go off together, every shot, whatever the range
+        A.gun(w.id, { x: p[0], y: p[1], z: p[2], ref: w.kind === "sniper" || w.id === "awp" ? 14 : 7, who: e.id });
         const end = [e.e[0] / 100, e.e[1] / 100, e.e[2] / 100];
         const mz = new THREE.Vector3(); r.soldier.muzzleWorld(mz);
         const d = new THREE.Vector3(end[0] - mz.x, end[1] - mz.y, end[2] - mz.z); const len = d.length() || 1; d.divideScalar(len);
         if (len > 1) F.muzzle([mz.x, mz.y, mz.z], [d.x, d.y, d.z], 0.45, !!w.silenced);
+        else { const ld = lookDir(r.pos.yaw, r.pos.pitch); F.muzzle([mz.x, mz.y, mz.z], ld, 0.45, !!w.silenced); }
         r.soldier.shoot = 1;
         // where it landed
         if (e.h) F.impact(end, [-d.x, 0.2, -d.z], "flesh");
@@ -586,12 +609,14 @@ export class Client {
     // recoil: a spray pattern, with the view kicked by it
     const [pp, py] = sprayAt(w, this.sprayN);
     const b = this.body, sp = Math.hypot(b.vx, b.vz);
-    // the spread is worked out from the shots BEFORE this one, so the first shot standing still is dead on
-    const spread = spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, this.sprayN, this.scoped > 0, this.ads);
+    // the spread comes from the shots BEFORE this one in the current full-auto burst (semi-autos never build any),
+    // so a single shot, or the first two of a burst, go exactly where the view is pointing
+    const spread = spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, w.auto ? this.burstN : 0, this.scoped > 0, this.ads);
     this.shootBullets(w, spread);
-    this.punchT = [pp * (this.scoped && w.kind === "sniper" ? 0.3 : 1) * 0.55 * (1 - 0.35 * this.ads), py * 0.55 * (1 - 0.35 * this.ads)];
-    this.sprayN++; this.lastShot = now;
-    this.vm.kick(w.kind);
+    // the kick lands after the bullet has left: this shot goes where you were aiming, the next ones climb
+    this.punchT = [pp * (this.scoped && w.kind === "sniper" ? 0.3 : 1) * RECOIL_VIEW * (1 - 0.35 * this.ads), py * RECOIL_VIEW * (1 - 0.35 * this.ads)];
+    this.sprayN++; this.burstN++; this.lastShot = now;
+    this.vm.kick(w.kind, w.cycle);
     // a bolt gun lowers the scope while it cycles
     if (w.bolt) { this.scopeAfter = this.scoped; this.scoped = 0; setTimeout(() => { if (this.me.alive) { this.audio.ui("bolt", 0.35); this.audio.foley("bolt", { scale: (w.cycle || 1.25) / 1.25 * 0.8, vol: 0.9 }); } }, 380); setTimeout(() => { if (this.cur === w.id && this.me.alive) { this.scoped = this.scopeAfter; } }, (w.cycle || 1) * 1000 * 0.9); }
     if (a.mag === 0 && a.res > 0) setTimeout(() => { if (this.cur === w.id && this.me.alive) this.reload(); }, 220);
@@ -599,11 +624,12 @@ export class Client {
 
   shootBullets(w, spreadD) {
     const b = this.body, eye = eyeHeight(b), ox = b.x, oy = b.y + eye, oz = b.z;
-    const yaw = this.look.yaw + this.punch[1] * RAD, pitch = this.look.pitch + this.punch[0] * RAD;
+    const { yaw, pitch } = this.aimAngles();
     const pellets = w.pellets || 1;
     const hits = []; let endFirst = null, impactKind = null, anyHit = false, hitNorm = null;
     for (let n = 0; n < pellets; n++) {
-      const sp = spreadD * RAD, ang = Math.random() * 6.283, rad = sp * Math.sqrt(-2 * Math.log(1 - Math.random() * 0.97)) * 0.55;
+      // an even disc of half-angle spread; no spread at all = the exact line through the middle of the screen
+      const sp = spreadD * RAD, ang = Math.random() * 6.283, rad = sp * Math.sqrt(Math.random());
       const d = lookDir(yaw + Math.cos(ang) * rad, pitch + Math.sin(ang) * rad);
       const wh = this.map.raycast(ox, oy, oz, d[0], d[1], d[2], 200);
       let maxT = wh ? wh.t : 200, vic = null, hb = null, kind = wh ? (wh.prop ? (wh.prop.kind === "crate" ? "wood" : "metal") : "wall") : null, nrm = wh ? [wh.nx, wh.ny, wh.nz] : [0, 1, 0];
@@ -625,13 +651,17 @@ export class Client {
       }
     }
     void impactKind; void hitNorm;
-    this.audio.play(w.snd || "pistol", { vol: w.snd === "pistol_sil" || w.silenced ? 0.55 : 0.95, rate: 1 });
-    this.muzzleFlash = 0.05;
+    this.audio.gun(w.id, { who: "me" });
+    this.muzzleFlash = Math.min(0.05, Math.max(0.025, (w.cycle || 0.1) * 0.5)); // always at least one drawn frame, never a constant glow
     const mz = this.vm.muzzleWorld(this.cam);
     if (mz) { const dir = lookDir(yaw, pitch); this.fx.muzzle([mz.x, mz.y, mz.z], dir, 0.5, !!w.silenced); }
     this.link.send({ a: "shot", w: widOf(w.id), e: endFirst.map((v) => Math.round(v * 100)), h: anyHit ? 1 : 0, hits: hits.length ? hits : undefined });
     this.shotCounter++;
   }
+
+  // the direction the middle of the screen is looking: the look angles plus the recoil kick. Bullets and the
+  // camera both use exactly this, so a shot goes where the crosshair is.
+  aimAngles() { return { yaw: this.look.yaw + this.punch[1] * RAD, pitch: this.look.pitch + this.punch[0] * RAD }; }
 
   isEnemy(r) { return !this.mode.teams || r.team !== this.me.team; }
 
@@ -807,6 +837,7 @@ export class Client {
     if (!me.alive || me.team === TEAM.SPEC) { this.updateSpectateInput(dt); return; }
     // the view punch eases toward its target, then back to nothing
     const since = this.nowS - this.lastShot;
+    if (since > Math.max(0.2, (this.curW().cycle || 0.1) * 1.8)) this.burstN = 0; // let go of the trigger: the spread closes at once
     if (since > Math.max(0.28, (this.curW().cycle || 0.1) * 2.2)) { this.punchT = [0, 0]; this.sprayN = Math.max(0, this.sprayN - dt * 14); }
     for (let k = 0; k < 2; k++) this.punch[k] += (this.punchT[k] - this.punch[k]) * Math.min(1, dt * (since > 0.25 ? 6 : 28));
     const frozen = this.phase === "freeze" || this.phase === "matchend" || this.buyOpen || this.teamOpen || this.chatOpen || this.paused || !this.locked;
@@ -886,7 +917,7 @@ export class Client {
   currentFov() {
     const w = this.curW();
     if (this.scoped && w.scope) { const hf = w.scope[this.scoped - 1]; return 2 * Math.atan(Math.tan((hf * RAD) / 2) * 0.75) / RAD; }
-    return this.baseFov() * (1 - 0.16 * this.ads);
+    return this.baseFov() * (1 - ADS_ZOOM * this.ads);
   }
 
   updateSpectateInput(dt) {
@@ -1026,7 +1057,7 @@ export class Client {
     if (me.alive && me.team !== TEAM.SPEC) {
       const b = this.body;
       x = b.x; y = b.y + eyeHeight(b); z = b.z;
-      yaw = this.look.yaw + this.punch[1] * RAD * 0.9; pitch = this.look.pitch + this.punch[0] * RAD * 0.9;
+      ({ yaw, pitch } = this.aimAngles());
       this.viewmodelOn = !(this.scoped && this.curW().scope);
     } else {
       const t = this.remote.get(this.specTarget);
@@ -1037,9 +1068,10 @@ export class Client {
       if (!me.alive && !this.specTarget && this.nowS - this.deathAt < 1.5) { x = this.body.x; y = this.body.y + 1.0; z = this.body.z; }
     }
     // screen shake
+    // (it shifts and rolls the camera but never turns it, so the crosshair still marks exactly where a bullet goes)
     const sh = this.fx.shake;
-    const rx = (Math.random() - 0.5) * sh * 0.05, ry = (Math.random() - 0.5) * sh * 0.05;
-    cam.position.set(x, y, z); cam.rotation.set(pitch + rx, yaw + ry, (Math.random() - 0.5) * sh * 0.02, "YXZ");
+    const rollJ = (Math.random() - 0.5) * sh * 0.03, px = (Math.random() - 0.5) * sh * 0.06, py = (Math.random() - 0.5) * sh * 0.06;
+    cam.position.set(x + Math.cos(yaw) * px, y + py, z - Math.sin(yaw) * px); cam.rotation.set(pitch, yaw, rollJ, "YXZ");
     if (Math.abs(cam.fov - fov) > 0.01) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 18); cam.updateProjectionMatrix(); }
     this.world.follow(x, y, z);
     this.audio.setListener(x, y, z, yaw);
@@ -1075,7 +1107,7 @@ export class Client {
     hud.setZone(this.map.zoneAt(this.eye.x, this.eye.z));
     // crosshair
     const b = this.body, sp = Math.hypot(b.vx, b.vz);
-    const spread = me.alive ? spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, this.sprayN, this.scoped > 0, this.ads) : 0;
+    const spread = me.alive ? spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, w.auto ? this.burstN : 0, this.scoped > 0, this.ads) : 0;
     const px = Math.tan(Math.min(25, spread) * RAD) / Math.tan((this.currentFov() * RAD) / 2) * (this.h / 2);
     hud.crosshair(Math.min(60, px), this.set.cross, !me.alive || (this.scoped > 0 && w.scope), this.ads);
     hud.scope(me.alive && this.scoped > 0 && !!w.scope);

@@ -92,7 +92,7 @@ export function bulletDamage(w, hitbox, dist, victim) {
 }
 
 // view kick of shot number n (0 based) in a spray: returns [pitchUp, yawRight] in degrees, accumulated.
-// Kept gentle on purpose: the first shots barely move the view and the climb tops out low.
+// Gentle but felt: every shot of a spray lifts the view a little more, the climb tops out low.
 export function sprayAt(w, n) {
   const r = w.recoil;
   if (!r) return [0, 0];
@@ -102,21 +102,23 @@ export function sprayAt(w, n) {
   return [pitch, yaw];
 }
 
-// cone half-angle in degrees for a shot. `n` is how many shots of this spray came before it.
-// Standing still on the ground, the first shot is dead on (0). Moving adds a tiny bit, jumping more,
-// and a long spray widens it slowly. Aiming down sights and crouching tighten it. Shotguns keep
-// their pellet cone. Unscoped snipers are loose until you scope.
+// cone half-angle in degrees for a shot. `n` is how many shots of the CURRENT automatic burst came before it
+// (the client passes 0 for semi-autos and resets it the moment you let go of the trigger).
+// The rule Caleb asked for: whatever you are pointing at is what you hit. The first two shots of a burst, and
+// any single shot, are dead on; running and jumping add only a sliver; a long full-auto burst opens up a little
+// and closes again as soon as you stop. Aiming down sights tightens it more. Shotguns keep their pellet cone.
+// Unscoped snipers are a bit loose until you scope.
 export function spreadDeg(w, speedFrac, onGround, crouching, n, scoped, ads = 0) {
   const a = w.inacc;
   if (!a) return 0;
   if (w.kind === "shotgun") return a.stand * (1 - 0.35 * ads);
   const moving = Math.min(1, speedFrac);
   let s = 0;
-  if (!onGround) s += a.air * 0.35;
-  else if (moving > 0.06) s += a.move * 0.07 * moving;
-  s += Math.min(n, 14) * (w.kind === "pistol" ? 0.045 : w.kind === "smg" ? 0.035 : 0.03);
+  if (!onGround) s += a.air * 0.08;
+  else if (moving > 0.06) s += a.move * 0.02 * moving;
+  s += Math.min(Math.max(0, n - 1), 14) * (w.kind === "pistol" ? 0.045 : w.kind === "smg" ? 0.035 : 0.032);
   if (crouching) s *= 0.6;
-  s *= 1 - 0.5 * ads;
-  if (w.kind === "sniper" && !scoped) s += 2.2 + moving * 3;
+  s *= 1 - 0.7 * ads;
+  if (w.kind === "sniper" && !scoped) s += 1 + moving * 2;
   return s;
 }

@@ -12,14 +12,25 @@ const BASE = "funstrike/assets/snd/";
 // per sound: shelf = dB of bass boost on the sample, thump = [start Hz, end Hz, seconds, gain] sub layer,
 // wet = how much goes to the room reverb
 const PRESET = {
-  ak: { shelf: 9, thump: [105, 38, 0.24, 1.0], wet: 0.3 }, rifle: { shelf: 8, thump: [100, 40, 0.22, 0.85], wet: 0.28 }, rifle_sil: { shelf: 6, thump: [90, 45, 0.12, 0.4], wet: 0.12 },
-  pistol: { shelf: 8, thump: [120, 50, 0.15, 0.6], wet: 0.22 }, pistol_sil: { shelf: 6, thump: [100, 50, 0.1, 0.3], wet: 0.1 }, deagle: { shelf: 9, thump: [95, 38, 0.24, 0.95], wet: 0.3 },
-  smg: { shelf: 7, thump: [110, 50, 0.12, 0.5], wet: 0.2 }, shotgun: { shelf: 9, thump: [85, 34, 0.3, 1.1], wet: 0.34 }, shotgun_auto: { shelf: 9, thump: [90, 36, 0.26, 1.0], wet: 0.3 },
-  sniper: { shelf: 9, thump: [80, 30, 0.42, 1.15], wet: 0.4 }, awp: { shelf: 10, thump: [72, 26, 0.55, 1.35], wet: 0.45 }, sniper_auto: { shelf: 9, thump: [85, 32, 0.3, 1.0], wet: 0.34 },
+  gun_ak: { shelf: 9, thump: [105, 38, 0.24, 1.0], wet: 0.3 }, gun_rifle: { shelf: 8, thump: [100, 40, 0.22, 0.85], wet: 0.28 }, gun_rifle_sil: { shelf: 6, thump: [90, 45, 0.12, 0.4], wet: 0.12 },
+  gun_pistol: { shelf: 8, thump: [120, 50, 0.15, 0.6], wet: 0.22 }, gun_pistol_sil: { shelf: 6, thump: [100, 50, 0.1, 0.3], wet: 0.1 }, gun_deagle: { shelf: 9, thump: [95, 38, 0.24, 0.95], wet: 0.3 },
+  gun_smg: { shelf: 7, thump: [110, 50, 0.12, 0.5], wet: 0.2 }, gun_shotgun: { shelf: 9, thump: [85, 34, 0.3, 1.1], wet: 0.34 }, gun_shotgun_auto: { shelf: 9, thump: [90, 36, 0.26, 1.0], wet: 0.3 },
+  gun_sniper: { shelf: 9, thump: [80, 30, 0.42, 1.15], wet: 0.4 }, gun_awp: { shelf: 10, thump: [72, 26, 0.55, 1.35], wet: 0.45 }, gun_sniper_auto: { shelf: 9, thump: [85, 32, 0.3, 1.0], wet: 0.34 },
   explode: { shelf: 8, thump: [70, 24, 0.9, 1.5], wet: 0.5 }, bomb_explode: { shelf: 10, thump: [60, 20, 1.6, 1.8], wet: 0.6 }, flash: { shelf: 3, thump: [90, 40, 0.2, 0.5], wet: 0.4 },
   step_sand: { shelf: 7, thump: [75, 45, 0.09, 0.4] }, step_stone: { shelf: 7, thump: [85, 50, 0.08, 0.38] }, step_gravel: { shelf: 7, thump: [80, 48, 0.09, 0.38] },
   land: { shelf: 8, thump: [70, 38, 0.16, 0.7] }, hit_flesh: { shelf: 6, thump: [110, 55, 0.08, 0.3] }, hit_head: { shelf: 3 }, knife_hit: { shelf: 5, thump: [100, 55, 0.07, 0.25] },
   nade_bounce: { shelf: 6, thump: [120, 60, 0.07, 0.25] }, plant: { shelf: 3 }, smoke: { shelf: 6, wet: 0.3 },
+};
+
+// Which gunshot each weapon makes: [file, pitch, loudness]. One file per weapon, every shot, no variants and no random
+// pitch: the same gun always goes off with exactly the same bang. Weapons that share a recording differ by a fixed pitch.
+// Every file in assets/snd/gun_*.wav starts on the bang itself (tools/funstrike/build_gun_sounds.py).
+export const GUNS = {
+  glock: ["gun_pistol", 1.0, 0.85], p250: ["gun_pistol", 0.9, 0.9], usp: ["gun_pistol_sil", 1.0, 0.6], deagle: ["gun_deagle", 1.0, 1.0],
+  mac10: ["gun_smg", 1.1, 0.8], mp9: ["gun_smg", 1.0, 0.8], mp7: ["gun_smg", 0.9, 0.85], p90: ["gun_smg", 1.22, 0.8],
+  galil: ["gun_rifle", 0.92, 0.95], famas: ["gun_rifle", 1.12, 0.95], ak47: ["gun_ak", 1.0, 1.0], m4a4: ["gun_rifle", 1.0, 0.95], m4a1s: ["gun_rifle_sil", 1.0, 0.6],
+  ssg08: ["gun_sniper", 1.0, 1.0], awp: ["gun_awp", 1.0, 1.15], scar20: ["gun_sniper_auto", 1.0, 1.0],
+  nova: ["gun_shotgun", 1.0, 1.0], xm1014: ["gun_shotgun_auto", 1.0, 1.0],
 };
 
 export class GameAudio {
@@ -35,7 +46,7 @@ export class GameAudio {
     if (this.ctx) { if (this.ctx.state === "suspended") this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    this.ctx = new AC();
+    this.ctx = new AC({ latencyHint: "interactive" });
     this.master = this.ctx.createGain(); this.master.gain.value = this.vol;
     this.comp = this.ctx.createDynamicsCompressor();
     this.comp.threshold.value = -14; this.comp.ratio.value = 4; this.comp.attack.value = 0.003; this.comp.release.value = 0.2;
@@ -64,12 +75,17 @@ export class GameAudio {
     } catch (e) { return; }
     const files = new Set();
     for (const v of Object.values(this.manifest)) for (const f of v) files.add(f);
-    await Promise.all([...files].map(async (f) => {
+    const get = async (f) => {
       try {
-        const ab = await fetch(BASE + f + ".mp3").then((r) => r.arrayBuffer());
+        const ab = await fetch(BASE + (f.includes(".") ? f : f + ".mp3")).then((r) => r.arrayBuffer());
         this.buffers[f] = await new Promise((res, rej) => this.ctx.decodeAudioData(ab, res, rej));
       } catch (e) { /* that one stays synthesised */ }
-    }));
+    };
+    // the gunshots first: the first shot of a match must already be the real recording
+    const all = [...files], guns = all.filter((f) => f.startsWith("gun_"));
+    await Promise.all(guns.map(get));
+    this.gunsReady = true;
+    await Promise.all(all.filter((f) => !f.startsWith("gun_")).map(get));
     this.loaded = true;
   }
 
@@ -86,7 +102,7 @@ export class GameAudio {
   // opts: x,y,z (positional), vol, rate, ref (distance where it is full volume), out (false: skip synth fallback)
   play(name, o = {}) {
     if (!this.ctx || this.ctx.state !== "running") return null;
-    if (this.voices > 28) return null;
+    if (this.voices > (o.cap || 28)) return null;
     const ctx = this.ctx, buf = this.pick(name);
     const vol = (o.vol === undefined ? 1 : o.vol);
     let out = this.master;
@@ -108,16 +124,35 @@ export class GameAudio {
     this.voices++;
     const done = () => { this.voices = Math.max(0, this.voices - 1); try { g.disconnect(); if (node) node.disconnect(); } catch (e) { /* gone */ } };
     if (buf) {
-      const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = (o.rate || 1) * (1 + (Math.random() - 0.5) * 0.06);
+      const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = (o.rate || 1) * (o.fixed ? 1 : 1 + (Math.random() - 0.5) * 0.06);
       if (pre.shelf) { const sh = ctx.createBiquadFilter(); sh.type = "lowshelf"; sh.frequency.value = 190; sh.gain.value = pre.shelf; s.connect(sh); sh.connect(g); }
       else s.connect(g);
-      s.start(); s.onended = done;
+      s.start(); s.onended = done; s.gainNode = g;
       return s;
     }
     if (o.out === false) { done(); return null; }
     const dur = this.synth(name, g, o);
     setTimeout(done, dur * 1000 + 50);
     return null;
+  }
+
+  // A gunshot. The same weapon always plays the same file at the same pitch and level, the bang is the first
+  // sample of it, and the previous shot of the same shooter is faded out as the next one starts so every
+  // shot in a spray is its own bang instead of a smear. who = whatever identifies the shooter ("me" or an id);
+  // x,y,z puts it in the world (other players), otherwise it is 2D (your own gun).
+  gun(id, o = {}) {
+    const g = GUNS[id] || GUNS.glock, name = g[0];
+    const opts = { vol: g[2] * (o.vol === undefined ? 1 : o.vol), rate: g[1], fixed: true, cap: 64 };
+    if (o.x !== undefined) { opts.x = o.x; opts.y = o.y; opts.z = o.z; opts.ref = o.ref; opts.max = o.max; }
+    const prev = this.shotVoice && this.shotVoice.get(o.who);
+    if (prev && this.ctx) {
+      const t = this.ctx.currentTime;
+      try { const gn = prev.gainNode.gain; gn.cancelScheduledValues(t); gn.setValueAtTime(gn.value, t); gn.linearRampToValueAtTime(0, t + 0.035); prev.stop(t + 0.045); } catch (e) { /* already over */ }
+    }
+    const s = this.play(name, opts);
+    if (!this.shotVoice) this.shotVoice = new Map();
+    this.shotVoice.set(o.who, s);
+    return s;
   }
 
   // 2D sound for the UI and your own weapon
@@ -219,8 +254,8 @@ export class GameAudio {
       const g = ctx.createGain(); g.gain.setValueAtTime(gain, t0 + dly); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dly + dur);
       osc.connect(g); g.connect(out); osc.start(t0 + dly); osc.stop(t0 + dly + dur + 0.02);
     };
-    const n = name;
-    if (PRESET[n] && PRESET[n].thump) this.thump(out, PRESET[n].thump[0], PRESET[n].thump[1], PRESET[n].thump[2], PRESET[n].thump[3] * 0.8);
+    const n = name.replace(/^gun_/, "");
+    if (PRESET[name] && PRESET[name].thump) this.thump(out, PRESET[name].thump[0], PRESET[name].thump[1], PRESET[name].thump[2], PRESET[name].thump[3] * 0.8);
     if (/^(ak|rifle|m4|galil|famas)/.test(n)) { burst(0.22, 5000, 400, 0.7, 0.9); burst(0.12, 900, 90, 0.5, 0.8); tone(110, 0.12, 0.5, "sine", 0, 50); return 0.3; }
     if (/^(pistol|deagle|usp|glock|p250)/.test(n)) { burst(0.16, 6000, 600, 0.7, 0.8); tone(150, 0.1, 0.4, "sine", 0, 60); return 0.25; }
     if (/^(smg|mac|mp|p90)/.test(n)) { burst(0.12, 7000, 800, 0.7, 0.7); return 0.18; }

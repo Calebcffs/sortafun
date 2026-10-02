@@ -15,8 +15,12 @@ python3 + PIL + numpy, ffmpeg, and Chrome for the baking step.
   those into one tiny int16 mesh per weapon (barrel along -z, metres) with vertex colours. The id -> model
   table is at the top of `pack-guns.mjs`.
 - **Textures** (`textures.py`) Poly Haven 1k, webp.
-- **Sounds** (`build_sounds.py`): Freesound CC0 previews picked by id. `fs_search_db.py "query" ...` scrapes
+- **Gunshots** (`build_gun_sounds.py`, v0.9.2): one single-shot recording per kind of gun, cut so the file starts on the bang
+  itself and written as WAV (an mp3 adds encoder delay). It also rewrites the `gun_*` entries of `sounds.json`.
+- **Sounds** (`build_sounds.py`, everything but the guns now): Freesound CC0 previews picked by id. `fs_search_db.py "query" ...` scrapes
   the search page into `fsdb.json` (id -> preview url), `build_sounds.py fsdb.json` downloads, finds the first
   onset in each clip, cuts it and writes `funstrike/assets/snd/*.mp3` + `sounds.json`. Nobody listened to
   the cuts while building: they were picked from onset detection and titles.
-- `preview-map.mjs`: dumps the Dust II grid as a top-down PPM (convert with PIL) to eyeball layout edits.
+- `preview-map.mjs out.ppm [scale] [map id]`: dumps a map's grid as a top-down PPM (convert with PIL) to eyeball layout edits.
+- Sky: Poly Haven's `industrial_sunset_02_puresky` 2k .hdr, saved as `funstrike/assets/sky/sunset.hdr`. Extra textures for the new
+  maps went through `textures.py` as before.

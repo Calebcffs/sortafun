@@ -63,7 +63,33 @@ function gunGeometry(id) {
     fore: V(m.Attach_RailBottom) || V(m.Pump) || new THREE.Vector3(0, bb.min.y * 0.4, bb.min.z * 0.4),
     scope: V(m.Attach_Scope), mag: V(m.Magazine), bounds: bb.clone(),
   };
+  Object.assign(marks, sightMarks(P, bb));
   return (gunCache[id] = { geometry: g, marks });
+}
+
+// Where the iron sights are, found from the mesh: the highest points along the centre line in the front 40% of the
+// gun (the front post) and in the back half (the rear sight), as gun-space points {sightF, sightR}. The first-person
+// view tips the gun so the line through the two passes through the middle of the screen, which is where bullets go.
+function sightMarks(P, bb) {
+  const len = bb.max.z - bb.min.z, front = bb.min.z + 0.4 * len, rear = bb.min.z + 0.5 * len;
+  let f = null, r = null;
+  for (let i = 0; i < P.length; i += 3) {
+    const x = P[i], y = P[i + 1], z = P[i + 2];
+    if (Math.abs(x) > 0.008) continue;
+    if (z < front && (!f || y > f.y)) f = { x, y, z };
+    if (z > rear && (!r || y > r.y)) r = { x, y, z };
+  }
+  if (!f || !r) return {};
+  // average the position of the points within 1.5 mm of the top of each, so a lone corner does not decide
+  const top = (c, lo, hi) => {
+    let sx = 0, sz = 0, n = 0;
+    for (let i = 0; i < P.length; i += 3) {
+      const z = P[i + 2]; if (Math.abs(P[i]) > 0.008 || z < lo || z > hi || P[i + 1] < c.y - 0.0015) continue;
+      sx += P[i]; sz += z; n++;
+    }
+    return new THREE.Vector3(sx / n, c.y, sz / n);
+  };
+  return { sightF: top(f, bb.min.z, front), sightR: top(r, rear, bb.max.z) };
 }
 
 // extras the baked models do not have: scope tubes, a silencer
