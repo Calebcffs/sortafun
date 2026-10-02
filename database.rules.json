@@ -233,6 +233,29 @@
             ".write": "auth != null && data.parent().child('host').val() === auth.uid",
             ".validate": "newData.isString() && newData.val().length < 12000"
           },
+          "vc": {
+            ".read": "auth != null",
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && data.parent().parent().child('host').exists()",
+              ".validate": "newData.hasChildren(['n', 't'])",
+              "n": { ".validate": "newData.isString() && newData.val().length <= 16" },
+              "t": { ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)" },
+              "$other": { ".validate": false }
+            }
+          },
+          "rtc": {
+            "$to": {
+              ".read": "auth != null && auth.uid === $to",
+              "$id": {
+                ".write": "auth != null && ((!data.exists() && newData.child('f').val() === auth.uid && data.parent().parent().parent().child('host').exists()) || (!newData.exists() && $to === auth.uid))",
+                ".validate": "newData.hasChildren(['f', 't', 'd']) && newData.child('t').isString() && newData.child('t').val().matches(/^[oac]$/) && newData.child('d').isString() && newData.child('d').val().length < 5000",
+                "f": { ".validate": true },
+                "t": { ".validate": true },
+                "d": { ".validate": true },
+                "$other": { ".validate": false }
+              }
+            }
+          },
           "in": {
             ".read": "auth != null && data.parent().child('host').val() === auth.uid",
             "$uid": {

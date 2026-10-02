@@ -9,8 +9,8 @@
 import { MapBuilder } from "./map.js";
 
 // material ids (index = id), the renderer reads the same list
-// (new ones go on the end: the id is the index, and maps.js builds every map from the same list)
-export const MATERIALS = ["sand", "plaster", "stone", "brick", "concrete", "tile", "dirt", "wood", "metal", "plank", "cracked", "redbrick", "asphalt", "grass", "snow", "plate", "rock", "green"];
+// (the id is the index, and every map is built from the same list)
+export const MATERIALS = ["sand", "plaster", "stone", "brick", "concrete", "tile", "dirt", "wood", "metal", "plank", "cracked"];
 const MAT = Object.fromEntries(MATERIALS.map((n, i) => [n, i]));
 
 export const NAME = "Dust II";

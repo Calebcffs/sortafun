@@ -22,5 +22,4 @@ python3 + PIL + numpy, ffmpeg, and Chrome for the baking step.
   onset in each clip, cuts it and writes `funstrike/assets/snd/*.mp3` + `sounds.json`. Nobody listened to
   the cuts while building: they were picked from onset detection and titles.
 - `preview-map.mjs out.ppm [scale] [map id]`: dumps a map's grid as a top-down PPM (convert with PIL) to eyeball layout edits.
-- Sky: Poly Haven's `industrial_sunset_02_puresky` 2k .hdr, saved as `funstrike/assets/sky/sunset.hdr`. Extra textures for the new
-  maps went through `textures.py` as before.
+- Sky: Poly Haven's `industrial_sunset_02_puresky` 2k .hdr, saved as `funstrike/assets/sky/sunset.hdr`.

@@ -32,6 +32,7 @@ export class HUD {
       <div class="fs-banner" id="h-banner"></div>
       <div class="fs-toast" id="h-toast"></div>
       <div class="fs-chat" id="h-chat"><div class="fs-chatlog" id="h-chatlog"></div><input id="h-chatin" maxlength="110" placeholder="say something" autocomplete="off" hidden></div>
+      <div class="fs-voice" id="h-voice"></div>
       <div class="fs-net" id="h-net" hidden></div>
       <div class="fs-wait" id="h-wait" hidden>waiting for players...</div>
     `;
@@ -83,11 +84,10 @@ export class HUD {
   setWait(on) { this.q("h-wait").hidden = !on; }
 
   // crosshair: gap/size from the current spread (pixels), style from settings
-  crosshair(spreadPx, s, hidden, ads = 0) {
+  crosshair(spreadPx, s, hidden) {
     const c = this.q("h-cross");
     c.style.display = hidden ? "none" : "block";
     c.style.opacity = 1;
-    c.classList.toggle("ads", ads > 0.5); // aiming: just a dot, sat exactly on the tip of the front sight
     const gap = (s.gap || 3) + spreadPx;
     c.style.setProperty("--gap", gap.toFixed(1) + "px"); c.style.setProperty("--len", (s.size || 6) + "px"); c.style.setProperty("--th", (s.thick || 2) + "px");
     c.style.setProperty("--col", s.color || "#4cff7a"); c.style.setProperty("--dot", s.dot ? "block" : "none");
@@ -100,6 +100,11 @@ export class HUD {
   smokeOverlay(a) { const f = this.q("h-smoke"); const v = Math.max(0, Math.min(1, a)).toFixed(2); if (this.cache.sm !== v) { this.cache.sm = v; f.style.opacity = v; } }
   hurt(a) { const f = this.q("h-dmg"); const v = Math.max(0, Math.min(1, a)).toFixed(2); if (this.cache.dm !== v) { this.cache.dm = v; f.style.opacity = v; } }
   scope(on, fov) { const s = this.q("h-scope"); s.classList.toggle("on", on); this.q("h-cross").style.opacity = on ? 0 : 1; void fov; }
+  // who is talking on voice chat: others by name, and a mic mark when it is you
+  voice(names, mine) {
+    const html = (mine ? '<div class="me"><i></i>you (voice on)</div>' : "") + names.map((n) => `<div><i></i>${esc(n)}</div>`).join("");
+    if (this.cache.vc !== html) { this.cache.vc = html; this.q("h-voice").innerHTML = html; }
+  }
   prompt(t) { this.txt("h-prompt", t || ""); }
   progress(label, f) {
     const p = this.q("h-prog");

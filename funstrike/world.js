@@ -25,16 +25,6 @@ export const TEX = {
   metal:    { d: "rusty_metal_02", size: 2.0, tint: [0.9, 0.9, 0.85], rough: 0.7, metal: 0.4 },
   plank:    { d: "brown_planks_09", size: 2.0, tint: [1.1, 1.0, 0.85], rough: 0.88 },
   cracked:  { d: "rough_plaster_broken", size: 3.0, tint: [1.2, 1.1, 0.9], rough: 0.95 },
-  redbrick: { d: "red_brick_03", size: 2.2, tint: [1.45, 1.3, 1.2], rough: 0.9 },
-  asphalt:  { d: "asphalt_02", size: 3.0, tint: [1.6, 1.55, 1.5], rough: 0.95 },
-  grass:    { d: "aerial_grass_rock", size: 3.0, tint: [1.15, 1.2, 0.85], rough: 1.0 },
-  snow:     { d: "snow_02", size: 3.0, tint: [1.0, 1.02, 1.1], rough: 0.9 },
-  plate:    { d: "metal_plate", size: 1.6, tint: [1.5, 1.5, 1.4], rough: 0.6, metal: 0.35 },
-  rock:     { d: "rock_wall_08", size: 2.6, tint: [1.9, 1.8, 1.7], rough: 0.95 },
-  green:    { d: "painted_concrete", size: 3.0, tint: [1.05, 1.1, 1.0], rough: 0.9 },
-  cred:     { d: "corrugated_iron_02", size: 1.6, tint: [1.7, 0.5, 0.4], rough: 0.6, metal: 0.35 },
-  cgreen:   { d: "corrugated_iron_02", size: 1.6, tint: [0.55, 1.3, 0.6], rough: 0.6, metal: 0.35 },
-  corange:  { d: "corrugated_iron_02", size: 1.6, tint: [1.8, 1.0, 0.35], rough: 0.6, metal: 0.35 },
   blue:     { d: "corrugated_iron_02", size: 1.6, tint: [0.45, 0.8, 1.6], rough: 0.6, metal: 0.35 },
   car:      { d: "painted_metal_shutter", size: 2.0, tint: [1.4, 1.3, 1.0], rough: 0.55, metal: 0.3 },
   barrel:   { d: "corrugated_iron_02", size: 1.2, tint: [0.6, 1.0, 0.55], rough: 0.65, metal: 0.4 },
@@ -100,6 +90,11 @@ export class World {
       if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
       return tex;
     };
+    // the fast setting uses the cheap Lambert shader (no PBR, no reflections): a big saving on weak graphics cards
+    if (this.quality === "low") {
+      const lm = new THREE.MeshLambertMaterial({ map: load(t.d + "_diff", true), vertexColors: true, color: new THREE.Color(t.tint[0], t.tint[1], t.tint[2]) });
+      return (this.mats[key] = lm);
+    }
     const m = new THREE.MeshStandardMaterial({
       map: load(t.d + "_diff", true), vertexColors: true,
       roughness: t.rough, metalness: t.metal || 0, envMapIntensity: this.envI || 0.4,
@@ -296,7 +291,7 @@ export class World {
         if (h > 1.8) this._box("trim", p.x0 - 0.012, p.y0 + h / 2 - post / 2, p.z0 - 0.012, p.x1 + 0.012, p.y0 + h / 2 + post / 2, p.z1 + 0.012, dark);
       } else if (p.kind === "container") {
         const long = d > w;
-        this._box(TEX[p.mat] && p.mat !== "container" ? p.mat : "blue", p.x0, p.y0 + 0.2, p.z0, p.x1, p.y1, p.z1, [1, 1, 1]);
+        this._box("blue", p.x0, p.y0 + 0.2, p.z0, p.x1, p.y1, p.z1, [1, 1, 1]);
         this._box("trim", p.x0 - 0.02, p.y0, p.z0 - 0.02, p.x1 + 0.02, p.y0 + 0.2, p.z1 + 0.02, [0.6, 0.6, 0.6]);
         this._box("trim", p.x0 - 0.02, p.y1 - 0.06, p.z0 - 0.02, p.x1 + 0.02, p.y1 + 0.02, p.z1 + 0.02, [0.6, 0.6, 0.6]);
         void long;
@@ -493,7 +488,7 @@ export class World {
     this.sunDir.copy(d);
     this.sun.color.setHex(P.sun); this.sun.intensity = P.sunI;
     // a roofed map (map.meta.ambient > 1) gets extra fill, since the low sun barely gets in
-    const amb = (this.map.meta && this.map.meta.ambient) || 1;
+    const amb = ((this.map.meta && this.map.meta.ambient) || 1) * (this.quality === "low" ? 1.55 : 1); // plain lighting has no sky ambient, so it gets more fill
     this.hemi.color.setHex(P.hemiSky); this.hemi.groundColor.setHex(P.hemiGround); this.hemi.baseI = P.hemiI * amb; this.hemi.intensity = P.hemiI * amb;
     this.fill.color.setHex(P.fill); this.fill.intensity = P.fillI;
     this.fill.position.set(-d.x * 50, 18, -d.z * 50);

@@ -103,12 +103,15 @@ body.fs-playing .fs-fullbtn { opacity: .2; }
 .fs-inv i { font-style: normal; opacity: .6; font-size: .85em; } .fs-inv img { height: 1.4em; opacity: .9; }
 .fs-wn { font-size: clamp(11px, 1.3vw, 16px); letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
 .fs-am b { font: 600 clamp(34px, 5.2vw, 70px)/1 "Teko", sans-serif; } .fs-am b.low { color: #ff5a4a; } .fs-am span { font: 600 clamp(18px, 2.4vw, 32px)/1 "Teko", sans-serif; opacity: .7; margin-left: 6px; }
+.fs-voice { position: absolute; left: 14px; bottom: 120px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; font: 700 clamp(12px, 1.3vw, 16px) "Rajdhani", sans-serif; letter-spacing: .06em; color: #fff; }
+.fs-voice div { background: rgba(10,12,15,.6); border-left: 3px solid #4cff7a; padding: 2px 10px 2px 8px; display: flex; align-items: center; gap: 7px; }
+.fs-voice .me { border-left-color: #ffb13b; }
+.fs-voice i { width: 8px; height: 8px; border-radius: 50%; background: #4cff7a; box-shadow: 0 0 6px #4cff7a; } .fs-voice .me i { background: #ffb13b; box-shadow: 0 0 6px #ffb13b; }
 .fs-cross { position: absolute; left: 50%; top: 50%; width: 0; height: 0; --gap: 4px; --len: 6px; --th: 2px; --col: #4cff7a; }
 .fs-cross i { position: absolute; background: var(--col); box-shadow: 0 0 2px rgba(0,0,0,.9); }
 .fs-cross .l { right: var(--gap); top: calc(var(--th) / -2); width: var(--len); height: var(--th); } .fs-cross .r { left: var(--gap); top: calc(var(--th) / -2); width: var(--len); height: var(--th); }
 .fs-cross .u { bottom: var(--gap); left: calc(var(--th) / -2); height: var(--len); width: var(--th); } .fs-cross .d { top: var(--gap); left: calc(var(--th) / -2); height: var(--len); width: var(--th); }
 .fs-cross .c { left: -1px; top: -1px; width: 2px; height: 2px; display: var(--dot, none); }
-.fs-cross.ads i:not(.c) { display: none; } .fs-cross.ads .c { display: block; left: -1.5px; top: -1.5px; width: 3px; height: 3px; border-radius: 50%; }
 .fs-hitm { left: 50%; top: 50%; width: 0; height: 0; opacity: 0; } .fs-hitm.on { opacity: 1; }
 .fs-hitm i { position: absolute; width: 9px; height: 2px; background: #fff; box-shadow: 0 0 2px #000; } .fs-hitm.head i, .fs-hitm.kill i { background: #ff4a3a; }
 .fs-hitm i:nth-child(1) { transform: translate(-16px, -16px) rotate(45deg); } .fs-hitm i:nth-child(2) { transform: translate(8px, -16px) rotate(-45deg); }

@@ -12,11 +12,12 @@ const BASE = "funstrike/assets/snd/";
 // per sound: shelf = dB of bass boost on the sample, thump = [start Hz, end Hz, seconds, gain] sub layer,
 // wet = how much goes to the room reverb
 const PRESET = {
-  gun_ak: { shelf: 9, thump: [105, 38, 0.24, 1.0], wet: 0.3 }, gun_rifle: { shelf: 8, thump: [100, 40, 0.22, 0.85], wet: 0.28 }, gun_rifle_sil: { shelf: 6, thump: [90, 45, 0.12, 0.4], wet: 0.12 },
-  gun_pistol: { shelf: 8, thump: [120, 50, 0.15, 0.6], wet: 0.22 }, gun_pistol_sil: { shelf: 6, thump: [100, 50, 0.1, 0.3], wet: 0.1 }, gun_deagle: { shelf: 9, thump: [95, 38, 0.24, 0.95], wet: 0.3 },
-  gun_smg: { shelf: 7, thump: [110, 50, 0.12, 0.5], wet: 0.2 }, gun_shotgun: { shelf: 9, thump: [85, 34, 0.3, 1.1], wet: 0.34 }, gun_shotgun_auto: { shelf: 9, thump: [90, 36, 0.26, 1.0], wet: 0.3 },
-  gun_sniper: { shelf: 9, thump: [80, 30, 0.42, 1.15], wet: 0.4 }, gun_awp: { shelf: 10, thump: [72, 26, 0.55, 1.35], wet: 0.45 }, gun_sniper_auto: { shelf: 9, thump: [85, 32, 0.3, 1.0], wet: 0.34 },
-  explode: { shelf: 8, thump: [70, 24, 0.9, 1.5], wet: 0.5 }, bomb_explode: { shelf: 10, thump: [60, 20, 1.6, 1.8], wet: 0.6 }, flash: { shelf: 3, thump: [90, 40, 0.2, 0.5], wet: 0.4 },
+  gun_ak: { shelf: 10, thump: [105, 38, 0.28, 1.25], wet: 0.5 }, gun_rifle: { shelf: 9, thump: [100, 40, 0.26, 1.1], wet: 0.48 }, gun_rifle_sil: { shelf: 7, thump: [90, 45, 0.14, 0.5], wet: 0.25 },
+  gun_pistol: { shelf: 9, thump: [120, 50, 0.18, 0.8], wet: 0.42 }, gun_pistol_sil: { shelf: 7, thump: [100, 50, 0.12, 0.4], wet: 0.22 }, gun_deagle: { shelf: 10, thump: [95, 38, 0.28, 1.2], wet: 0.5 },
+  gun_smg: { shelf: 8, thump: [110, 50, 0.14, 0.65], wet: 0.4 }, gun_shotgun: { shelf: 10, thump: [85, 34, 0.34, 1.4], wet: 0.55 }, gun_shotgun_auto: { shelf: 10, thump: [90, 36, 0.3, 1.3], wet: 0.5 },
+  // the scoped guns get a long, deep boom: a second sub-bass drop under the first, and a big tail
+  gun_sniper: { shelf: 12, thump: [78, 28, 0.55, 1.7], thump2: [48, 22, 0.9, 1.5], wet: 0.75 }, gun_awp: { shelf: 13, thump: [70, 24, 0.7, 2.0], thump2: [44, 20, 1.1, 1.8], wet: 0.8 }, gun_sniper_auto: { shelf: 12, thump: [82, 30, 0.45, 1.5], thump2: [50, 22, 0.8, 1.3], wet: 0.7 },
+    explode: { shelf: 8, thump: [70, 24, 0.9, 1.5], wet: 0.5 }, bomb_explode: { shelf: 10, thump: [60, 20, 1.6, 1.8], wet: 0.6 }, flash: { shelf: 3, thump: [90, 40, 0.2, 0.5], wet: 0.4 },
   step_sand: { shelf: 7, thump: [75, 45, 0.09, 0.4] }, step_stone: { shelf: 7, thump: [85, 50, 0.08, 0.38] }, step_gravel: { shelf: 7, thump: [80, 48, 0.09, 0.38] },
   land: { shelf: 8, thump: [70, 38, 0.16, 0.7] }, hit_flesh: { shelf: 6, thump: [110, 55, 0.08, 0.3] }, hit_head: { shelf: 3 }, knife_hit: { shelf: 5, thump: [100, 55, 0.07, 0.25] },
   nade_bounce: { shelf: 6, thump: [120, 60, 0.07, 0.25] }, plant: { shelf: 3 }, smoke: { shelf: 6, wet: 0.3 },
@@ -25,11 +26,13 @@ const PRESET = {
 // Which gunshot each weapon makes: [file, pitch, loudness]. One file per weapon, every shot, no variants and no random
 // pitch: the same gun always goes off with exactly the same bang. Weapons that share a recording differ by a fixed pitch.
 // Every file in assets/snd/gun_*.wav starts on the bang itself (tools/funstrike/build_gun_sounds.py).
+// guns are mixed this much louder than everything else (and the scoped ones more, see GUNS)
+const GUN_LOUD = 1.5;
 export const GUNS = {
   glock: ["gun_pistol", 1.0, 0.85], p250: ["gun_pistol", 0.9, 0.9], usp: ["gun_pistol_sil", 1.0, 0.6], deagle: ["gun_deagle", 1.0, 1.0],
   mac10: ["gun_smg", 1.1, 0.8], mp9: ["gun_smg", 1.0, 0.8], mp7: ["gun_smg", 0.9, 0.85], p90: ["gun_smg", 1.22, 0.8],
   galil: ["gun_rifle", 0.92, 0.95], famas: ["gun_rifle", 1.12, 0.95], ak47: ["gun_ak", 1.0, 1.0], m4a4: ["gun_rifle", 1.0, 0.95], m4a1s: ["gun_rifle_sil", 1.0, 0.6],
-  ssg08: ["gun_sniper", 1.0, 1.0], awp: ["gun_awp", 1.0, 1.15], scar20: ["gun_sniper_auto", 1.0, 1.0],
+  ssg08: ["gun_sniper", 1.0, 1.15], awp: ["gun_awp", 1.0, 1.3], scar20: ["gun_sniper_auto", 1.0, 1.15],
   nova: ["gun_shotgun", 1.0, 1.0], xm1014: ["gun_shotgun_auto", 1.0, 1.0],
 };
 
@@ -49,16 +52,24 @@ export class GameAudio {
     this.ctx = new AC({ latencyHint: "interactive" });
     this.master = this.ctx.createGain(); this.master.gain.value = this.vol;
     this.comp = this.ctx.createDynamicsCompressor();
-    this.comp.threshold.value = -14; this.comp.ratio.value = 4; this.comp.attack.value = 0.003; this.comp.release.value = 0.2;
+    this.comp.threshold.value = -9; this.comp.ratio.value = 5; this.comp.attack.value = 0.003; this.comp.release.value = 0.2;
     // a little warmth on everything, then the compressor
     this.warm = this.ctx.createBiquadFilter(); this.warm.type = "lowshelf"; this.warm.frequency.value = 130; this.warm.gain.value = 4.5;
-    this.master.connect(this.warm); this.warm.connect(this.comp); this.comp.connect(this.ctx.destination);
+    this.master.connect(this.warm); this.warm.connect(this.comp);
+    // the guns are mixed loud, so after the compressor comes a limiter and a soft clipper: nothing goes past full scale
+    // (that would be crackling) however many shots and booms pile up
+    this.limit = this.ctx.createDynamicsCompressor();
+    this.limit.threshold.value = -4; this.limit.knee.value = 0; this.limit.ratio.value = 20; this.limit.attack.value = 0.001; this.limit.release.value = 0.08;
+    this.clip = this.ctx.createWaveShaper();
+    const curve = new Float32Array(2048); for (let i = 0; i < 2048; i++) { const x = (i / 1023.5) - 1; curve[i] = Math.tanh(1.6 * x) / Math.tanh(1.6); }
+    this.clip.curve = curve;
+    this.comp.connect(this.limit); this.limit.connect(this.clip); this.clip.connect(this.ctx.destination);
     // one shared room reverb (a generated impulse: noise that dies away), used as a send by shots and blasts
-    const sr = this.ctx.sampleRate, len = Math.floor(sr * 1.6), imp = this.ctx.createBuffer(2, len, sr);
-    for (let ch = 0; ch < 2; ch++) { const d = imp.getChannelData(ch); for (let i = 0; i < len; i++) { const t = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.6) * (i < sr * 0.012 ? i / (sr * 0.012) : 1); } }
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 2.4), imp = this.ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) { const d = imp.getChannelData(ch); for (let i = 0; i < len; i++) { const t = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.1) * (i < sr * 0.012 ? i / (sr * 0.012) : 1); } }
     this.verb = this.ctx.createConvolver(); this.verb.buffer = imp;
     this.verbIn = this.ctx.createGain(); this.verbIn.gain.value = 1;
-    const vf = this.ctx.createBiquadFilter(); vf.type = "lowpass"; vf.frequency.value = 3800;
+    const vf = this.ctx.createBiquadFilter(); vf.type = "lowpass"; vf.frequency.value = 4600;
     this.verbIn.connect(vf); vf.connect(this.verb); this.verb.connect(this.master);
     // a second of white noise for the synthesised sounds
     const n = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate), d = n.getChannelData(0);
@@ -121,6 +132,7 @@ export class GameAudio {
     const pre = PRESET[name] || {};
     if (pre.wet && o.wet !== 0) { const send = ctx.createGain(); send.gain.value = pre.wet * vol; g.connect(send); send.connect(this.verbIn); }
     if (pre.thump) this.thump(out, pre.thump[0], pre.thump[1], pre.thump[2], pre.thump[3] * vol);
+    if (pre.thump2) this.thump(out, pre.thump2[0], pre.thump2[1], pre.thump2[2], pre.thump2[3] * vol);
     this.voices++;
     const done = () => { this.voices = Math.max(0, this.voices - 1); try { g.disconnect(); if (node) node.disconnect(); } catch (e) { /* gone */ } };
     if (buf) {
@@ -142,7 +154,7 @@ export class GameAudio {
   // x,y,z puts it in the world (other players), otherwise it is 2D (your own gun).
   gun(id, o = {}) {
     const g = GUNS[id] || GUNS.glock, name = g[0];
-    const opts = { vol: g[2] * (o.vol === undefined ? 1 : o.vol), rate: g[1], fixed: true, cap: 64 };
+    const opts = { vol: Math.min(1.6, g[2] * GUN_LOUD) * (o.vol === undefined ? 1 : o.vol), rate: g[1], fixed: true, cap: 64 };
     if (o.x !== undefined) { opts.x = o.x; opts.y = o.y; opts.z = o.z; opts.ref = o.ref; opts.max = o.max; }
     const prev = this.shotVoice && this.shotVoice.get(o.who);
     if (prev && this.ctx) {

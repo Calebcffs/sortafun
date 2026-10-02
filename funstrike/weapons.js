@@ -80,8 +80,11 @@ export const DEFAULT_PISTOL = { T: "glock", CT: "usp" };
 
 // total damage a bullet does: base x hitbox x falloff, then armour takes its share.
 // armour: {armor, helmet} of the victim. Returns {health, armor}: what comes off each.
+// Every bullet hurts this much more than CS:GO's number (Caleb: it should take fewer bullets to kill you):
+// a rifle is two body shots, a pistol three, any headshot with a rifle or a deagle is one.
+export const BULLET_DAMAGE = 1.6;
 export function bulletDamage(w, hitbox, dist, victim) {
-  let d = w.dmg * (HIT[hitbox] || 1) * Math.pow(w.range, dist / FALLOFF_M);
+  let d = w.dmg * (w.kind === "knife" ? 1 : BULLET_DAMAGE) * (HIT[hitbox] || 1) * Math.pow(w.range, dist / FALLOFF_M);
   const protectedHit = victim.armor > 0 && (hitbox !== "head" || victim.helmet) && hitbox !== "legs";
   if (w.kind === "knife") d = hitbox === "back" ? w.backstab : hitbox === "stab" ? w.stab : w.dmg;
   if (!protectedHit) return { health: Math.max(1, Math.round(d)), armor: 0 };
@@ -106,19 +109,18 @@ export function sprayAt(w, n) {
 // (the client passes 0 for semi-autos and resets it the moment you let go of the trigger).
 // The rule Caleb asked for: whatever you are pointing at is what you hit. The first two shots of a burst, and
 // any single shot, are dead on; running and jumping add only a sliver; a long full-auto burst opens up a little
-// and closes again as soon as you stop. Aiming down sights tightens it more. Shotguns keep their pellet cone.
+// and closes again as soon as you stop. Shotguns keep their pellet cone.
 // Unscoped snipers are a bit loose until you scope.
-export function spreadDeg(w, speedFrac, onGround, crouching, n, scoped, ads = 0) {
+export function spreadDeg(w, speedFrac, onGround, crouching, n, scoped) {
   const a = w.inacc;
   if (!a) return 0;
-  if (w.kind === "shotgun") return a.stand * (1 - 0.35 * ads);
+  if (w.kind === "shotgun") return a.stand;
   const moving = Math.min(1, speedFrac);
   let s = 0;
   if (!onGround) s += a.air * 0.08;
   else if (moving > 0.06) s += a.move * 0.02 * moving;
   s += Math.min(Math.max(0, n - 1), 14) * (w.kind === "pistol" ? 0.045 : w.kind === "smg" ? 0.035 : 0.032);
   if (crouching) s *= 0.6;
-  s *= 1 - 0.7 * ads;
   if (w.kind === "sniper" && !scoped) s += 1 + moving * 2;
   return s;
 }

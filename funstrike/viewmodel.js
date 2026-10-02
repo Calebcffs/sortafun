@@ -16,10 +16,6 @@ const POSE = {
   pistol: [0.155, -0.155, -0.4], knife: [0.17, -0.23, -0.45], grenade: [0.16, -0.23, -0.46], bomb: [0.0, -0.24, -0.46],
 };
 
-// how far in front of the eye the rear sight sits when aiming, and how far under its top edge the notch is (metres)
-const ADS_DIST = { pistol: 0.22, smg: 0.17, rifle: 0.18, shotgun: 0.34, sniper: 0.2 };
-const NOTCH = 0.005;
-
 function glow() {
   const c = document.createElement("canvas"); c.width = c.height = 64;
   const g = c.getContext("2d"), grd = g.createRadialGradient(32, 32, 1, 32, 32, 31);
@@ -105,14 +101,13 @@ export class Viewmodel {
   update(dt, s, mainCam) {
     this.camera.aspect = mainCam.aspect; this.camera.updateProjectionMatrix();
     this.t += dt;
-    const ads = s.ads || 0;
-    const k = Math.min(1, s.speed / 6) * (s.onGround ? 1 : 0.15) * (1 - 0.85 * ads);
+    const k = Math.min(1, s.speed / 6) * (s.onGround ? 1 : 0.15);
     this.bob += dt * (3 + s.speed * 1.5) * (s.onGround ? 1 : 0.2);
     const bx = Math.sin(this.bob) * 0.006 * k, by = Math.abs(Math.cos(this.bob)) * 0.008 * k - (s.onGround ? 0 : 0.012);
-    const idle = Math.sin(this.t * 1.4) * 0.0012 * (1 - ads);
+    const idle = Math.sin(this.t * 1.4) * 0.0012;
     // view swing: the gun lags the camera
     const tx = Math.max(-1, Math.min(1, s.yawRate * 0.012)), ty = Math.max(-1, Math.min(1, s.pitchRate * 0.01));
-    this.sway.x += (tx * (1 - ads) - this.sway.x) * Math.min(1, dt * 10); this.sway.y += (ty * (1 - ads) - this.sway.y) * Math.min(1, dt * 10); // no lag when aiming: the sights stay on the middle
+    this.sway.x += (tx - this.sway.x) * Math.min(1, dt * 10); this.sway.y += (ty - this.sway.y) * Math.min(1, dt * 10);
     const decay = Math.exp(-dt * 16);
     this.kickZ *= decay; this.kickR *= decay; this.kickY *= decay;
     // draw: rises from below
@@ -137,28 +132,13 @@ export class Viewmodel {
       if (this.throwT >= 1) this.throwT = -1;
     }
     const p = [this.base.x, this.base.y, this.base.z];
-    const kickMul = 1 - 0.6 * ads; // sights stay readable while firing from them
-    let rx = reloadRX + this.kickR * kickMul - up * 0.8 + krx + this.sway.y * 0.04, ry = -this.sway.x * 0.05 + kry, rz = reloadRZ + krz;
+    let rx = reloadRX + this.kickR - up * 0.8 + krx + this.sway.y * 0.04, ry = -this.sway.x * 0.05 + kry, rz = reloadRZ + krz;
     this.rig.position.set(0, 0, 0); this.rig.rotation.set(0, 0, 0);
     // put the gun so its grip is at base + motion
     const g = this.gun; if (!g) return;
     const m = g.userData.marks;
     const gripGun = this.kind === "knife" || this.kind === "grenade" || this.kind === "bomb" ? new THREE.Vector3() : m.trigger.clone().add(new THREE.Vector3(0, -0.04, 0.03));
-    const handR = new THREE.Vector3(p[0] + bx + kx - this.sway.x * 0.012, p[1] + by + idle + reloadY - up * 0.3 + ky - this.sway.y * 0.01 + this.kickY * kickMul, p[2] + this.kickZ * kickMul + kz);
-    if (ads > 0.001 && m.sightF && m.sightR) {
-      // Aiming: the gun swings in front of the eye and tips so that the line from the rear sight (just under its
-      // top edge, where the notch is) to the tip of the front post runs straight down the middle of the screen.
-      // The view model camera sits at the origin looking down -z, and the middle of the screen is where bullets go,
-      // so the post tip ends up exactly on the reticle and the rear sight is centred round it.
-      const R = m.sightR.clone(); R.y -= NOTCH;
-      const F = m.sightF, run = Math.max(0.05, R.z - F.z);
-      const ax = -Math.atan2(F.y - R.y, run), ay = (F.x - R.x) / run;
-      const rotA = new THREE.Euler(ax, ay, 0);
-      const Rr = R.clone().applyEuler(rotA), d = ADS_DIST[this.kind] || 0.18;
-      const origin = new THREE.Vector3(-Rr.x, -Rr.y, -d - Rr.z);
-      handR.lerp(origin.add(gripGun.clone().applyEuler(rotA)), ads);
-      rx += ax * ads; ry += ay * ads;
-    }
+    const handR = new THREE.Vector3(p[0] + bx + kx - this.sway.x * 0.012, p[1] + by + idle + reloadY - up * 0.3 + ky - this.sway.y * 0.01 + this.kickY, p[2] + this.kickZ + kz);
     g.rotation.set(rx + (this.kind === "knife" ? -0.6 : 0), ry, rz);
     g.position.copy(gripGun).multiplyScalar(-1).applyEuler(g.rotation).add(handR);
     g.updateMatrixWorld(true);

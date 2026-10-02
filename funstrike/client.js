@@ -15,6 +15,7 @@ import { Soldier, makeGun, makeC4, gunMaterial } from "./models.js";
 import { FX } from "./fx.js";
 import { newBody, stepBody, eyeHeight, lookDir, bodyHeight, STAND_H, CROUCH_H } from "./movement.js";
 import { rayPlayer, hitboxes } from "./hitbox.js";
+import { Voice } from "./voice.js";
 import { WEAPONS, WEAPON_IDS, widOf, byWid, spreadDeg, sprayAt, GEAR } from "./weapons.js";
 import { MODES, TEAM } from "./sim.js";
 import { Viewmodel } from "./viewmodel.js";
@@ -23,8 +24,6 @@ const RAD = Math.PI / 180;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // how much of a weapon's spray curve (weapons.js sprayAt) shows up as the view climbing
 const RECOIL_VIEW = 0.8;
-// aiming down the sights narrows the field of view by this much (a gentle zoom, about 1.3x)
-const ADS_ZOOM = 0.2;
 const GKEYS = ["he", "flash", "smoke", "fire"];
 const GIDS = ["he", "flash", "smoke", null]; // the 4th is molotov or incendiary, by team
 const STATE_EVERY = 66;
@@ -38,7 +37,7 @@ export class Client {
     this.body = newBody(); this.punch = [0, 0]; this.punchT = [0, 0]; this.look = { yaw: 0, pitch: 0 };
     this.me = { team: TEAM.SPEC, alive: false, hp: 100, armor: 0, helmet: false, kit: false, money: 0, inv: null, waiting: false, c4: false };
     this.ammo = {}; this.cur = "knife"; this.reloadEnd = 0; this.reloadId = ""; this.nextFire = 0; this.drawEnd = 0; this.fireLatch = false;
-    this.sprayN = 0; this.burstN = 0; this.lastShot = -9; this.scoped = 0; this.ads = 0; this.grenadeIdx = 0;
+    this.sprayN = 0; this.burstN = 0; this.lastShot = -9; this.scoped = 0; this.grenadeIdx = 0;
     this.off = null; this.interp = 0.12; this.clockSet = false;
     this.phase = "warmup"; this.phaseEnd = 0; this.round = 0; this.score = [0, 0];
     this.bomb = null; this.drops = []; this.grenades = new Map(); this.smokes = new Map(); this.fires = new Map(); this.dropMeshes = new Map();
@@ -96,7 +95,7 @@ export class Client {
 
   maxPR() {
     const q = this.set.quality, d = window.devicePixelRatio || 1;
-    return q === "low" ? Math.min(d, 0.8) : q === "medium" ? Math.min(d, 1) : Math.min(d, 1.5);
+    return q === "low" ? Math.min(d, 1) : q === "medium" ? Math.min(d, 1) : Math.min(d, 1.5);
   }
 
   resize() {
@@ -111,7 +110,7 @@ export class Client {
   makeRadarBase() {
     const m = this.map, S = 4, c = document.createElement("canvas");
     c.width = m.w * S; c.height = m.d * S;
-    const g = c.getContext("2d"), pal = { sand: "#c8b48a", plaster: "#b9a47c", stone: "#a89570", brick: "#a89570", concrete: "#8a8a86", tile: "#cdbb94", dirt: "#b49c70", wood: "#8a6a40", metal: "#667", plank: "#8a6a40", cracked: "#b39c74", redbrick: "#a0603f", asphalt: "#77777a", grass: "#7f8c4a", snow: "#dfe6ee", plate: "#6a6a58", rock: "#6f675e", green: "#6f9a7a" };
+    const g = c.getContext("2d"), pal = { sand: "#c8b48a", plaster: "#b9a47c", stone: "#a89570", brick: "#a89570", concrete: "#8a8a86", tile: "#cdbb94", dirt: "#b49c70", wood: "#8a6a40", metal: "#667", plank: "#8a6a40", cracked: "#b39c74" };
     for (let z = 0; z < m.d; z++) for (let x = 0; x < m.w; x++) {
       const i = z * m.w + x;
       if (m.solid[i]) continue;
@@ -135,11 +134,12 @@ export class Client {
       if (!this.running) return;
       if (this.chatOpen) { if (e.code === "Enter") { this.sendChat(); e.preventDefault(); } else if (e.code === "Escape") this.closeChat(); return; }
       if (e.repeat) { if (["Tab", "Space"].includes(e.code)) e.preventDefault(); return; }
+      if (e.code === "CapsLock") { if (this.voice) this.voice.talk(true); else if (!this.voiceHinted) { this.voiceHinted = true; this.hud.prompt("Voice chat only works on an online server"); setTimeout(() => this.hud.prompt(""), 2500); } e.preventDefault(); return; }
       this.keys.add(e.code); this.pressed.add(e.code);
       if (["Tab", "Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
       this.onKeyPress(e.code, e);
     };
-    this.onKeyUp = (e) => { this.keys.delete(e.code); if (e.code === "Tab") { this.scoreOpen = false; this.hud.showScore(false); } };
+    this.onKeyUp = (e) => { if (e.code === "CapsLock" && this.voice) this.voice.talk(false); this.keys.delete(e.code); if (e.code === "Tab") { this.scoreOpen = false; this.hud.showScore(false); } };
     this.onMouseMove = (e) => { if (this.locked) { this.mouse.dx += e.movementX || 0; this.mouse.dy += e.movementY || 0; } };
     this.onMouseDown = (e) => {
       if (!this.running) return;
@@ -157,7 +157,7 @@ export class Client {
       if (this.locked) this.setPaused(false);
     };
     this.onCtx = (e) => e.preventDefault();
-    this.onBlur = () => { this.keys.clear(); this.mouse.b = 0; };
+    this.onBlur = () => { this.keys.clear(); this.mouse.b = 0; if (this.voice) this.voice.talk(false); };
     this.onResize = () => this.resize();
     document.addEventListener("keydown", this.onKeyDown); document.addEventListener("keyup", this.onKeyUp);
     document.addEventListener("mousemove", this.onMouseMove); document.addEventListener("mousedown", this.onMouseDown); document.addEventListener("mouseup", this.onMouseUp);
@@ -235,7 +235,23 @@ export class Client {
     this.audio.init();
   }
 
+  // voice chat over the match's own database connection (online servers only)
+  startVoice(conn, sid, hostUid) {
+    const hostU8 = hostUid ? hostUid.slice(0, 8) : null; // the host's own roster row says uid "local"
+    if (this.voice) this.voice.close();
+    this.voice = new Voice(conn, sid, {
+      name: () => this.name || "player",
+      settings: () => this.set,
+      teamOf: (u8) => { if (u8 === hostU8) u8 = "local"; for (const ro of this.roster.values()) if (ro.uid8 === u8) return ro.team; return undefined; },
+      myTeam: () => this.me.team,
+      teamOnly: () => !!this.mode.rounds,
+      onTalking: (names, mine) => this.hud.voice(names, mine),
+      onError: (msg) => { this.hud.prompt(msg); setTimeout(() => this.hud.prompt(""), 4000); },
+    });
+  }
+
   stop() {
+    if (this.voice) { this.voice.close(); this.voice = null; this.hud.voice([], false); }
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.unlock(); this.hud.show(false); this.hud.showScore(false); this.hud.showBuy(false); this.hud.showTeams(false); this.hud.showPause(false);
@@ -266,6 +282,7 @@ export class Client {
     for (const id of [...this.roster.keys()]) if (!seen.has(id)) { this.roster.delete(id); const rp = this.remote.get(id); if (rp) { this.removeRemote(rp); this.remote.delete(id); } }
     const mine = this.roster.get(this.myId);
     if (mine) this.syncMe(mine);
+    if (this.voice) this.voice.refresh();
   }
 
   syncMe(ro) {
@@ -373,7 +390,13 @@ export class Client {
         else { const ld = lookDir(r.pos.yaw, r.pos.pitch); F.muzzle([mz.x, mz.y, mz.z], ld, 0.45, !!w.silenced); }
         r.soldier.shoot = 1;
         // where it landed
-        if (e.h) F.impact(end, [-d.x, 0.2, -d.z], "flesh");
+        if (e.h) {
+          F.impact(end, [-d.x, 0.2, -d.z], "flesh");
+          // whoever it hit rocks back (the event only has the spot, so it is the one standing there)
+          let near = null, nd = 1.1;
+          for (const o of this.remote.values()) { if (!o.alive || o === r) continue; const dd = Math.hypot(o.pos.x - end[0], o.pos.z - end[2]); if (dd < nd && end[1] > o.pos.y - 0.1 && end[1] < o.pos.y + 2) { nd = dd; near = o; } }
+          if (near) near.soldier.impact(d.x, d.z, w.dmg / 36, end[1] > near.pos.y + 1.55);
+        }
         else { const hit = this.map.raycast(mz.x, mz.y, mz.z, d.x, d.y, d.z, len + 0.3); if (hit) { F.impact([hit.x, hit.y, hit.z], [hit.nx, hit.ny, hit.nz], hit.prop ? (hit.prop.kind === "crate" ? "wood" : "metal") : "wall"); if (Math.random() < 0.3) A.play(hit.prop ? "hit_wood" : "hit_wall", { x: hit.x, y: hit.y, z: hit.z, ref: 3, vol: 0.5 }); } }
         break;
       }
@@ -399,14 +422,14 @@ export class Client {
         const ta = teamOf(e.a), tv = teamOf(e.v);
         hud.killfeed({ a: e.a && e.a !== e.v ? nameOf(e.a) : "", v: nameOf(e.v), wname, hs: !!e.hs, ta: ta, tv: tv, me: e.a === me, died: e.v === me });
         if (e.v === me) { this.me.alive = false; this.deathAt = this.nowS; this.lastKillerId = e.a; this.killedBy = e.a && e.a !== me ? nameOf(e.a) : ""; this.scoped = 0; this.reloadEnd = 0; this.unlockForDeath(); }
-        else if (v) { v.soldier.die(); v.alive = false; const p = v.pos; if (e.hs) A.play("hit_head", { x: p.x, y: p.y + 1.6, z: p.z, ref: 6 }); }
+        else if (v) { this.killThrow(v, e); v.alive = false; const p = v.pos; if (e.hs) A.play("hit_head", { x: p.x, y: p.y + 1.6, z: p.z, ref: 6 }); }
         if (e.a === me && e.v !== me) { hud.hitMarker(!!e.hs, true); A.ui("ding", 0.7); }
         break;
       }
       case "throw": { const p = pos(e.id); if (p) A.play("nade_bounce", { x: p[0], y: p[1], z: p[2], vol: 0.5, rate: 1.4 }); break; }
       case "boom": {
         const p = [e.x, e.y + 0.3, e.z];
-        F.explosion(p, 1);
+        F.explosion(p, 1); this.lastBoom = { x: e.x, z: e.z, t: this.nowS };
         A.play("explode", { x: e.x, y: e.y, z: e.z, ref: 12, vol: 1.2 });
         const d = Math.hypot(e.x - this.body.x, e.z - this.body.z); F.shake = Math.max(F.shake, clamp(1.2 - d / 18, 0, 1));
         break;
@@ -611,10 +634,10 @@ export class Client {
     const b = this.body, sp = Math.hypot(b.vx, b.vz);
     // the spread comes from the shots BEFORE this one in the current full-auto burst (semi-autos never build any),
     // so a single shot, or the first two of a burst, go exactly where the view is pointing
-    const spread = spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, w.auto ? this.burstN : 0, this.scoped > 0, this.ads);
+    const spread = spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, w.auto ? this.burstN : 0, this.scoped > 0);
     this.shootBullets(w, spread);
     // the kick lands after the bullet has left: this shot goes where you were aiming, the next ones climb
-    this.punchT = [pp * (this.scoped && w.kind === "sniper" ? 0.3 : 1) * RECOIL_VIEW * (1 - 0.35 * this.ads), py * RECOIL_VIEW * (1 - 0.35 * this.ads)];
+    this.punchT = [pp * (this.scoped && w.kind === "sniper" ? 0.3 : 1) * RECOIL_VIEW, py * RECOIL_VIEW];
     this.sprayN++; this.burstN++; this.lastShot = now;
     this.vm.kick(w.kind, w.cycle);
     // a bolt gun lowers the scope while it cycles
@@ -641,7 +664,7 @@ export class Client {
         if (h && h.t < maxT) { maxT = h.t; vic = r; hb = h.name; kind = hb === "head" ? "head" : "flesh"; nrm = [-d[0], 0.2, -d[2]]; }
       }
       const end = [ox + d[0] * maxT, oy + d[1] * maxT, oz + d[2] * maxT];
-      if (vic) { hits.push([vic.id, hb, +maxT.toFixed(2)]); anyHit = true; }
+      if (vic) { hits.push([vic.id, hb, +maxT.toFixed(2)]); anyHit = true; vic.soldier.impact(d[0], d[2], w.dmg / 36, hb === "head"); }
       if (n === 0) { endFirst = end; impactKind = kind; hitNorm = nrm; }
       if (n === 0 || pellets > 1) {
         const mz = this.vm.muzzleWorld(this.cam) || new THREE.Vector3(ox, oy, oz);
@@ -662,6 +685,20 @@ export class Client {
   // the direction the middle of the screen is looking: the look angles plus the recoil kick. Bullets and the
   // camera both use exactly this, so a shot goes where the crosshair is.
   aimAngles() { return { yaw: this.look.yaw + this.punch[1] * RAD, pitch: this.look.pitch + this.punch[0] * RAD }; }
+
+  // a soldier dies: throw it back along the shot (or away from the blast), harder for bigger guns
+  killThrow(v, e) {
+    const w = byWid(e.w), kind = w ? w.kind : "";
+    const att = e.a === this.myId ? { x: this.body.x, z: this.body.z } : (this.remote.get(e.a) || {}).pos;
+    let dx = 0, dz = 0, power = kind === "sniper" ? 6.5 : kind === "shotgun" ? 6 : kind === "rifle" ? 3.6 : kind === "smg" || kind === "pistol" ? 2.6 : kind === "knife" ? 1.2 : 0, blast = false;
+    if (att && att !== v.pos) { dx = v.pos.x - att.x; dz = v.pos.z - att.z; } else { dx = Math.sin(v.pos.yaw); dz = Math.cos(v.pos.yaw); }
+    if (w && w.id === "he") { // a grenade: away from the bang, up and tumbling
+      const b = this.lastBoom && this.nowS - this.lastBoom.t < 1.5 ? this.lastBoom : null;
+      if (b) { dx = v.pos.x - b.x; dz = v.pos.z - b.z; if (Math.hypot(dx, dz) < 0.2) { dx = Math.sin(v.pos.yaw); dz = Math.cos(v.pos.yaw); } }
+      power = 8; blast = true;
+    } else if (e.w === undefined || !w || w.kind === "bomb") { power = 9; blast = true; dx = v.pos.x - (this.lastBoom ? this.lastBoom.x : v.pos.x - 1); dz = v.pos.z - (this.lastBoom ? this.lastBoom.z : v.pos.z); }
+    v.soldier.die(dx, dz, power, !!e.hs, blast);
+  }
 
   isEnemy(r) { return !this.mode.teams || r.team !== this.me.team; }
 
@@ -812,11 +849,11 @@ export class Client {
   }
 
   adaptResolution() {
-    if (this.set.quality !== "auto") return;
+    if (this.set.quality !== "auto" && this.set.quality !== "low") return;
     this.adaptT = (this.adaptT || 0) + 1;
     if (this.adaptT < 45) return; this.adaptT = 0;
     const ms = this.frameMs;
-    if (ms > 21 && this.pr > 0.6) { this.pr = Math.max(0.6, this.pr - 0.1); this.resize(); }
+    if (ms > 18 && this.pr > 0.5) { this.pr = Math.max(0.5, this.pr - 0.1); this.resize(); }
     else if (ms < 13.5 && this.pr < this.maxPR()) { this.pr = Math.min(this.maxPR(), this.pr + 0.05); this.resize(); }
   }
 
@@ -826,12 +863,11 @@ export class Client {
     const me = this.me, b = this.body;
     // mouse look
     const sensBase = 0.022 * RAD * this.set.sens;
-    const fov = this.currentFov();
-    const zoomScale = Math.tan((fov * RAD) / 2) / Math.tan((this.baseFov() * RAD) / 2);
+    // the same degrees per mouse count scoped or not (Caleb: scoping in must not slow the mouse down)
     const canLook = this.locked && !this.paused;
     if (canLook) {
-      this.look.yaw -= this.mouse.dx * sensBase * zoomScale;
-      this.look.pitch = clamp(this.look.pitch - this.mouse.dy * sensBase * zoomScale * (this.set.invert ? -1 : 1), -1.5, 1.5);
+      this.look.yaw -= this.mouse.dx * sensBase;
+      this.look.pitch = clamp(this.look.pitch - this.mouse.dy * sensBase * (this.set.invert ? -1 : 1), -1.5, 1.5);
     }
     this.mouse.dx = this.mouse.dy = 0;
     if (!me.alive || me.team === TEAM.SPEC) { this.updateSpectateInput(dt); return; }
@@ -850,7 +886,7 @@ export class Client {
     if (frozen) { b.vx *= Math.max(0, 1 - dt * 12); b.vz *= Math.max(0, 1 - dt * 12); }
     b.yaw = this.look.yaw; b.pitch = this.look.pitch;
     const w = this.curW();
-    const sp = (w.speedMs || 6.35) * (this.scoped && w.kind === "sniper" ? 0.55 : 1) * (1 - 0.22 * this.ads);
+    const sp = (w.speedMs || 6.35) * (this.scoped && w.kind === "sniper" ? 0.55 : 1);
     this.prevPos.x = b.x; this.prevPos.y = b.y; this.prevPos.z = b.z;
     const wasGround = b.onGround;
     b.landed = 0;
@@ -886,11 +922,6 @@ export class Client {
         else { const take = Math.min(w.mag - a.mag, a.res); a.mag += take; a.res -= take; this.reloadEnd = 0; }
       } else this.reloadEnd = 0;
     }
-    // aiming down the sights (hold right click) for every gun that has no scope
-    const adsOk = !w.scope && (w.kind === "pistol" || w.kind === "smg" || w.kind === "rifle" || w.kind === "shotgun");
-    const wantAds = adsOk && (K & 2) !== 0 && this.me.alive && !frozen && this.phase !== "freeze" && this.phase !== "matchend" && this.reloadEnd === 0 && now >= this.drawEnd - 0.25 && !this.buyOpen;
-    this.ads += ((wantAds ? 1 : 0) - this.ads) * Math.min(1, dt * 13);
-    if (this.ads < 0.005) this.ads = 0;
     if (frozen && this.phase !== "freeze") return;
     if (this.phase === "freeze" || this.phase === "matchend") { this.scoped = 0; return; }
     // scope
@@ -917,7 +948,7 @@ export class Client {
   currentFov() {
     const w = this.curW();
     if (this.scoped && w.scope) { const hf = w.scope[this.scoped - 1]; return 2 * Math.atan(Math.tan((hf * RAD) / 2) * 0.75) / RAD; }
-    return this.baseFov() * (1 - ADS_ZOOM * this.ads);
+    return this.baseFov();
   }
 
   updateSpectateInput(dt) {
@@ -976,7 +1007,12 @@ export class Client {
       const sy = Math.sin(r.pos.yaw), cy = Math.cos(r.pos.yaw);
       const vf = -sy * r.svx - cy * r.svz, vs = cy * r.svx - sy * r.svz;
       s.hold(r.alive ? (WEAPON_IDS[r.wid] || "knife") : null);
-      if (r.alive) s.update(dt, vf, vs, r.crouch, !r.onGround, r.pos.pitch); else s.tickDead(dt);
+      if (r.alive) s.update(dt, vf, vs, r.crouch, !r.onGround, r.pos.pitch);
+      else {
+        s.base = r.pos; if (!s.solidAt) s.solidAt = (x, z) => this.map.isSolid(Math.floor(x), Math.floor(z));
+        s.tickDead(dt);
+        s.root.position.set(r.pos.x + s.off.x, r.pos.y + s.off.y, r.pos.z + s.off.z); // thrown back by the hit that killed it
+      }
       if (ro) r.team = ro.team, r.name = ro.name;
       // footsteps
       const sp = Math.hypot(r.svx, r.svz);
@@ -1107,9 +1143,9 @@ export class Client {
     hud.setZone(this.map.zoneAt(this.eye.x, this.eye.z));
     // crosshair
     const b = this.body, sp = Math.hypot(b.vx, b.vz);
-    const spread = me.alive ? spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, w.auto ? this.burstN : 0, this.scoped > 0, this.ads) : 0;
+    const spread = me.alive ? spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, w.auto ? this.burstN : 0, this.scoped > 0) : 0;
     const px = Math.tan(Math.min(25, spread) * RAD) / Math.tan((this.currentFov() * RAD) / 2) * (this.h / 2);
-    hud.crosshair(Math.min(60, px), this.set.cross, !me.alive || (this.scoped > 0 && w.scope), this.ads);
+    hud.crosshair(Math.min(60, px), this.set.cross, !me.alive || (this.scoped > 0 && w.scope));
     hud.scope(me.alive && this.scoped > 0 && !!w.scope);
     // flash and hurt
     let fl = 0;
@@ -1268,7 +1304,7 @@ export class Client {
     if (this.viewmodelOn && this.me.alive) {
       r.clearDepth();
       const b = this.body, speed = Math.hypot(b.vx, b.vz);
-      this.vm.update(dt, { speed, onGround: b.onGround, crouch: b.crouch, yawRate: this.vmYaw(dt), pitchRate: this.vmPitch(dt), drawFrac: clamp((this.nowS - this.drawStart) / Math.max(0.2, this.drawEnd - this.drawStart), 0, 1), flash: this.muzzleFlash > 0, ads: this.ads, kind: this.curW().kind, c4use: this.useHold && this.me.c4 }, this.cam);
+      this.vm.update(dt, { speed, onGround: b.onGround, crouch: b.crouch, yawRate: this.vmYaw(dt), pitchRate: this.vmPitch(dt), drawFrac: clamp((this.nowS - this.drawStart) / Math.max(0.2, this.drawEnd - this.drawStart), 0, 1), flash: this.muzzleFlash > 0, kind: this.curW().kind, c4use: this.useHold && this.me.c4 }, this.cam);
       r.render(this.vmScene, this.vmCam);
       this.muzzleFlash = Math.max(0, this.muzzleFlash - dt);
     }

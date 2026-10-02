@@ -931,7 +931,7 @@ rules deploy.
 ### Fun Strike (`funstrike.html` + `funstrike/`, 2026-10-02, v0.9)
 
 Caleb asked for "a simple Counter-Strike type game, as close to CSGO as possible", called **Fun Strike**: Dust2
-only (v0.9.2 added nine more maps, below), Defuse + Team Deathmatch + Deathmatch (FFA), multiplayer with a server list (ping, players, bots, map),
+only (v0.9.2 added nine generated maps, v0.9.3 removed them again, see below), Defuse + Team Deathmatch + Deathmatch (FFA), multiplayer with a server list (ping, players, bots, map),
 create-your-own-server, bots, join-mid-round = spectate until next round, free assets, good looking but smooth.
 Honest scope notes: the map is **our own rebuild of Dust II's layout** (Valve's geometry/art is not free to use),
 the soldier is Quaternius' SWAT recoloured per team, guns are Pichuliru's CC0 set, sounds are Freesound CC0.
@@ -1034,6 +1034,47 @@ carrier on the minimap; sounds untested by ear (picked by onset detection); only
 - Headless test harness lives in the session scratchpad only; the pattern is in the **Testing** paragraph above (`funstrike.client`
   after `startMatch`). Set `client.locked = true` and `client.mouse.b = 2` to aim, `client.shootBullets(w, 0)` with a spy on
   `link.send` to check where a shot lands. Bots shoot you while you teleport around, which is fine.
+
+**v0.9.3 (Caleb's second playtest round), supersedes parts of v0.9.2 above:**
+- **Damage**: `BULLET_DAMAGE` 1.6 in weapons.js multiplies every bullet (not the knife): a rifle kills in 2 body shots, a pistol in
+  3, any rifle / deagle headshot in 1. Bots use the same function, so they hurt you the same.
+- **No aim down sights** for unscoped guns any more (Caleb: the sights blocked the reticle, then "remove it"). Everything ADS was
+  deleted: `client.ads`, the viewmodel sight alignment, `models.js sightMarks`, the crosshair dot. Right click is only the
+  sniper scope, knife stab and weak throw. **Scoping does not slow the mouse**: `updateInput` uses the same degrees per count
+  scoped or not (there is no zoomScale any more).
+- **Gun sound**: `GUN_LOUD` 1.5 on top of the `GUNS` levels, more reverb (2.4s tail, wet 0.4-0.8), and the three scoped guns have
+  a second deep sub-bass drop (`thump2` in `PRESET`) plus a big tail. The master chain is now master -> warm -> compressor
+  (threshold -9) -> limiter -> tanh soft clipper -> out, because the guns peaked at 3.8x full scale before the limiter
+  (measured with an AnalyserNode on `audio.clip`).
+- **Performance**: default graphics is "low" ("Fast"): no shadows, no MSAA, no normal maps, the cheap `MeshLambertMaterial`
+  (hemisphere gets x1.55 to make up for the missing sky ambient), pixel ratio <= 1 and the frame-rate adapter runs on it too
+  (floor 0.5). Everyone's saved quality is reset once to "low" (`settings.v` = 3). "Balanced / Pretty / Prettiest" are the old
+  auto / medium / high. Headless swiftshader can't tell you real GPU speed, so judge by draw calls and shader cost.
+- **Hit reactions**: `Soldier.impact(dx, dz, power, head)` rocks the upper body back along the shot (headshots snap neck and
+  head); `Soldier.die(dx, dz, power, head, blast)` throws the body back along the shot with friction, stopped by walls
+  (`solidAt`), and for grenade / bomb kills flies it up (4.5+ m/s) and tumbles the hips. `client.killThrow()` picks direction
+  (attacker -> victim, or away from the last `boom`) and power by weapon kind; remote `s` events with a hit flag flinch whoever
+  stands at the end point. Dead soldiers get their offset in `updateEntities` via `tickDead`.
+- **Voice chat** (`voice.js`): hold **Caps Lock**. WebRTC audio peer to peer, signalled through the match's own RTDB room
+  (`fs/room/<sid>/vc/<uid>` presence + `t` talking flag, `fs/room/<sid>/rtc/<toUid>/<id>` letters; rules in
+  `database.rules.json`). The smaller uid offers; **only the offerer pre-makes the audio transceiver** (a transceiver made
+  by the answerer is not matched to the offer and its answer comes back receive-only, which silently made one direction
+  mute). Talking = `sender.replaceTrack(mic)`. Hearing is gated on the listening end: Defuse hears teammates only, TDM / DM
+  hear everyone (`teamOnly = mode.rounds`); the host's roster row has uid8 "local", so `startVoice(conn, sid, hostUid)`
+  maps it. STUN only (Google), no TURN, so strict NATs can fail. Settings: voice on / mic level (a GainNode, 0-300%) /
+  others' volume. HUD `#h-voice` lists who is talking. Practice matches have no voice (Caps Lock says so). Tested with two
+  browser contexts on the emulators and Chrome's fake mic (`--use-fake-ui-for-media-stream --use-fake-device-for-media-stream`):
+  packets flow both ways, enemies were muted in Defuse and teammates heard.
+- **Maps, again**: Caleb asked for real, downloadable maps only (and said to get non-free ones anyway, which was declined: nothing
+  that isn't freely licensed gets shipped on the public site). The nine generated maps were deleted; `maps.js` keeps the
+  registry with just Dust II (our rebuild, still the only map with bomb sites). Findings so you do not repeat the hunt:
+  Sketchfab has CC0 / CC-BY shooter maps (e.g. ResoForge "LOWPOLY FPS TDM GAME MAP", CC-BY, 59k tris) but downloading needs a
+  logged-in API token (`GET https://api.sketchfab.com/v3/models/<uid>/download`, header `Authorization: Token ...`); BlendSwap
+  403s; Poly Pizza has no maps; AssaultCube's 44 community maps (GitHub assaultcube/AC, `.cgz`, a cell grid that would map
+  straight onto `GridMap`) are licensed "do not redistribute outside the unmodified AssaultCube package, no commercial use";
+  Xonotic's repo has only `.map` sources; itch.io packs are mostly Unity-only or forbid redistribution; three.js's
+  `collision-world.glb` is a tiny plain test level. A mesh map still needs a mesh -> grid rasteriser (floor height per cell, wall
+  where something blocks 0.5-1.8m up) because rays, movement and A* are all grid based.
 
 ### Sound (`sfx.js`)
 

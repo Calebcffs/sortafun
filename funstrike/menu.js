@@ -11,11 +11,15 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 
 export const DEFAULTS = {
-  sens: 2.2, fov: 90, volume: 0.8, quality: "auto", invert: false, speech: true,
+  sens: 2.2, fov: 90, volume: 0.8, quality: "low", invert: false, speech: true, micGain: 1, voiceVol: 1, voice: true, v: 3,
   cross: { color: "#4cff7a", size: 6, gap: 3, thick: 2, dot: false },
 };
 export function loadSettings() {
-  try { const s = JSON.parse(localStorage.getItem("fs-settings") || "{}"); return { ...DEFAULTS, ...s, cross: { ...DEFAULTS.cross, ...(s.cross || {}) } }; } catch (e) { return { ...DEFAULTS, cross: { ...DEFAULTS.cross } }; }
+  try {
+    const s = JSON.parse(localStorage.getItem("fs-settings") || "{}");
+    if ((s.v || 0) < 3) { s.quality = "low"; s.v = 3; } // v3: frame rate first, everyone starts on the fast setting once
+    return { ...DEFAULTS, ...s, cross: { ...DEFAULTS.cross, ...(s.cross || {}) } };
+  } catch (e) { return { ...DEFAULTS, cross: { ...DEFAULTS.cross } }; }
 }
 export function saveSettings(s) { try { localStorage.setItem("fs-settings", JSON.stringify(s)); } catch (e) { /* private window */ } }
 
@@ -177,9 +181,14 @@ export class Menus {
           <p class="blurb">Raw input: no mouse acceleration and no smoothing, what you move is what you see.</p>
           <label>Field of view <input type="range" id="s-fov" min="70" max="110" step="1" value="${s.fov}"><output id="o-fov">${s.fov}</output></label>
           <label>Volume <input type="range" id="s-vol" min="0" max="1" step="0.05" value="${s.volume}"><output id="o-vol">${Math.round(s.volume * 100)}%</output></label>
-          <label>Graphics <select id="s-q"><option value="auto">Auto (adjusts to your frame rate)</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low (no shadows)</option></select></label>
+          <label>Graphics <select id="s-q"><option value="low">Fast (default: no shadows, plain lighting, adjusts to your frame rate)</option><option value="auto">Balanced (shadows, adjusts to your frame rate)</option><option value="medium">Pretty</option><option value="high">Prettiest</option></select></label>
           <label><span>Invert mouse Y</span><input type="checkbox" id="s-inv" ${s.invert ? "checked" : ""}></label>
           <label><span>Radio voice lines (your browser's own voices)</span><input type="checkbox" id="s-speech" ${s.speech ? "checked" : ""}></label>
+          <h3>Voice chat</h3>
+          <p class="blurb">Hold <b>Caps Lock</b> to talk on an online server. In Team Deathmatch and Deathmatch everyone hears you, in Defuse only your team.</p>
+          <label><span>Voice chat on</span><input type="checkbox" id="s-voice" ${s.voice !== false ? "checked" : ""}></label>
+          <label>Your mic level <input type="range" id="s-mic" min="0" max="3" step="0.05" value="${s.micGain}"><output id="o-mic">${Math.round(s.micGain * 100)}%</output></label>
+          <label>Other players' voices <input type="range" id="s-vv" min="0" max="1" step="0.05" value="${s.voiceVol}"><output id="o-vv">${Math.round(s.voiceVol * 100)}%</output></label>
           <h3>Crosshair</h3>
           <label>Colour <input type="color" id="x-col" value="${c.color}"></label>
           <label>Size <input type="range" id="x-size" min="2" max="14" value="${c.size}"><output id="o-xs">${c.size}</output></label>
@@ -200,6 +209,9 @@ export class Menus {
     bind("s-vol", (e) => { s.volume = +e.value; q("o-vol").textContent = Math.round(s.volume * 100) + "%"; });
     bind("s-q", (e) => { s.quality = e.value; });
     bind("s-inv", (e) => { s.invert = e.checked; });
+    bind("s-voice", (e) => { s.voice = e.checked; });
+    bind("s-mic", (e) => { s.micGain = +e.value; q("o-mic").textContent = Math.round(s.micGain * 100) + "%"; });
+    bind("s-vv", (e) => { s.voiceVol = +e.value; q("o-vv").textContent = Math.round(s.voiceVol * 100) + "%"; });
     bind("s-speech", (e) => { s.speech = e.checked; });
     bind("x-col", (e) => { c.color = e.value; });
     bind("x-size", (e) => { c.size = +e.value; q("o-xs").textContent = c.size; });
@@ -211,7 +223,7 @@ export class Menus {
   }
 
   s_controls() {
-    const rows = [["W A S D", "move"], ["Mouse", "look"], ["Left click", "fire (hold for full auto)"], ["Right click", "aim down sights · scope · knife stab · weak throw"], ["Space", "jump"], ["Ctrl / C", "crouch"], ["Shift", "walk quietly"], ["R", "reload"], ["1 2 3 4 5", "primary · pistol · knife · grenades · bomb"], ["Q / wheel", "last weapon / cycle"], ["G", "drop weapon"], ["E", "buy menu (and pick up, plant, defuse)"], ["Tab", "scoreboard"], ["Enter / Y", "chat"], ["M", "change team"], ["F3", "ping and frame rate"], ["Esc", "pause (it also leaves fullscreen)"]];
+    const rows = [["W A S D", "move"], ["Mouse", "look"], ["Left click", "fire (hold for full auto)"], ["Right click", "scope in (snipers) · knife stab · weak throw"], ["Hold Caps Lock", "talk on voice chat (online servers)"], ["Space", "jump"], ["Ctrl / C", "crouch"], ["Shift", "walk quietly"], ["R", "reload"], ["1 2 3 4 5", "primary · pistol · knife · grenades · bomb"], ["Q / wheel", "last weapon / cycle"], ["G", "drop weapon"], ["E", "buy menu (and pick up, plant, defuse)"], ["Tab", "scoreboard"], ["Enter / Y", "chat"], ["M", "change team"], ["F3", "ping and frame rate"], ["Esc", "pause (it also leaves fullscreen)"]];
     this.root.innerHTML = `<div class="fs-panel"><header><h2>Controls</h2><button class="x" data-back>back</button></header><div class="fs-keys">${rows.map((r) => `<div><kbd>${r[0]}</kbd><span>${r[1]}</span></div>`).join("")}</div><footer><span>Keyboard and mouse. It is not made for phones.</span><button class="go" data-back>Done</button></footer></div>`;
     this.root.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => this.go("title")));
   }

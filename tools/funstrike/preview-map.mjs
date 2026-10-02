@@ -5,7 +5,7 @@ import { buildMap } from "../../funstrike/maps.js";
 import fs from "fs";
 const m = buildMap(process.argv[4] || "dust2"), S = +process.argv[3] || 8;
 const W = m.w * S, H = m.d * S, buf = Buffer.alloc(W * H * 3);
-const palette = { redbrick: [160, 90, 65], asphalt: [110, 110, 115], grass: [120, 140, 70], snow: [225, 230, 240], plate: [105, 105, 90], rock: [110, 100, 90], green: [110, 150, 120], sand: [214, 190, 140], plaster: [190, 170, 130], stone: [170, 150, 110], brick: [150, 100, 80], concrete: [130, 130, 130], tile: [200, 180, 150], dirt: [160, 130, 90], wood: [140, 100, 60], metal: [100, 110, 120], plank: [140, 100, 60], cracked: [180, 150, 110] };
+const palette = { sand: [214, 190, 140], plaster: [190, 170, 130], stone: [170, 150, 110], brick: [150, 100, 80], concrete: [130, 130, 130], tile: [200, 180, 150], dirt: [160, 130, 90], wood: [140, 100, 60], metal: [100, 110, 120], plank: [140, 100, 60], cracked: [180, 150, 110] };
 function put(x, y, c) { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 3; buf[i] = c[0]; buf[i + 1] = c[1]; buf[i + 2] = c[2]; }
 for (let cz = 0; cz < m.d; cz++) for (let cx = 0; cx < m.w; cx++) {
   const i = cz * m.w + cx; let c;

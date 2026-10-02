@@ -31,7 +31,7 @@ const myName = () => (getName().trim() || "Player" + (100 + Math.floor(Math.rand
 
 menus.cb = {
   getName, setName,
-  settingsChanged: (s) => { audio.setVolume(s.volume); audio.speech = s.speech; },
+  settingsChanged: (s) => { audio.setVolume(s.volume); audio.speech = s.speech; if (client && client.voice) client.voice.setLevels(); },
   create: (opts, online) => startMatch(opts, online),
   join: (row) => joinServer(row),
 };
@@ -130,6 +130,7 @@ async function startMatch(opts, online) {
     link.uid8 = "local";
     host.start();
     enter(link, name, opts.name, MODES[opts.mode], map);
+    if (host.chan) client.startVoice(host.chan.c, host.chan.sid);
   } catch (e) { console.error(e); menus.message("Something went wrong starting the match", String(e.message || e)); }
 }
 
@@ -143,6 +144,7 @@ async function joinServer(row) {
     link.onClose = (why) => { if (client && client.running) { leave(); menus.message(why || "Disconnected.", "Back to the menu in a moment."); setTimeout(() => menus.show("servers"), 2200); } };
     // keep the first state flowing so the host adds us
     enter(link, name, row.name, MODES[row.mode] || MODES.defuse, getMap(row.map));
+    client.startVoice(ch.c, ch.sid, ch.row && ch.row.h);
   } catch (e) { menus.message("Couldn't join that server", String(e.message || e)); setTimeout(() => menus.show("servers"), 2500); }
 }
 

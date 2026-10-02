@@ -57,7 +57,6 @@ import { WEAPONS, spreadDeg } from "../funstrike/weapons.js";
 for (const id of ["ak47", "m4a4", "usp", "glock", "deagle", "mp9"]) ok(spreadDeg(WEAPONS[id], 0, true, false, 0, false) === 0, id + ": first shot standing still has no spread");
 ok(spreadDeg(WEAPONS.ak47, 1, true, false, 0, false) > 0 && spreadDeg(WEAPONS.ak47, 1, true, false, 0, false) < 0.8, "moving adds only a tiny bit (" + spreadDeg(WEAPONS.ak47, 1, true, false, 0, false).toFixed(2) + " deg)");
 ok(spreadDeg(WEAPONS.ak47, 0, true, false, 8, false) > 0, "a long spray widens a little");
-ok(spreadDeg(WEAPONS.ak47, 0, true, false, 8, false, 1) < spreadDeg(WEAPONS.ak47, 0, true, false, 8, false, 0), "aiming down sights tightens it");
 ok(WEAPONS.awp.scope.length === 1, "AWP has a single zoom level");
 ok(spreadDeg(WEAPONS.ak47, 0, true, false, 1, false) === 0, "the second shot of a burst is still dead on");
 ok(spreadDeg(WEAPONS.ak47, 0, true, false, 14, false) < 0.6, "even a full mag dump stays under 0.6 deg (" + spreadDeg(WEAPONS.ak47, 0, true, false, 14, false).toFixed(2) + ")");

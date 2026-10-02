@@ -63,33 +63,7 @@ function gunGeometry(id) {
     fore: V(m.Attach_RailBottom) || V(m.Pump) || new THREE.Vector3(0, bb.min.y * 0.4, bb.min.z * 0.4),
     scope: V(m.Attach_Scope), mag: V(m.Magazine), bounds: bb.clone(),
   };
-  Object.assign(marks, sightMarks(P, bb));
   return (gunCache[id] = { geometry: g, marks });
-}
-
-// Where the iron sights are, found from the mesh: the highest points along the centre line in the front 40% of the
-// gun (the front post) and in the back half (the rear sight), as gun-space points {sightF, sightR}. The first-person
-// view tips the gun so the line through the two passes through the middle of the screen, which is where bullets go.
-function sightMarks(P, bb) {
-  const len = bb.max.z - bb.min.z, front = bb.min.z + 0.4 * len, rear = bb.min.z + 0.5 * len;
-  let f = null, r = null;
-  for (let i = 0; i < P.length; i += 3) {
-    const x = P[i], y = P[i + 1], z = P[i + 2];
-    if (Math.abs(x) > 0.008) continue;
-    if (z < front && (!f || y > f.y)) f = { x, y, z };
-    if (z > rear && (!r || y > r.y)) r = { x, y, z };
-  }
-  if (!f || !r) return {};
-  // average the position of the points within 1.5 mm of the top of each, so a lone corner does not decide
-  const top = (c, lo, hi) => {
-    let sx = 0, sz = 0, n = 0;
-    for (let i = 0; i < P.length; i += 3) {
-      const z = P[i + 2]; if (Math.abs(P[i]) > 0.008 || z < lo || z > hi || P[i + 1] < c.y - 0.0015) continue;
-      sx += P[i]; sz += z; n++;
-    }
-    return new THREE.Vector3(sx / n, c.y, sz / n);
-  };
-  return { sightF: top(f, bb.min.z, front), sightR: top(r, rear, bb.max.z) };
 }
 
 // extras the baked models do not have: scope tubes, a silencer
@@ -226,6 +200,7 @@ export class Soldier {
     for (const a of swat.animations) this.act[a.name] = this.mixer.clipAction(a);
     for (const n of ["Idle_Gun", "Walk", "Run", "Run_Back", "Run_Left", "Run_Right"]) { const a = this.act[n]; if (a) { a.play(); a.setEffectiveWeight(n === "Idle_Gun" ? 1 : 0); } }
     this.dead = false; this.deathPlayed = false;
+    this.off = new THREE.Vector3(); this.kb = null; this.flinch = null; this.base = null; this.solidAt = null; // hit reactions: see impact() and die()
     this.lastLoc = { f: 0, s: 0, sp: 0 };
     this.pitch = 0; this.crouch = 0; this.ik = true; this.shoot = 0; this.tmpAxis = new THREE.Vector3(1, 0, 0);
     this.hand = { r: new THREE.Vector3(), l: new THREE.Vector3(), useL: true };
@@ -302,6 +277,7 @@ export class Soldier {
     const axis = this.tmpAxis.set(1, 0, 0).applyQuaternion(this.root.getWorldQuaternion(_q));
     const p = this.pitch;
     for (const [bone, k] of [[B.abdomen, 0.22], [B.torso, 0.22], [B.chest, 0.2], [B.neck, 0.12], [B.head, 0.16]]) if (bone) rotateBoneWorld(bone, axis, p * k);
+    this.applyFlinch();
     this.root.updateWorldMatrix(true, true);
     if (this.dead || !this.ik || !this.gun) return;
     this.reach(B.uaR, B.laR, B.wrR, this.holder.getWorldPosition(this.hand.r), this.elbowR, 1);
@@ -330,9 +306,30 @@ export class Soldier {
     void side;
   }
 
-  die() {
+  // A bullet lands on a living soldier: the upper body rocks back along the way the bullet was going (dx, dz is that
+  // direction on the ground), the head more so on a headshot. power ~ damage / 36.
+  impact(dx, dz, power = 1, head = false) {
+    const l = Math.hypot(dx, dz) || 1;
+    this.flinch = { ax: dz / l, az: -dx / l, p: Math.min(2, power), head, t: 0 };
+  }
+  applyFlinch() {
+    const f = this.flinch; if (!f) return;
+    f.t += 1 / 60;
+    const e = Math.exp(-f.t * 7) * Math.min(1, f.t * 30); // a quick snap and a recovery
+    if (e < 0.01) { this.flinch = null; return; }
+    const B = this.bones, axis = _v.set(f.ax, 0, f.az);
+    for (const [bone, k] of [[B.torso, 0.09], [B.chest, 0.1], [B.neck, f.head ? 0.45 : 0.1], [B.head, f.head ? 0.9 : 0.14]]) if (bone) rotateBoneWorld(bone, axis, k * f.p * e);
+  }
+
+  // Dying: the Death clip plays, and on top of it the body is thrown back along (dx, dz) at `power` m/s, with the head
+  // snapped back on a headshot. blast: a grenade, which also throws it up and tumbles it.
+  die(dx = 0, dz = 0, power = 0, head = false, blast = false) {
     if (this.dead) return;
     this.dead = true;
+    const l = Math.hypot(dx, dz) || 1;
+    this.kb = power > 0 ? { dx: dx / l, dz: dz / l, vx: (dx / l) * power, vz: (dz / l) * power, vy: blast ? 4.5 + power * 0.25 : 0, head, blast, t: 0, air: !!blast } : null;
+    this.off.set(0, 0, 0);
+    this.flinch = null;
     for (const n of Object.keys(this.act)) this.act[n].setEffectiveWeight(0);
     const a = this.act.Death;
     if (a) { a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.setEffectiveWeight(1); a.timeScale = 1.2; a.play(); }
@@ -340,11 +337,33 @@ export class Soldier {
   revive() {
     if (!this.dead) return;
     this.dead = false;
+    this.kb = null; this.off.set(0, 0, 0);
     const a = this.act.Death; if (a) { a.stop(); }
     for (const n of ["Idle_Gun"]) { const x = this.act[n]; if (x) { x.reset(); x.play(); x.setEffectiveWeight(1); } }
     this.mixer.setTime(0);
   }
-  tickDead(dt) { this.mixer.update(dt); }
+  tickDead(dt) {
+    // undo last frame's extra bending first, as update() does for the living
+    if (this.saved) for (const [bone, q] of this.saved) bone.quaternion.copy(q);
+    this.mixer.update(dt);
+    const B = this.bones;
+    this.saved = [B.hips, B.abdomen, B.torso, B.chest, B.neck, B.head].filter(Boolean).map((b) => [b, b.quaternion.clone()]);
+    const k = this.kb; if (!k) return;
+    k.t += dt;
+    // slide (and, for a blast, fly) away, stopped by walls, slowing down on the floor
+    const bx = this.base ? this.base.x : 0, bz = this.base ? this.base.z : 0;
+    const nx = this.off.x + k.vx * dt, nz = this.off.z + k.vz * dt;
+    if (!this.solidAt || !this.solidAt(bx + nx, bz + this.off.z)) this.off.x = nx; else k.vx = 0;
+    if (!this.solidAt || !this.solidAt(bx + this.off.x, bz + nz)) this.off.z = nz; else k.vz = 0;
+    if (k.air) { k.vy -= 14 * dt; this.off.y += k.vy * dt; if (this.off.y <= 0) { this.off.y = 0; k.air = false; k.vx *= 0.45; k.vz *= 0.45; } }
+    const fr = Math.exp(-dt * (k.air ? 0.4 : 3.4)); k.vx *= fr; k.vz *= fr;
+    // the body bends: head and neck whip back, the chest follows, a blast tumbles the whole thing
+    this.root.updateWorldMatrix(true, true);
+    const axis = _v.set(k.dz, 0, -k.dx), snap = (r) => 1 - Math.exp(-k.t * r);
+    const parts = [[B.torso, 0.3 * snap(8)], [B.chest, 0.3 * snap(8)], [B.neck, (k.head ? 0.5 : 0.12) * snap(14)], [B.head, (k.head ? 0.95 : 0.15) * snap(14)]];
+    if (k.blast) parts.unshift([B.hips, (k.air ? 1.3 * Math.min(1, k.t / 0.5) : Math.max(0.2, 1.3 - (k.t - 0.5) * 1.5))]);
+    for (const [bone, ang] of parts) if (bone) rotateBoneWorld(bone, axis, ang);
+  }
   dispose() {
     this.model.traverse((o) => { if (o.isMesh) { o.material.dispose(); } });
   }
