@@ -1109,6 +1109,36 @@ carrier on the minimap; sounds untested by ear (picked by onset detection); only
   Measured on the 10-soldier map: updateEntities 2.0ms -> 0.5ms, sim tick 0.5ms. (Software GL in headless Chrome can only tell
   you JS and draw-call costs, not GPU speed.) The map is 100 draw calls (99 textures that wrap, so no atlas).
 
+**v0.9.5 (Caleb: map too small, no replay, sky, loading, lag, persistent servers, leaderboard):**
+- **Map scale 45 -> 54** (`prepare-map.mjs` third argument, `scale` in maps.js; 139 x 131 x 21 m). Re-run prepare-map.mjs AND
+  `tools/funstrike/build-nav.mjs` whenever `cs.glb` changes: the walking graph + spawns are saved in `cs.nav.json` (47 KB) and
+  `MeshMap.loadNav` reads them (map load 590 -> 240 ms); without the file `pickSpawns()` works them out at load. The packed
+  graph loses a link now and then where one cell holds two floors (`funstrike-mapcheck.mjs` allows 1%).
+- **Kill cam bugs found** (it had still played as plain spectating): clicks skipped it (you are usually still clicking when
+  you die), now only Space after 1.4 s; it started 5 s back even if the killer had respawned since (so you watched a body), now it
+  starts when the killer last spawned (never less than 1.5 s); and `start()` was given a weapon name where it wants the index.
+- **Sky** is `assets/sky/sunset.jpg` (Poly Haven Kloppenheim 06, 100 KB instead of the 4 MB .hdr, made by `tools/funstrike/hdr2jpg.py`,
+  which also prints the sun direction that is hard coded in `SKIES.sunset.sunDir`). The "fast" setting builds no environment map
+  and no procedural sky at start.
+- **Loading**: map and models load in parallel, the weapon icons draw 400 ms after the menu is up (`Object.assign(icons, ...)`),
+  sky is tiny. Cold load in headless Chrome ~1.1 s, warm 0.4 s.
+- **Mouse lag**: `client.applyMouse()` runs at the start of the frame AND at the start of `updateCamera`, so the picture uses
+  the latest mouse; the WebGL context asks for `desynchronized: true` (`alpha: false`). Small FPS counter top left (`#h-fps`,
+  Settings has the switch, `showFps`).
+- **Persistent servers**: the create screen has "Server stays up" (only while I am in it / 15 / 30 / 60 min). Such a lobby row
+  carries `ex` (end time, server clock, **never `| 0` it: it is a 41 bit number**), `o` (the opts to restart the match) and `sl`.
+  When the host leaves (`HostChannel.close`, or `onDisconnect` for a crash) the room is deleted but the row stays with `hb: 0, p: 0,
+  sl: 1`: listed as asleep with its bots. Joining a sleeping row makes the joiner the host (`main.wakeServer` ->
+  `resumeOnline` -> `HostChannel.resume`, which clears the old room, only allowed by the rules while the lobby row is stale,
+  > 15 s, and has `ex`) with the same settings; if someone woke it first they fall back to joining them. Nothing runs while it
+  sleeps, and the match restarts fresh on waking (bots included): that is the honest version of "bots keep it alive", there is no
+  server of ours to run a simulation. `ex` passes -> the host's `onExpire` leaves, `sweepStale` deletes expired rows.
+  `database.rules.json` changed for all of this (lobby `hb` may be 0, fields `ex` `o` `sl`, room delete). Tested with two browser
+  contexts on the emulators.
+- **Leaderboard**: key `funstrike` (leaderboard.js GAMES, firestore.rules enum, leaderboards.html ORDER, index tile `key`).
+  `client.submitScore()` runs on the `matchend` event, once per match: kills x10 + headshots x5 + assists x3 (no submit at 0).
+  The title screen has a Leaderboard button; `funstrike.html` now loads `leaderboard.js`.
+
 ### Sound (`sfx.js`)
 
 Every page loads `sfx.js` in its `<head>` (`/sfx.js` on the 404). Everything

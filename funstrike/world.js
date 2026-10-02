@@ -8,7 +8,6 @@
 
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
-import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { OPEN } from "./map.js";
 
 const TEXDIR = "funstrike/assets/tex/";
@@ -31,12 +30,13 @@ export const TEX = {
   door:     { d: "blue_painted_planks", size: 1.6, tint: [0.55, 1.15, 1.0], rough: 0.8 },
   trim:     { d: "weathered_planks", size: 1.4, tint: [0.9, 0.7, 0.5], rough: 0.85 },
 };
-// The sky: one Poly Haven sunset (CC0, equirect .hdr, "Industrial Sunset 02 (Pure Sky)") and the warm low light that goes
+// The sky: one Poly Haven golden-hour sky (CC0, "Kloppenheim 06 (Pure Sky)", tone mapped to a 100 KB JPEG by tools/funstrike/hdr2jpg.py,
+// which also printed the sun direction used below) and the warm low light that goes
 // with it. It is the only sky now: Caleb asked for one nice sunset, not a menu. The sun's direction is read out of the
 // picture itself (its brightest patch) and then held up at minEl degrees, so the shadows are long but never stretch
 // off across the whole map.
 export const SKIES = {
-  sunset: { name: "Sunset", sun: 0xffa045, sunI: 3.3, hemiSky: 0xffc9a4, hemiGround: 0xa86a44, hemiI: 0.66, env: 0.55, exposure: 1.0, fog: 0xe3a98a, fill: 0x7aa0ff, fillI: 0.55, minEl: 10, bg: 0.6 },
+  sunset: { name: "Sunset", file: "sunset.jpg", sunDir: [0.801, 0.172, 0.572], sun: 0xffa045, sunI: 3.3, hemiSky: 0xffd2b0, hemiGround: 0xa86a44, hemiI: 0.66, env: 0.55, exposure: 1.0, fog: 0xd6b69c, fill: 0x7aa0ff, fillI: 0.55, minEl: 10, bg: 1.0 },
 };
 
 // the wall base band that goes under plain plaster
@@ -448,8 +448,8 @@ export class World {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.92;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    // until the real sky has loaded the generated one lights things
-    try {
+    // until the real sky has loaded the generated one lights things (the fast setting does without)
+    if (this.quality !== "low") try {
       const pm = new THREE.PMREMGenerator(renderer);
       const es = new THREE.Scene(); const sk = new Sky(); sk.scale.setScalar(900);
       sk.material.uniforms.sunPosition.value.copy(this.sunDir); sk.material.uniforms.turbidity.value = 4.5; sk.material.uniforms.rayleigh.value = 1.5;
@@ -467,41 +467,19 @@ export class World {
     this.skyKind = kind;
     const P = SKIES[kind], renderer = this.renderer, scene = this.scene;
     this.applySkyLight(P, this.sunDir);
-    new RGBELoader().load(TEXDIR.replace("tex/", "sky/") + (P.file || kind) + ".hdr", (tex) => {
+    new THREE.TextureLoader().load(TEXDIR.replace("tex/", "sky/") + P.file, (tex) => {
       if (this.skyKind !== kind) return;
-      tex.mapping = THREE.EquirectangularReflectionMapping;
-      // where is the sun? the brightest patch of the picture
-      const dir = this.sunFromHdr(tex);
-      const pm = new THREE.PMREMGenerator(renderer);
-      const env = pm.fromEquirectangular(tex).texture; pm.dispose();
-      if (this.hdrEnv) this.hdrEnv.dispose();
-      this.hdrEnv = env; scene.environment = env; scene.background = tex;
-      scene.backgroundIntensity = P.bg;
+      tex.mapping = THREE.EquirectangularReflectionMapping; tex.colorSpace = THREE.SRGBColorSpace;
+      scene.background = tex; scene.backgroundIntensity = P.bg;
+      // the fast setting has no use for sky lighting on its materials, so it skips building the environment map
+      if (this.quality !== "low") {
+        const pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(tex).texture; pm.dispose();
+        if (this.hdrEnv) this.hdrEnv.dispose();
+        this.hdrEnv = env; scene.environment = env;
+      } else scene.environment = null;
       if (this.sky) this.sky.visible = false;
-      this.applySkyLight(P, dir);
+      this.applySkyLight(P, new THREE.Vector3(...P.sunDir).normalize());
     }, undefined, () => { /* keep the generated sky */ });
-  }
-
-  sunFromHdr(tex) {
-    const { data, width, height } = tex.image;
-    const half = data instanceof Uint16Array;
-    const f = (v) => (half ? THREE.DataUtils.fromHalfFloat(v) : v);
-    let best = 0, bi = 0;
-    for (let r = 0; r < height; r += 2) for (let c = 0; c < width; c += 2) {
-      const i = (r * width + c) * 4, L = f(data[i]) * 0.3 + f(data[i + 1]) * 0.59 + f(data[i + 2]) * 0.11;
-      if (L > best) { best = L; bi = i / 4; }
-    }
-    // average the near-brightest pixels around it so a glint doesn't pull it off
-    let sx = 0, sy = 0, sz = 0, n = 0;
-    for (let r = 0; r < height; r += 2) for (let c = 0; c < width; c += 2) {
-      const i = (r * width + c) * 4, L = f(data[i]) * 0.3 + f(data[i + 1]) * 0.59 + f(data[i + 2]) * 0.11;
-      if (L < best * 0.85) continue;
-      const phi = (c / width - 0.5) * Math.PI * 2, el = (r / height - 0.5) * Math.PI;
-      sx += Math.cos(el) * Math.cos(phi); sy += Math.sin(el); sz += Math.cos(el) * Math.sin(phi); n++;
-    }
-    void bi;
-    const d = new THREE.Vector3(sx, sy, sz); if (!n || d.lengthSq() < 1e-6) return this.sunDir.clone();
-    return d.normalize();
   }
 
   applySkyLight(P, dir) {

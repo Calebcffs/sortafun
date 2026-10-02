@@ -11,7 +11,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 
 export const DEFAULTS = {
-  sens: 2.2, fov: 90, volume: 0.8, quality: "low", invert: false, speech: true, micGain: 1, voiceVol: 1, voice: true, v: 3,
+  sens: 2.2, fov: 90, volume: 0.8, quality: "low", invert: false, speech: true, showFps: true, micGain: 1, voiceVol: 1, voice: true, v: 3,
   cross: { color: "#4cff7a", size: 6, gap: 3, thick: 2, dot: false },
 };
 export function loadSettings() {
@@ -54,12 +54,13 @@ export class Menus {
         <button data-go="servers" class="big">Find a server</button>
         <button data-go="create" class="big">Create a server</button>
         <button data-go="practice" class="big alt">Practice vs bots</button>
-        <div class="row"><button data-go="settings">Settings</button><button data-go="controls">Controls</button><button data-go="credits">Credits</button></div>
+        <div class="row"><button data-go="settings">Settings</button><button data-link="leaderboards.html">Leaderboard</button><button data-go="controls">Controls</button><button data-go="credits">Credits</button></div>
       </div>
       <div class="fs-name"><label>Your name <input id="fs-nm" maxlength="16" value="${esc(this.cb.getName ? this.cb.getName() : "")}"></label></div>
       <div class="fs-foot">Counter Strike Map · Team Deathmatch · Deathmatch · voice chat · bots included</div>`;
     const nm = this.root.querySelector("#fs-nm");
     nm.addEventListener("input", () => this.cb.setName && this.cb.setName(nm.value));
+    this.root.querySelectorAll("[data-link]").forEach((b) => b.addEventListener("click", () => window.open(b.dataset.link, "_blank")));
     this.root.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
       const g = b.dataset.go;
       if (g === "practice") this.go("create"), (this.practice = true);
@@ -113,7 +114,9 @@ export class Menus {
     rows.innerHTML = list.map((s) => {
       const full = s.players + s.bots >= s.max, m = MODES[s.mode];
       const pc = s.ping < 80 ? "good" : s.ping < 160 ? "ok" : "bad";
-      return `<tr data-id="${s.id}" class="${s.id === this.sel ? "sel" : ""}${full ? " full" : ""}"><td class="n">${esc(s.name)}<small>host ${esc(s.host)}</small></td><td>${esc(m ? m.name : s.mode)}</td><td>${esc((MAPS[s.map] || MAPS[DEFAULT_MAP]).name)}</td><td>${s.players + s.bots}/${s.max}${full ? " (full)" : ""}</td><td>${s.bots}</td><td class="${pc}">${s.ping} ms</td><td>${DIFF[s.diff] || "-"}</td></tr>`;
+      const mins = s.left > 0 ? Math.max(1, Math.round(s.left / 60000)) + " min left" : "";
+      const sub = s.sleeping ? `asleep with ${s.bots} bots: join to wake it${mins ? " · " + mins : ""}` : `host ${esc(s.host)}${mins ? " · " + mins : ""}`;
+      return `<tr data-id="${s.id}" class="${s.id === this.sel ? "sel" : ""}${full ? " full" : ""}${s.sleeping ? " asleep" : ""}"><td class="n">${esc(s.name)}<small>${sub}</small></td><td>${esc(m ? m.name : s.mode)}</td><td>${esc((MAPS[s.map] || MAPS[DEFAULT_MAP]).name)}</td><td>${s.players + s.bots}/${s.max}${full ? " (full)" : ""}</td><td>${s.bots}</td><td class="${pc}">${s.ping} ms</td><td>${DIFF[s.diff] || "-"}</td></tr>`;
     }).join("");
     rows.querySelectorAll("tr[data-id]").forEach((tr) => {
       tr.onclick = () => { this.sel = tr.dataset.id; this.renderRows(); };
@@ -135,6 +138,7 @@ export class Menus {
           <label>Game mode <select id="c-mode"></select></label>
           <p class="blurb" id="c-blurb"></p>
           <label>Max players <input type="range" id="c-slots" min="2" max="10" value="10"><output id="o-slots">10</output></label>
+          ${prac ? "" : `<label>Server stays up <select id="c-life"><option value="0">Only while I am in it</option><option value="15" selected>15 minutes (bots keep it listed)</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></label>`}
           <label>Bots <input type="range" id="c-bots" min="0" max="9" value="6"><output id="o-bots">6</output></label>
           <label>Bot skill <select id="c-diff">${DIFF.map((d, i) => `<option value="${i}"${i === 1 ? " selected" : ""}>${d}</option>`).join("")}</select></label>
           <label id="l-rounds">Match length <select id="c-rounds"><option value="5">Short (first to 6 rounds)</option><option value="10">Medium (first to 11)</option><option value="15" selected>Long (first to 16)</option></select></label>
@@ -165,7 +169,7 @@ export class Menus {
     ["c-mode", "c-slots", "c-bots"].forEach((id) => q("#" + id).addEventListener("input", upd)); fillModes(); upd();
     if (prac) q("#c-slots").value = 10, upd();
     q("#c-go").onclick = () => {
-      const opts = { map: q("#c-map").value, mode: q("#c-mode").value, slots: +q("#c-slots").value, bots: +q("#c-bots").value, diff: +q("#c-diff").value, rounds: +q("#c-rounds").value, time: +q("#c-time").value, name: prac ? nm + "'s practice" : (q("#c-name").value.trim() || nm + "'s server") };
+      const opts = { life: prac ? 0 : +q("#c-life").value, map: q("#c-map").value, mode: q("#c-mode").value, slots: +q("#c-slots").value, bots: +q("#c-bots").value, diff: +q("#c-diff").value, rounds: +q("#c-rounds").value, time: +q("#c-time").value, name: prac ? nm + "'s practice" : (q("#c-name").value.trim() || nm + "'s server") };
       this.cb.create && this.cb.create(opts, !prac);
     };
   }
@@ -182,6 +186,7 @@ export class Menus {
           <label>Field of view <input type="range" id="s-fov" min="70" max="110" step="1" value="${s.fov}"><output id="o-fov">${s.fov}</output></label>
           <label>Volume <input type="range" id="s-vol" min="0" max="1" step="0.05" value="${s.volume}"><output id="o-vol">${Math.round(s.volume * 100)}%</output></label>
           <label>Graphics <select id="s-q"><option value="low">Fast (default: no shadows, plain lighting, adjusts to your frame rate)</option><option value="auto">Balanced (shadows, adjusts to your frame rate)</option><option value="medium">Pretty</option><option value="high">Prettiest</option></select></label>
+          <label><span>Show the small FPS counter (top left)</span><input type="checkbox" id="s-fps" ${s.showFps !== false ? "checked" : ""}></label>
           <label><span>Invert mouse Y</span><input type="checkbox" id="s-inv" ${s.invert ? "checked" : ""}></label>
           <label><span>Radio voice lines (your browser's own voices)</span><input type="checkbox" id="s-speech" ${s.speech ? "checked" : ""}></label>
           <h3>Voice chat</h3>
@@ -209,6 +214,7 @@ export class Menus {
     bind("s-vol", (e) => { s.volume = +e.value; q("o-vol").textContent = Math.round(s.volume * 100) + "%"; });
     bind("s-q", (e) => { s.quality = e.value; });
     bind("s-inv", (e) => { s.invert = e.checked; });
+    bind("s-fps", (e) => { s.showFps = e.checked; });
     bind("s-voice", (e) => { s.voice = e.checked; });
     bind("s-mic", (e) => { s.micGain = +e.value; q("o-mic").textContent = Math.round(s.micGain * 100) + "%"; });
     bind("s-vv", (e) => { s.voiceVol = +e.value; q("o-vv").textContent = Math.round(s.voiceVol * 100) + "%"; });
@@ -230,7 +236,7 @@ export class Menus {
 
   s_credits() {
     this.root.innerHTML = `<div class="fs-panel"><header><h2>Credits</h2><button class="x" data-back>back</button></header><div class="fs-credits">
-      <p>Fun Strike is a fan-made homage to a certain tactical shooter. The soldiers, weapons, sounds and textures are free (credits below). <b>The map</b> is a model by someone else: ${esc(MAPS[DEFAULT_MAP].credit)}.</p>
+      <p>Fun Strike is a fan-made homage to a certain tactical shooter. The soldiers, weapons, sounds and textures are free (credits below; the sky is Poly Haven's Kloppenheim 06). <b>The map</b> is a model by someone else: ${esc(MAPS[DEFAULT_MAP].credit)}.</p>
       <p><b>Soldiers</b> Quaternius (CC0) · <b>Weapons and grenades</b> Pichuliru (CC0) · <b>Textures</b> Poly Haven (CC0) · <b>Sounds</b> Freesound.org contributors (CC0) · <b>three.js</b> for the 3D · <b>Firebase</b> for the server list.</p>
       <p>The full list, with links, is in <code>funstrike/assets/CREDITS.md</code>.</p></div><footer><span></span><button class="go" data-back>Done</button></footer></div>`;
     this.root.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => this.go("title")));

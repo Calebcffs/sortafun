@@ -13,7 +13,7 @@ export const MAPS = {
     modes: ["tdm", "dm"],
     blurb: "A real Counter-Strike style map: long streets, narrow alleys, stairs and rooftops.",
     credit: '"Counter Strike Map" by CHANO (Sketchfab), CC BY 4.0, https://sketchfab.com/3d-models/counter-strike-map-b0b7e8e91275464491f5ba2ee3e2d776',
-    scale: 45, // metres per model unit, used by prepare-map.mjs
+    scale: 54, // metres per model unit, used by prepare-map.mjs
   },
 };
 export const MAP_IDS = Object.keys(MAPS);

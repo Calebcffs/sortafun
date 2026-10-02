@@ -16,6 +16,7 @@
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
 export const PROTOCOL = 3; // 3: the one map is a real model (maps.js); 2 was the grid maps
 const STALE_MS = 25000;
+const SLEEP_MS = 20000; // a server with a lifetime whose host has been quiet this long is "sleeping": listed, waiting for someone to wake it
 
 let conn = null;
 export function connect() {
@@ -65,9 +66,11 @@ export async function watchServers(cb) {
     snap.forEach((ch) => {
       const v = ch.val();
       if (!v || v.v !== PROTOCOL) return;
-      const age = now - (v.hb || 0);
-      if (age > STALE_MS) return;
-      rows.push({ id: ch.key, name: v.n, mode: v.m, map: v.mp || "cs", host: v.hn, hostUid: v.h, players: v.p | 0, bots: v.b | 0, max: v.x | 0, phase: v.ph, diff: v.d | 0, ping: c.rtt + (v.rt | 0) + 10, age });
+      const age = now - (v.hb || 0), ex = v.ex || 0;
+      if (ex && ex < now) return;                       // its lifetime is over
+      if (!ex && age > STALE_MS) return;                // an ordinary server whose host has gone is gone
+      const sleeping = !!ex && (!!v.sl || age > SLEEP_MS);
+      rows.push({ id: ch.key, name: v.n, mode: v.m, map: v.mp || "cs", host: v.hn, hostUid: v.h, players: sleeping ? 0 : v.p | 0, bots: v.b | 0, max: v.x | 0, phase: v.ph, diff: v.d | 0, ping: c.rtt + (v.rt | 0) + 10, age, ex, left: ex ? ex - now : 0, sleeping, opts: v.o || "" });
     });
     cb(rows, c);
   });
@@ -80,7 +83,7 @@ export async function sweepStale() {
     const c = await connect();
     const s = await c.db.get(c.ref("lobby"));
     const now = c.now();
-    s.forEach((ch) => { const v = ch.val(); if (v && now - (v.hb || 0) > 60000) c.db.remove(c.ref("lobby/" + ch.key)).catch(() => {}); });
+    s.forEach((ch) => { const v = ch.val(); if (v && (v.ex ? v.ex < now : now - (v.hb || 0) > 60000)) c.db.remove(c.ref("lobby/" + ch.key)).catch(() => {}); });
   } catch (e) { /* ignore */ }
 }
 
@@ -94,18 +97,26 @@ export class HostChannel {
     this.known = new Map();
     this.lastRoster = 0; this.hbAt = 0; this.dead = false;
   }
-  static async create(summary) {
+  static async create(summary) { return HostChannel.open(summary, null); }
+  // wake a sleeping server (one with a lifetime whose host left): take over its room under the same id
+  static async resume(sid, summary) { return HostChannel.open(summary, sid); }
+  static async open(summary, resumeSid) {
     const c = await connect();
     await measureRtt(c, 3);
-    const sid = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+    const sid = resumeSid || (Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3));
     const h = new HostChannel(c, sid, summary);
     const { db } = c;
     const lob = c.ref("lobby/" + sid);
+    if (resumeSid) { // the old room is only ours to clear while its host is gone (the rules check the lobby row); then it is ours
+      const old = await db.get(c.ref("room/" + sid + "/host"));
+      if (old.exists()) await db.remove(c.ref("room/" + sid));
+    }
     await db.set(c.ref("room/" + sid + "/host"), c.uid);
     // the room goes first on a dropped connection (its rule needs the host row), then the lobby row
     db.onDisconnect(c.ref("room/" + sid)).remove();
     await db.set(lob, h.lobbyRow());
-    db.onDisconnect(lob).remove();
+    // a server with a lifetime does not vanish when its host does: it goes to sleep, still listed with its bots
+    if (summary.ex) db.onDisconnect(lob).update({ hb: 0, p: 0, sl: 1 }); else db.onDisconnect(lob).remove();
     // players' positions
     h.unIn = db.onValue(c.ref("room/" + sid + "/in"), (snap) => {
       snap.forEach((ch) => {
@@ -127,7 +138,9 @@ export class HostChannel {
   }
   lobbyRow(extra = {}) {
     const s = this.summary;
-    return { n: String(s.name).slice(0, 28), m: s.mode, mp: s.map, h: this.c.uid, hn: String(s.hostName || "host").slice(0, 16), p: s.players | 0, b: s.bots | 0, x: s.max | 0, ph: s.phase || "warmup", d: s.diff | 0, rt: this.c.rtt | 0, hb: this.c.db.serverTimestamp(), v: PROTOCOL, ...extra };
+    const row = { n: String(s.name).slice(0, 28), m: s.mode, mp: s.map, h: this.c.uid, hn: String(s.hostName || "host").slice(0, 16), p: s.players | 0, b: s.bots | 0, x: s.max | 0, ph: s.phase || "warmup", d: s.diff | 0, rt: this.c.rtt | 0, hb: this.c.db.serverTimestamp(), v: PROTOCOL, sl: 0, ...extra };
+    if (s.ex) { row.ex = s.ex; row.o = String(s.o || "").slice(0, 300); }
+    return row;
   }
   heartbeat(summary) {
     this.summary = { ...this.summary, ...summary };
@@ -138,8 +151,14 @@ export class HostChannel {
   close() {
     this.dead = true;
     try { this.unIn && this.unIn(); this.unAct && this.unAct(); } catch (e) { /* ignore */ }
-    this.c.db.remove(this.c.ref("lobby/" + this.sid)).catch(() => {});
-    this.c.db.remove(this.c.ref("room/" + this.sid)).catch(() => {});
+    const { db } = this.c, lob = this.c.ref("lobby/" + this.sid), ex = this.summary.ex || 0;
+    if (ex && this.c.now() < ex) { // it has a lifetime left: the room goes, the listing stays, asleep, with its bots
+      db.remove(this.c.ref("room/" + this.sid)).catch(() => {});
+      db.update(lob, { hb: 0, p: 0, sl: 1 }).catch(() => {});
+      return;
+    }
+    db.remove(lob).catch(() => {});
+    db.remove(this.c.ref("room/" + this.sid)).catch(() => {});
   }
 }
 

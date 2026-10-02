@@ -57,7 +57,11 @@ export class Client {
   // -------------------------------------------------------------------
   init() {
     const q = this.set.quality;
-    const r = (this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: q !== "low", powerPreference: "high-performance", stencil: false }));
+    // `desynchronized` lets the browser put the picture on screen without waiting for the page compositor, which cuts a frame of
+    // delay between the mouse and the screen where it is supported (it is only a hint: anywhere else it is ignored)
+    let gl = null;
+    try { gl = this.canvas.getContext("webgl2", { antialias: q !== "low", powerPreference: "high-performance", stencil: false, desynchronized: true, alpha: false }); } catch (e) { gl = null; }
+    const r = (this.renderer = new THREE.WebGLRenderer(gl ? { canvas: this.canvas, context: gl } : { canvas: this.canvas, antialias: q !== "low", powerPreference: "high-performance", stencil: false }));
     r.autoClear = false;
     r.shadowMap.enabled = q !== "low"; r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.pr = this.maxPR(); r.setPixelRatio(this.pr);
@@ -431,7 +435,7 @@ export class Client {
         const wname = byWid(e.w) ? byWid(e.w).icon || byWid(e.w).id : "knife";
         const ta = teamOf(e.a), tv = teamOf(e.v);
         hud.killfeed({ a: e.a && e.a !== e.v ? nameOf(e.a) : "", v: nameOf(e.v), wname, hs: !!e.hs, ta: ta, tv: tv, me: e.a === me, died: e.v === me });
-        if (e.v === me) { this.me.alive = false; this.deathAt = this.nowS; this.lastKillerId = e.a; this.killedBy = e.a && e.a !== me ? nameOf(e.a) : ""; this.scoped = 0; this.reloadEnd = 0; this.unlockForDeath(); this.kc.start(e.a, e.hs, WEAPON_IDS[e.w]); }
+        if (e.v === me) { this.me.alive = false; this.deathAt = this.nowS; this.lastKillerId = e.a; this.killedBy = e.a && e.a !== me ? nameOf(e.a) : ""; this.scoped = 0; this.reloadEnd = 0; this.unlockForDeath(); this.kc.start(e.a, e.hs, e.w); }
         else if (v) { this.killThrow(v, e); v.alive = false; const p = v.pos; if (e.hs) A.play("hit_head", { x: p.x, y: p.y + 1.6, z: p.z, ref: 6 }); }
         if (e.a === me && e.v !== me) { hud.hitMarker(!!e.hs, true); A.ui("ding", 0.7); }
         break;
@@ -482,8 +486,8 @@ export class Client {
       }
       case "halftime": hud.banner("Halftime", "teams swap sides", "half"); A.say("Teams are switching sides."); break;
       case "mvp": if (e.id === me) hud.toast("You are the MVP of the round!"); break;
-      case "matchend": hud.banner("Match over", e.text, "end"); this.scoreOpen = false; break;
-      case "newmatch": hud.clearBanner(); break;
+      case "matchend": hud.banner("Match over", e.text, "end"); this.scoreOpen = false; this.submitScore(); break;
+      case "newmatch": hud.clearBanner(); this.scoreSent = false; break;
       case "say": hud.chatLine(e.n, e.tm, e.m); break;
       case "join": if (e.id !== me) hud.chatLine("", 2, e.n + " joined the game", true); break;
       case "leave": hud.chatLine("", 2, e.n + " left the game", true); break;
@@ -696,6 +700,18 @@ export class Client {
   // camera both use exactly this, so a shot goes where the crosshair is.
   aimAngles() { return { yaw: this.look.yaw + this.punch[1] * RAD, pitch: this.look.pitch + this.punch[0] * RAD }; }
 
+  // End of a match: your result goes on the site's Fun Strike leaderboard (kills x10, headshots x5, assists x3).
+  submitScore() {
+    const ro = this.roster.get(this.myId), LB = window.SortafunLB;
+    if (this.scoreSent || !ro || !LB || ro.team === TEAM.SPEC) return;
+    this.scoreSent = true;
+    const pts = Math.max(0, ro.kills * 10 + (ro.hs || 0) * 5 + (ro.assists || 0) * 3);
+    if (pts <= 0) return;
+    LB.submit("funstrike", ro.name || "player", pts)
+      .then(() => this.hud.toast(pts + " points added to the Fun Strike leaderboard"))
+      .catch((e) => console.warn("leaderboard:", e));
+  }
+
   // a soldier dies: throw it back along the shot (or away from the blast), harder for bigger guns
   killThrow(v, e) {
     const w = byWid(e.w), kind = w ? w.kind : "";
@@ -844,6 +860,8 @@ export class Client {
     let dt = (t - this.last) / 1000; this.last = t;
     dt = clamp(dt, 0.001, 0.05);
     this.nowS += dt;
+    this.fpsN = (this.fpsN || 0) + 1; this.fpsT = (this.fpsT || 0) + dt;
+    if (this.fpsT >= 0.5) { this.hud.fps(Math.round(this.fpsN / this.fpsT), this.set.showFps !== false); this.fpsN = 0; this.fpsT = 0; }
     this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
     this.adaptResolution();
     this.updateTimers(dt);
@@ -870,17 +888,22 @@ export class Client {
 
   updateTimers() { /* reserved */ }
 
+  // Turn whatever the mouse has done so far into the view. Called at the start of the frame AND again just before the
+  // camera is placed for drawing, so the picture shows the mouse as it is right now, not as it was when the frame began
+  // (that is about a frame of lag less; the same degrees per mouse count scoped or not).
+  applyMouse() {
+    const m = this.mouse;
+    if (this.locked && !this.paused && (m.dx || m.dy)) {
+      const sensBase = 0.022 * RAD * this.set.sens;
+      this.look.yaw -= m.dx * sensBase;
+      this.look.pitch = clamp(this.look.pitch - m.dy * sensBase * (this.set.invert ? -1 : 1), -1.5, 1.5);
+    }
+    m.dx = m.dy = 0;
+  }
+
   updateInput(dt) {
     const me = this.me, b = this.body;
-    // mouse look
-    const sensBase = 0.022 * RAD * this.set.sens;
-    // the same degrees per mouse count scoped or not (Caleb: scoping in must not slow the mouse down)
-    const canLook = this.locked && !this.paused;
-    if (canLook) {
-      this.look.yaw -= this.mouse.dx * sensBase;
-      this.look.pitch = clamp(this.look.pitch - this.mouse.dy * sensBase * (this.set.invert ? -1 : 1), -1.5, 1.5);
-    }
-    this.mouse.dx = this.mouse.dy = 0;
+    this.applyMouse();
     if (!me.alive || me.team === TEAM.SPEC) { this.updateSpectateInput(dt); return; }
     // the view punch eases toward its target, then back to nothing
     const since = this.nowS - this.lastShot;
@@ -964,7 +987,7 @@ export class Client {
 
   updateSpectateInput(dt) {
     const K = this.keys;
-    if (this.kc.active) { if (this.pressed.has("Mouse0") || this.pressed.has("Space")) this.kc.skip = true; return; } // click or space skips the kill cam
+    if (this.kc.active) { if (this.pressed.has("Space") && this.kc.elapsed > this.kc.skipOkAt) this.kc.skip = true; return; } // space skips the kill cam (clicks do not: you are usually still clicking when you die)
     if (this.pressed.has("Mouse0")) this.cycleSpectate(1);
     if (this.pressed.has("Mouse2")) this.cycleSpectate(-1);
     const t = this.remote.get(this.specTarget);
@@ -1112,6 +1135,7 @@ export class Client {
   // -------------------------------------------------------------------
   updateCamera(dt) {
     const cam = this.cam, me = this.me;
+    if (me.alive) this.applyMouse(); // the late look: see updateInput
     let x, y, z, yaw, pitch, fov = this.currentFov();
     this.viewmodelOn = false;
     if (this.kc.active && this.kc.update(dt) && this.kc.cam) {

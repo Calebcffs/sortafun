@@ -4,7 +4,7 @@
 // everybody online (net.js).
 
 import { Game } from "./sim.js";
-import { decodeState, HostChannel } from "./net.js";
+import { decodeState, HostChannel, connect } from "./net.js";
 
 const SNAP_EVERY = 100;     // ms between snapshots
 const HEARTBEAT = 5000;    // ms between lobby row refreshes
@@ -74,6 +74,7 @@ export class HostRuntime {
       this.snapAt = now;
       this.publish(now);
     }
+    if (this.chan && this.ex && this.chan.c.now() > this.ex && this.onExpire) { const f = this.onExpire; this.onExpire = null; f(); return; } // its lifetime is over
     if (this.chan && now - this.hbAt >= HEARTBEAT) {
       this.hbAt = now;
       this.chan.heartbeat({ ...g.summary(), hostName: this.hostName });
@@ -116,8 +117,23 @@ export class HostRuntime {
   }
 }
 
+// opts.life: minutes the server should stay listed after its host leaves (0: it goes when they do). opts.ex is that as a time.
+// Everything needed to start the same match again rides in the listing (`o`), for whoever wakes it.
+function onlineSummary(map, opts, hostName, c) {
+  const o = { mode: opts.mode, slots: opts.slots, bots: opts.bots, diff: opts.diff, rounds: opts.rounds, time: opts.time, name: opts.name, map: map.id };
+  const ex = opts.ex || (opts.life > 0 ? c.now() + opts.life * 60000 : 0);
+  return { name: opts.name, mode: opts.mode, map: map.id || "cs", players: 1, bots: opts.bots, max: opts.slots, phase: "warmup", diff: opts.diff, hostName, ex, o: ex ? JSON.stringify(o) : "" };
+}
 export async function createOnline(map, opts, hostName) {
-  const summary = { name: opts.name, mode: opts.mode, map: map.id || "cs", players: 1, bots: opts.bots, max: opts.slots, phase: "warmup", diff: opts.diff, hostName };
-  const chan = await HostChannel.create(summary);
-  return new HostRuntime(map, opts, chan, hostName);
+  const c = await connect();
+  const chan = await HostChannel.create(onlineSummary(map, opts, hostName, c));
+  const h = new HostRuntime(map, opts, chan, hostName); h.ex = chan.summary.ex || 0;
+  return h;
+}
+// someone joined a sleeping server: they become its host, with the same settings and the same end time
+export async function resumeOnline(map, opts, hostName, sid) {
+  const c = await connect();
+  const chan = await HostChannel.resume(sid, onlineSummary(map, opts, hostName, c));
+  const h = new HostRuntime(map, opts, chan, hostName); h.ex = chan.summary.ex || 0;
+  return h;
 }

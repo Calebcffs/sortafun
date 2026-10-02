@@ -27,6 +27,13 @@ for (let k = 0; k < 16; k++) {
   if (pi >= p.length && Math.hypot(body.x - b.x, body.z - b.z) < 1.5) walked++;
 }
 ok(walked === tried, "bodies walked " + walked + " of " + tried + " paths with the real movement code");
+// the saved form must give the same graph back
+const copy = await loadMeshMapNode(new URL("../funstrike/assets/maps/cs.glb", import.meta.url).pathname);
+const packed = JSON.parse(JSON.stringify(map.exportNav())), re = Object.create(Object.getPrototypeOf(copy)); Object.assign(re, copy); re.nodes = null; re.loadNav(packed);
+const mA = map.nodes.filter((_, i) => map.inMain(i)).length, mB = re.nodes.filter((_, i) => re.inMain(i)).length;
+ok(re.nodes.length === map.nodes.length && mB > mA * 0.99, "the packed walking graph loads back (" + re.nodes.length + " nodes, playable area " + mB + " of " + mA + ": two floors in one cell can lose a link)");
+const p2 = re.findPath(me.spawnsT[0].x, me.spawnsT[0].y, me.spawnsT[0].z, me.spawnsCT[0].x, me.spawnsCT[0].z, me.spawnsCT[0].y);
+ok(p2 && p2.length > 60, "and finds a route from the T spawn to the CT spawn (" + (p2 ? p2.length : 0) + " steps)");
 const r = map.raycast(me.spawnsT[0].x, me.spawnsT[0].y + 1.6, me.spawnsT[0].z, 0, -1, 0, 5);
 ok(r && Math.abs(r.y - me.spawnsT[0].y) < 0.1, "a ray straight down finds the floor");
 console.log(fails ? fails + " FAILED" : "all passed");

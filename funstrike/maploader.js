@@ -10,9 +10,11 @@ import { MAPS, DEFAULT_MAP } from "./maps.js";
 
 export function loadMap(id) {
   const key = MAPS[id] ? id : DEFAULT_MAP, info = MAPS[key];
+  // the walking graph and spawns were worked out ahead of time (tools/funstrike/build-nav.mjs); fetched alongside the model
+  const navP = fetch(info.file.replace(/\.glb$/, ".nav.json")).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
-    loader.load(info.file, (gltf) => {
+    loader.load(info.file, async (gltf) => {
       try {
         const scene = gltf.scene; scene.updateMatrixWorld(true);
         // every triangle, in world coordinates
@@ -27,7 +29,8 @@ export function loadMap(id) {
         const tris = new Float32Array(count); let o = 0; for (const p of parts) { tris.set(p, o); o += p.length; }
         const map = new MeshMap(tris);
         map.id = key; map.name = info.name; map.visual = scene;
-        map.pickSpawns(); // builds the walking graph too (about a quarter of a second)
+        const nav = await navP;
+        if (nav && nav.v === 1) map.loadNav(nav); else map.pickSpawns(); // without the saved graph it is worked out here (about a quarter of a second)
         resolve(map);
       } catch (e) { reject(e); }
     }, undefined, reject);

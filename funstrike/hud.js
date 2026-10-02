@@ -33,7 +33,8 @@ export class HUD {
       <div class="fs-toast" id="h-toast"></div>
       <div class="fs-chat" id="h-chat"><div class="fs-chatlog" id="h-chatlog"></div><input id="h-chatin" maxlength="110" placeholder="say something" autocomplete="off" hidden></div>
       <div class="fs-voice" id="h-voice"></div>
-      <div class="fs-kc" id="h-kc" hidden><i class="bar t"></i><i class="bar b"></i><div class="kc-lab"><small>KILL CAM</small><b id="h-kcname"></b><em id="h-kcw"></em></div><div class="kc-prog"><i id="h-kcp"></i></div></div>
+      <div class="fs-kc" id="h-kc" hidden><i class="bar t"></i><i class="bar b"></i><div class="kc-lab"><small>KILL CAM</small><b id="h-kcname"></b><em id="h-kcw"></em></div><div class="kc-prog"><i id="h-kcp"></i></div><div class="kc-skip">SPACE to skip</div></div>
+      <div class="fs-fps" id="h-fps"></div>
       <div class="fs-net" id="h-net" hidden></div>
       <div class="fs-wait" id="h-wait" hidden>waiting for players...</div>
     `;
@@ -115,6 +116,7 @@ export class HUD {
     this.q("h-kcw").innerHTML = (ic ? `<img src="${ic}" alt="">` : "") + (hs ? '<u title="headshot"></u>' : "");
   }
   killcamProgress(f, past) { this.q("h-kcp").style.width = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%"; this.q("h-kc").classList.toggle("past", !!past); }
+  fps(n, on) { const f = this.q("h-fps"), t = on ? n + " fps" : ""; if (this.cache.fps !== t) { this.cache.fps = t; f.textContent = t; } }
   prompt(t) { this.txt("h-prompt", t || ""); }
   progress(label, f) {
     const p = this.q("h-prog");

@@ -21,5 +21,6 @@ python3 + PIL + numpy, ffmpeg, and Chrome for the baking step.
   the search page into `fsdb.json` (id -> preview url), `build_sounds.py fsdb.json` downloads, finds the first
   onset in each clip, cuts it and writes `funstrike/assets/snd/*.mp3` + `sounds.json`. Nobody listened to
   the cuts while building: they were picked from onset detection and titles.
+- `build-nav.mjs` (v0.9.5) saves the map's walking graph and spawns as `cs.nav.json`; `hdr2jpg.py in.hdr out.jpg [exposure]` makes the sky picture.
 - `prepare-map.mjs in.glb out.glb [scale]` (v0.9.4): turns a downloaded model into the game's map (upright, metres, small textures, meshopt). `node-map.mjs` loads it in plain node for `tools/funstrike-mapcheck.mjs` and `funstrike-sim.mjs`; all of those need `npm i @gltf-transform/core @gltf-transform/extensions @gltf-transform/functions meshoptimizer sharp` in the folder you run them from.
 - Sky: Poly Haven's `industrial_sunset_02_puresky` 2k .hdr, saved as `funstrike/assets/sky/sunset.hdr`.

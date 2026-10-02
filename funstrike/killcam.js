@@ -60,13 +60,22 @@ export class KillCam {
     const c = this.c;
     if (!killerId || killerId === c.myId || !this.hist.length) return false;
     const now = c.nowS, newest = this.hist[this.hist.length - 1].t, oldest = this.hist[0].t;
-    const t0 = Math.max(oldest, now - KILL_BEFORE);
-    if (!this.sample(t0).some((p) => p[0] === killerId)) return false; // the killer was not around that long ago
+    // start 5 s before the kill, but not before the killer last spawned (watching a body lie there is no replay)
+    let aliveFrom = -Infinity, seen = false;
+    for (let i = this.hist.length - 1; i >= 0; i--) {
+      const p = this.hist[i].a.find((x) => x[0] === killerId);
+      if (!p) break; seen = true;
+      if (!p[8]) { aliveFrom = this.hist[i].t + 0.25; break; }
+    }
+    if (!seen) return false; // the killer is not in the history at all
+    let t0 = Math.max(oldest, now - KILL_BEFORE, aliveFrom);
+    t0 = Math.min(t0, newest - 1.5 > oldest ? newest - 1.5 : t0); // never less than a second and a half
     this.killer = killerId; this.deathT = now; this.T = t0; this.t0 = t0; this.t1 = Math.min(now + KILL_AFTER, newest + KILL_AFTER);
     this.hs = !!hs; this.wid = wid; this.shotIdx = this.shots.findIndex((s) => s.t >= t0);
     this.active = true; this.elapsed = 0; this.deadSeen = new Set();
     for (const r of c.remote.values()) r.soldier.root.visible = false;
     c.hud.killcam(true, c.roster.get(killerId) ? c.roster.get(killerId).name : "someone", wid, !!hs);
+    this.skipOkAt = 1.4; // seconds in before skipping works: you are probably still clicking when you die
     return true;
   }
 

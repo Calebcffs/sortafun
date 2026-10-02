@@ -112,6 +112,7 @@ body.fs-playing .fs-fullbtn { opacity: .2; }
 .fs-kc .kc-lab em { display: flex; justify-content: center; align-items: center; gap: 8px; font-style: normal; height: 34px; } .fs-kc .kc-lab img { height: 30px; filter: drop-shadow(0 1px 3px #000); }
 .fs-kc .kc-lab u { display: inline-block; width: 18px; height: 18px; border: 2px solid #ff4a3a; border-radius: 50%; }
 .fs-kc .kc-prog { position: absolute; left: 15%; right: 15%; bottom: 11.5%; height: 4px; background: rgba(255,255,255,.2); } .fs-kc .kc-prog i { display: block; height: 100%; width: 0; background: #fff; }
+.fs-kc .kc-skip { position: absolute; right: 16%; bottom: 12.4%; color: rgba(255,255,255,.7); font: 700 clamp(11px, 1.1vw, 14px) "Rajdhani", sans-serif; letter-spacing: .12em; }
 .fs-kc.past .kc-prog i { background: #ff5a46; }
 .fs-voice { position: absolute; left: 14px; bottom: 120px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; font: 700 clamp(12px, 1.3vw, 16px) "Rajdhani", sans-serif; letter-spacing: .06em; color: #fff; }
 .fs-voice div { background: rgba(10,12,15,.6); border-left: 3px solid #4cff7a; padding: 2px 10px 2px 8px; display: flex; align-items: center; gap: 7px; }
@@ -144,6 +145,8 @@ body.fs-playing .fs-fullbtn { opacity: .2; }
 .fs-toast { left: 50%; top: 14%; transform: translateX(-50%); background: rgba(10,12,15,.7); border: 1px solid rgba(255,255,255,.2); padding: 3px 16px; font-size: clamp(13px, 1.7vw, 22px); opacity: 0; transition: opacity .3s; letter-spacing: .06em; } .fs-toast.on { opacity: 1; }
 .fs-chat { left: 1.2%; bottom: 22%; width: 36%; font-size: clamp(11px, 1.35vw, 17px); } .fs-chatlog { display: flex; flex-direction: column; gap: 1px; } .cl { background: rgba(10,12,15,.45); padding: 1px 6px; transition: opacity 1.2s; width: fit-content; max-width: 100%; } .cl i { opacity: .7; } .cl.old { opacity: 0; } .fs-chat.open .cl.old { opacity: 1; }
 .fs-chat input { pointer-events: auto; margin-top: 4px; width: 100%; box-sizing: border-box; background: rgba(0,0,0,.7); color: #fff; border: 1px solid rgba(255,255,255,.4); padding: 4px 8px; font: inherit; }
+.fs-table tr.asleep td { opacity: .72; font-style: italic; }
+.fs-fps { position: absolute; left: 6px; top: 3px; font: 600 10px/1 monospace; color: rgba(255,255,255,.55); text-shadow: 0 0 2px #000; pointer-events: none; }
 .fs-net { right: 1.2%; bottom: 36%; font-size: 12px; background: rgba(0,0,0,.5); padding: 2px 6px; font-family: monospace; }
 .fs-wait { left: 50%; top: 40%; transform: translateX(-50%); font: 600 clamp(20px, 3vw, 40px) "Teko", sans-serif; letter-spacing: .12em; text-transform: uppercase; background: rgba(8,10,13,.6); padding: 4px 24px; animation: fsblink 1.6s infinite; } @keyframes fsblink { 50% { opacity: .5; } }
 

@@ -16,6 +16,7 @@ const H = 2, K = 1024, OFF = 64;
 const key = (cx, cz) => (cx + OFF) * K + (cz + OFF);
 
 export class MeshMap {
+  static DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
   // tris: Float32Array, 9 numbers per triangle (three x, y, z corners)
   constructor(tris) {
     this.mesh = true;
@@ -231,8 +232,50 @@ export class MeshMap {
         }
       }
     }
-    // keep only the biggest connected piece (a sealed room or a roof nobody can reach is no use)
-    const comp = new Int32Array(nodes.length).fill(-1); let best = -1, bestN = 0;
+    this.finishNav(); // keep only the biggest connected piece (a sealed room or a roof nobody can reach is no use)
+    return this;
+  }
+  inMain(i) { return this.navComp[i] === this.navMain; }
+
+  // The walking graph and the spawns, packed small, so the game can load them instead of working them out (a quarter of a
+  // second at every start). tools/funstrike/build-nav.mjs writes this next to the model: nodes as cell x, cell z (bytes) and
+  // height in cm (int16), links as one byte per node (one bit for each of the 8 neighbouring cells), spawns as lists.
+  exportNav() {
+    this.pickSpawns();
+    const N = this.nodes, DIRS = MeshMap.DIRS, nb = new Uint8Array(N.length * 4), mask = new Uint8Array(N.length);
+    N.forEach((n, i) => {
+      nb[i * 4] = n.cx; nb[i * 4 + 1] = n.cz; const y = Math.round(n.y * 100); nb[i * 4 + 2] = y & 255; nb[i * 4 + 3] = (y >> 8) & 255;
+      for (const j of n.links) { const b = N[j], d = DIRS.findIndex((q) => q[0] === b.cx - n.cx && q[1] === b.cz - n.cz); if (d >= 0) mask[i] |= 1 << d; }
+    });
+    const b64 = (u8) => (typeof Buffer !== "undefined" ? Buffer.from(u8).toString("base64") : btoa(String.fromCharCode(...u8)));
+    const sp = (a) => a.map((s) => [+s.x.toFixed(2), +s.y.toFixed(2), +s.z.toFixed(2), +s.yaw.toFixed(3)]);
+    return { v: 1, w: this.w, d: this.d, n: N.length, nodes: b64(nb), links: b64(mask), spawns: { T: sp(this.meta.spawnsT), CT: sp(this.meta.spawnsCT), DM: sp(this.meta.spawnsDM) } };
+  }
+  loadNav(data) {
+    const un = (s) => { if (typeof Buffer !== "undefined") return new Uint8Array(Buffer.from(s, "base64")); const t = atob(s), u = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; };
+    const nb = un(data.nodes), mask = un(data.links), n = data.n, nodes = [], byCell = new Map();
+    for (let i = 0; i < n; i++) {
+      const cx = nb[i * 4], cz = nb[i * 4 + 1]; let y = nb[i * 4 + 2] | (nb[i * 4 + 3] << 8); if (y > 32767) y -= 65536;
+      nodes.push({ x: cx + 0.5, y: y / 100, z: cz + 0.5, cx, cz, links: [] });
+      const k = cx * 4096 + cz; (byCell.get(k) || byCell.set(k, []).get(k)).push(i);
+    }
+    const DIRS = MeshMap.DIRS;
+    for (let i = 0; i < n; i++) for (let d = 0; d < 8; d++) {
+      if (!(mask[i] & (1 << d))) continue;
+      const cand = byCell.get((nodes[i].cx + DIRS[d][0]) * 4096 + (nodes[i].cz + DIRS[d][1])); if (!cand) continue;
+      let best = -1, bd = 9; for (const j of cand) { const dy = Math.abs(nodes[j].y - nodes[i].y); if (dy < bd) { bd = dy; best = j; } }
+      if (best >= 0) nodes[i].links.push(best);
+    }
+    this.nodes = nodes; this.byCell = byCell;
+    this.finishNav();
+    const me = this.meta, un2 = (a) => a.map((s) => ({ x: s[0], y: s[1], z: s[2], yaw: s[3] }));
+    me.spawnsT = un2(data.spawns.T); me.spawnsCT = un2(data.spawns.CT); me.spawnsDM = un2(data.spawns.DM);
+    me.points = {}; me.spawnsDM.slice(0, 14).forEach((s, i) => (me.points["p" + i] = [s.x, s.z, s.y]));
+    return this;
+  }
+  // which nodes are one connected piece (the biggest is the playable area) and which cells are open
+  finishNav() {
+    const nodes = this.nodes, comp = new Int32Array(nodes.length).fill(-1); let best = -1, bestN = 0;
     for (let s = 0; s < nodes.length; s++) {
       if (comp[s] >= 0) continue;
       const q = [s]; comp[s] = s; let n = 0;
@@ -242,9 +285,7 @@ export class MeshMap {
     this.navComp = comp; this.navMain = best;
     this.cellOpen = new Set();
     nodes.forEach((n, i) => { if (comp[i] === best) this.cellOpen.add(n.cx * 4096 + n.cz); });
-    return this;
   }
-  inMain(i) { return this.navComp[i] === this.navMain; }
 
   // can a body walk the straight line from a to b (floors continuous, nothing in the way)?
   walkable(ax, ay, az, bx, by, bz) {
@@ -318,9 +359,12 @@ export class MeshMap {
     const roomy = (i) => { if (!clean(i)) return false; let k = 0; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) { const nb = this.byCell.get((N[i].cx + dx) * 4096 + (N[i].cz + dz)); if (nb && nb.some((j) => Math.abs(N[j].y - N[i].y) < 0.6)) k++; } return k >= 7; };
     const towards = (a, b) => { const p = this.findPath(N[a].x, N[a].y, N[a].z, N[b].x, N[b].z, N[b].y); const q = p && p[Math.min(p.length - 1, 8)]; return q ? Math.atan2(-(q.x - N[a].x), -(q.z - N[a].z)) : 0; };
     const team = (end, other, dEnd) => {
-      const yaw = towards(end, other), cand = members.filter((i) => dEnd[i] >= 0 && dEnd[i] <= 16 && roomy(i)).sort((a, b) => dEnd[a] - dEnd[b]);
-      const out = [];
-      for (const i of cand) { if (out.length >= 10) break; if (out.every((s) => Math.hypot(s.x - N[i].x, s.z - N[i].z) > 2.2)) out.push({ x: N[i].x, y: N[i].y, z: N[i].z, yaw }); }
+      const yaw = towards(end, other), out = [];
+      // widen the area round the end until there is room for ten people
+      for (let radius = 16; radius <= 60 && out.length < 10; radius += 8) {
+        const cand = members.filter((i) => dEnd[i] >= 0 && dEnd[i] <= radius && roomy(i)).sort((a, b) => dEnd[a] - dEnd[b]);
+        for (const i of cand) { if (out.length >= 10) break; if (out.every((s) => Math.hypot(s.x - N[i].x, s.z - N[i].z) > 2.2)) out.push({ x: N[i].x, y: N[i].y, z: N[i].z, yaw }); }
+      }
       return out;
     };
     const me = this.meta;

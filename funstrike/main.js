@@ -11,7 +11,7 @@ import { GameAudio } from "./audio.js";
 import { HUD } from "./hud.js";
 import { Menus, loadSettings } from "./menu.js";
 import { Client } from "./client.js";
-import { HostRuntime, createOnline } from "./host.js";
+import { HostRuntime, createOnline, resumeOnline } from "./host.js";
 import { ClientChannel, encodeState } from "./net.js";
 import { MODES } from "./sim.js";
 
@@ -81,16 +81,14 @@ async function boot() {
     return;
   }
   menus.loading("loading the map...", 0.05);
-  await new Promise((r) => setTimeout(r, 30));
-  try { map = await getMap(DEFAULT_MAP); } catch (e) { menus.message("Couldn't load the map", String(e.message || e)); return; }
-  menus.loading("loading soldiers and weapons...", 0.25);
-  try { await loadModels(); } catch (e) { menus.message("Couldn't load the models", String(e.message || e)); return; }
-  menus.loading("drawing weapon icons...", 0.6);
-  await new Promise((r) => setTimeout(r, 10));
-  icons = makeIcons();
-  hud = new HUD(stage, icons);
+  // the map and the soldiers and weapons download and build side by side, not one after the other
+  const t0 = performance.now(), mark = (what) => console.log("boot: " + what + " at " + Math.round(performance.now() - t0) + " ms");
+  try { [map] = await Promise.all([getMap(DEFAULT_MAP), loadModels().then(() => mark("models"))]); mark("map"); }
+  catch (e) { menus.message("Couldn't load the map or the models", String(e.message || e)); return; }
   menus.loading("lighting the map...", 0.8);
-  await new Promise((r) => setTimeout(r, 30));
+  icons = {}; // the weapon pictures are drawn a moment after the menu is up (see below), the HUD reads them when it needs them
+  hud = new HUD(stage, icons);
+  await new Promise((r) => setTimeout(r, 0));
   try { client = new Client({ canvas, stage, hud, audio, settings, map }); }
   catch (e) { console.error(e); menus.message("Your browser couldn't start the 3D view", String(e.message || e)); return; }
   hud.onPause = (a) => {
@@ -103,6 +101,7 @@ async function boot() {
   menus.go = (screen) => { if (menus.back === "game" && (screen === "title")) { menus.back = null; menus.hide(); return; } origGo(screen); };
   document.addEventListener("keydown", (e) => { if (e.code === "Escape" && menus.back === "game" && !menus.root.hidden) { menus.back = null; menus.hide(); } });
   menus.show("title");
+  setTimeout(() => Object.assign(icons, makeIcons()), 400); // drawing 18 little pictures takes a moment: not while loading
   window.funstrike = { client, menus, audio, map, getMap, startMatch, joinServer, leave, get host() { return host; }, get link() { return client && client.link; } };
   console.log("fun strike ready in", Math.round(performance.now() - T0), "ms");
   window.funstrikeReady = true;
@@ -132,11 +131,35 @@ async function startMatch(opts, online) {
     host.start();
     enter(link, name, opts.name, MODES[opts.mode], map);
     if (host.chan) client.startVoice(host.chan.c, host.chan.sid);
+    if (host.ex) host.onExpire = () => { leave(); menus.message("That server's time is up.", "It has been taken off the list."); setTimeout(() => menus.show("servers"), 3000); };
   } catch (e) { console.error(e); menus.message("Something went wrong starting the match", String(e.message || e)); }
+}
+
+// someone joined a sleeping server (its host left but it still has time on its clock): they become the host and the same
+// match starts again, with its bots. Returns false when somebody else woke it first, so the caller joins them instead.
+async function wakeServer(row) {
+  const name = myName();
+  menus.message("Waking up " + row.name + "...");
+  audio.init();
+  let o; try { o = JSON.parse(row.opts); } catch (e) { return false; }
+  try {
+    map = await getMap(o.map);
+    const opts = { ...o, map: map.id, ex: row.ex };
+    if (host) { host.stop(); host = null; }
+    host = await resumeOnline(map, opts, name, row.id);
+  } catch (e) { console.warn("could not wake it:", e); return false; }
+  const link = host.localLink(name);
+  link.uid8 = "local";
+  host.start();
+  enter(link, name, row.name, MODES[o.mode] || MODES.tdm, map);
+  client.startVoice(host.chan.c, host.chan.sid);
+  host.onExpire = () => { leave(); menus.message("That server's time is up.", "It has been taken off the list."); setTimeout(() => menus.show("servers"), 3000); };
+  return true;
 }
 
 async function joinServer(row) {
   const name = myName();
+  if (row.sleeping && (await wakeServer(row))) return;
   menus.message("Joining " + row.name + "...");
   audio.init();
   try {

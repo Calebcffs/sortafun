@@ -56,6 +56,8 @@
       return p + "/8, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
     } },
     sushi:     { label: "sushi goes round",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
+    // a Fun Strike match: kills x10 + headshots x5 + assists x3, sent when a match ends
+    funstrike: { label: "fun strike", unit: "pts", better: "high" },
     sushirush: { label: "sushi lunch rush",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
     // part 2: samples * 10000 - seconds, the same idea
     deeptime2: { label: "deep time part 2", unit: "samples", better: "high", format: function (v) {
