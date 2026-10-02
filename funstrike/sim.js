@@ -848,7 +848,7 @@ export class Game {
     }
     const s = {
       t: Math.round(this.t * 1000), ph: this.phase, pe: Math.round(this.phaseEnd * 1000), rd: this.round, sc: this.score,
-      p: pl, rv: this.rv,
+      p: pl, rv: this.rv, sk: this.opts.sky || "noon",
       ev: this.events.filter((e) => this.t - e.at < Math.min(e.keep, 2)).map(stripEvent), // each event rides in ~2s of snapshots at most, the client dedupes by seq
     };
     if (this.waiting) s.wait = 1;

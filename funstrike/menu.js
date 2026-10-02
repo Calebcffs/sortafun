@@ -130,6 +130,7 @@ export class Menus {
           <label>Game mode <select id="c-mode">${Object.entries(MODES).map(([k, m]) => `<option value="${k}">${esc(m.name)}</option>`).join("")}</select></label>
           <p class="blurb" id="c-blurb"></p>
           <label>Max players <input type="range" id="c-slots" min="2" max="10" value="10"><output id="o-slots">10</output></label>
+          <label>Sky <select id="c-sky"><option value="noon">Cloudy noon</option><option value="sunset">Sunset</option><option value="storm">Stormy</option></select></label>
           <label>Bots <input type="range" id="c-bots" min="0" max="9" value="6"><output id="o-bots">6</output></label>
           <label>Bot skill <select id="c-diff">${DIFF.map((d, i) => `<option value="${i}"${i === 1 ? " selected" : ""}>${d}</option>`).join("")}</select></label>
           <label id="l-rounds">Match length <select id="c-rounds"><option value="5">Short (first to 6 rounds)</option><option value="10">Medium (first to 11)</option><option value="15" selected>Long (first to 16)</option></select></label>
@@ -153,7 +154,7 @@ export class Menus {
     ["c-mode", "c-slots", "c-bots"].forEach((id) => q("#" + id).addEventListener("input", upd)); upd();
     if (prac) q("#c-slots").value = 10, upd();
     q("#c-go").onclick = () => {
-      const opts = { mode: q("#c-mode").value, slots: +q("#c-slots").value, bots: +q("#c-bots").value, diff: +q("#c-diff").value, rounds: +q("#c-rounds").value, time: +q("#c-time").value, name: prac ? nm + "'s practice" : (q("#c-name").value.trim() || nm + "'s server") };
+      const opts = { mode: q("#c-mode").value, slots: +q("#c-slots").value, bots: +q("#c-bots").value, diff: +q("#c-diff").value, sky: q("#c-sky").value, rounds: +q("#c-rounds").value, time: +q("#c-time").value, name: prac ? nm + "'s practice" : (q("#c-name").value.trim() || nm + "'s server") };
       this.cb.create && this.cb.create(opts, !prac);
     };
   }
@@ -202,7 +203,7 @@ export class Menus {
   }
 
   s_controls() {
-    const rows = [["W A S D", "move"], ["Mouse", "look"], ["Left click", "fire (hold for full auto)"], ["Right click", "scope · knife stab · weak throw"], ["Space", "jump"], ["Ctrl / C", "crouch"], ["Shift", "walk quietly"], ["R", "reload"], ["1 2 3 4 5", "primary · pistol · knife · grenades · bomb"], ["Q / wheel", "last weapon / cycle"], ["E", "use: pick up a gun, plant, defuse"], ["G", "drop weapon"], ["B", "buy menu"], ["Tab", "scoreboard"], ["Enter / Y", "chat"], ["M", "change team"], ["F3", "ping and frame rate"], ["Esc", "pause"]];
+    const rows = [["W A S D", "move"], ["Mouse", "look"], ["Left click", "fire (hold for full auto)"], ["Right click", "aim down sights · scope · knife stab · weak throw"], ["Space", "jump"], ["Ctrl / C", "crouch"], ["Shift", "walk quietly"], ["R", "reload"], ["1 2 3 4 5", "primary · pistol · knife · grenades · bomb"], ["Q / wheel", "last weapon / cycle"], ["G", "drop weapon"], ["E", "buy menu (and pick up, plant, defuse)"], ["Tab", "scoreboard"], ["Enter / Y", "chat"], ["M", "change team"], ["F3", "ping and frame rate"], ["Esc", "pause (it also leaves fullscreen)"]];
     this.root.innerHTML = `<div class="fs-panel"><header><h2>Controls</h2><button class="x" data-back>back</button></header><div class="fs-keys">${rows.map((r) => `<div><kbd>${r[0]}</kbd><span>${r[1]}</span></div>`).join("")}</div><footer><span>Keyboard and mouse. It is not made for phones.</span><button class="go" data-back>Done</button></footer></div>`;
     this.root.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => this.go("title")));
   }

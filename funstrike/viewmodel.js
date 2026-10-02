@@ -12,8 +12,8 @@ const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3
 
 // resting pose of the gripping hand (camera space), by kind
 const POSE = {
-  rifle: [0.17, -0.12, -0.4], smg: [0.16, -0.115, -0.39], sniper: [0.17, -0.125, -0.42], shotgun: [0.17, -0.125, -0.4],
-  pistol: [0.12, -0.1, -0.42], knife: [0.13, -0.19, -0.45], grenade: [0.13, -0.19, -0.46], bomb: [0.0, -0.22, -0.46],
+  rifle: [0.215, -0.185, -0.4], smg: [0.205, -0.18, -0.39], sniper: [0.215, -0.19, -0.42], shotgun: [0.215, -0.185, -0.4],
+  pistol: [0.155, -0.155, -0.4], knife: [0.17, -0.23, -0.45], grenade: [0.16, -0.23, -0.46], bomb: [0.0, -0.24, -0.46],
 };
 
 function glow() {
@@ -98,10 +98,11 @@ export class Viewmodel {
   update(dt, s, mainCam) {
     this.camera.aspect = mainCam.aspect; this.camera.updateProjectionMatrix();
     this.t += dt;
-    const k = Math.min(1, s.speed / 6) * (s.onGround ? 1 : 0.15);
+    const ads = s.ads || 0;
+    const k = Math.min(1, s.speed / 6) * (s.onGround ? 1 : 0.15) * (1 - 0.85 * ads);
     this.bob += dt * (3 + s.speed * 1.5) * (s.onGround ? 1 : 0.2);
     const bx = Math.sin(this.bob) * 0.006 * k, by = Math.abs(Math.cos(this.bob)) * 0.008 * k - (s.onGround ? 0 : 0.012);
-    const idle = Math.sin(this.t * 1.4) * 0.0012;
+    const idle = Math.sin(this.t * 1.4) * 0.0012 * (1 - ads);
     // view swing: the gun lags the camera
     const tx = Math.max(-1, Math.min(1, s.yawRate * 0.012)), ty = Math.max(-1, Math.min(1, s.pitchRate * 0.01));
     this.sway.x += (tx - this.sway.x) * Math.min(1, dt * 10); this.sway.y += (ty - this.sway.y) * Math.min(1, dt * 10);
@@ -133,9 +134,14 @@ export class Viewmodel {
     this.rig.position.set(0, 0, 0); this.rig.rotation.set(0, 0, 0);
     // put the gun so its grip is at base + motion
     const g = this.gun; if (!g) return;
-    const handR = new THREE.Vector3(p[0] + bx + kx - this.sway.x * 0.012, p[1] + by + idle + reloadY - up * 0.3 + ky - this.sway.y * 0.01, p[2] + this.kickZ + kz);
     const m = g.userData.marks;
     const gripGun = this.kind === "knife" || this.kind === "grenade" || this.kind === "bomb" ? new THREE.Vector3() : m.trigger.clone().add(new THREE.Vector3(0, -0.04, 0.03));
+    const handR = new THREE.Vector3(p[0] + bx + kx - this.sway.x * 0.012, p[1] + by + idle + reloadY - up * 0.3 + ky - this.sway.y * 0.01, p[2] + this.kickZ + kz);
+    if (ads > 0.001) { // the gun swings to the middle of the screen with its sights on the line of sight
+      const o = this.kind === "pistol" ? [0, -0.07, -0.32] : [0, -0.1, -0.31];
+      const tgt = new THREE.Vector3(o[0] + gripGun.x, o[1] + gripGun.y, o[2] + gripGun.z + this.kickZ * 0.6);
+      handR.lerp(tgt, ads);
+    }
     g.rotation.set(rx + (this.kind === "knife" ? -0.6 : 0), ry, rz);
     g.position.copy(gripGun).multiplyScalar(-1).applyEuler(g.rotation).add(handR);
     g.updateMatrixWorld(true);

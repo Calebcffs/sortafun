@@ -128,7 +128,7 @@ body.fs-playing .fs-fullbtn { opacity: .2; }
 .fs-banner b { font: 600 clamp(32px, 5.6vw, 76px)/1 "Teko", sans-serif; letter-spacing: .1em; text-transform: uppercase; padding: 0 28px; background: rgba(8,10,13,.6); border-top: 3px solid #ffb04a; border-bottom: 3px solid #ffb04a; }
 .fs-banner.ct b { border-color: #5a9cff; color: #cfe2ff; } .fs-banner.t b { border-color: #ffb04a; color: #ffe2b8; } .fs-banner small { margin-top: 6px; font-size: clamp(13px, 1.8vw, 24px); letter-spacing: .12em; text-transform: uppercase; background: rgba(8,10,13,.55); padding: 2px 12px; }
 .fs-toast { left: 50%; top: 14%; transform: translateX(-50%); background: rgba(10,12,15,.7); border: 1px solid rgba(255,255,255,.2); padding: 3px 16px; font-size: clamp(13px, 1.7vw, 22px); opacity: 0; transition: opacity .3s; letter-spacing: .06em; } .fs-toast.on { opacity: 1; }
-.fs-chat { left: 1.2%; bottom: 17%; width: 36%; font-size: clamp(11px, 1.35vw, 17px); } .fs-chatlog { display: flex; flex-direction: column; gap: 1px; } .cl { background: rgba(10,12,15,.45); padding: 1px 6px; transition: opacity 1.2s; width: fit-content; max-width: 100%; } .cl i { opacity: .7; } .cl.old { opacity: 0; } .fs-chat.open .cl.old { opacity: 1; }
+.fs-chat { left: 1.2%; bottom: 22%; width: 36%; font-size: clamp(11px, 1.35vw, 17px); } .fs-chatlog { display: flex; flex-direction: column; gap: 1px; } .cl { background: rgba(10,12,15,.45); padding: 1px 6px; transition: opacity 1.2s; width: fit-content; max-width: 100%; } .cl i { opacity: .7; } .cl.old { opacity: 0; } .fs-chat.open .cl.old { opacity: 1; }
 .fs-chat input { pointer-events: auto; margin-top: 4px; width: 100%; box-sizing: border-box; background: rgba(0,0,0,.7); color: #fff; border: 1px solid rgba(255,255,255,.4); padding: 4px 8px; font: inherit; }
 .fs-net { right: 1.2%; bottom: 36%; font-size: 12px; background: rgba(0,0,0,.5); padding: 2px 6px; font-family: monospace; }
 .fs-wait { left: 50%; top: 40%; transform: translateX(-50%); font: 600 clamp(20px, 3vw, 40px) "Teko", sans-serif; letter-spacing: .12em; text-transform: uppercase; background: rgba(8,10,13,.6); padding: 4px 24px; animation: fsblink 1.6s infinite; } @keyframes fsblink { 50% { opacity: .5; } }
@@ -164,3 +164,6 @@ body.fs-playing .fs-fullbtn { opacity: .2; }
 .fs-table tr[data-id]:hover, .fs-table tr[data-id]:hover td { background: rgba(255,170,60,.12) !important; }
 .fs-table tr.sel, .fs-table tr.sel td { background: rgba(255,170,60,.26) !important; }
 .fs-table td { border-bottom: 1px solid rgba(255,255,255,.06) !important; }
+
+.fs-hint { left: 2.2%; bottom: 17.5%; display: none; align-items: center; gap: 8px; font-size: clamp(11px, 1.4vw, 17px); letter-spacing: .14em; text-transform: uppercase; background: rgba(10,12,15,.55); padding: 2px 10px 2px 4px; border-left: 3px solid #ffb04a; }
+.fs-hint kbd { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4); border-bottom-width: 3px; padding: 0 7px; font: 700 1em 'Rajdhani', sans-serif; }

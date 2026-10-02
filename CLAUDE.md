@@ -979,6 +979,17 @@ contexts, one `startMatch(..., true)`, the other `net.js watchServers` then `joi
 `Menus` had a method named like a data field (`servers`, `settings`), screens are `s_*` now; the site's `table`
 and `canvas` styles leak in unless overridden (`.fs-stage` resets in funstrike.css); gun colours in the source
 are near black, `models.js` lifts them; buying during warmup is wiped when the match starts.
+**v0.9.1 (Caleb's playtest notes):** right click = aim down sights for every unscoped gun (`client.ads`, viewmodel
+slides to the middle, FOV x0.84, spread x0.5), snipers keep a single-level scope (AWP 25, SSG 40, SCAR 35). Spread is
+`spreadDeg(w, speedFrac, onGround, crouch, n, scoped, ads)` where n = shots *before* this one, so a first shot
+standing still is exactly 0; recoil is `sprayAt` x0.62 and the view punch x0.55. No tracers at all (muzzle flash only;
+hits are instant hitscan). **E** is the buy menu (B is gone, Esc leaves fullscreen): plant/defuse when in place
+(`useEligible`), else pick up a gun lying within 1.9m (`nearDrop`), else toggle the menu; a corner hint shows
+"E BUY MENU / CLOSE". Skies are Poly Haven HDRIs in `assets/sky/` (`SKIES` in world.js; sun direction is read from the
+brightest patch of the picture; the server's `opts.sky` rides in every snapshot as `sk`). Sound: `audio.js` PRESET gives
+samples a bass shelf + a sub-bass thump + a reverb send, and `foley()` builds gun handling (mag out/in, rack, bolt,
+safety, strap) from noise and rings. Looked for ready-made map models: the Sketchfab "de_dust2" uploads are rips of
+Valve's map (CC-BY label or not, not safe to ship) and a generic mesh map would need mesh collision + a nav mesh for the bots.
 Not done / ideas: weapon recoil patterns are generated curves, not CS's real ones; no wallbang; no bomb
 carrier on the minimap; sounds untested by ear (picked by onset detection); only Dust II, no leaderboard key.
 

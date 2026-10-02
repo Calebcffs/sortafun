@@ -8,6 +8,7 @@
 
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { OPEN } from "./map.js";
 
 const TEXDIR = "funstrike/assets/tex/";
@@ -30,6 +31,14 @@ export const TEX = {
   door:     { d: "blue_painted_planks", size: 1.6, tint: [0.55, 1.15, 1.0], rough: 0.8 },
   trim:     { d: "weathered_planks", size: 1.4, tint: [0.9, 0.7, 0.5], rough: 0.85 },
 };
+// times of day: a Poly Haven sky (CC0, equirect .hdr) plus the lighting that suits it. The sun's direction is
+// read out of the picture itself (its brightest patch), so shadows fall the way the clouds say they should.
+export const SKIES = {
+  noon: { name: "Cloudy noon", sun: 0xfff1da, sunI: 3.5, hemiSky: 0xe3ecf8, hemiGround: 0xd6b27c, hemiI: 0.75, env: 0.5, exposure: 0.95, fog: 0xcad9ea, fill: 0xffdcae, fillI: 0.8, minEl: 38, bg: 1 },
+  sunset: { name: "Sunset", sun: 0xffa45c, sunI: 3.4, hemiSky: 0xffc7a0, hemiGround: 0xa86a44, hemiI: 0.62, env: 0.55, exposure: 1.0, fog: 0xe9b08c, fill: 0x7aa0ff, fillI: 0.55, minEl: 9, bg: 0.55 },
+  storm: { name: "Stormy", sun: 0xdbe6ff, sunI: 2.3, hemiSky: 0xb6c3d6, hemiGround: 0x9a8a70, hemiI: 0.85, env: 0.6, exposure: 0.98, fog: 0xa4afbf, fill: 0xc8d0e0, fillI: 0.5, minEl: 30, bg: 0.85 },
+};
+
 // the wall base band that goes under plain plaster
 const BAND = { plaster: "stone", cracked: "stone" };
 
@@ -83,7 +92,7 @@ export class World {
     };
     const m = new THREE.MeshStandardMaterial({
       map: load(t.d + "_diff", true), vertexColors: true,
-      roughness: t.rough, metalness: t.metal || 0, envMapIntensity: 0.18,
+      roughness: t.rough, metalness: t.metal || 0, envMapIntensity: this.envI || 0.4,
       color: new THREE.Color(t.tint[0], t.tint[1], t.tint[2]),
     });
     if (this.quality !== "low") { m.normalMap = load(t.d + "_nor", false); m.normalScale = new THREE.Vector2(0.8, 0.8); }
@@ -403,12 +412,13 @@ export class World {
   }
 
   setupScene(scene, renderer) {
+    this.scene = scene; this.renderer = renderer;
     scene.add(this.group);
     scene.fog = new THREE.Fog(0xe8d9b8, 70, 210);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.92;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    // image based light from the sky, once
+    // until the real sky has loaded the generated one lights things
     try {
       const pm = new THREE.PMREMGenerator(renderer);
       const es = new THREE.Scene(); const sk = new Sky(); sk.scale.setScalar(900);
@@ -417,5 +427,67 @@ export class World {
       scene.environment = pm.fromScene(es, 0, 1, 1000).texture;
       pm.dispose();
     } catch (e) { /* no environment: the hemisphere light still lights everything */ }
+    this.setSky(this.opts.sky || "noon");
+  }
+
+  // swap to one of SKIES. Safe to call again whenever the server's time of day changes.
+  setSky(kind) {
+    if (!SKIES[kind]) kind = "noon";
+    if (this.skyKind === kind) return;
+    this.skyKind = kind;
+    const P = SKIES[kind], renderer = this.renderer, scene = this.scene;
+    this.applySkyLight(P, this.sunDir);
+    new RGBELoader().load(TEXDIR.replace("tex/", "sky/") + kind + ".hdr", (tex) => {
+      if (this.skyKind !== kind) return;
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      // where is the sun? the brightest patch of the picture
+      const dir = this.sunFromHdr(tex);
+      const pm = new THREE.PMREMGenerator(renderer);
+      const env = pm.fromEquirectangular(tex).texture; pm.dispose();
+      if (this.hdrEnv) this.hdrEnv.dispose();
+      this.hdrEnv = env; scene.environment = env; scene.background = tex;
+      scene.backgroundIntensity = P.bg;
+      if (this.sky) this.sky.visible = false;
+      this.applySkyLight(P, dir);
+    }, undefined, () => { /* keep the generated sky */ });
+  }
+
+  sunFromHdr(tex) {
+    const { data, width, height } = tex.image;
+    const half = data instanceof Uint16Array;
+    const f = (v) => (half ? THREE.DataUtils.fromHalfFloat(v) : v);
+    let best = 0, bi = 0;
+    for (let r = 0; r < height; r += 2) for (let c = 0; c < width; c += 2) {
+      const i = (r * width + c) * 4, L = f(data[i]) * 0.3 + f(data[i + 1]) * 0.59 + f(data[i + 2]) * 0.11;
+      if (L > best) { best = L; bi = i / 4; }
+    }
+    // average the near-brightest pixels around it so a glint doesn't pull it off
+    let sx = 0, sy = 0, sz = 0, n = 0;
+    for (let r = 0; r < height; r += 2) for (let c = 0; c < width; c += 2) {
+      const i = (r * width + c) * 4, L = f(data[i]) * 0.3 + f(data[i + 1]) * 0.59 + f(data[i + 2]) * 0.11;
+      if (L < best * 0.85) continue;
+      const phi = (c / width - 0.5) * Math.PI * 2, el = (r / height - 0.5) * Math.PI;
+      sx += Math.cos(el) * Math.cos(phi); sy += Math.sin(el); sz += Math.cos(el) * Math.sin(phi); n++;
+    }
+    void bi;
+    const d = new THREE.Vector3(sx, sy, sz); if (!n || d.lengthSq() < 1e-6) return this.sunDir.clone();
+    return d.normalize();
+  }
+
+  applySkyLight(P, dir) {
+    const d = dir.clone();
+    // never let the sun sit too low (shadows would stretch across the whole map) or fall behind the map
+    const el = Math.asin(Math.max(-1, Math.min(1, d.y))) * 180 / Math.PI;
+    if (el < P.minEl) { const k = Math.cos(P.minEl * Math.PI / 180) / Math.max(1e-3, Math.hypot(d.x, d.z)); d.set(d.x * k, Math.sin(P.minEl * Math.PI / 180), d.z * k); }
+    d.normalize();
+    this.sunDir.copy(d);
+    this.sun.color.setHex(P.sun); this.sun.intensity = P.sunI;
+    this.hemi.color.setHex(P.hemiSky); this.hemi.groundColor.setHex(P.hemiGround); this.hemi.baseI = P.hemiI; this.hemi.intensity = P.hemiI;
+    this.fill.color.setHex(P.fill); this.fill.intensity = P.fillI;
+    this.fill.position.set(-d.x * 50, 18, -d.z * 50);
+    if (this.scene && this.scene.fog) this.scene.fog.color.setHex(P.fog);
+    if (this.renderer) this.renderer.toneMappingExposure = P.exposure;
+    for (const m of Object.values(this.mats)) m.envMapIntensity = P.env;
+    this.envI = P.env;
   }
 }

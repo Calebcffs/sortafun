@@ -22,6 +22,7 @@ export class HUD {
       <div class="fs-ammo"><div class="fs-inv" id="h-inv"></div><div class="fs-wn" id="h-wn"></div><div class="fs-am"><b id="h-mag">0</b><span id="h-res">/ 0</span></div></div>
       <div class="fs-cross" id="h-cross"><i class="l"></i><i class="r"></i><i class="u"></i><i class="d"></i><i class="c"></i></div>
       <div class="fs-hitm" id="h-hitm"><i></i><i></i><i></i><i></i></div>
+      <div class="fs-hint" id="h-hint"><kbd>E</kbd><span id="h-hinttx"></span></div>
       <div class="fs-prompt" id="h-prompt"></div>
       <div class="fs-prog" id="h-prog"><span id="h-progl"></span><div><i id="h-progf"></i></div></div>
       <div class="fs-dmg" id="h-dmg"></div><div class="fs-dirs" id="h-dirs"></div>
@@ -77,13 +78,15 @@ export class HUD {
     this.cache.inv = key;
     this.q("h-inv").innerHTML = items.map((i) => `<div class="${i.cur ? "cur" : ""}"><i>${i.slot}</i>${this.icons[i.id] ? `<img src="${this.icons[i.id]}" alt="">` : ""}<span>${esc(i.name)}${i.count > 1 ? " x" + i.count : ""}</span></div>`).join("");
   }
+  hint(t) { this.txt("h-hinttx", t); this.q("h-hint").style.display = t ? "flex" : "none"; }
   setZone(z) { this.txt("h-zone", z && z !== "-" ? z : ""); }
   setWait(on) { this.q("h-wait").hidden = !on; }
 
   // crosshair: gap/size from the current spread (pixels), style from settings
-  crosshair(spreadPx, s, hidden) {
+  crosshair(spreadPx, s, hidden, ads = 0) {
     const c = this.q("h-cross");
     c.style.display = hidden ? "none" : "block";
+    c.style.opacity = ads > 0.3 ? 0.35 : 1;
     const gap = (s.gap || 3) + spreadPx;
     c.style.setProperty("--gap", gap.toFixed(1) + "px"); c.style.setProperty("--len", (s.size || 6) + "px"); c.style.setProperty("--th", (s.thick || 2) + "px");
     c.style.setProperty("--col", s.color || "#4cff7a"); c.style.setProperty("--dot", s.dot ? "block" : "none");
@@ -211,7 +214,7 @@ export class HUD {
         return `<button data-id="${id}" class="bi${can ? "" : " no"}${own ? " own" : ""}"><i class="k">${n + 1}</i>${this.icons[id] ? `<img src="${this.icons[id]}" alt="">` : ""}<span>${esc(w.name)}</span><b>${st.free ? "free" : money(price)}</b></button>`;
       }).join("")}</div>`;
     }).join("");
-    this.buy.innerHTML = `<div class="bbox"><div class="bh"><b>BUY MENU</b><span>${st.free ? "free for all weapons" : money(st.money)}</span><small>B or Esc to close · click or press the numbers</small></div><div class="bgrid">${cats}</div></div>`;
+    this.buy.innerHTML = `<div class="bbox"><div class="bh"><b>BUY MENU</b><span>${st.free ? "free for all weapons" : money(st.money)}</span><small>E to close · click or press the numbers</small></div><div class="bgrid">${cats}</div></div>`;
     this.buy.querySelectorAll("button.bi").forEach((b) => b.addEventListener("click", () => this.onBuy && this.onBuy(b.dataset.id)));
   }
 

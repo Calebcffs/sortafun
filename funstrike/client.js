@@ -34,7 +34,7 @@ export class Client {
     this.body = newBody(); this.punch = [0, 0]; this.punchT = [0, 0]; this.look = { yaw: 0, pitch: 0 };
     this.me = { team: TEAM.SPEC, alive: false, hp: 100, armor: 0, helmet: false, kit: false, money: 0, inv: null, waiting: false, c4: false };
     this.ammo = {}; this.cur = "knife"; this.reloadEnd = 0; this.reloadId = ""; this.nextFire = 0; this.drawEnd = 0; this.fireLatch = false;
-    this.sprayN = 0; this.lastShot = -9; this.scoped = 0; this.grenadeIdx = 0;
+    this.sprayN = 0; this.lastShot = -9; this.scoped = 0; this.ads = 0; this.grenadeIdx = 0;
     this.off = null; this.interp = 0.12; this.clockSet = false;
     this.phase = "warmup"; this.phaseEnd = 0; this.round = 0; this.score = [0, 0];
     this.bomb = null; this.drops = []; this.grenades = new Map(); this.smokes = new Map(); this.fires = new Map(); this.dropMeshes = new Map();
@@ -173,8 +173,8 @@ export class Client {
       else if (code === "Digit3") this.pickTeam("auto"); else if (code === "Digit4") this.pickTeam("2");
       return;
     }
-    if (code === "KeyB" || (this.buyOpen && code === "Escape")) { this.toggleBuy(); return; }
     if (this.buyOpen) {
+      if (code === "KeyE" || code === "Escape") { this.toggleBuy(); return; }
       const m = /^Digit(\d)$/.exec(code);
       if (m) this.buyKey(+m[1]);
       return;
@@ -188,14 +188,20 @@ export class Client {
     else if (code === "KeyQ") this.selectLast();
     else if (code === "KeyR") this.reload();
     else if (code === "KeyG") this.dropWeapon();
-    else if (code === "KeyE") this.link.send({ a: "use" });
+    else if (code === "KeyE") {
+      // E is plant / defuse when you are in the right place (that is a hold, handled by the flag), then
+      // picking up a gun lying right here, and otherwise the buy menu
+      if (this.useEligible()) return;
+      if (this.nearDrop()) { this.link.send({ a: "use" }); return; }
+      this.toggleBuy();
+    }
   }
 
   // -------------------------------------------------------------------
   // starting and stopping
   // -------------------------------------------------------------------
   start(link, name, mode) {
-    this.link = link; this.name = name; this.mode = mode; this.joinWait = 0; this.joinFailed = false;
+    this.link = link; this.name = name; this.mode = mode; this.joinWait = 0; this.joinFailed = false; this.pickedTeam = false;
     this.interp = link.kind === "net" ? 0.2 : 0.13;
     link.onSnapshot = (s) => this.onSnapshot(typeof s === "string" ? JSON.parse(s) : s);
     link.onRoster = (r) => this.onRoster(typeof r === "string" ? JSON.parse(r) : r);
@@ -268,6 +274,7 @@ export class Client {
     if (this.off === null) this.off = sample;
     else if (sample > this.off) this.off = sample; else this.off += (sample - this.off) * 0.02;
     this.lastSnapAt = now;
+    if (s.sk && this.world) this.world.setSky(s.sk);
     this.phase = s.ph; this.phaseEnd = s.pe; this.round = s.rd; this.score = s.sc; this.waiting = !!s.wait; this.winText = s.win; this.roundWin = s.rw;
     if (s.pg && this.myId) for (const [id, ct] of s.pg) if (id === this.myId) { const rtt = (Math.round(performance.now()) & 0x3fffffff) - ct; if (rtt >= 0 && rtt < 5000) this.pingMs = Math.round(this.pingMs * 0.7 + rtt * 0.3); }
     if (this.link.kind === "local") this.pingMs = 0;
@@ -340,7 +347,7 @@ export class Client {
         const end = [e.e[0] / 100, e.e[1] / 100, e.e[2] / 100];
         const mz = new THREE.Vector3(); r.soldier.muzzleWorld(mz);
         const d = new THREE.Vector3(end[0] - mz.x, end[1] - mz.y, end[2] - mz.z); const len = d.length() || 1; d.divideScalar(len);
-        if (len > 1) { F.muzzle([mz.x, mz.y, mz.z], [d.x, d.y, d.z], 0.45, !!w.silenced); F.tracer([mz.x, mz.y, mz.z], end); }
+        if (len > 1) F.muzzle([mz.x, mz.y, mz.z], [d.x, d.y, d.z], 0.45, !!w.silenced);
         r.soldier.shoot = 1;
         // where it landed
         if (e.h) F.impact(end, [-d.x, 0.2, -d.z], "flesh");
@@ -518,6 +525,7 @@ export class Client {
     this.drawStart = this.nowS;
     this.vm.setWeapon(id, this.me.team === TEAM.CT ? "ct" : "t");
     this.reloadId = "";
+    if (!instant && w.kind !== "bomb") this.audio.foley("draw_" + w.kind, { vol: 0.8 });
   }
   selectSlot(n) {
     const inv = this.me.inv; if (!inv) return;
@@ -553,8 +561,12 @@ export class Client {
     this.scoped = 0;
     this.reloadStart = this.nowS; this.reloadDur = w.shell ? w.reload : w.reload;
     this.reloadEnd = this.nowS + w.reload; this.reloadId = this.cur;
-    const snd = w.kind === "pistol" ? "reload_pistol" : w.kind === "smg" ? "reload_smg" : w.shell ? "shell" : "reload_rifle";
-    this.audio.ui(snd, 0.7);
+    if (w.shell) { this.audio.ui("shell", 0.5); this.audio.foley("reload_shell"); }
+    else {
+      const snd = w.kind === "pistol" ? "reload_pistol" : w.kind === "smg" ? "reload_smg" : "reload_rifle";
+      this.audio.ui(snd, 0.32);                       // the recording is the background, the clacks on top are the hands
+      this.audio.foley(snd, { scale: w.reload / (w.kind === "pistol" ? 2.2 : w.kind === "smg" ? 2.4 : 2.9), vol: 1 });
+    }
     this.vm.reload(w.shell ? w.reload : w.reload);
   }
 
@@ -573,14 +585,15 @@ export class Client {
     this.nextFire = now + (w.cycle || 0.1);
     // recoil: a spray pattern, with the view kicked by it
     const [pp, py] = sprayAt(w, this.sprayN);
-    this.punchT = [pp * (this.scoped && w.kind === "sniper" ? 0.3 : 1) * 0.55, py * 0.55];
-    this.sprayN++; this.lastShot = now;
     const b = this.body, sp = Math.hypot(b.vx, b.vz);
-    const spread = spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, this.sprayN, this.scoped > 0);
+    // the spread is worked out from the shots BEFORE this one, so the first shot standing still is dead on
+    const spread = spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, this.sprayN, this.scoped > 0, this.ads);
     this.shootBullets(w, spread);
+    this.punchT = [pp * (this.scoped && w.kind === "sniper" ? 0.3 : 1) * 0.55 * (1 - 0.35 * this.ads), py * 0.55 * (1 - 0.35 * this.ads)];
+    this.sprayN++; this.lastShot = now;
     this.vm.kick(w.kind);
     // a bolt gun lowers the scope while it cycles
-    if (w.bolt) { this.scopeAfter = this.scoped; this.scoped = 0; this.audio.ui("bolt", 0.6); setTimeout(() => { if (this.cur === w.id && this.me.alive) { this.scoped = this.scopeAfter; } }, (w.cycle || 1) * 1000 * 0.9); }
+    if (w.bolt) { this.scopeAfter = this.scoped; this.scoped = 0; setTimeout(() => { if (this.me.alive) { this.audio.ui("bolt", 0.35); this.audio.foley("bolt", { scale: (w.cycle || 1.25) / 1.25 * 0.8, vol: 0.9 }); } }, 380); setTimeout(() => { if (this.cur === w.id && this.me.alive) { this.scoped = this.scopeAfter; } }, (w.cycle || 1) * 1000 * 0.9); }
     if (a.mag === 0 && a.res > 0) setTimeout(() => { if (this.cur === w.id && this.me.alive) this.reload(); }, 220);
   }
 
@@ -607,7 +620,6 @@ export class Client {
       if (n === 0 || pellets > 1) {
         const mz = this.vm.muzzleWorld(this.cam) || new THREE.Vector3(ox, oy, oz);
         if (kind) this.fx.impact(end, nrm, kind);
-        if (pellets === 1 || n < 3) this.fx.tracer([mz.x, mz.y, mz.z], end, 0.01);
         if (kind === "head" || kind === "flesh") { /* the sound comes from the host's hit event */ }
         else if (kind && Math.random() < 0.4) this.audio.play(kind === "wood" ? "hit_wood" : kind === "metal" ? "hit_metal" : "hit_wall", { x: end[0], y: end[1], z: end[2], ref: 3, vol: 0.6 });
       }
@@ -718,6 +730,7 @@ export class Client {
   }
   pickTeam(t) {
     const team = t === "auto" ? -1 : +t;
+    this.pickedTeam = true;
     this.link.send({ a: "team", t: team });
     this.teamOpen = false; this.hud.showTeams(false);
     if (this.running) this.lock();
@@ -806,7 +819,7 @@ export class Client {
     if (frozen) { b.vx *= Math.max(0, 1 - dt * 12); b.vz *= Math.max(0, 1 - dt * 12); }
     b.yaw = this.look.yaw; b.pitch = this.look.pitch;
     const w = this.curW();
-    const sp = (w.speedMs || 6.35) * (this.scoped && w.kind === "sniper" ? 0.55 : 1);
+    const sp = (w.speedMs || 6.35) * (this.scoped && w.kind === "sniper" ? 0.55 : 1) * (1 - 0.22 * this.ads);
     this.prevPos.x = b.x; this.prevPos.y = b.y; this.prevPos.z = b.z;
     const wasGround = b.onGround;
     b.landed = 0;
@@ -838,10 +851,15 @@ export class Client {
     if (this.reloadEnd > 0 && now >= this.reloadEnd && this.reloadId === this.cur) {
       const a = this.ammo[this.cur];
       if (a) {
-        if (w.shell) { a.mag++; a.res--; if (a.mag < w.mag && a.res > 0) { this.reloadEnd = now + w.reload; this.audio.ui("shell", 0.6); } else this.reloadEnd = 0; }
+        if (w.shell) { a.mag++; a.res--; if (a.mag < w.mag && a.res > 0) { this.reloadEnd = now + w.reload; this.audio.ui("shell", 0.5); this.audio.foley("reload_shell"); } else { this.reloadEnd = 0; this.audio.foley("pump"); } }
         else { const take = Math.min(w.mag - a.mag, a.res); a.mag += take; a.res -= take; this.reloadEnd = 0; }
       } else this.reloadEnd = 0;
     }
+    // aiming down the sights (hold right click) for every gun that has no scope
+    const adsOk = !w.scope && (w.kind === "pistol" || w.kind === "smg" || w.kind === "rifle" || w.kind === "shotgun");
+    const wantAds = adsOk && (K & 2) !== 0 && this.me.alive && !frozen && this.phase !== "freeze" && this.phase !== "matchend" && this.reloadEnd === 0 && now >= this.drawEnd - 0.25 && !this.buyOpen;
+    this.ads += ((wantAds ? 1 : 0) - this.ads) * Math.min(1, dt * 13);
+    if (this.ads < 0.005) this.ads = 0;
     if (frozen && this.phase !== "freeze") return;
     if (this.phase === "freeze" || this.phase === "matchend") { this.scoped = 0; return; }
     // scope
@@ -868,7 +886,7 @@ export class Client {
   currentFov() {
     const w = this.curW();
     if (this.scoped && w.scope) { const hf = w.scope[this.scoped - 1]; return 2 * Math.atan(Math.tan((hf * RAD) / 2) * 0.75) / RAD; }
-    return this.baseFov();
+    return this.baseFov() * (1 - 0.16 * this.ads);
   }
 
   updateSpectateInput(dt) {
@@ -953,7 +971,7 @@ export class Client {
     // the bomb
     this.updateBomb(dt);
     // flash light from explosions
-    this.world.hemi.intensity = 0.95 + this.fx.flashLight * 1.4;
+    this.world.hemi.intensity = (this.world.hemi.baseI || 0.8) + this.fx.flashLight * 1.4;
     // dust hanging in the air, caught in the sun
     this.dustT = (this.dustT || 0) - dt;
     if (this.dustT <= 0 && this.set.quality !== "low") {
@@ -1057,9 +1075,9 @@ export class Client {
     hud.setZone(this.map.zoneAt(this.eye.x, this.eye.z));
     // crosshair
     const b = this.body, sp = Math.hypot(b.vx, b.vz);
-    const spread = me.alive ? spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, this.sprayN, this.scoped > 0) : 0;
+    const spread = me.alive ? spreadDeg(w, sp / Math.max(1, w.speedMs), b.onGround, b.crouching, this.sprayN, this.scoped > 0, this.ads) : 0;
     const px = Math.tan(Math.min(25, spread) * RAD) / Math.tan((this.currentFov() * RAD) / 2) * (this.h / 2);
-    hud.crosshair(Math.min(60, px), this.set.cross, !me.alive || (this.scoped > 0 && w.scope) || w.kind === "grenade" && false);
+    hud.crosshair(Math.min(60, px), this.set.cross, !me.alive || (this.scoped > 0 && w.scope), this.ads);
     hud.scope(me.alive && this.scoped > 0 && !!w.scope);
     // flash and hurt
     let fl = 0;
@@ -1088,7 +1106,7 @@ export class Client {
     // a server that never lets us in (full, or the host is gone)
     if (this.link.kind === "net" && !this.myId) { this.joinWait = (this.joinWait || 0) + dt; if (this.joinWait > 12 && !this.joinFailed) { this.joinFailed = true; window.dispatchEvent(new CustomEvent("fs-join-failed")); } } else this.joinWait = 0;
     // first-time prompt to join a team
-    if (!this.askedTeam && this.myId && this.roster.has(this.myId)) { this.askedTeam = true; if (me.team === TEAM.SPEC || (!this.mode.teams && me.team === TEAM.SPEC)) this.openTeamSelect(); }
+    if (!this.askedTeam && this.myId && this.roster.has(this.myId)) { this.askedTeam = true; if (this.pickedTeam) { /* already chose */ } else if (me.team === TEAM.SPEC || (!this.mode.teams && me.team === TEAM.SPEC)) this.openTeamSelect(); }
   }
 
   updateInventory() {
@@ -1099,6 +1117,23 @@ export class Client {
     for (const g of this.grenadeList()) { const k = g === "he" ? "he" : g === "flash" ? "flash" : g === "smoke" ? "smoke" : "fire"; add(4, g, inv.g[k]); }
     if (this.me.c4) add(5, "c4");
     this.hud.setInventory(this.me.alive ? items : []);
+  }
+
+  nearDrop() {
+    const b = this.body, me = this.me;
+    let near = null, nd = 1.9;
+    for (const d of this.drops) {
+      const dd = Math.hypot(d.x - b.x, d.z - b.z), w = WEAPONS[d.w];
+      if (dd < nd && Math.abs(d.y - b.y) < 2 && !(w && w.team && this.mode.teams && w.team !== (me.team === TEAM.T ? "T" : "CT"))) { nd = dd; near = d; }
+    }
+    return near;
+  }
+  // is E a plant or a defuse right now?
+  useEligible() {
+    if (!this.mode.rounds || this.phase !== "live") return false;
+    const b = this.body, me = this.me, bm = this.bomb;
+    if (me.c4 && this.siteAt(b.x, b.z)) return true;
+    return !!(bm && bm.st === "p" && me.team === TEAM.CT && Math.hypot(b.x - bm.x, b.z - bm.z) < 2.0);
   }
 
   updatePrompts() {
@@ -1124,8 +1159,7 @@ export class Client {
       if (bm && bm.st === "d" && me.team === TEAM.T && Math.hypot(b.x - bm.x, b.z - bm.z) < 4) prompt = "Walk over the bomb to pick it up";
     }
     if (this.reloadEnd > 0 && this.reloadId === this.cur && !prog) { const w = this.curW(); if (!w.shell) { label = "Reloading"; prog = 1 - (this.reloadEnd - this.nowS) / Math.max(0.1, w.reload); } }
-    if (!prompt && this.mode.rounds && this.phase === "freeze" && !this.buyOpen) prompt = "[B] buy menu";
-    if (!prompt && !this.mode.rounds && !this.buyOpen && this.nowS - (this.deathAt || -99) > 0 && this.nowS < 20) prompt = "[B] choose your weapons";
+    hud.hint(this.buyOpen ? "CLOSE" : this.canBuyNow() && !this.useEligible() ? "BUY MENU" : "");
     hud.prompt(prompt);
     hud.progress(label, prog);
     void now;
@@ -1202,7 +1236,7 @@ export class Client {
     if (this.viewmodelOn && this.me.alive) {
       r.clearDepth();
       const b = this.body, speed = Math.hypot(b.vx, b.vz);
-      this.vm.update(dt, { speed, onGround: b.onGround, crouch: b.crouch, yawRate: this.vmYaw(dt), pitchRate: this.vmPitch(dt), drawFrac: clamp((this.nowS - this.drawStart) / Math.max(0.2, this.drawEnd - this.drawStart), 0, 1), flash: this.muzzleFlash > 0, kind: this.curW().kind, c4use: this.useHold && this.me.c4 }, this.cam);
+      this.vm.update(dt, { speed, onGround: b.onGround, crouch: b.crouch, yawRate: this.vmYaw(dt), pitchRate: this.vmPitch(dt), drawFrac: clamp((this.nowS - this.drawStart) / Math.max(0.2, this.drawEnd - this.drawStart), 0, 1), flash: this.muzzleFlash > 0, ads: this.ads, kind: this.curW().kind, c4use: this.useHold && this.me.c4 }, this.cam);
       r.render(this.vmScene, this.vmCam);
       this.muzzleFlash = Math.max(0, this.muzzleFlash - dt);
     }

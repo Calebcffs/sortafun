@@ -52,5 +52,12 @@ ok(down && Math.abs(down.y) < 1e-6, "ray down hits the floor");
 // window: you can see through B window at head height, not through the wall beside it
 ok(map.visible(36, 1.8, 29.5, 42, 1.8, 29.5), "see through B window");
 ok(!map.visible(36, 1.8, 24, 42, 1.8, 24), "wall beside B window blocks");
+// 4. shooting rules: the first shot standing still is dead on, moving is a little loose, the AWP has one zoom level
+import { WEAPONS, spreadDeg } from "../funstrike/weapons.js";
+for (const id of ["ak47", "m4a4", "usp", "glock", "deagle", "mp9"]) ok(spreadDeg(WEAPONS[id], 0, true, false, 0, false) === 0, id + ": first shot standing still has no spread");
+ok(spreadDeg(WEAPONS.ak47, 1, true, false, 0, false) > 0 && spreadDeg(WEAPONS.ak47, 1, true, false, 0, false) < 0.8, "moving adds only a tiny bit (" + spreadDeg(WEAPONS.ak47, 1, true, false, 0, false).toFixed(2) + " deg)");
+ok(spreadDeg(WEAPONS.ak47, 0, true, false, 8, false) > 0, "a long spray widens a little");
+ok(spreadDeg(WEAPONS.ak47, 0, true, false, 8, false, 1) < spreadDeg(WEAPONS.ak47, 0, true, false, 8, false, 0), "aiming down sights tightens it");
+ok(WEAPONS.awp.scope.length === 1, "AWP has a single zoom level");
 console.log(fails ? fails + " FAILED" : "all passed");
 process.exit(fails ? 1 : 0);

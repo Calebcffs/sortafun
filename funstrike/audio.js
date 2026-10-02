@@ -9,6 +9,19 @@
 
 const BASE = "funstrike/assets/snd/";
 
+// per sound: shelf = dB of bass boost on the sample, thump = [start Hz, end Hz, seconds, gain] sub layer,
+// wet = how much goes to the room reverb
+const PRESET = {
+  ak: { shelf: 9, thump: [105, 38, 0.24, 1.0], wet: 0.3 }, rifle: { shelf: 8, thump: [100, 40, 0.22, 0.85], wet: 0.28 }, rifle_sil: { shelf: 6, thump: [90, 45, 0.12, 0.4], wet: 0.12 },
+  pistol: { shelf: 8, thump: [120, 50, 0.15, 0.6], wet: 0.22 }, pistol_sil: { shelf: 6, thump: [100, 50, 0.1, 0.3], wet: 0.1 }, deagle: { shelf: 9, thump: [95, 38, 0.24, 0.95], wet: 0.3 },
+  smg: { shelf: 7, thump: [110, 50, 0.12, 0.5], wet: 0.2 }, shotgun: { shelf: 9, thump: [85, 34, 0.3, 1.1], wet: 0.34 }, shotgun_auto: { shelf: 9, thump: [90, 36, 0.26, 1.0], wet: 0.3 },
+  sniper: { shelf: 9, thump: [80, 30, 0.42, 1.15], wet: 0.4 }, awp: { shelf: 10, thump: [72, 26, 0.55, 1.35], wet: 0.45 }, sniper_auto: { shelf: 9, thump: [85, 32, 0.3, 1.0], wet: 0.34 },
+  explode: { shelf: 8, thump: [70, 24, 0.9, 1.5], wet: 0.5 }, bomb_explode: { shelf: 10, thump: [60, 20, 1.6, 1.8], wet: 0.6 }, flash: { shelf: 3, thump: [90, 40, 0.2, 0.5], wet: 0.4 },
+  step_sand: { shelf: 7, thump: [75, 45, 0.09, 0.4] }, step_stone: { shelf: 7, thump: [85, 50, 0.08, 0.38] }, step_gravel: { shelf: 7, thump: [80, 48, 0.09, 0.38] },
+  land: { shelf: 8, thump: [70, 38, 0.16, 0.7] }, hit_flesh: { shelf: 6, thump: [110, 55, 0.08, 0.3] }, hit_head: { shelf: 3 }, knife_hit: { shelf: 5, thump: [100, 55, 0.07, 0.25] },
+  nade_bounce: { shelf: 6, thump: [120, 60, 0.07, 0.25] }, plant: { shelf: 3 }, smoke: { shelf: 6, wet: 0.3 },
+};
+
 export class GameAudio {
   constructor() {
     this.ctx = null; this.buffers = {}; this.manifest = {}; this.master = null;
@@ -26,7 +39,16 @@ export class GameAudio {
     this.master = this.ctx.createGain(); this.master.gain.value = this.vol;
     this.comp = this.ctx.createDynamicsCompressor();
     this.comp.threshold.value = -14; this.comp.ratio.value = 4; this.comp.attack.value = 0.003; this.comp.release.value = 0.2;
-    this.master.connect(this.comp); this.comp.connect(this.ctx.destination);
+    // a little warmth on everything, then the compressor
+    this.warm = this.ctx.createBiquadFilter(); this.warm.type = "lowshelf"; this.warm.frequency.value = 130; this.warm.gain.value = 4.5;
+    this.master.connect(this.warm); this.warm.connect(this.comp); this.comp.connect(this.ctx.destination);
+    // one shared room reverb (a generated impulse: noise that dies away), used as a send by shots and blasts
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 1.6), imp = this.ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) { const d = imp.getChannelData(ch); for (let i = 0; i < len; i++) { const t = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.6) * (i < sr * 0.012 ? i / (sr * 0.012) : 1); } }
+    this.verb = this.ctx.createConvolver(); this.verb.buffer = imp;
+    this.verbIn = this.ctx.createGain(); this.verbIn.gain.value = 1;
+    const vf = this.ctx.createBiquadFilter(); vf.type = "lowpass"; vf.frequency.value = 3800;
+    this.verbIn.connect(vf); vf.connect(this.verb); this.verb.connect(this.master);
     // a second of white noise for the synthesised sounds
     const n = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate), d = n.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -80,11 +102,16 @@ export class GameAudio {
       p.connect(this.master); out = p; node = p;
     }
     const g = ctx.createGain(); g.gain.value = vol; g.connect(out);
+    const pre = PRESET[name] || {};
+    if (pre.wet && o.wet !== 0) { const send = ctx.createGain(); send.gain.value = pre.wet * vol; g.connect(send); send.connect(this.verbIn); }
+    if (pre.thump) this.thump(out, pre.thump[0], pre.thump[1], pre.thump[2], pre.thump[3] * vol);
     this.voices++;
     const done = () => { this.voices = Math.max(0, this.voices - 1); try { g.disconnect(); if (node) node.disconnect(); } catch (e) { /* gone */ } };
     if (buf) {
       const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = (o.rate || 1) * (1 + (Math.random() - 0.5) * 0.06);
-      s.connect(g); s.start(); s.onended = done;
+      if (pre.shelf) { const sh = ctx.createBiquadFilter(); sh.type = "lowshelf"; sh.frequency.value = 190; sh.gain.value = pre.shelf; s.connect(sh); sh.connect(g); }
+      else s.connect(g);
+      s.start(); s.onended = done;
       return s;
     }
     if (o.out === false) { done(); return null; }
@@ -121,6 +148,62 @@ export class GameAudio {
     } catch (e) { /* no voices here */ }
   }
 
+  // a sub bass drop: what makes a gun or a footstep feel heavy
+  thump(out, f0, f1, dur, gain) {
+    const ctx = this.ctx, t0 = ctx.currentTime;
+    const osc = ctx.createOscillator(); osc.type = "sine";
+    osc.frequency.setValueAtTime(f0, t0); osc.frequency.exponentialRampToValueAtTime(Math.max(18, f1), t0 + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(Math.max(0.001, gain), t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(out); osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+
+  // The working of a gun, made from scratch: little metal clacks, bolts, mags and slides, each a burst of
+  // filtered noise + a short ring + a low knock. name picks a sequence of [seconds, part]; scale stretches it.
+  foley(name, o = {}) {
+    if (!this.ctx || this.ctx.state !== "running") return;
+    const seq = FOLEY[name]; if (!seq) return;
+    const ctx = this.ctx, t0 = ctx.currentTime, sc = o.scale || 1, vol = o.vol === undefined ? 1 : o.vol;
+    let out = this.master, panner = null;
+    if (o.x !== undefined) {
+      panner = ctx.createPanner(); panner.panningModel = "HRTF"; panner.distanceModel = "inverse"; panner.refDistance = 4; panner.rolloffFactor = 1.4;
+      if (panner.positionX) { panner.positionX.value = o.x; panner.positionY.value = o.y || 0; panner.positionZ.value = o.z; } else panner.setPosition(o.x, o.y || 0, o.z);
+      panner.connect(this.master); out = panner;
+    }
+    const bus = ctx.createGain(); bus.gain.value = vol; bus.connect(out);
+    for (const [t, part] of seq) this.part(bus, t0 + t * sc, part);
+    setTimeout(() => { try { bus.disconnect(); if (panner) panner.disconnect(); } catch (e) { /* gone */ } }, (seq[seq.length - 1][0] * sc + 1) * 1000);
+  }
+
+  part(out, at, kind) {
+    const ctx = this.ctx;
+    const noise = (dur, f, q, gain, type = "bandpass") => {
+      const s = ctx.createBufferSource(); s.buffer = this.noise; s.loop = true;
+      const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      s.connect(fl); fl.connect(g); g.connect(out); s.start(at, Math.random()); s.stop(at + dur + 0.05);
+    };
+    const ring = (f, dur, gain) => { const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f; const g = ctx.createGain(); g.gain.setValueAtTime(gain, at); g.gain.exponentialRampToValueAtTime(0.0001, at + dur); o.connect(g); g.connect(out); o.start(at); o.stop(at + dur + 0.02); };
+    const knock = (f0, f1, dur, gain) => { const o = ctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f1, at + dur); const g = ctx.createGain(); g.gain.setValueAtTime(gain, at); g.gain.exponentialRampToValueAtTime(0.0001, at + dur); o.connect(g); g.connect(out); o.start(at); o.stop(at + dur + 0.02); };
+    switch (kind) {
+      case "clack": noise(0.03, 3200, 1.2, 0.55); ring(1900, 0.09, 0.12); ring(2750, 0.07, 0.07); knock(150, 70, 0.07, 0.5); break;
+      case "safety": noise(0.018, 4200, 2, 0.4); ring(2300, 0.04, 0.08); knock(180, 110, 0.03, 0.2); break;
+      case "magout": noise(0.05, 1400, 0.8, 0.5); knock(130, 55, 0.12, 0.8); ring(900, 0.1, 0.07); noise(0.09, 600, 0.6, 0.2, "lowpass"); break;
+      case "magin": noise(0.03, 2600, 1, 0.6); knock(160, 60, 0.1, 0.9); ring(1500, 0.08, 0.1); ring(2200, 0.06, 0.06); break;
+      case "rack": noise(0.07, 2000, 0.6, 0.5, "highpass"); noise(0.025, 3000, 1.2, 0.6); knock(140, 60, 0.08, 0.6); ring(1700, 0.1, 0.1); break;
+      case "slide": noise(0.05, 2400, 0.6, 0.35, "highpass"); noise(0.02, 3600, 1.4, 0.5); knock(170, 80, 0.06, 0.4); ring(2100, 0.06, 0.08); break;
+      case "boltup": noise(0.03, 1800, 1.2, 0.45); knock(140, 80, 0.06, 0.4); ring(1300, 0.06, 0.07); break;
+      case "boltback": noise(0.06, 2200, 0.8, 0.4, "highpass"); noise(0.02, 3000, 1.4, 0.5); knock(150, 70, 0.07, 0.5); break;
+      case "boltfwd": noise(0.05, 1900, 0.8, 0.4, "highpass"); noise(0.03, 2800, 1.2, 0.55); knock(130, 60, 0.08, 0.6); break;
+      case "boltdown": noise(0.03, 2400, 1.4, 0.55); knock(150, 65, 0.09, 0.75); ring(1800, 0.08, 0.1); break;
+      case "strap": noise(0.16, 700, 0.5, 0.18, "bandpass"); noise(0.1, 2400, 0.5, 0.08, "highpass"); break;
+      case "shing": noise(0.22, 5200, 4, 0.12, "highpass"); ring(4300, 0.2, 0.05); break;
+      case "pin": noise(0.03, 3400, 2, 0.4); ring(3000, 0.12, 0.1); knock(200, 100, 0.04, 0.2); break;
+      case "shell": noise(0.03, 2000, 1.2, 0.5); knock(120, 60, 0.07, 0.5); ring(1200, 0.07, 0.08); break;
+      case "pump": noise(0.05, 1600, 0.8, 0.45, "highpass"); knock(110, 50, 0.1, 0.8); ring(1000, 0.1, 0.1); break;
+      default: noise(0.03, 3000, 1, 0.4);
+    }
+  }
+
   // ---- synthesised fallbacks ------------------------------------------------
   synth(name, out, o) {
     const ctx = this.ctx, t0 = ctx.currentTime;
@@ -137,6 +220,7 @@ export class GameAudio {
       osc.connect(g); g.connect(out); osc.start(t0 + dly); osc.stop(t0 + dly + dur + 0.02);
     };
     const n = name;
+    if (PRESET[n] && PRESET[n].thump) this.thump(out, PRESET[n].thump[0], PRESET[n].thump[1], PRESET[n].thump[2], PRESET[n].thump[3] * 0.8);
     if (/^(ak|rifle|m4|galil|famas)/.test(n)) { burst(0.22, 5000, 400, 0.7, 0.9); burst(0.12, 900, 90, 0.5, 0.8); tone(110, 0.12, 0.5, "sine", 0, 50); return 0.3; }
     if (/^(pistol|deagle|usp|glock|p250)/.test(n)) { burst(0.16, 6000, 600, 0.7, 0.8); tone(150, 0.1, 0.4, "sine", 0, 60); return 0.25; }
     if (/^(smg|mac|mp|p90)/.test(n)) { burst(0.12, 7000, 800, 0.7, 0.7); return 0.18; }
@@ -165,3 +249,21 @@ export class GameAudio {
     return 0.15;
   }
 }
+
+// sequences of [seconds from the start, part] (see GameAudio.part)
+const FOLEY = {
+  reload_rifle: [[0.3, "magout"], [1.5, "magin"], [2.2, "rack"]],
+  reload_pistol: [[0.25, "magout"], [1.1, "magin"], [1.55, "slide"]],
+  reload_smg: [[0.3, "magout"], [1.25, "magin"], [1.85, "rack"]],
+  reload_shell: [[0.1, "shell"]],
+  draw_rifle: [[0.08, "strap"], [0.4, "clack"], [0.72, "safety"]],
+  draw_smg: [[0.08, "strap"], [0.4, "clack"], [0.7, "safety"]],
+  draw_pistol: [[0.15, "slide"], [0.4, "safety"]],
+  draw_shotgun: [[0.1, "strap"], [0.45, "pump"]],
+  draw_sniper: [[0.15, "strap"], [0.5, "clack"], [0.85, "boltup"], [1.05, "boltdown"]],
+  draw_knife: [[0.08, "shing"]],
+  draw_grenade: [[0.2, "pin"]],
+  bolt: [[0.02, "boltup"], [0.26, "boltback"], [0.52, "boltfwd"], [0.72, "boltdown"]],
+  pump: [[0.08, "pump"]],
+  rack: [[0.02, "rack"]],
+};

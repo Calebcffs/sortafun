@@ -33,8 +33,8 @@ const raw = {
   m4a1s:  { name: "M4A1-S", kind: "rifle", team: "CT", price: 2900, kill: 300, dmg: 38, ap: 0.7, range: 0.97, cycle: 0.09, mag: 20, reserve: 40, speed: 225, reload: 3.07, draw: 1.0, auto: true, recoil: { climb: 9.5, tau: 9, sway: 1.8, omega: 0.9 }, inacc: { stand: 0.25, move: 5.5, air: 7, crouch: 0.16 }, snd: "rifle_sil", icon: "m4a1s", silenced: true },
   // ---- snipers
   ssg08:  { name: "SSG 08", kind: "sniper", price: 1700, kill: 300, dmg: 88, ap: 0.85, range: 0.99, cycle: 1.25, mag: 10, reserve: 90, speed: 230, reload: 3.7, draw: 1.1, auto: false, bolt: true, recoil: { climb: 2, tau: 2, sway: 0.2, omega: 1 }, inacc: { stand: 0.1, move: 7.5, air: 9, crouch: 0.05 }, scope: [40], snd: "sniper", icon: "ssg08" },
-  awp:    { name: "AWP", kind: "sniper", price: 4750, kill: 100, dmg: 115, ap: 0.975, range: 0.99, cycle: 1.455, mag: 10, reserve: 30, speed: 200, reload: 3.65, draw: 1.45, auto: false, bolt: true, recoil: { climb: 2.5, tau: 2, sway: 0.2, omega: 1 }, inacc: { stand: 0.05, move: 9, air: 11, crouch: 0.03 }, scope: [40, 10], snd: "awp", icon: "awp" },
-  scar20: { name: "SCAR-20", kind: "sniper", team: "CT", price: 5000, kill: 300, dmg: 80, ap: 0.825, range: 0.98, cycle: 0.25, mag: 20, reserve: 90, speed: 215, reload: 3.1, draw: 1.1, auto: true, recoil: { climb: 5, tau: 6, sway: 1, omega: 1 }, inacc: { stand: 0.15, move: 7.5, air: 9, crouch: 0.1 }, scope: [40, 15], snd: "sniper_auto", icon: "scar20" },
+  awp:    { name: "AWP", kind: "sniper", price: 4750, kill: 100, dmg: 115, ap: 0.975, range: 0.99, cycle: 1.455, mag: 10, reserve: 30, speed: 200, reload: 3.65, draw: 1.45, auto: false, bolt: true, recoil: { climb: 2.5, tau: 2, sway: 0.2, omega: 1 }, inacc: { stand: 0.05, move: 9, air: 11, crouch: 0.03 }, scope: [25], snd: "awp", icon: "awp" },
+  scar20: { name: "SCAR-20", kind: "sniper", team: "CT", price: 5000, kill: 300, dmg: 80, ap: 0.825, range: 0.98, cycle: 0.25, mag: 20, reserve: 90, speed: 215, reload: 3.1, draw: 1.1, auto: true, recoil: { climb: 5, tau: 6, sway: 1, omega: 1 }, inacc: { stand: 0.15, move: 7.5, air: 9, crouch: 0.1 }, scope: [35], snd: "sniper_auto", icon: "scar20" },
   // ---- shotguns
   nova:   { name: "Nova", kind: "shotgun", price: 1050, kill: 900, dmg: 26, pellets: 9, ap: 0.5, range: 0.7, cycle: 0.88, mag: 8, reserve: 32, speed: 220, reload: 0.5, draw: 1.0, auto: false, shell: true, recoil: { climb: 3, tau: 2, sway: 0.4, omega: 1 }, inacc: { stand: 2.6, move: 3.2, air: 4.5, crouch: 2.4 }, snd: "shotgun", icon: "nova" },
   xm1014: { name: "XM1014", kind: "shotgun", price: 2000, kill: 900, dmg: 20, pellets: 6, ap: 0.8, range: 0.7, cycle: 0.35, mag: 7, reserve: 32, speed: 215, reload: 0.5, draw: 1.0, auto: true, shell: true, recoil: { climb: 4, tau: 2, sway: 0.6, omega: 1 }, inacc: { stand: 2.8, move: 3.4, air: 4.8, crouch: 2.5 }, snd: "shotgun_auto", icon: "xm1014" },
@@ -91,24 +91,32 @@ export function bulletDamage(w, hitbox, dist, victim) {
   return { health: Math.max(1, Math.round(h)), armor: Math.round(a) };
 }
 
-// view kick of shot number n (0 based) in a spray: returns [pitchUp, yawRight] in degrees, accumulated
+// view kick of shot number n (0 based) in a spray: returns [pitchUp, yawRight] in degrees, accumulated.
+// Kept gentle on purpose: the first shots barely move the view and the climb tops out low.
 export function sprayAt(w, n) {
   const r = w.recoil;
   if (!r) return [0, 0];
-  const pitch = r.climb * (1 - Math.exp(-(n + 1) / r.tau));
+  const pitch = r.climb * 0.62 * (1 - Math.exp(-(n + 1) / r.tau));
   const ramp = 1 - Math.exp(-n / 7);
-  const yaw = r.sway * Math.sin(n * 0.55 * r.omega + 0.6) * ramp + r.sway * 0.25 * Math.sin(n * 1.3);
+  const yaw = 0.6 * (r.sway * Math.sin(n * 0.55 * r.omega + 0.6) * ramp + r.sway * 0.25 * Math.sin(n * 1.3));
   return [pitch, yaw];
 }
 
-// cone half-angle in degrees for the next shot
-export function spreadDeg(w, speedFrac, onGround, crouching, shotsInSpray, scoped) {
+// cone half-angle in degrees for a shot. `n` is how many shots of this spray came before it.
+// Standing still on the ground, the first shot is dead on (0). Moving adds a tiny bit, jumping more,
+// and a long spray widens it slowly. Aiming down sights and crouching tighten it. Shotguns keep
+// their pellet cone. Unscoped snipers are loose until you scope.
+export function spreadDeg(w, speedFrac, onGround, crouching, n, scoped, ads = 0) {
   const a = w.inacc;
   if (!a) return 0;
-  let s = crouching ? a.crouch : a.stand;
-  if (!onGround) s += a.air;
-  else s += a.move * Math.min(1, speedFrac) * (crouching ? 0.5 : 1);
-  s += Math.min(shotsInSpray, 12) * 0.03 * (w.kind === "pistol" ? 1.5 : w.kind === "rifle" ? 0.6 : 0.4);
-  if (w.kind === "sniper" && scoped && onGround && speedFrac < 0.2) s *= 0.15;
+  if (w.kind === "shotgun") return a.stand * (1 - 0.35 * ads);
+  const moving = Math.min(1, speedFrac);
+  let s = 0;
+  if (!onGround) s += a.air * 0.35;
+  else if (moving > 0.06) s += a.move * 0.07 * moving;
+  s += Math.min(n, 14) * (w.kind === "pistol" ? 0.045 : w.kind === "smg" ? 0.035 : 0.03);
+  if (crouching) s *= 0.6;
+  s *= 1 - 0.5 * ads;
+  if (w.kind === "sniper" && !scoped) s += 2.2 + moving * 3;
   return s;
 }
