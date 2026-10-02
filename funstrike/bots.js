@@ -296,8 +296,8 @@ export class BotBrain {
     if (!this.goal || Math.hypot(this.goal.x - b.x, this.goal.z - b.z) < 2.5 || now - this.goalAt > 25) {
       const pts = g.map.meta.spawnsDM;
       const s = pick(pts);
-      const hint = rnd() < 0.5 ? pick(this.roamPoints) : [s.x, s.z];
-      this.setGoal({ x: hint[0], z: hint[1] });
+      const hint = rnd() < 0.5 ? pick(this.roamPoints) : [s.x, s.z, s.y];
+      this.setGoal({ x: hint[0], z: hint[1], y: hint[2] });
     }
     return this.followPath(dt);
   }
@@ -405,7 +405,7 @@ export class BotBrain {
     if (!this.goal) return null;
     if ((!this.path.length || this.pi >= this.path.length) && now >= this.repathAt) {
       this.repathAt = now + 0.8 + rnd() * 0.4;
-      const p = findPath(g.map, b.x, b.z, this.goal.x, this.goal.z);
+      const p = g.map.mesh ? g.map.findPath(b.x, b.y, b.z, this.goal.x, this.goal.z, this.goal.y) : findPath(g.map, b.x, b.z, this.goal.x, this.goal.z);
       this.path = p || []; this.pi = 0;
       if (!p) { this.goal = null; return null; }
     }
@@ -421,6 +421,7 @@ export class BotBrain {
   clearLine(ax, az, bx, bz) {
     const m = this.g.map, dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz);
     if (l > 7) return false;
+    if (m.mesh) return m.clearLine(ax, this.b.y, az, bx, bz);
     const n = Math.ceil(l / 0.4);
     const y0 = m.groundAt(ax, az);
     for (let i = 1; i <= n; i++) {

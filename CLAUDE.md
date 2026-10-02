@@ -931,7 +931,7 @@ rules deploy.
 ### Fun Strike (`funstrike.html` + `funstrike/`, 2026-10-02, v0.9)
 
 Caleb asked for "a simple Counter-Strike type game, as close to CSGO as possible", called **Fun Strike**: Dust2
-only (v0.9.2 added nine generated maps, v0.9.3 removed them again, see below), Defuse + Team Deathmatch + Deathmatch (FFA), multiplayer with a server list (ping, players, bots, map),
+only (v0.9.2 added nine generated maps, v0.9.3 removed them, v0.9.4 swapped Dust II for a real downloaded map, see below), Defuse + Team Deathmatch + Deathmatch (FFA), multiplayer with a server list (ping, players, bots, map),
 create-your-own-server, bots, join-mid-round = spectate until next round, free assets, good looking but smooth.
 Honest scope notes: the map is **our own rebuild of Dust II's layout** (Valve's geometry/art is not free to use),
 the soldier is Quaternius' SWAT recoloured per team, guns are Pichuliru's CC0 set, sounds are Freesound CC0.
@@ -1017,7 +1017,7 @@ carrier on the minimap; sounds untested by ear (picked by onset detection); only
   longer sends `sk`), sun held at 10 degrees so shadows are about 5.7x as long as what casts them, shadow light 110m back.
   Roofed maps set `map.meta.ambient` (>1) for extra fill. New materials on the end of `MATERIALS`: redbrick asphalt grass snow
   plate rock green; containers take `mat` cred / cgreen / corange / blue.
-- **Maps**: `maps.js` is the registry (`MAPS`, `buildMap(id)`): Dust II plus nine hand written TDM / DM maps (Cargo Hall,
+- **Maps** (SUPERSEDED, all of it was deleted: see v0.9.4 for the real map and what replaced `buildMap`): `maps.js` was the registry (`MAPS`, `buildMap(id)`): Dust II plus nine hand written TDM / DM maps (Cargo Hall,
   Harbor, Canyon, Bunker, Village, The Pit, Foundry, Ruins, Station), each ~45-70m across with its own materials and a mix of
   roofed / open. Only Dust II has bomb sites, so only it offers Defuse. The server row's `map` id picks the map on both ends
   (`main.js getMap`, `client.setMap` rebuilds the world), the create screen filters modes by map, PROTOCOL is 2 now.
@@ -1075,6 +1075,39 @@ carrier on the minimap; sounds untested by ear (picked by onset detection); only
   Xonotic's repo has only `.map` sources; itch.io packs are mostly Unity-only or forbid redistribution; three.js's
   `collision-world.glb` is a tiny plain test level. A mesh map still needs a mesh -> grid rasteriser (floor height per cell, wall
   where something blocks 0.5-1.8m up) because rays, movement and A* are all grid based.
+
+**v0.9.4 (Caleb: kill cam, deadlier bullets, the real map, faster):**
+- **The map is a real model now** (`funstrike/assets/maps/cs.glb`, Caleb's own `counter_strike_map.glb` in the repo folder,
+  Sketchfab "Counter Strike Map" by CHANO, CC BY 4.0: **credit it**, done in the Credits screen and `assets/CREDITS.md`; it
+  looks like a rip of a Valve map, which Caleb knows and chose; the source file is git-ignored). All the old maps are gone,
+  `dust2.js` too; `map.js` (GridMap, MapBuilder, MATERIALS) stays for any future grid map. The model lay on its side (up = -X),
+  `tools/funstrike/prepare-map.mjs` stands it up, scales it x45 (the common floor-to-ceiling gap 0.072 = 3.25m; 112 x 105 x 17.5 m),
+  merges per material, shrinks the textures to 256px WebP, meshopt-compresses it (3.9MB -> 0.95MB) and recolours the one
+  untextured material. Its node transforms are NOT identity after meshopt's quantisation: always apply `matrixWorld`.
+- **Collision is the triangles themselves** (`meshmap.js` `MeshMap`, same questions as a GridMap, `map.mesh` is true):
+  `groundAt(x, z, lim)` highest up-facing floor <= lim, `ceilAt(x, z, y)`, `pushOut` (movement.js calls it instead of the grid
+  version: walls are any triangle whose height span overlaps feet+STEP..head, floors / roofs only where they are high enough to
+  get in the way), `raycast` / `visible` (2m hash on x/z + DDA, Moller-Trumbore, two sided), all DOM-free. Movement is the same
+  `stepBody`, so stairs, ramps up to ~45 degrees and multiple floors just work. **Bots**: `buildNav()` samples a node per metre
+  on every floor with head room, links neighbours only when the walk is possible both ways (`walkable()`), keeps the biggest
+  component (2600 of 4664 nodes), `findPath(sx, sy, sz, gx, gz, gy)` is A*; `pickSpawns()` takes the two ends of the graph
+  (two BFS) as the teams' ends and farthest point sampling for deathmatch. Built on every client (radar and the dead-body slide
+  use it) in ~0.3s inside `maploader.js`, which also gives the three.js scene (`map.visual`). Only TDM and DM (no bomb sites).
+  Checked by `tools/funstrike-mapcheck.mjs` (16 real bodies walk real paths) and `funstrike-sim.mjs` (bots fight), both need
+  glTF Transform in the current folder (`tools/funstrike/node-map.mjs`).
+- **Kill cam** (`killcam.js`): `record()` keeps 14s of everyone's pose, aim, weapon and alive flag at 30Hz plus the shots; when
+  another player kills you `start()` replays 5s before and 2s after from the killer's eyes with the killer's gun (kick, flash,
+  sound on their recorded shots), your own soldier thrown back by the killing shot, the live soldiers hidden, letterbox bars,
+  "KILL CAM" + the killer's name and weapon, the HUD hidden; click / space skips. The server holds a human killed by a player
+  for `KILLCAM_RESPAWN` 7.2s (sim.js) so you are not running around while watching; a spawn event stops it.
+- **Damage** is a table now (`KILL` in weapons.js): [health damage to an unarmoured chest, share through a vest, share of a headshot
+  through a helmet] per gun, head x3, legs x0.6. No vest: rifle 1 body or head shot, pistol / SMG 2 body or 1 head. Vest: pistol
+  6 body shots, rifle 3 (the vest wears out as it soaks). Helmet: survives one pistol headshot only (`funstrike-test.mjs` checks all
+  of this). Shotgun spread ~4.6-5 degrees; scopes AWP 13 / SSG 22 / SCAR 18 (horizontal degrees at 4:3), mouse speed unchanged.
+- **Speed**: soldiers out of view are not animated or drawn (frustum test on last frame's camera), far ones animate every 2nd / 4th
+  frame without arm IK, the radar redraws every other frame, quality "low" = Lambert + no shadows + adaptive resolution.
+  Measured on the 10-soldier map: updateEntities 2.0ms -> 0.5ms, sim tick 0.5ms. (Software GL in headless Chrome can only tell
+  you JS and draw-call costs, not GPU speed.) The map is 100 draw calls (99 textures that wrap, so no atlas).
 
 ### Sound (`sfx.js`)
 

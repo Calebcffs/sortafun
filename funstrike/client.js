@@ -10,12 +10,13 @@
 
 import * as THREE from "three";
 import { World } from "./world.js";
-import { MATERIALS } from "./dust2.js";
+import { MATERIALS } from "./map.js";
 import { Soldier, makeGun, makeC4, gunMaterial } from "./models.js";
 import { FX } from "./fx.js";
 import { newBody, stepBody, eyeHeight, lookDir, bodyHeight, STAND_H, CROUCH_H } from "./movement.js";
 import { rayPlayer, hitboxes } from "./hitbox.js";
 import { Voice } from "./voice.js";
+import { KillCam } from "./killcam.js";
 import { WEAPONS, WEAPON_IDS, widOf, byWid, spreadDeg, sprayAt, GEAR } from "./weapons.js";
 import { MODES, TEAM } from "./sim.js";
 import { Viewmodel } from "./viewmodel.js";
@@ -49,6 +50,7 @@ export class Client {
     this.shots = []; this.pendingThrow = null; this.shotCounter = 0; this.muzzleFlash = 0;
     this.footT = 0; this.beepT = 0; this.firePlay = 0; this.lastGround = true;
     this.prevPos = { x: 0, y: 0, z: 0 };
+    this.kc = new KillCam(this);
     this.init();
   }
 
@@ -69,7 +71,7 @@ export class Client {
     this.cam.rotation.order = "YXZ";
     this.vm = new Viewmodel(r);
     this.vmScene = this.vm.scene; this.vmCam = this.vm.camera;
-    this.radarBase = this.makeRadarBase();
+    this.radarBase = this.makeRadarBase(); this.hud.mapName = this.map.name;
     this.bombMesh = makeC4(); this.bombMesh.visible = false; this.scene.add(this.bombMesh);
     this.bombLight = new THREE.PointLight(0xff2200, 0, 6, 2); this.bombLight.position.set(0, 0.3, 0); this.bombMesh.add(this.bombLight);
     this.resize();
@@ -80,7 +82,7 @@ export class Client {
   // textures come from the browser cache, so this is quick)
   setMap(map) {
     if (!map || map === this.map) return;
-    this.map = map;
+    this.map = map; this.hud.mapName = map.name;
     const old = this.world;
     this.scene.remove(old.group);
     old.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
@@ -109,6 +111,13 @@ export class Client {
 
   makeRadarBase() {
     const m = this.map, S = 4, c = document.createElement("canvas");
+    if (m.mesh) { // a model map: the streets and floors you can walk on, lighter the higher they are
+      c.width = m.w * S; c.height = m.d * S;
+      const g = c.getContext("2d"), hi = Math.max(1, m.bounds.y1);
+      m.nodes.forEach((n, i) => { if (!m.inMain(i)) return; const lv = clamp(n.y / hi, 0, 1); g.fillStyle = `rgb(${Math.round(176 + 60 * lv)},${Math.round(160 + 60 * lv)},${Math.round(118 + 70 * lv)})`; g.fillRect(n.cx * S, n.cz * S, S, S); });
+      c.scale = S;
+      return c;
+    }
     c.width = m.w * S; c.height = m.d * S;
     const g = c.getContext("2d"), pal = { sand: "#c8b48a", plaster: "#b9a47c", stone: "#a89570", brick: "#a89570", concrete: "#8a8a86", tile: "#cdbb94", dirt: "#b49c70", wood: "#8a6a40", metal: "#667", plank: "#8a6a40", cracked: "#b39c74" };
     for (let z = 0; z < m.d; z++) for (let x = 0; x < m.w; x++) {
@@ -357,6 +366,7 @@ export class Client {
         if (e.id === me) {
           const b = this.body; b.x = e.x; b.y = e.y; b.z = e.z; b.vx = b.vy = b.vz = 0; b.yaw = e.yaw; b.pitch = 0; b.crouch = 0; b.crouching = false; b.onGround = true;
           this.look.yaw = e.yaw; this.look.pitch = 0; this.punch = [0, 0]; this.punchT = [0, 0];
+          if (this.kc.active) this.kc.stop();
           this.me.alive = true; this.wasAlive = true; this.hud.dead(""); this.specTarget = 0; this.hud.clearBanner();
           this.resetLoadout();
           this.audio.ui("draw", 0.5);
@@ -388,7 +398,7 @@ export class Client {
         const d = new THREE.Vector3(end[0] - mz.x, end[1] - mz.y, end[2] - mz.z); const len = d.length() || 1; d.divideScalar(len);
         if (len > 1) F.muzzle([mz.x, mz.y, mz.z], [d.x, d.y, d.z], 0.45, !!w.silenced);
         else { const ld = lookDir(r.pos.yaw, r.pos.pitch); F.muzzle([mz.x, mz.y, mz.z], ld, 0.45, !!w.silenced); }
-        r.soldier.shoot = 1;
+        r.soldier.shoot = 1; this.kc.shot(e.id, e.w);
         // where it landed
         if (e.h) {
           F.impact(end, [-d.x, 0.2, -d.z], "flesh");
@@ -421,7 +431,7 @@ export class Client {
         const wname = byWid(e.w) ? byWid(e.w).icon || byWid(e.w).id : "knife";
         const ta = teamOf(e.a), tv = teamOf(e.v);
         hud.killfeed({ a: e.a && e.a !== e.v ? nameOf(e.a) : "", v: nameOf(e.v), wname, hs: !!e.hs, ta: ta, tv: tv, me: e.a === me, died: e.v === me });
-        if (e.v === me) { this.me.alive = false; this.deathAt = this.nowS; this.lastKillerId = e.a; this.killedBy = e.a && e.a !== me ? nameOf(e.a) : ""; this.scoped = 0; this.reloadEnd = 0; this.unlockForDeath(); }
+        if (e.v === me) { this.me.alive = false; this.deathAt = this.nowS; this.lastKillerId = e.a; this.killedBy = e.a && e.a !== me ? nameOf(e.a) : ""; this.scoped = 0; this.reloadEnd = 0; this.unlockForDeath(); this.kc.start(e.a, e.hs, WEAPON_IDS[e.w]); }
         else if (v) { this.killThrow(v, e); v.alive = false; const p = v.pos; if (e.hs) A.play("hit_head", { x: p.x, y: p.y + 1.6, z: p.z, ref: 6 }); }
         if (e.a === me && e.v !== me) { hud.hitMarker(!!e.hs, true); A.ui("ding", 0.7); }
         break;
@@ -674,7 +684,7 @@ export class Client {
       }
     }
     void impactKind; void hitNorm;
-    this.audio.gun(w.id, { who: "me" });
+    this.audio.gun(w.id, { who: "me" }); this.kc.shot(this.myId, widOf(w.id));
     this.muzzleFlash = Math.min(0.05, Math.max(0.025, (w.cycle || 0.1) * 0.5)); // always at least one drawn frame, never a constant glow
     const mz = this.vm.muzzleWorld(this.cam);
     if (mz) { const dir = lookDir(yaw, pitch); this.fx.muzzle([mz.x, mz.y, mz.z], dir, 0.5, !!w.silenced); }
@@ -839,6 +849,7 @@ export class Client {
     this.updateTimers(dt);
     this.updateInput(dt);
     this.updateRemotes();
+    this.kc.record();
     this.updateEntities(dt);
     this.updateCamera(dt);
     this.updateHud(dt);
@@ -953,6 +964,7 @@ export class Client {
 
   updateSpectateInput(dt) {
     const K = this.keys;
+    if (this.kc.active) { if (this.pressed.has("Mouse0") || this.pressed.has("Space")) this.kc.skip = true; return; } // click or space skips the kill cam
     if (this.pressed.has("Mouse0")) this.cycleSpectate(1);
     if (this.pressed.has("Mouse2")) this.cycleSpectate(-1);
     const t = this.remote.get(this.specTarget);
@@ -996,10 +1008,15 @@ export class Client {
 
   updateEntities(dt) {
     const camPos = this.cam.position;
+    // soldiers you cannot see are neither animated nor drawn (last frame's camera is close enough)
+    const fr = (this._fr = this._fr || new THREE.Frustum()), pm = (this._pm = this._pm || new THREE.Matrix4()), sph = (this._sph = this._sph || new THREE.Sphere());
+    pm.multiplyMatrices(this.cam.projectionMatrix, this.cam.matrixWorldInverse); fr.setFromProjectionMatrix(pm);
     for (const r of this.remote.values()) {
       const s = r.soldier, ro = this.roster.get(r.id);
       if (!r.snaps.length) continue;
-      s.root.visible = !(this.specTarget === r.id && !this.me.alive && !this.freeFollow3p);
+      sph.center.set(r.pos.x, r.pos.y + 1, r.pos.z); sph.radius = 1.7;
+      const inView = this.kc.active ? false : (r.alive ? (fr.intersectsSphere(sph) || Math.hypot(r.pos.x - camPos.x, r.pos.z - camPos.z) < 3) : true);
+      s.root.visible = inView && !(this.specTarget === r.id && !this.me.alive && !this.freeFollow3p);
       s.root.position.set(r.pos.x, r.pos.y, r.pos.z); s.root.rotation.y = r.pos.yaw;
       // local velocity for the legs
       r.svx = (r.svx || 0) + ((r.vx || 0) - (r.svx || 0)) * Math.min(1, dt * 8); r.svz = (r.svz || 0) + ((r.vz || 0) - (r.svz || 0)) * Math.min(1, dt * 8);
@@ -1007,7 +1024,14 @@ export class Client {
       const sy = Math.sin(r.pos.yaw), cy = Math.cos(r.pos.yaw);
       const vf = -sy * r.svx - cy * r.svz, vs = cy * r.svx - sy * r.svz;
       s.hold(r.alive ? (WEAPON_IDS[r.wid] || "knife") : null);
-      if (r.alive) s.update(dt, vf, vs, r.crouch, !r.onGround, r.pos.pitch);
+      if (r.alive) {
+        if (inView) {
+          // far soldiers animate less often and skip the arm IK: you cannot tell, and ten of them cost real time
+          const dist = Math.hypot(r.pos.x - camPos.x, r.pos.z - camPos.z), every = dist > 55 ? 4 : dist > 28 ? 2 : 1;
+          r.accDt = (r.accDt || 0) + dt; r.lodN = (r.lodN || 0) + 1;
+          if (r.lodN % every === 0 || every === 1) { s.ik = dist < 30; s.update(r.accDt, vf, vs, r.crouch, !r.onGround, r.pos.pitch); r.accDt = 0; }
+        }
+      }
       else {
         s.base = r.pos; if (!s.solidAt) s.solidAt = (x, z) => this.map.isSolid(Math.floor(x), Math.floor(z));
         s.tickDead(dt);
@@ -1090,7 +1114,12 @@ export class Client {
     const cam = this.cam, me = this.me;
     let x, y, z, yaw, pitch, fov = this.currentFov();
     this.viewmodelOn = false;
-    if (me.alive && me.team !== TEAM.SPEC) {
+    if (this.kc.active && this.kc.update(dt) && this.kc.cam) {
+      const k = this.kc.cam; x = k.x; y = k.y; z = k.z; yaw = k.yaw; pitch = k.pitch; fov = this.baseFov();
+      const wid = WEAPON_IDS[k.wid] || "knife";
+      this.vm.setWeapon(wid, this.kc.teamKeyOf(this.kc.killer));
+      this.viewmodelOn = true;
+    } else if (me.alive && me.team !== TEAM.SPEC) {
       const b = this.body;
       x = b.x; y = b.y + eyeHeight(b); z = b.z;
       ({ yaw, pitch } = this.aimAngles());
@@ -1237,7 +1266,7 @@ export class Client {
 
   updateDeathHud() {
     const me = this.me, hud = this.hud;
-    if (this.teamOpen) { hud.dead(""); return; }
+    if (this.teamOpen || this.kc.active) { hud.dead(""); return; }
     if (me.team === TEAM.SPEC) { const t = this.remote.get(this.specTarget); hud.dead(`<b>Spectating</b><span>${t ? t.name : "free camera"}</span><small>click to switch · M to join a team</small>`); return; }
     if (!me.alive) {
       const t = this.remote.get(this.specTarget);
@@ -1269,7 +1298,7 @@ export class Client {
       dots.push({ x: r.pos.x, z: r.pos.z, kind: this.mode.teams ? (r.team === TEAM.CT ? "ct" : "t") : "foe", dead: !r.alive, yaw: r.pos.yaw });
     }
     if (this.bomb && (this.bomb.st === "p" || this.bomb.st === "d")) dots.push({ x: this.bomb.x, z: this.bomb.z, kind: "bomb" });
-    this.hud.drawRadar({ px: cx, pz: cz, yaw, base: this.radarBase, bscale: this.radarBase.scale, dots, sites: this.mode.rounds ? this.map.meta.sites : [] });
+    if ((this.radarN = (this.radarN || 0) + 1) % 2 === 0) this.hud.drawRadar({ px: cx, pz: cz, yaw, base: this.radarBase, bscale: this.radarBase.scale, dots, sites: this.mode.rounds ? this.map.meta.sites : [] }); // 30 times a second is plenty
   }
   visibleToTeam(r) {
     const me = this.me, b = this.body, eyeY = b.y + eyeHeight(b);
@@ -1301,10 +1330,13 @@ export class Client {
     const r = this.renderer;
     r.clear();
     r.render(this.scene, this.cam);
-    if (this.viewmodelOn && this.me.alive) {
+    if (this.viewmodelOn && (this.me.alive || this.kc.active)) {
       r.clearDepth();
-      const b = this.body, speed = Math.hypot(b.vx, b.vz);
-      this.vm.update(dt, { speed, onGround: b.onGround, crouch: b.crouch, yawRate: this.vmYaw(dt), pitchRate: this.vmPitch(dt), drawFrac: clamp((this.nowS - this.drawStart) / Math.max(0.2, this.drawEnd - this.drawStart), 0, 1), flash: this.muzzleFlash > 0, kind: this.curW().kind, c4use: this.useHold && this.me.c4 }, this.cam);
+      const b = this.body, speed = this.kc.active ? this.kc.cam.speed : Math.hypot(b.vx, b.vz);
+      if (this.kc.active) { // the killer's gun, steady, kicking on their shots
+        const kw = WEAPONS[WEAPON_IDS[this.kc.cam.wid]];
+        this.vm.update(dt, { speed, onGround: !this.kc.cam.air, crouch: 0, yawRate: 0, pitchRate: 0, drawFrac: 1, flash: false, kind: kw ? kw.kind : "rifle", c4use: false }, this.cam);
+      } else this.vm.update(dt, { speed, onGround: b.onGround, crouch: b.crouch, yawRate: this.vmYaw(dt), pitchRate: this.vmPitch(dt), drawFrac: clamp((this.nowS - this.drawStart) / Math.max(0.2, this.drawEnd - this.drawStart), 0, 1), flash: this.muzzleFlash > 0, kind: this.curW().kind, c4use: this.useHold && this.me.c4 }, this.cam);
       r.render(this.vmScene, this.vmCam);
       this.muzzleFlash = Math.max(0, this.muzzleFlash - dt);
     }

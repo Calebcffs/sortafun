@@ -34,7 +34,7 @@ export function groundHeight(map, x, y, z, r = RADIUS) {
   const k = r * 0.6;
   for (let i = 0; i < 5; i++) {
     const px = x + (i === 1 ? k : i === 2 ? -k : 0), pz = z + (i === 3 ? k : i === 4 ? -k : 0);
-    const f = map.groundAt(px, pz);
+    const f = map.groundAt(px, pz, lim); // (a model map wants the height limit, a grid map ignores it)
     if (f <= lim && f > best) best = f;
   }
   for (const p of map.props) {
@@ -48,6 +48,7 @@ export function groundHeight(map, x, y, z, r = RADIUS) {
 
 // push the circle (x, z) out of anything solid at this height; returns [x, z, hit]
 function pushOut(map, x, z, r, feet, head) {
+  if (map.mesh) return map.pushOut(x, z, r, feet, head);
   let hit = false;
   for (let iter = 0; iter < 3; iter++) {
     let moved = false;
@@ -95,11 +96,11 @@ function pushOut(map, x, z, r, feet, head) {
 }
 
 // lowest ceiling over the footprint
-function ceilingOver(map, x, z, r) {
+function ceilingOver(map, x, z, r, y = 0) {
   let c = Infinity;
   for (let i = 0; i < 5; i++) {
     const px = x + (i === 1 ? r * 0.6 : i === 2 ? -r * 0.6 : 0), pz = z + (i === 3 ? r * 0.6 : i === 4 ? -r * 0.6 : 0);
-    const v = map.ceilAt(px, pz);
+    const v = map.ceilAt(px, pz, y);
     if (v < c) c = v;
   }
   return c;
@@ -122,7 +123,7 @@ function stepOnce(map, b, input, dt, maxSpeed) {
   const wantCrouch = !!input.crouch;
   if (wantCrouch) b.crouching = true;
   else if (b.crouching) {
-    const c = ceilingOver(map, b.x, b.z, RADIUS);
+    const c = ceilingOver(map, b.x, b.z, RADIUS, b.y);
     if (c - b.y >= STAND_H + 0.02) b.crouching = false;
   }
   const target = b.crouching ? 1 : 0;
@@ -186,7 +187,7 @@ function stepOnce(map, b, input, dt, maxSpeed) {
     b.vy -= GRAVITY * dt;
     let ny = b.y + b.vy * dt;
     const g2 = groundHeight(map, b.x, Math.max(b.y, ny), b.z);
-    const cl = ceilingOver(map, b.x, b.z, RADIUS);
+    const cl = ceilingOver(map, b.x, b.z, RADIUS, b.y);
     if (b.vy > 0 && ny + hgt > cl) { ny = cl - hgt; b.vy = 0; }
     if (b.vy <= 0 && g2 > -Infinity && ny <= g2) {
       b.landed = Math.max(b.landed, -b.vy);

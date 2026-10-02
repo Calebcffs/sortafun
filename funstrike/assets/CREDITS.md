@@ -1,7 +1,8 @@
 # Fun Strike credits
 
-All CC0 / public domain. Nothing from Valve's games is used.
+Everything is CC0 / public domain except the map (CC BY 4.0, below).
 
+- **Map**: "Counter Strike Map" by CHANO, https://sketchfab.com/3d-models/counter-strike-map-b0b7e8e91275464491f5ba2ee3e2d776, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Changes: stood upright, scaled to metres, textures shrunk to 256px WebP, geometry compressed, one untextured material recoloured (tools/funstrike/prepare-map.mjs). NOTE: the Sketchfab page says it is from CSS or CSGO, i.e. possibly a rip of a Valve map that the uploader cannot relicense; Caleb supplied the file himself and chose to use it.
 - **Soldier**: "SWAT" by Quaternius, https://poly.pizza/m/Btfn3G5Xv4 (CC0)
 - **Weapons and grenades** by Pichuliru (poly.pizza, CC0): Pistol West/Full East, Smg Compact West/East,
   Smg West, Smg Full East, Rifle Assault East, Assault Rifle West, Rifle Battle East, Rifle West, Sniper Rifle

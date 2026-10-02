@@ -29,6 +29,8 @@ export const TEAM_NAME = ["T", "CT", "SPEC", "FFA"];
 const FREEZE = 10, ROUND_TIME = 115, BOMB_TIME = 40, ROUND_END = 6, BUY_TIME = 20, PLANT_TIME = 3.2, DEFUSE_TIME = 10, DEFUSE_KIT_TIME = 5;
 const START_MONEY = 800, MAX_MONEY = 16000, WARMUP = 8, LOSS_BONUS = [1400, 1900, 2400, 2900, 3400];
 const DM_RESPAWN = 2.5, SPAWN_PROTECT = 2;
+// a human killed by another player waits this long to respawn: the kill cam (5 s before the kill, 2 s after, killcam.js)
+export const KILLCAM_RESPAWN = 7.2;
 const TICK = 1 / 30;
 
 const rnd = Math.random;
@@ -200,8 +202,7 @@ export class Game {
     p.stateAt = this.t;
     if (!p.alive) { p.ct = s.ct; return; }
     const b = p.body;
-    const lim = this.map.w - 1;
-    b.x = Math.max(1, Math.min(lim, s.x)); b.y = s.y; b.z = Math.max(1, Math.min(lim, s.z));
+    b.x = Math.max(1, Math.min(this.map.w - 1, s.x)); b.y = s.y; b.z = Math.max(1, Math.min(this.map.d - 1, s.z));
     b.yaw = s.yaw; b.pitch = s.pitch; p.flags = s.flags | 0; p.ct = s.ct;
     if (s.vx !== undefined) { b.vx = s.vx; b.vz = s.vz; }
     b.crouch = (p.flags & 1) ? 1 : 0;
@@ -266,7 +267,7 @@ export class Game {
     if (p.team === TEAM.SPEC) return;
     const s = this.spawnPoint(p);
     const b = p.body;
-    b.x = s.x; b.z = s.z; b.y = Math.max(0, this.map.groundAt(s.x, s.z)); b.vx = b.vy = b.vz = 0; b.yaw = s.yaw; b.pitch = 0; b.crouch = 0; b.crouching = false; b.onGround = true;
+    b.x = s.x; b.z = s.z; b.y = s.y !== undefined ? s.y : Math.max(0, this.map.groundAt(s.x, s.z)); b.vx = b.vy = b.vz = 0; b.yaw = s.yaw; b.pitch = 0; b.crouch = 0; b.crouching = false; b.onGround = true;
     p.hp = 100; p.alive = true; p.waiting = false; p.using = false; p.useT = 0; p.lastDamagers = {};
     p.spawnProt = this.mode.rounds ? 0 : SPAWN_PROTECT;
     if (!keepGear) { this.resetInventory(p); if (!this.mode.rounds) { /* deathmatch: pick weapons from the menu for free */ } }
@@ -473,7 +474,7 @@ export class Game {
   kill(v, att, wid, headshot, silent = false) {
     if (!v.alive) return;
     v.alive = false; v.hp = 0; v.deaths++; v.deadAt = this.t; v.using = false;
-    v.respawnAt = this.t + DM_RESPAWN;
+    v.respawnAt = this.t + (!v.bot && att && att !== v ? KILLCAM_RESPAWN : DM_RESPAWN);
     if (!silent) v.lastKiller = att ? att.id : 0;
     // assists: someone else who did 40+ damage
     let assist = null;
@@ -882,7 +883,7 @@ export class Game {
   summary() {
     const hs = this.humans();
     return {
-      name: this.opts.name, mode: this.modeId, map: this.map.id || "dust2", players: hs.length, bots: this.players.size - hs.length, max: this.opts.slots,
+      name: this.opts.name, mode: this.modeId, map: this.map.id || "cs", players: hs.length, bots: this.players.size - hs.length, max: this.opts.slots,
       phase: this.phase, round: this.round, sc: this.score,
     };
   }

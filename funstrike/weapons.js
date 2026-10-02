@@ -32,12 +32,12 @@ const raw = {
   m4a4:   { name: "M4A4", kind: "rifle", team: "CT", price: 3100, kill: 300, dmg: 33, ap: 0.7, range: 0.97, cycle: 0.09, mag: 30, reserve: 90, speed: 225, reload: 3.07, draw: 1.0, auto: true, recoil: { climb: 10.5, tau: 9, sway: 2.0, omega: 0.9 }, inacc: { stand: 0.28, move: 5.5, air: 7, crouch: 0.18 }, snd: "rifle", icon: "m4a4" },
   m4a1s:  { name: "M4A1-S", kind: "rifle", team: "CT", price: 2900, kill: 300, dmg: 38, ap: 0.7, range: 0.97, cycle: 0.09, mag: 20, reserve: 40, speed: 225, reload: 3.07, draw: 1.0, auto: true, recoil: { climb: 9.5, tau: 9, sway: 1.8, omega: 0.9 }, inacc: { stand: 0.25, move: 5.5, air: 7, crouch: 0.16 }, snd: "rifle_sil", icon: "m4a1s", silenced: true },
   // ---- snipers
-  ssg08:  { name: "SSG 08", kind: "sniper", price: 1700, kill: 300, dmg: 88, ap: 0.85, range: 0.99, cycle: 1.25, mag: 10, reserve: 90, speed: 230, reload: 3.7, draw: 1.1, auto: false, bolt: true, recoil: { climb: 2, tau: 2, sway: 0.2, omega: 1 }, inacc: { stand: 0.1, move: 7.5, air: 9, crouch: 0.05 }, scope: [40], snd: "sniper", icon: "ssg08" },
-  awp:    { name: "AWP", kind: "sniper", price: 4750, kill: 100, dmg: 115, ap: 0.975, range: 0.99, cycle: 1.455, mag: 10, reserve: 30, speed: 200, reload: 3.65, draw: 1.45, auto: false, bolt: true, recoil: { climb: 2.5, tau: 2, sway: 0.2, omega: 1 }, inacc: { stand: 0.05, move: 9, air: 11, crouch: 0.03 }, scope: [25], snd: "awp", icon: "awp" },
-  scar20: { name: "SCAR-20", kind: "sniper", team: "CT", price: 5000, kill: 300, dmg: 80, ap: 0.825, range: 0.98, cycle: 0.25, mag: 20, reserve: 90, speed: 215, reload: 3.1, draw: 1.1, auto: true, recoil: { climb: 5, tau: 6, sway: 1, omega: 1 }, inacc: { stand: 0.15, move: 7.5, air: 9, crouch: 0.1 }, scope: [35], snd: "sniper_auto", icon: "scar20" },
+  ssg08:  { name: "SSG 08", kind: "sniper", price: 1700, kill: 300, dmg: 88, ap: 0.85, range: 0.99, cycle: 1.25, mag: 10, reserve: 90, speed: 230, reload: 3.7, draw: 1.1, auto: false, bolt: true, recoil: { climb: 2, tau: 2, sway: 0.2, omega: 1 }, inacc: { stand: 0.1, move: 7.5, air: 9, crouch: 0.05 }, scope: [22], snd: "sniper", icon: "ssg08" },
+  awp:    { name: "AWP", kind: "sniper", price: 4750, kill: 100, dmg: 115, ap: 0.975, range: 0.99, cycle: 1.455, mag: 10, reserve: 30, speed: 200, reload: 3.65, draw: 1.45, auto: false, bolt: true, recoil: { climb: 2.5, tau: 2, sway: 0.2, omega: 1 }, inacc: { stand: 0.05, move: 9, air: 11, crouch: 0.03 }, scope: [13], snd: "awp", icon: "awp" },
+  scar20: { name: "SCAR-20", kind: "sniper", team: "CT", price: 5000, kill: 300, dmg: 80, ap: 0.825, range: 0.98, cycle: 0.25, mag: 20, reserve: 90, speed: 215, reload: 3.1, draw: 1.1, auto: true, recoil: { climb: 5, tau: 6, sway: 1, omega: 1 }, inacc: { stand: 0.15, move: 7.5, air: 9, crouch: 0.1 }, scope: [18], snd: "sniper_auto", icon: "scar20" },
   // ---- shotguns
-  nova:   { name: "Nova", kind: "shotgun", price: 1050, kill: 900, dmg: 26, pellets: 9, ap: 0.5, range: 0.7, cycle: 0.88, mag: 8, reserve: 32, speed: 220, reload: 0.5, draw: 1.0, auto: false, shell: true, recoil: { climb: 3, tau: 2, sway: 0.4, omega: 1 }, inacc: { stand: 2.6, move: 3.2, air: 4.5, crouch: 2.4 }, snd: "shotgun", icon: "nova" },
-  xm1014: { name: "XM1014", kind: "shotgun", price: 2000, kill: 900, dmg: 20, pellets: 6, ap: 0.8, range: 0.7, cycle: 0.35, mag: 7, reserve: 32, speed: 215, reload: 0.5, draw: 1.0, auto: true, shell: true, recoil: { climb: 4, tau: 2, sway: 0.6, omega: 1 }, inacc: { stand: 2.8, move: 3.4, air: 4.8, crouch: 2.5 }, snd: "shotgun_auto", icon: "xm1014" },
+  nova:   { name: "Nova", kind: "shotgun", price: 1050, kill: 900, dmg: 26, pellets: 9, ap: 0.5, range: 0.7, cycle: 0.88, mag: 8, reserve: 32, speed: 220, reload: 0.5, draw: 1.0, auto: false, shell: true, recoil: { climb: 3, tau: 2, sway: 0.4, omega: 1 }, inacc: { stand: 4.6, move: 5.2, air: 6.5, crouch: 4.2 }, snd: "shotgun", icon: "nova" },
+  xm1014: { name: "XM1014", kind: "shotgun", price: 2000, kill: 900, dmg: 20, pellets: 6, ap: 0.8, range: 0.7, cycle: 0.35, mag: 7, reserve: 32, speed: 215, reload: 0.5, draw: 1.0, auto: true, shell: true, recoil: { climb: 4, tau: 2, sway: 0.6, omega: 1 }, inacc: { stand: 5.0, move: 5.6, air: 6.8, crouch: 4.5 }, snd: "shotgun_auto", icon: "xm1014" },
   // ---- melee
   knife:  { name: "Knife", kind: "knife", price: 0, kill: 1500, dmg: 40, backstab: 180, stab: 65, ap: 0.85, range: 1, cycle: 0.5, mag: 0, reserve: 0, speed: 250, reload: 0, draw: 0.7, auto: false, reach: 1.7, snd: "knife", icon: "knife" },
   // ---- grenades (thrown by the host's physics)
@@ -80,17 +80,29 @@ export const DEFAULT_PISTOL = { T: "glock", CT: "usp" };
 
 // total damage a bullet does: base x hitbox x falloff, then armour takes its share.
 // armour: {armor, helmet} of the victim. Returns {health, armor}: what comes off each.
-// Every bullet hurts this much more than CS:GO's number (Caleb: it should take fewer bullets to kill you):
-// a rifle is two body shots, a pistol three, any headshot with a rifle or a deagle is one.
-export const BULLET_DAMAGE = 1.6;
+// How hard bullets hit. Caleb: without a vest you should be nearly one bullet; only with Kevlar can you take more than a
+// couple. For each gun: [health damage to an unarmoured chest, share of that which gets through a vest, share of a
+// headshot that gets through a helmet]. A head is x3, legs x0.6. So with nothing on: a rifle or sniper kills in one body
+// shot, a pistol or SMG in two, any headshot in one. A vest turns a pistol into ~7 body shots and a rifle into ~3 (the vest
+// wears out as it soaks). A helmet lets you live through ONE pistol headshot and nothing stronger (an SMG still kills).
+const KILL = {
+  glock: [66, 0.3, 0.4], usp: [66, 0.3, 0.4], p250: [66, 0.3, 0.4], deagle: [105, 0.5, 0.7],
+  mac10: [66, 0.45, 0.8], mp9: [66, 0.45, 0.8], mp7: [66, 0.45, 0.8], p90: [66, 0.45, 0.8],
+  galil: [105, 0.4, 0.6], famas: [105, 0.4, 0.6], ak47: [110, 0.4, 0.6], m4a4: [105, 0.4, 0.6], m4a1s: [105, 0.4, 0.6],
+  ssg08: [210, 0.8, 1], awp: [260, 0.8, 1], scar20: [210, 0.8, 1],
+  nova: [26, 0.4, 0.6], xm1014: [28, 0.4, 0.6], // per pellet
+};
+const HITMUL = { head: 3, chest: 1, stomach: 1.1, legs: 0.6, arms: 1 };
 export function bulletDamage(w, hitbox, dist, victim) {
-  let d = w.dmg * (w.kind === "knife" ? 1 : BULLET_DAMAGE) * (HIT[hitbox] || 1) * Math.pow(w.range, dist / FALLOFF_M);
-  const protectedHit = victim.armor > 0 && (hitbox !== "head" || victim.helmet) && hitbox !== "legs";
-  if (w.kind === "knife") d = hitbox === "back" ? w.backstab : hitbox === "stab" ? w.stab : w.dmg;
+  if (w.kind === "knife") { const k = hitbox === "back" ? w.backstab : hitbox === "stab" ? w.stab : w.dmg; return { health: Math.round(k), armor: 0 }; }
+  const K = KILL[w.id] || [70, 0.4, 0.6];
+  const d = K[0] * (HITMUL[hitbox] || 1) * Math.max(0.5, Math.pow(w.range, dist / FALLOFF_M));
+  const protectedHit = victim.armor > 0 && hitbox !== "legs" && (hitbox !== "head" || victim.helmet);
   if (!protectedHit) return { health: Math.max(1, Math.round(d)), armor: 0 };
-  const toHealth = d * w.ap, toArmor = (d - toHealth) * 0.5;
-  let a = Math.round(toArmor), h = toHealth;
-  if (a > victim.armor) { h += (a - victim.armor) * 2; a = victim.armor; } // armour ran out
+  const through = hitbox === "head" ? K[2] : K[1];
+  const soaked = d * (1 - through), toArmor = soaked * 0.5;
+  let a = Math.round(toArmor), h = d * through;
+  if (a > victim.armor) { h += (a - victim.armor) * 2; a = victim.armor; } // the vest ran out
   return { health: Math.max(1, Math.round(h)), armor: Math.round(a) };
 }
 

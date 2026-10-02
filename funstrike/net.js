@@ -14,7 +14,7 @@
 // echoed back in the snapshot).
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
-export const PROTOCOL = 2; // 2: servers carry a map id and every client builds that map
+export const PROTOCOL = 3; // 3: the one map is a real model (maps.js); 2 was the grid maps
 const STALE_MS = 25000;
 
 let conn = null;
@@ -67,7 +67,7 @@ export async function watchServers(cb) {
       if (!v || v.v !== PROTOCOL) return;
       const age = now - (v.hb || 0);
       if (age > STALE_MS) return;
-      rows.push({ id: ch.key, name: v.n, mode: v.m, map: v.mp || "dust2", host: v.hn, hostUid: v.h, players: v.p | 0, bots: v.b | 0, max: v.x | 0, phase: v.ph, diff: v.d | 0, ping: c.rtt + (v.rt | 0) + 10, age });
+      rows.push({ id: ch.key, name: v.n, mode: v.m, map: v.mp || "cs", host: v.hn, hostUid: v.h, players: v.p | 0, bots: v.b | 0, max: v.x | 0, phase: v.ph, diff: v.d | 0, ping: c.rtt + (v.rt | 0) + 10, age });
     });
     cb(rows, c);
   });

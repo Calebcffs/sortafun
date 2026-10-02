@@ -19,6 +19,9 @@
 
 export const OPEN = 99;
 
+// floor / wall material names of the grid maps (the id is the index; world.js has the textures)
+export const MATERIALS = ["sand", "plaster", "stone", "brick", "concrete", "tile", "dirt", "wood", "metal", "plank", "cracked"];
+
 export class GridMap {
   constructor(w, d) {
     this.w = w; this.d = d;

@@ -3,7 +3,8 @@
 // "Fun Strike" for the map of them.
 
 import * as THREE from "three";
-import { buildMap, MAPS } from "./maps.js";
+import { MAPS, DEFAULT_MAP } from "./maps.js";
+import { loadMap } from "./maploader.js";
 import { loadModels, makeGun } from "./models.js";
 import { WEAPONS, WEAPON_IDS } from "./weapons.js";
 import { GameAudio } from "./audio.js";
@@ -22,7 +23,7 @@ audio.vol = settings.volume; audio.speech = settings.speech;
 const menus = new Menus(stage, settings);
 let client = null, hud = null, host = null, map = null, icons = {};
 const mapCache = {};
-const getMap = (id) => (mapCache[MAPS[id] ? id : "dust2"] = mapCache[MAPS[id] ? id : "dust2"] || buildMap(id)); // built once, kept
+const getMap = async (id) => { const k = MAPS[id] ? id : DEFAULT_MAP; return (mapCache[k] = mapCache[k] || (await loadMap(k))); }; // loaded once, kept
 const T0 = performance.now();
 
 const getName = () => { try { return localStorage.getItem("sortafun-name") || ""; } catch (e) { return ""; } };
@@ -79,9 +80,9 @@ async function boot() {
     menus.message("Fun Strike needs a keyboard and mouse", "Open it on a computer. Everything else on sortafun works on a phone.");
     return;
   }
-  menus.loading("building the maps...", 0.05);
+  menus.loading("loading the map...", 0.05);
   await new Promise((r) => setTimeout(r, 30));
-  map = getMap("dust2");
+  try { map = await getMap(DEFAULT_MAP); } catch (e) { menus.message("Couldn't load the map", String(e.message || e)); return; }
   menus.loading("loading soldiers and weapons...", 0.25);
   try { await loadModels(); } catch (e) { menus.message("Couldn't load the models", String(e.message || e)); return; }
   menus.loading("drawing weapon icons...", 0.6);
@@ -112,7 +113,7 @@ async function boot() {
 // ---------------------------------------------------------------------------
 async function startMatch(opts, online) {
   const name = myName();
-  map = getMap(opts.map);
+  try { map = await getMap(opts.map); } catch (e) { menus.message("Couldn't load that map", String(e.message || e)); return; }
   opts = { ...opts, map: map.id };
   menus.message(online ? "Creating your server..." : "Setting up the match...");
   audio.init();
@@ -143,7 +144,7 @@ async function joinServer(row) {
     const link = new NetLink(ch);
     link.onClose = (why) => { if (client && client.running) { leave(); menus.message(why || "Disconnected.", "Back to the menu in a moment."); setTimeout(() => menus.show("servers"), 2200); } };
     // keep the first state flowing so the host adds us
-    enter(link, name, row.name, MODES[row.mode] || MODES.defuse, getMap(row.map));
+    enter(link, name, row.name, MODES[row.mode] || MODES.tdm, await getMap(row.map));
     client.startVoice(ch.c, ch.sid, ch.row && ch.row.h);
   } catch (e) { menus.message("Couldn't join that server", String(e.message || e)); setTimeout(() => menus.show("servers"), 2500); }
 }

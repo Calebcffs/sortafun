@@ -103,6 +103,16 @@ body.fs-playing .fs-fullbtn { opacity: .2; }
 .fs-inv i { font-style: normal; opacity: .6; font-size: .85em; } .fs-inv img { height: 1.4em; opacity: .9; }
 .fs-wn { font-size: clamp(11px, 1.3vw, 16px); letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
 .fs-am b { font: 600 clamp(34px, 5.2vw, 70px)/1 "Teko", sans-serif; } .fs-am b.low { color: #ff5a4a; } .fs-am span { font: 600 clamp(18px, 2.4vw, 32px)/1 "Teko", sans-serif; opacity: .7; margin-left: 6px; }
+.fs-hud.kcam .fs-top, .fs-hud.kcam .fs-radar-wrap, .fs-hud.kcam .fs-vitals, .fs-hud.kcam .fs-ammo, .fs-hud.kcam .fs-cross, .fs-hud.kcam .fs-hint { display: none; }
+.fs-kc { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.fs-kc .bar { position: absolute; left: 0; right: 0; height: 9%; background: #000; } .fs-kc .bar.t { top: 0; } .fs-kc .bar.b { bottom: 0; }
+.fs-kc .kc-lab { position: absolute; top: 11%; left: 50%; transform: translateX(-50%); text-align: center; color: #fff; text-shadow: 0 2px 6px #000; font-family: "Rajdhani", sans-serif; }
+.fs-kc .kc-lab small { display: block; letter-spacing: .5em; font-weight: 700; color: #ff5a46; font-size: clamp(12px, 1.4vw, 18px); }
+.fs-kc .kc-lab b { font-size: clamp(22px, 3vw, 40px); letter-spacing: .08em; text-transform: uppercase; }
+.fs-kc .kc-lab em { display: flex; justify-content: center; align-items: center; gap: 8px; font-style: normal; height: 34px; } .fs-kc .kc-lab img { height: 30px; filter: drop-shadow(0 1px 3px #000); }
+.fs-kc .kc-lab u { display: inline-block; width: 18px; height: 18px; border: 2px solid #ff4a3a; border-radius: 50%; }
+.fs-kc .kc-prog { position: absolute; left: 15%; right: 15%; bottom: 11.5%; height: 4px; background: rgba(255,255,255,.2); } .fs-kc .kc-prog i { display: block; height: 100%; width: 0; background: #fff; }
+.fs-kc.past .kc-prog i { background: #ff5a46; }
 .fs-voice { position: absolute; left: 14px; bottom: 120px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; font: 700 clamp(12px, 1.3vw, 16px) "Rajdhani", sans-serif; letter-spacing: .06em; color: #fff; }
 .fs-voice div { background: rgba(10,12,15,.6); border-left: 3px solid #4cff7a; padding: 2px 10px 2px 8px; display: flex; align-items: center; gap: 7px; }
 .fs-voice .me { border-left-color: #ffb13b; }

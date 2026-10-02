@@ -107,7 +107,32 @@ export class World {
   buf(key) { return this.bufs[key] || (this.bufs[key] = new Buf()); }
 
   // ------------------------------------------------------------------
+  // A model map: put a copy of the loaded model in the scene with materials to suit the graphics setting (the fast setting
+  // gets the cheap Lambert shader and no shadows), then the lights and sky as ever.
+  _buildMesh() {
+    const low = this.quality === "low", seen = new Map();
+    const model = this.map.visual.clone(true);
+    model.traverse((o) => {
+      if (!o.isMesh) return;
+      const src = o.material;
+      let m = seen.get(src);
+      if (!m) {
+        const tex = src.map;
+        if (tex) { tex.anisotropy = low ? 1 : Math.min(4, this.opts.aniso || 4); tex.colorSpace = THREE.SRGBColorSpace; }
+        m = low ? new THREE.MeshLambertMaterial({ map: tex, color: src.color, side: THREE.DoubleSide })
+          : new THREE.MeshStandardMaterial({ map: tex, color: src.color, roughness: 0.92, metalness: 0, side: THREE.DoubleSide, envMapIntensity: this.envI || 0.4 });
+        seen.set(src, m); this.mats["m" + seen.size] = m;
+      }
+      o.material = m; o.castShadow = !low; o.receiveShadow = !low; o.frustumCulled = true;
+    });
+    model.updateMatrixWorld(true);
+    this.group.add(model);
+    this._lights();
+    return this.group;
+  }
+
   build() {
+    if (this.map.mesh) return this._buildMesh();
     const map = this.map;
     const w = map.w, d = map.d;
     const solid = (cx, cz) => map.isSolid(cx, cz);

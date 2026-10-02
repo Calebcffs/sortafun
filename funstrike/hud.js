@@ -3,7 +3,7 @@
 // (they only touch the DOM when a value changed) and this file never reads
 // game state itself.
 
-import { WEAPONS, BUY_MENU, GEAR, widOf } from "./weapons.js";
+import { WEAPONS, WEAPON_IDS, BUY_MENU, GEAR, widOf } from "./weapons.js";
 import { TEAM_NAME } from "./sim.js";
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -33,6 +33,7 @@ export class HUD {
       <div class="fs-toast" id="h-toast"></div>
       <div class="fs-chat" id="h-chat"><div class="fs-chatlog" id="h-chatlog"></div><input id="h-chatin" maxlength="110" placeholder="say something" autocomplete="off" hidden></div>
       <div class="fs-voice" id="h-voice"></div>
+      <div class="fs-kc" id="h-kc" hidden><i class="bar t"></i><i class="bar b"></i><div class="kc-lab"><small>KILL CAM</small><b id="h-kcname"></b><em id="h-kcw"></em></div><div class="kc-prog"><i id="h-kcp"></i></div></div>
       <div class="fs-net" id="h-net" hidden></div>
       <div class="fs-wait" id="h-wait" hidden>waiting for players...</div>
     `;
@@ -105,6 +106,15 @@ export class HUD {
     const html = (mine ? '<div class="me"><i></i>you (voice on)</div>' : "") + names.map((n) => `<div><i></i>${esc(n)}</div>`).join("");
     if (this.cache.vc !== html) { this.cache.vc = html; this.q("h-voice").innerHTML = html; }
   }
+  // the kill cam overlay: letterbox bars, "KILL CAM" and who killed you with what, and a bar that fills as it plays
+  killcam(on, name, wid, hs) {
+    const kc = this.q("h-kc"); kc.hidden = !on; this.root.classList.toggle("kcam", !!on);
+    if (!on) return;
+    this.q("h-kcname").textContent = name || "";
+    const w = WEAPONS[WEAPON_IDS[wid]], ic = w && this.icons[w.icon || w.id];
+    this.q("h-kcw").innerHTML = (ic ? `<img src="${ic}" alt="">` : "") + (hs ? '<u title="headshot"></u>' : "");
+  }
+  killcamProgress(f, past) { this.q("h-kcp").style.width = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%"; this.q("h-kc").classList.toggle("past", !!past); }
   prompt(t) { this.txt("h-prompt", t || ""); }
   progress(label, f) {
     const p = this.q("h-prog");
@@ -204,7 +214,7 @@ export class HUD {
     } else {
       body = `<div class="sb ffa"><h3>Deathmatch</h3><table>${head}${rows(3)}</table></div>`;
     }
-    this.score.innerHTML = `<div class="sbtop"><b>${esc(info.name)}</b> · ${esc(mode.name)} · Dust II</div>${body}`;
+    this.score.innerHTML = `<div class="sbtop"><b>${esc(info.name)}</b> · ${esc(mode.name)} · ${esc(this.mapName || "")}</div>${body}`;
   }
 
   // ---- buy menu
@@ -232,7 +242,7 @@ export class HUD {
     if (key === this.teamKey) return; // re-drawing every frame would swallow clicks
     this.teamKey = key;
     const m = st.mode;
-    this.teamSel.innerHTML = `<div class="tbox"><h2>${esc(st.name)}</h2><p>${esc(m.name)} · Dust II · ${st.players} playing</p>` +
+    this.teamSel.innerHTML = `<div class="tbox"><h2>${esc(st.name)}</h2><p>${esc(m.name)} · ${esc(this.mapName || "")} · ${st.players} playing</p>` +
       (m.teams ? `<div class="tbtns"><button data-t="0" class="tbtn t"><b>Terrorists</b><small>${st.counts[0]} players</small></button><button data-t="1" class="tbtn ct"><b>Counter-Terrorists</b><small>${st.counts[1]} players</small></button></div><div class="tbtns"><button data-t="auto" class="tbtn auto">Auto-assign</button><button data-t="2" class="tbtn spec">Spectate</button></div>` :
         `<div class="tbtns"><button data-t="3" class="tbtn auto"><b>Join the fight</b><small>free for all</small></button><button data-t="2" class="tbtn spec">Spectate</button></div>`) +
       `<small class="hint">${st.midRound ? "A round is in progress: you will spawn at the start of the next one." : "Keys: 1 = T, 2 = CT, 3 = auto, 4 = spectate"}</small></div>`;

@@ -4,7 +4,7 @@
 // collects choices.
 
 import { MODES } from "./sim.js";
-import { MAPS } from "./maps.js";
+import { MAPS, DEFAULT_MAP } from "./maps.js";
 import { watchServers, sweepStale } from "./net.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -57,7 +57,7 @@ export class Menus {
         <div class="row"><button data-go="settings">Settings</button><button data-go="controls">Controls</button><button data-go="credits">Credits</button></div>
       </div>
       <div class="fs-name"><label>Your name <input id="fs-nm" maxlength="16" value="${esc(this.cb.getName ? this.cb.getName() : "")}"></label></div>
-      <div class="fs-foot">10 maps · Defuse on Dust II · Team Deathmatch · Deathmatch · bots included</div>`;
+      <div class="fs-foot">Counter Strike Map · Team Deathmatch · Deathmatch · voice chat · bots included</div>`;
     const nm = this.root.querySelector("#fs-nm");
     nm.addEventListener("input", () => this.cb.setName && this.cb.setName(nm.value));
     this.root.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
@@ -113,7 +113,7 @@ export class Menus {
     rows.innerHTML = list.map((s) => {
       const full = s.players + s.bots >= s.max, m = MODES[s.mode];
       const pc = s.ping < 80 ? "good" : s.ping < 160 ? "ok" : "bad";
-      return `<tr data-id="${s.id}" class="${s.id === this.sel ? "sel" : ""}${full ? " full" : ""}"><td class="n">${esc(s.name)}<small>host ${esc(s.host)}</small></td><td>${esc(m ? m.name : s.mode)}</td><td>${esc((MAPS[s.map] || MAPS.dust2).name)}</td><td>${s.players + s.bots}/${s.max}${full ? " (full)" : ""}</td><td>${s.bots}</td><td class="${pc}">${s.ping} ms</td><td>${DIFF[s.diff] || "-"}</td></tr>`;
+      return `<tr data-id="${s.id}" class="${s.id === this.sel ? "sel" : ""}${full ? " full" : ""}"><td class="n">${esc(s.name)}<small>host ${esc(s.host)}</small></td><td>${esc(m ? m.name : s.mode)}</td><td>${esc((MAPS[s.map] || MAPS[DEFAULT_MAP]).name)}</td><td>${s.players + s.bots}/${s.max}${full ? " (full)" : ""}</td><td>${s.bots}</td><td class="${pc}">${s.ping} ms</td><td>${DIFF[s.diff] || "-"}</td></tr>`;
     }).join("");
     rows.querySelectorAll("tr[data-id]").forEach((tr) => {
       tr.onclick = () => { this.sel = tr.dataset.id; this.renderRows(); };
@@ -149,14 +149,14 @@ export class Menus {
     q("[data-back]").onclick = () => this.go("title");
     // the maps with no bomb sites only offer the two deathmatch modes
     const fillModes = () => {
-      const keep = q("#c-mode").value, mp = MAPS[q("#c-map").value] || MAPS.dust2;
+      const keep = q("#c-mode").value, mp = MAPS[q("#c-map").value] || MAPS[DEFAULT_MAP];
       q("#c-mode").innerHTML = mp.modes.map((k) => `<option value="${k}">${esc(MODES[k].name)}</option>`).join("");
       q("#c-mode").value = mp.modes.includes(keep) ? keep : mp.modes[0];
     };
     q("#c-map").addEventListener("input", () => { fillModes(); upd(); });
     const upd = () => {
       const m = q("#c-mode").value;
-      q("#c-blurb").textContent = MODES[m].blurb + " " + (MAPS[q("#c-map").value] || MAPS.dust2).blurb;
+      q("#c-blurb").textContent = MODES[m].blurb + " " + (MAPS[q("#c-map").value] || MAPS[DEFAULT_MAP]).blurb;
       q("#l-rounds").style.display = MODES[m].rounds ? "" : "none"; q("#l-time").style.display = MODES[m].rounds ? "none" : "";
       const slots = +q("#c-slots").value; q("#o-slots").textContent = slots;
       q("#c-bots").max = slots - (prac ? 1 : 0); if (+q("#c-bots").value > +q("#c-bots").max) q("#c-bots").value = q("#c-bots").max;
@@ -230,7 +230,7 @@ export class Menus {
 
   s_credits() {
     this.root.innerHTML = `<div class="fs-panel"><header><h2>Credits</h2><button class="x" data-back>back</button></header><div class="fs-credits">
-      <p>Fun Strike is a fan-made homage to a certain tactical shooter. The map is Dust II <i>as a layout</i>, rebuilt from scratch: none of that game's art, models or sounds are in here.</p>
+      <p>Fun Strike is a fan-made homage to a certain tactical shooter. The soldiers, weapons, sounds and textures are free (credits below). <b>The map</b> is a model by someone else: ${esc(MAPS[DEFAULT_MAP].credit)}.</p>
       <p><b>Soldiers</b> Quaternius (CC0) · <b>Weapons and grenades</b> Pichuliru (CC0) · <b>Textures</b> Poly Haven (CC0) · <b>Sounds</b> Freesound.org contributors (CC0) · <b>three.js</b> for the 3D · <b>Firebase</b> for the server list.</p>
       <p>The full list, with links, is in <code>funstrike/assets/CREDITS.md</code>.</p></div><footer><span></span><button class="go" data-back>Done</button></footer></div>`;
     this.root.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => this.go("title")));

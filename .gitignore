@@ -10,3 +10,6 @@ taka/src/
 
 # slacking simulator: office photo crops. only the encrypted slack/vault.js is published
 slack/src/
+
+# fun strike: the original downloaded map model (the game uses the processed funstrike/assets/maps/cs.glb)
+counter_strike_map.glb

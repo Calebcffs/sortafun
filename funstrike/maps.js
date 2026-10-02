@@ -1,31 +1,20 @@
-// Every map Fun Strike has, and how to build one by id.
+// The maps Fun Strike has. Each is a real 3D model made by someone else (a triangle soup the game collides with, see
+// meshmap.js), loaded by maploader.js. This file is only the list (names, which modes, where the file is, who made it), so
+// the menus and node tools can use it without three.js.
 //
-// Right now that is just Dust II (dust2.js, our own rebuild of its layout, with bomb sites, so it is the only map that
-// plays Defuse). The nine deathmatch maps written for v0.9.2 were removed again: Caleb wants real maps made by people,
-// not generated ones. When real ones turn up, a map is one row in MAPS plus a builder that returns a GridMap (map.js),
-// see CLAUDE.md "Maps". Everything downstream (menus, server rows, client.setMap, bots) already works for any number of maps.
+// Adding one: run tools/funstrike/prepare-map.mjs on the .glb (stands it up, scales it to metres, shrinks the textures),
+// put the result in funstrike/assets/maps/ and add a row here. Spawns and the bots' walking graph are worked out from the
+// model itself (MeshMap.pickSpawns), nothing is hand placed.
 
-import { findPath } from "./map.js";
-import { buildDust2 } from "./dust2.js";
-
-// ---------------------------------------------------------------------------------------------------------------
 export const MAPS = {
-  dust2: { name: "Dust II", build: buildDust2, modes: ["defuse", "tdm", "dm"], blurb: "The classic desert layout: long A, mid, B tunnels. The only map with bomb sites." },
+  cs: {
+    name: "Counter Strike Map",
+    file: "funstrike/assets/maps/cs.glb",
+    modes: ["tdm", "dm"],
+    blurb: "A real Counter-Strike style map: long streets, narrow alleys, stairs and rooftops.",
+    credit: '"Counter Strike Map" by CHANO (Sketchfab), CC BY 4.0, https://sketchfab.com/3d-models/counter-strike-map-b0b7e8e91275464491f5ba2ee3e2d776',
+    scale: 45, // metres per model unit, used by prepare-map.mjs
+  },
 };
 export const MAP_IDS = Object.keys(MAPS);
-
-// Build a map by id (an unknown id gives Dust II). Anything the bots need and a map did not write by hand is filled in:
-// roaming points come from the deathmatch spawns, and there are no routes, holds or bomb sites.
-export function buildMap(id) {
-  const info = MAPS[id] || MAPS.dust2, key = MAPS[id] ? id : "dust2";
-  const m = info.build();
-  m.id = key; m.name = info.name;
-  const me = m.meta;
-  if (key !== "dust2") { // a deathmatch spawn nobody can walk to (boxed in by a prop, on a cut off ledge) is no use
-    const t0 = me.spawnsT[0];
-    me.spawnsDM = me.spawnsDM.filter((s) => findPath(m, t0.x, t0.z, s.x, s.z));
-  }
-  if (!me.points || !Object.keys(me.points).length) { me.points = {}; me.spawnsDM.slice(0, 14).forEach((s, i) => (me.points["p" + i] = [s.x, s.z])); }
-  me.routes = me.routes || {}; me.holds = me.holds || {}; me.sites = me.sites || [];
-  return m;
-}
+export const DEFAULT_MAP = "cs";
