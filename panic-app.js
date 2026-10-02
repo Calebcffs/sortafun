@@ -43,6 +43,7 @@
     "city.html": ["City Sandbox", "ppt"],
     "draw.html": ["Draw and Guess", "ppt"],
     "deeptime.html": ["Deep Time", "ppt"],
+    "funstrike.html": ["Fun Strike", "ppt"],
     "taka.html": ["Taka-san Dinner", "ppt"],
     "slack.html": ["Slacking Simulator", "ppt"],
     "clarissa.html": ["Farewell card", "ppt"],

@@ -1,0 +1,31 @@
+<!doctype html><html><body>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const L=new GLTFLoader();
+window.bake=async function(url){
+  const g=await new Promise((res,rej)=>L.load(url,res,undefined,rej));
+  g.scene.updateMatrixWorld(true); g.scene.traverse(o=>{if(o.isSkinnedMesh)o.skeleton.update();});
+  const P=[],N=[],C=[],I=[]; let base=0; const v=new THREE.Vector3(), n=new THREE.Vector3(); const marks={};
+  g.scene.traverse(o=>{ if(o.isBone && !/_end$/.test(o.name) && o.name!=='Body'){ const p=new THREE.Vector3(); o.getWorldPosition(p); marks[o.name]=[p.x,p.y,p.z]; } });
+  g.scene.traverse(o=>{
+    if(!o.isMesh) return; const geo=o.geometry; const pos=geo.attributes.position, nor=geo.attributes.normal; if(!pos) return;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    const idx=geo.index; const groups=geo.groups.length?geo.groups:[{start:0,count:idx?idx.count:pos.count,materialIndex:0}];
+    // per-vertex colour from the primitive's material (gltf = one primitive per material, split into groups by the loader? no: separate meshes children)
+    const col=mats[0].color.clone().convertLinearToSRGB();
+    const m3=new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
+    for(let i=0;i<pos.count;i++){
+      v.fromBufferAttribute(pos,i); n.fromBufferAttribute(nor,i);
+      if(o.isSkinnedMesh){ o.applyBoneTransform(i,v); }
+      v.applyMatrix4(o.matrixWorld); n.applyMatrix3(m3).normalize();
+      P.push(v.x,v.y,v.z); N.push(n.x,n.y,n.z); C.push(col.r,col.g,col.b);
+    }
+    if(idx){ for(let i=0;i<idx.count;i++) I.push(idx.getX(i)+base); } else { for(let i=0;i<pos.count;i++) I.push(i+base); }
+    base+=pos.count;
+  });
+  return {P,N,C,I,marks};
+};
+window.ready=true;
+</script></body></html>

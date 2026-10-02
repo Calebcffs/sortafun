@@ -1,0 +1,13 @@
+import {NodeIO} from '@gltf-transform/core';
+import {ALL_EXTENSIONS} from '@gltf-transform/extensions';
+import {dedup, prune, quantize, meshopt, resample} from '@gltf-transform/functions';
+import {MeshoptEncoder} from 'meshoptimizer';
+await MeshoptEncoder.ready;
+const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'meshopt.encoder':MeshoptEncoder});
+const d=await io.read('dl/swat.glb'); const r=d.getRoot();
+const keep=/\|(Idle_Gun|Idle|Idle_Gun_Pointing|Run|Run_Back|Run_Left|Run_Right|Walk|Death|HitRecieve|Gun_Shoot|Run_Shoot|Idle_Gun_Shoot|Interact)$/;
+for(const a of r.listAnimations()) if(!keep.test(a.getName())) a.dispose();
+for(const a of r.listAnimations()) a.setName(a.getName().replace('CharacterArmature|',''));
+await d.transform(resample(), prune(), dedup(), quantize({quantizePosition:14,quantizeNormal:10,quantizeTexcoord:12}), meshopt({encoder:MeshoptEncoder,level:'high'}));
+await io.write('out/swat.glb',d);
+console.log(r.listAnimations().map(a=>a.getName()).join(','));

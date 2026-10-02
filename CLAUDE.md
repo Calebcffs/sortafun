@@ -928,6 +928,60 @@ bot (grid BFS on `M.distField`, W + shift, sidestep when blocked) collects all
 `TUNE` for a peaceful run. Leaderboard fetches 400 on localhost until the
 rules deploy.
 
+### Fun Strike (`funstrike.html` + `funstrike/`, 2026-10-02, v0.9)
+
+Caleb asked for "a simple Counter-Strike type game, as close to CSGO as possible", called **Fun Strike**: Dust2
+only, Defuse + Team Deathmatch + Deathmatch (FFA), multiplayer with a server list (ping, players, bots, map),
+create-your-own-server, bots, join-mid-round = spectate until next round, free assets, good looking but smooth.
+Honest scope notes: the map is **our own rebuild of Dust II's layout** (Valve's geometry/art is not free to use),
+the soldier is Quaternius' SWAT recoloured per team, guns are Pichuliru's CC0 set, sounds are Freesound CC0.
+three.js 0.160 via importmap, ES modules, no build. `tools/stamp.py` stamps `funstrike/*.js` into the import map.
+
+Architecture: **host-authoritative, hosted in a player's tab.** `sim.js` (`Game`) is DOM-free and runs the whole
+match (rounds, economy, bomb, grenades, bots, damage). The creator's tab owns it (`host.js`, ticked from a
+Worker timer so a hidden tab keeps serving) and talks to its own player over a loopback link; other players
+talk to it through the Realtime Database (`net.js`, paths in its header, rules in `database.rules.json` under
+`fs/`). Humans move themselves (client prediction, nothing is corrected except on a `spawn` event) and
+report their own hits (`shot` actions: the shooter's tab does the ray test against the players it *sees*; the
+host checks rate, ownership, distance and applies damage). Snapshots (~10/s, ~0.7KB) carry players, bomb,
+grenades, smokes, fires, dropped guns and a list of events (each rides ~2s, clients dedupe by `s`); the roster
+(scoreboard + inventory) is a separate node sent when `rv` changes (>=450ms apart). A practice match is the same
+thing with no channel. Spark caveat: a 10 player server is roughly 0.2GB/hour of downloads, and the 100
+connection cap is shared with City Sandbox / chat / Draw.
+
+Files: `map.js` (grid of 1m cells: floor plane + ceiling per cell, solid = wall; props = boxes; `raycast`,
+A*), `dust2.js` (the level + `meta` spawns/sites/routes/holds/decor; ASCII-free, edit the rects and run
+`tools/funstrike/preview-map.mjs`), `movement.js` (Source-like: friction, air strafing, 46cm steps, crouch;
+bots use the same function), `hitbox.js`, `weapons.js` (CS:GO stats, spray/spread, buy menu; **the order of
+`WEAPON_IDS` goes over the wire, never reorder**), `sim.js`, `bots.js` (4 skill levels, routes A_long / A_short
+/ B_tunnels / B_lower / mid, CT holds + rotation on contact, buying, grenades), `host.js`, `net.js`,
+`world.js` (merged meshes per material, baked vertex AO, sun shadow that follows the player, Sky addon),
+`models.js` (guns from `assets/guns.json`, `Soldier` = swat.glb with the legs from clips and spine + both
+arms posed by hand every frame: aim pitch + two-bone IK onto the gun's trigger/foregrip marks),
+`viewmodel.js` (own scene + camera, procedural arms), `fx.js` (instanced particles, tracers, holes),
+`client.js` (input, own movement + weapon + recoil, remote interpolation, events -> fx/sound/HUD, spectate),
+`hud.js`, `menu.js`, `audio.js` (samples with synthesised fallbacks, HRTF), `main.js`, `funstrike.css`.
+Asset pipeline + credits: `tools/funstrike/README.md`, `funstrike/assets/CREDITS.md`.
+
+Rules worth knowing: defuse = MR15 (opts.rounds), 10s freeze, 115s round, 40s bomb, plant 3.2s / defuse 10s
+(5 with kit), $800 start, win 3250 (3500 bomb), loss bonus 1400..3400, kills pay by weapon, halftime swap.
+DM/TDM: free buy menu anytime, respawn 2.5s with 2s protection, keep your loadout, first to 30 / 60 kills or time.
+Joining mid-round in defuse: `waiting` until the next `beginRound`. The match can't start with fewer than 2
+players (bots count). The host's own player is `uid "local"`.
+
+**Testing** (all headless Chrome + swiftshader; frames are ~20fps so `client.nowS` runs slow, wait on game time,
+not wall time): `node tools/funstrike-test.mjs` (map, movement, rays), `node tools/funstrike-sim.mjs defuse|tdm|dm
+<minutes> <diff>` (all-bot match in node, ~25ms per sim minute), then in a browser `window.funstrike`
+(`startMatch(opts, online)`, `client`, `host.game`, `menus`) on `funstrike.html?force` (`force` skips the phone
+block). Two real players: start the emulators (`npx firebase-tools@13 emulators:start --only auth,database
+--project sortafun-ba7cb`, push rules with a `Bearer owner` PUT), open `funstrike.html?force&emu` in two browser
+contexts, one `startMatch(..., true)`, the other `net.js watchServers` then `joinServer(row)`. Gotchas hit:
+`Menus` had a method named like a data field (`servers`, `settings`), screens are `s_*` now; the site's `table`
+and `canvas` styles leak in unless overridden (`.fs-stage` resets in funstrike.css); gun colours in the source
+are near black, `models.js` lifts them; buying during warmup is wiped when the match starts.
+Not done / ideas: weapon recoil patterns are generated curves, not CS's real ones; no wallbang; no bomb
+carrier on the minimap; sounds untested by ear (picked by onset detection); only Dust II, no leaderboard key.
+
 ### Sound (`sfx.js`)
 
 Every page loads `sfx.js` in its `<head>` (`/sfx.js` on the 404). Everything

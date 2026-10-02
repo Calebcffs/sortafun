@@ -54,7 +54,7 @@ IMPORTMAP = re.compile(rb'(<script type="importmap">\s*)(\{.*?\})(\s*</script>)'
 
 
 # deeptime2.html (part 2) loads deeptime/l2/ and part 1's shared modules
-MODULE_DIRS = {"city.html": ["city"], "deeptime.html": ["deeptime"], "deeptime2.html": ["deeptime", "deeptime/l2"]}
+MODULE_DIRS = {"funstrike.html": ["funstrike"], "city.html": ["city"], "deeptime.html": ["deeptime"], "deeptime2.html": ["deeptime", "deeptime/l2"]}
 
 
 def stamp_modules(html, folders):
