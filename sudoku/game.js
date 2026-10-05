@@ -224,9 +224,11 @@
   }
 
   // ---------------------------------------------------------------- timer
+  var rolling = false;
   function tick() {
     var now = performance.now();
-    if (running && !paused && !document.hidden && st) {
+    // the clock stops while hidden and while the boss key (0, panic-app.js) is up
+    if (running && !paused && !document.hidden && st && !document.documentElement.classList.contains("panic")) {
       st.t += Math.min(now - last, 2000); // a stalled tab doesn't eat minutes
       $("sd-time").textContent = fmt(st.t);
       if (Date.now() - saveAt > 5000) save();
@@ -234,7 +236,10 @@
     last = now;
     var left = Date.parse(DAY || sgDay()) + 864e5 - (Date.now() + SG);
     $("sd-next").textContent = left > 0 ? fmt(left) : "now";
-    if (left <= 0 && st && (st.done || st.v === P)) open(diff); // midnight: roll over to the new puzzles
+    // midnight: roll over to the new puzzles if this one is untouched or was
+    // finished before midnight (open() ticks too, hence the guard)
+    var midnight = Date.now() + left;
+    if (left <= 0 && !rolling && st && (st.v === P || (st.done && st.fin < midnight))) { rolling = true; open(diff); rolling = false; }
   }
 
   // ---------------------------------------------------------------- draw
@@ -321,7 +326,7 @@
     if (paused) { if (k === " " || k === "p" || k === "P" || k === "Enter") { e.preventDefault(); setPaused(false); } return; }
     if (st.done) return;
     if (/^[1-9]$/.test(k)) { e.preventDefault(); input(+k); return; }
-    if (k === "0" || k === "Backspace" || k === "Delete") { e.preventDefault(); erase(); return; }
+    if (k === "Backspace" || k === "Delete") { e.preventDefault(); erase(); return; } // not 0: that's the boss key
     if (k === "n" || k === "N") { setNotes(!notes); return; }
     if (k === "u" || k === "U") { doUndo(); return; }
     if (k === "p" || k === "P") { setPaused(true); return; }
