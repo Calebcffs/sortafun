@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>daily sudoku (work in progress) &middot; SORTAFUN.ORG</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=f59c62c1">
+<style>
+  .wrap.sd { max-width: 620px; }
+  .wip { display: inline-block; background: #ffd43b; color: #1d1b2e; font: 700 11px var(--body); padding: 2px 8px; border-radius: 6px; border: 2px solid #1d1b2e; transform: rotate(-2deg); }
+  #sd-game[hidden], #lock[hidden], #sd-done[hidden], #sd-paused[hidden] { display: none !important; }
+
+  /* lock */
+  #lock { text-align: center; padding: 26px 12px 18px; }
+  #lock h2 { margin: 0 0 6px; font: 400 30px var(--chunky); color: var(--accent); }
+  #lock p { margin: 6px 0; }
+  #lock-form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+  #lock-form input { font-size: 16px; padding: 8px 12px; width: 220px; }
+  #lock-form.no { animation: no .4s; }
+  @keyframes no { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+  #lock-msg { min-height: 1.3em; color: #c92a2a; font-size: 13px; }
+
+  /* difficulty tabs */
+  #sd-tabs { display: flex; gap: 6px; justify-content: center; margin: 10px 0 8px; }
+  #sd-tabs button { flex: 1; max-width: 150px; padding: 6px 4px; line-height: 1.15; background: #fff; color: var(--ink); }
+  #sd-tabs button small { display: block; font: 400 11px var(--body); opacity: .75; }
+  #sd-tabs button.on { background: var(--accent); color: #fff; }
+
+  .sd-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; max-width: 450px; margin: 0 auto 6px; font-size: 14px; }
+  .sd-bar b { font-size: 17px; font-variant-numeric: tabular-nums; }
+  .sd-bar .hot b { color: #c92a2a; }
+  #sd-pause { padding: 3px 10px; font-size: 13px; }
+
+  /* the board */
+  .sd-board { position: relative; max-width: 450px; margin: 0 auto; }
+  #sd-grid { display: grid; grid-template-columns: repeat(9, 1fr); border: 3px solid var(--ink); border-radius: 6px; overflow: hidden; background: #fff;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  #sd-grid .c { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-right: 1px solid #cfc8e6; border-bottom: 1px solid #cfc8e6;
+    font: 400 clamp(18px, 6vw, 28px) var(--chunky); color: var(--accent); cursor: pointer; position: relative; min-width: 0; }
+  #sd-grid .c:nth-child(9n) { border-right: 0; }
+  #sd-grid .c:nth-child(n+73) { border-bottom: 0; }
+  #sd-grid .c.bx { border-right: 3px solid var(--ink); }
+  #sd-grid .c.by { border-bottom: 3px solid var(--ink); }
+  #sd-grid .c.g { color: var(--ink); }
+  #sd-grid .c.peer { background: #f1ecff; }
+  #sd-grid .c.same { background: #dccfff; }
+  #sd-grid .c.sel { background: #ffe066; }
+  #sd-grid .c.bad { color: #c92a2a; background: #ffe3e3; }
+  #sd-grid .c.bad.sel { background: #ffc9c9; }
+  #sd-grid.over .c { cursor: default; }
+  #sd-grid .c.shake { animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+  .nt { position: absolute; inset: 1px; display: grid; grid-template-columns: repeat(3, 1fr); }
+  .nt i { font: 700 clamp(7px, 2.2vw, 10px) var(--body); font-style: normal; color: #6d6488; display: flex; align-items: center; justify-content: center; }
+  .nt i.hl { color: #fff; background: var(--accent); border-radius: 3px; }
+
+  /* number pad + tools */
+  #sd-pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; max-width: 450px; margin: 10px auto 0; }
+  #sd-pad button { padding: 6px 0 2px; font: 400 clamp(18px, 5vw, 24px) var(--chunky); line-height: 1; min-width: 0; }
+  #sd-pad button small { display: block; font: 400 9px var(--body); opacity: .7; min-height: 11px; }
+  #sd-pad button.gone { opacity: .3; }
+  .sd-tools { display: flex; gap: 6px; justify-content: center; max-width: 450px; margin: 8px auto 0; }
+  .sd-tools button { flex: 1; padding: 6px 4px; font-size: 13px; background: #fff; color: var(--ink); }
+  .sd-tools button.on { background: var(--accent); color: #fff; }
+
+  /* overlays over the board */
+  .sd-over { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 10px; }
+  #sd-paused { background: #f1ecff; border: 3px solid var(--ink); border-radius: 6px; flex-direction: column; gap: 10px; font: 400 26px var(--chunky); }
+  #sd-done { background: rgba(255,255,255,.55); }
+  .sd-card { background: #fffdf5; border: 3px solid var(--ink); border-radius: 12px; box-shadow: 0 5px 0 var(--ink); padding: 12px 16px; width: min(330px, 100%); text-align: center; }
+  .sd-card h2 { margin: 0 0 6px; font: 400 28px var(--chunky); color: var(--accent); }
+  .sd-card table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 0 0 8px; }
+  .sd-card td { padding: 3px 4px; border: 0; border-bottom: 1px dashed #d8d2c0; text-align: left; }
+  .sd-card td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sd-card td span { color: #888; font-size: 11px; }
+  .sd-card tr.tot td { border-bottom: 0; font: 400 22px var(--chunky); padding-top: 6px; }
+  .sd-card .go { margin-top: 8px; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .sd-card .go button { padding: 5px 10px; font-size: 13px; }
+  #sd-look { margin-top: 8px; font-size: 12px; background: none; border: 0; box-shadow: none; color: #888; text-decoration: underline; padding: 0; }
+  .sd-foot { text-align: center; font-size: 12px; color: #777; margin: 10px 0 0; }
+  .sd-foot b { font-variant-numeric: tabular-nums; }
+</style>
+<script src="sfx.js?v=5233b886"></script>
+<script src="china.js?v=793f6239"></script>
+<script src="feedback.js?v=ff687459"></script>
+<script src="panic-app.js?v=fa0aeabf"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-puzzle">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap sd">
+  <h1>daily sudoku</h1>
+  <p class="sub"><span class="wip">WORK IN PROGRESS</span> three new sudoku every day (singapore time): easy, hard and extreme. same puzzles for everyone. tap a square, then a number. score = a base for the difficulty, plus or minus time against par, minus a tenth of the base for every wrong number.</p>
+
+  <section id="lock">
+    <h2>coming soon</h2>
+    <p>this one's still being built. enter the password.</p>
+    <form id="lock-form" autocomplete="off"><input id="lock-pass" type="password" aria-label="password" placeholder="password" autocomplete="off"><button type="submit">unlock &#9654;</button></form>
+    <p id="lock-msg" role="status"></p>
+  </section>
+
+  <section id="sd-game" hidden>
+    <div id="sd-tabs" role="tablist">
+      <button type="button" data-k="easy">easy<small></small></button>
+      <button type="button" data-k="hard">hard<small></small></button>
+      <button type="button" data-k="extreme">extreme<small></small></button>
+    </div>
+    <div class="sd-bar">
+      <span>sudoku <b id="sd-num"></b> <span id="sd-diff"></span></span>
+      <span>errors <b id="sd-err">0</b></span>
+      <span>time <b id="sd-time">0:00</b> <button type="button" id="sd-pause" aria-label="pause">II</button></span>
+    </div>
+    <div class="sd-board">
+      <div id="sd-grid" role="grid" aria-label="sudoku grid" data-noxlate></div>
+      <div class="sd-over" id="sd-paused" hidden>paused<button type="button" id="sd-resume">resume &#9654;</button></div>
+      <div class="sd-over" id="sd-done" hidden>
+        <div class="sd-card">
+          <h2 id="sd-d-title">solved!</h2>
+          <table><tbody id="sd-d-rows"></tbody></table>
+          <div id="sd-d-more"></div>
+          <button type="button" id="sd-look">look at the grid</button>
+        </div>
+      </div>
+    </div>
+    <div id="sd-pad" data-noxlate></div>
+    <div class="sd-tools">
+      <button type="button" id="sd-notes" aria-pressed="false">notes (N)</button>
+      <button type="button" id="sd-erase">erase</button>
+      <button type="button" id="sd-undo">undo</button>
+    </div>
+    <p class="sd-foot">keys: 1-9 fill &middot; arrows move &middot; N notes &middot; backspace erase &middot; ctrl+Z undo &middot; P pause<br>new puzzles in <b id="sd-next"></b> &middot; puzzles from the public-domain <a href="https://github.com/grantm/sudoku-exchange-puzzle-bank" target="_blank" rel="noopener">Sudoku Exchange puzzle bank</a></p>
+  </section>
+
+  <a class="back" href="index.html#games">&laquo; back to all games</a>
+</div>
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=1a7df27a"></script>
+<script src="sudoku/vault.js?v=0b1a8cc9"></script>
+<script src="sudoku/game.js?v=e7fc441f"></script>
+<script src="sudoku/lock.js?v=42e0250d"></script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

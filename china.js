@@ -203,6 +203,10 @@
     "sfsg slacking simulator": "SFSG 摸鱼模拟器", "work in progress": "制作中", "the office, rebuilt in 3d. do as little as possible from 9 to 6 without getting caught.": "3D重建的办公室。从九点到六点尽量少干活，还不被抓到。",
     "slack": "摸鱼", "eye": "眼睛", "phone": "手机", "alt-tab": "切换窗口", "nap": "打盹", "clock in": "打卡上班", "another day": "再来一天", "staff only": "仅限员工",
     "this one's still being built. enter the password.": "这个还在制作中。请输入密码。", "badge in": "刷卡进入",
+    "daily sudoku": "每日数独", "daily sudoku (work in progress)": "每日数独（制作中）", "sudoku": "数独", "unlock": "解锁", "extreme": "极难", "errors": "错误", "notes (n)": "笔记 (N)", "erase": "擦除",
+    "three new sudoku every day (singapore time): easy, hard and extreme. same puzzles for everyone. tap a square, then a number. score = a base for the difficulty, plus or minus time against par, minus a tenth of the base for every wrong number.":
+      "每天三道新数独（新加坡时间）：简单、困难、极难。所有人同一题。先点格子，再点数字。得分 = 难度底分，加减与标准时间的差，每填错一个数字扣底分的十分之一。",
+    "solved!": "解开了！", "solved": "已解开", "new best!": "新纪录！", "look at the grid": "看看棋盘", "new puzzles in": "新谜题倒计时",
     "9:00am. mr. goh is walking the floor. earn slack points for every second you're not working. three strikes and he'd like a quick word.": "早上9:00。吴先生正在巡视。你每一秒不工作都能赚摸鱼分。被抓三次他就要找你谈话了。",
     "stop the bar": "停住指针", "the marker sweeps back and forth. click or hit space to stop it inside the green band. every hit shrinks the band and speeds things up. one miss and you are out.": "指针来回摆动。点击或按空格把它停在绿色区域内。每次命中区域会变小，速度会变快。失误一次就出局。",
     "click or press space to start": "点击或按空格开始",

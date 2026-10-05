@@ -27,6 +27,7 @@
     "crossword.html": ["Crossword", "excel"],
     "puzzle.html": ["Tile Slider", "excel"],
     "mines.html": ["Minesweeper", "excel"],
+    "sudoku.html": ["Daily Sudoku", "excel"],
     "maze.html": ["Cursor Maze", "excel"],
     "leaderboards.html": ["Leaderboards", "excel"],
     "five.html": ["Five Letters", "word"],

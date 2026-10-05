@@ -1257,6 +1257,33 @@ builds taka's).
 - Registered in panic-app FILES and feedback ITEMS; the homepage tile is still
   in Coming Soon (not clickable) until it's ready.
 
+### Daily Sudoku (`sudoku.html` + `sudoku/`, WORK IN PROGRESS, 2026-10-05, v0.9.7)
+
+Three daily sudoku (easy / hard / extreme), the same for everyone on the same
+Singapore day. **Password protected while it's being built** (same vault
+scheme as slack/taka; the password is Caleb's, not in the repo, ask him).
+Linked only from the admin page's "in development" table, no homepage tile.
+
+- Puzzles: the Sudoku Exchange puzzle bank (public domain,
+  github.com/grantm/sudoku-exchange-puzzle-bank, QQWing-generated, graded with
+  Sukaku Explainer). `tools/build-sudoku.mjs <dir with the .txt files>` takes
+  366 per band (easy.txt; hard.txt rated 3.0-4.5; diabolical.txt rated
+  5.0-7.5), checks each has exactly one solution, and writes
+  `sudoku/src/data.js` (git-ignored) as `[puzzle, solution, rating]`. Then
+  `node tools/build-vault.mjs sudoku <password>` -> `sudoku/vault.js`.
+- `sudoku/game.js` `SudokuBoot(content)`: puzzle n = days since `EPOCH`
+  (2026-10-05 = sudoku #1) mod 366. A digit that isn't the stored solution
+  is an error (shown red, stays until erased); notes never count. Score =
+  base (1000 / 2000 / 3000) + (par - seconds) x base / (2 x par) - errors x
+  base / 10, never below base / 10 (pars 5 / 15 / 25 min). Timer only runs
+  while the tab is visible; hiding it pauses. Keys: 1-9, arrows, N notes,
+  backspace, ctrl+Z, P.
+- Progress + results in localStorage only (`sortafun-sudoku-<day>-<diff>`,
+  `sortafun-sudoku-best`, `sortafun-sudoku-tab`). **No leaderboard yet**: when
+  it gets one, keys like `sudoku_easy` etc., rules commit first.
+- `window.__sudoku` (`state`, `score`, `solve`, `select`, `input`) and
+  `SudokuUnlock(pw)` for tests. Registered in feedback ITEMS and panic FILES.
+
 ### Taka-san Dinner Simulator (`taka.html` + `taka/`, 2026-09-29, v0.3)
 
 **Password protected and encrypted (v0.3.1).** The page opens on a lock
@@ -1443,6 +1470,8 @@ submitted per day / per game, "plays" = submitted scores) and latest scores + gu
 just a client check: it signs in to Firebase Auth as `admin@sortafun.org` (email/password provider, account made
 with the service-account key) and `firestore.rules` `isAdmin()` lets only that account read `feedback` and
 read/write `admin_todos` / `admin_state` (feedback "done" flags; feedback docs themselves stay immutable).
+The "in development" table near the top is static HTML: WIP games (Daily Sudoku, the slacking simulator) with links
+and what's next. Never write their passwords in it (the page source is public even though the data isn't).
 Uses its own named Firebase app, session persistence only.
 
 ### Feedback (`feedback.js`)
