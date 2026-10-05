@@ -413,6 +413,22 @@ every daily puzzle (they index into it), including today's.
   queen bee is always 100%. The meter shows "today's hive: hard / tricky /
   normal / easy". Recalibrate with a year of `buildPuzzle()` runs if the
   dictionary changes.
+  **The daily board is live (v0.9.8, Caleb's ask).** No submit button for
+  today: the first word puts you on today's board (name from `sortafun-name`,
+  or a one-time "your name for today" box), and every word after updates the
+  same row (`SortafunLB.liveSet`, id from `newLiveId()` made before the first
+  write and kept in the localStorage save + the codephrase save as `lb`/`name`,
+  so a reload or another device with the codephrase climbs the same row under
+  the same name). One debounced write path (`flush()`: live row, then the
+  codephrase save), one live write in flight, always the full total (the rules
+  refuse a lower score). At Singapore midnight the rules freeze the row and the
+  page locks the hive with "this hive's board is closed". The standing board is
+  `keepBoard(lb, "hive", { live, mine })`: the today tab is an `onSnapshot`
+  listener (`watchTop`), your own row is outlined "(you)". Archive rounds keep
+  the old "i'm done, submit score" one-shot submit. Limits: a device that had
+  its own row before typing another codephrase leaves that row behind (rows
+  can't be deleted), and a score submitted the old way earlier the same day
+  stays as a separate row.
 - `five.html` = **five letters** (Wordle rules, key `five`, low = guesses).
   Daily answer from common 5-letter words minus plurals / -ed; guesses must be
   in the dictionary. Progress per day in `localStorage` `sortafun-five-<day>`

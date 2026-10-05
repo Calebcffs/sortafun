@@ -84,6 +84,10 @@
   .cont input { font: inherit; width: 150px; padding: 3px 6px; border: 3px solid var(--ink); border-radius: 8px; }
   .cont button { padding: 3px 10px; }
   #cmsg { color: #b00; }
+  .livebox { font-size: 13px; margin: 8px auto 0; max-width: 420px; padding: 6px 10px; background: #fff9db; border: 2px dashed var(--ink); border-radius: 10px; }
+  .livebox input { font: inherit; width: 140px; padding: 3px 6px; border: 3px solid var(--ink); border-radius: 8px; }
+  .livebox button { padding: 3px 10px; }
+  .livebox .lberr { color: #b00; margin-top: 3px; }
   .m-now { display: none; }
 
   @media (max-width: 560px) {
@@ -104,8 +108,8 @@
   }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=793f6239"></script>
-<script src="feedback.js?v=ff687459"></script>
+<script src="china.js?v=fa60ab7c"></script>
+<script src="feedback.js?v=2d542b28"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -116,7 +120,7 @@
   <p class="sub" id="archnote" hidden></p>
   <p class="sub">seven letters, one of them mandatory (gold). find every word you can, 4+ letters,
     reuse letters as often as you like. any real word counts, no names.
-    no clock, stop whenever and submit your score. same seven letters for everyone today.
+    no clock. every word you find goes straight onto today's leaderboard, live, until midnight. same seven letters for everyone today.
     the ranks on the meter scale with the day's letters: a hard hive gets you to the top with fewer points.</p>
 
   <div class="cont">got a codephrase? <input id="cin" placeholder="fluffy-antelope" maxlength="26" autocomplete="off" spellcheck="false"> <button id="cgo">continue</button> <span id="cmsg"></span></div>
@@ -139,6 +143,7 @@
   </div>
 
   <div class="status" id="status">type or click letters. the gold one is required in every word.</div>
+  <div class="livebox" id="livebox" hidden></div>
   <div><button id="finish">i'm done, submit score</button></div>
   </div>
 
@@ -164,7 +169,7 @@
 <script src="dict.js?v=8295ff80"></script>
 <script src="freq.js?v=8508f925"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=1a7df27a"></script>
+<script src="leaderboard.js?v=0aae6dae"></script>
 <script>
 "use strict";
 
@@ -617,29 +622,120 @@ function showCode() {
   document.getElementById("scode").textContent = saveCode;
   document.getElementById("savebox").hidden = false;
 }
+// today's live leaderboard row (leaderboard.js liveSet): every word climbs it until midnight.
+// liveId is made before the first write and kept with the save, so a reload or another device
+// (same codephrase) keeps writing the same row, under the name it started with.
+var LIVE = !IS_ARCHIVE, liveId = null, liveName = null, liveMade = false;
+var lbBusy = false, lbAgain = false, lbClosed = false;
+var LIVE_ID_RE = /^[A-Za-z0-9]{20}$/;
 function localSave() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ code: saveCode, words: Object.keys(foundWords) })); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ code: saveCode, words: Object.keys(foundWords), lb: liveId, name: liveName, made: liveMade })); } catch (e) {}
 }
-function cloudSave() {
-  if (!saveCode || !window.SortafunLB || !SortafunLB.hiveSaveSet) return;
+// one debounced write path: the live row first (so a new row id goes into the save), then the codephrase save
+function flush() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(function () { SortafunLB.hiveSaveSet(saveCode, VIEW_DAY, Object.keys(foundWords)).catch(function (e) { console.warn("[hive] cloud save failed", e); }); }, 1200);
+  saveTimer = setTimeout(function () {
+    pushLive();
+    if (!saveCode || !window.SortafunLB || !SortafunLB.hiveSaveSet) return;
+    SortafunLB.hiveSaveSet(saveCode, VIEW_DAY, Object.keys(foundWords), LIVE ? { lb: liveId, name: liveName } : null)
+      .catch(function (e) { console.warn("[hive] cloud save failed", e); });
+  }, 700);
 }
 // after every word: this device now, and the codephrase (made the first time you find one)
 function persistProgress() {
   localSave();
-  if (saveCode) { cloudSave(); return; }
-  if (codeMaking || !window.SortafunLB || !SortafunLB.hiveSaveGet) return;
+  flush();
+  if (saveCode || codeMaking || !window.SortafunLB || !SortafunLB.hiveSaveGet) return;
   codeMaking = true;
   (function tryMake(n) {
     var c = pickWord(ADJ) + "-" + pickWord(NOUN);
     SortafunLB.hiveSaveGet(c).then(function (d) {
       if (d && n < 8) return tryMake(n + 1);       // taken, try another
       saveCode = c; codeMaking = false;
-      showCode(); localSave(); cloudSave();
+      showCode(); localSave(); flush();
     }).catch(function () { codeMaking = false; });   // offline: it will try again after the next word
   })(0);
 }
+
+// ---- the live row ----
+// one write in flight at a time, always the current total: the rules refuse a score that goes down,
+// so two writes landing out of order would bounce
+function pushLive() {
+  if (!LIVE || lbClosed || !window.SortafunLB || !SortafunLB.liveSet || !Object.keys(foundWords).length) return;
+  if (SortafunLB.dayStr() !== VIEW_DAY) { closeLive(); return; }
+  if (!liveName) {
+    var saved = null;
+    try { saved = (localStorage.getItem("sortafun-name") || "").trim(); } catch (e) {}
+    if (!saved) { askName(); return; }
+    liveName = saved.slice(0, 20);
+  }
+  if (!liveId) { liveId = SortafunLB.newLiveId(); localSave(); }
+  if (lbBusy) { lbAgain = true; return; }
+  lbBusy = true;
+  SortafunLB.liveSet(liveId, { name: liveName, score: score, bee: rankIndex(score) === RANKS.length - 1, day: VIEW_DAY }).then(function () {
+    if (!liveMade) { liveMade = true; localSave(); }
+    showLive("");
+  }, function (e) {
+    console.warn("[hive] live board update failed", e);
+    if (SortafunLB.dayStr() !== VIEW_DAY) { closeLive(); return; }
+    showLive(/permission/i.test(String(e && (e.code || e.message)))
+      ? "the board didn't take that update. it tries again with your next word."
+      : "couldn't reach the board. it tries again with your next word.");
+  }).then(function () {
+    lbBusy = false;
+    if (lbAgain) { lbAgain = false; pushLive(); }
+  });
+}
+function liveBox() { var b = document.getElementById("livebox"); b.hidden = false; b.innerHTML = ""; return b; }
+function askName() {
+  if (document.getElementById("lname")) return;
+  var b = liveBox();
+  b.appendChild(document.createTextNode("you're going on today's leaderboard. your name for today (it stays all day): "));
+  var inp = document.createElement("input");
+  inp.id = "lname"; inp.maxLength = 20; inp.placeholder = "your name"; inp.autocomplete = "off"; inp.spellcheck = false;
+  var go = document.createElement("button");
+  go.textContent = "go on the board";
+  b.appendChild(inp); b.appendChild(document.createTextNode(" ")); b.appendChild(go);
+  inp.addEventListener("keydown", function (e) {
+    e.stopPropagation(); // typing a name isn't playing the game
+    if (e.key === "Enter") { e.preventDefault(); go.click(); }
+  });
+  go.addEventListener("click", function () {
+    var v = inp.value.trim().slice(0, 20);
+    if (!v) { inp.focus(); return; }
+    liveName = v;
+    try { localStorage.setItem("sortafun-name", v); } catch (e) {}
+    localSave();
+    showLive("");
+    flush();
+  });
+}
+function showLive(err) {
+  var b = liveBox();
+  b.appendChild(document.createTextNode("live on today's board as "));
+  var nm = document.createElement("b"); nm.textContent = liveName; b.appendChild(nm);
+  b.appendChild(document.createTextNode(". every word adds to it until midnight (singapore time)."));
+  if (err) { var e = document.createElement("div"); e.className = "lberr"; e.textContent = err; b.appendChild(e); }
+}
+// midnight in Singapore: today's board is final, this hive is over
+function closeLive() {
+  if (lbClosed) return;
+  lbClosed = true;
+  done = true;
+  ["enter", "del", "clear", "shuffle"].forEach(function (id) { document.getElementById(id).disabled = true; });
+  hiveEl.querySelectorAll(".cell").forEach(function (c) { c.disabled = true; });
+  var b = liveBox();
+  b.appendChild(document.createTextNode(Object.keys(foundWords).length
+    ? "midnight: this hive's board is closed. your final score is " + score + ". "
+    : "midnight: a new hive is out. "));
+  var a = document.createElement("a"); a.href = "anagram.html"; a.textContent = "play today's hive";
+  b.appendChild(a);
+}
+if (LIVE) {
+  document.getElementById("finish").parentNode.hidden = true; // today's score posts itself
+  setInterval(function () { if (!lbClosed && window.SortafunLB && SortafunLB.dayStr() !== VIEW_DAY) closeLive(); }, 15000);
+}
+
 // put saved words back (only ones that are real answers today)
 function restoreWords(list) {
   var n = 0;
@@ -666,10 +762,13 @@ function continueWith(code) {
       return;
     }
     saveCode = code;
+    // carry on the same leaderboard row, under the name it started with
+    if (LIVE && typeof d.lb === "string" && LIVE_ID_RE.test(d.lb)) { liveId = d.lb; liveMade = true; }
+    if (LIVE && typeof d.name === "string" && d.name.trim()) liveName = d.name.trim().slice(0, 20);
     var n = restoreWords(d.words);
     msg.textContent = n ? "welcome back, " + n + " word" + (n === 1 ? "" : "s") + " restored" : "that save has nothing new in it";
     msg.style.color = "#1faf3a";
-    showCode(); localSave(); cloudSave();
+    showCode(); localSave(); flush();
   }).catch(function () { msg.textContent = "couldn't reach the save"; });
 }
 document.getElementById("cgo").addEventListener("click", function () { continueWith(document.getElementById("cin").value); });
@@ -682,16 +781,19 @@ document.getElementById("cin").addEventListener("keydown", function (e) {
   try { local = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
   if (local && Array.isArray(local.words) && local.words.length) {
     if (local.code && CODE_RE.test(local.code)) saveCode = local.code;
+    if (LIVE && typeof local.lb === "string" && LIVE_ID_RE.test(local.lb)) { liveId = local.lb; liveMade = !!local.made; }
+    if (LIVE && typeof local.name === "string" && local.name) liveName = local.name.slice(0, 20);
     restoreWords(local.words);
     showCode();
+    flush(); // words found while offline reach the board now
   }
   var q = new URLSearchParams(location.search).get("code");
   if (q) { document.getElementById("cin").value = q; continueWith(q); }
 })();
 </script>
 <script>if (IS_ARCHIVE) { var an = document.getElementById("archnote"); an.hidden = false; an.textContent = "archive hive from " + VIEW_DAY + ". your score counts toward the all time board, but not today's."; document.querySelector("h1").textContent = "word hive (archive)"; }</script>
-<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
-if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "hive");</script>
+<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard); today's is live */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "hive", IS_ARCHIVE ? null : { live: true, mine: function () { return liveId; } });</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 <script>/* one day only (5 oct 2026): a get well soon card from a sick bee */
 (function () {

@@ -185,9 +185,59 @@
         var out = [];
         snap.forEach(function (doc) {
           var d = doc.data();
-          out.push({ name: d.name, score: d.score, ts: d.ts || null, bee: d.bee === true });
+          out.push({ id: doc.id, name: d.name, score: d.score, ts: d.ts || null, bee: d.bee === true });
         });
         return out;
+      });
+    });
+  }
+
+  // The same top-n query, kept live (onSnapshot): cb(rows) on every change,
+  // err(e) on failure. Returns a stop function (safe to call before it starts).
+  function watchTop(game, day, n, cb, err) {
+    var stop = null, stopped = false;
+    init().then(function () {
+      if (stopped) return;
+      var fs = state.fs;
+      var parts = [fs.collection(state.db, "scores"), fs.where("game", "==", game)];
+      if (day) parts.push(fs.where("day", "==", day));
+      parts.push(fs.orderBy("rankValue", "desc"), fs.limit(n));
+      stop = fs.onSnapshot(fs.query.apply(null, parts), function (snap) {
+        var out = [];
+        snap.forEach(function (doc) {
+          var d = doc.data({ serverTimestamps: "estimate" });
+          out.push({ id: doc.id, name: d.name, score: d.score, ts: d.ts || null, bee: d.bee === true });
+        });
+        cb(out);
+      }, err);
+    }).catch(err);
+    return function () { stopped = true; if (stop) stop(); };
+  }
+
+  // Word hive's live row: one scores doc per player per day (live: true) that
+  // climbs with every word until Singapore midnight (firestore.rules
+  // isHiveLiveUpdate: score only goes up, name and day never change). The id
+  // is made here, before the first write, so a reload mid-write can't make a
+  // second row; every write is the whole doc via setDoc (create, then update).
+  function newLiveId() {
+    var A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", out = "";
+    var r = new Uint8Array(20);
+    (window.crypto || window.msCrypto).getRandomValues(r);
+    for (var i = 0; i < 20; i++) out += A[r[i] % 62];
+    return out;
+  }
+  function liveSet(id, o) {
+    return init().then(function () {
+      var fs = state.fs;
+      var doc = { game: "hive", name: String(o.name).trim().slice(0, 20), score: Math.round(Number(o.score)),
+        day: o.day, ts: fs.serverTimestamp(), live: true };
+      doc.rankValue = doc.score;
+      if (o.bee) doc.bee = true;
+      return fs.setDoc(fs.doc(state.db, "scores", id), doc).then(function () {
+        try {
+          localStorage.setItem("sortafun-stamp-scored", "1");
+          localStorage.setItem("sortafun-stamp-game-hive", "1");
+        } catch (e) {}
       });
     });
   }
@@ -323,10 +373,13 @@
       return fs.getDoc(fs.doc(state.db, "hive_saves", code)).then(function (s) { return s.exists() ? s.data() : null; });
     });
   }
-  function hiveSaveSet(code, day, words) {
+  function hiveSaveSet(code, day, words, extra) {
     return init().then(function () {
       var fs = state.fs;
-      return fs.setDoc(fs.doc(state.db, "hive_saves", code), { day: day, words: words, ts: fs.serverTimestamp() });
+      var d = { day: day, words: words, ts: fs.serverTimestamp() };
+      if (extra && extra.lb) d.lb = extra.lb;      // the live leaderboard row (newLiveId)
+      if (extra && extra.name) d.name = extra.name; // the name on it, fixed for the day
+      return fs.setDoc(fs.doc(state.db, "hive_saves", code), d, { merge: true });
     });
   }
 
@@ -569,7 +622,7 @@
     var g = GAMES[game];
     // one board per spot: a finished round's panel replaces the standing one
     Array.prototype.slice.call(target.children).forEach(function (c) {
-      if (c.classList.contains("lb")) c.remove();
+      if (c.classList.contains("lb")) { if (c._lbStop) c._lbStop(); c.remove(); }
     });
     var root = el("div", "lb");
     if (opts.score == null) root.setAttribute("data-idle", "");
@@ -592,6 +645,10 @@
     var period = "day";
     var justSent = null;
     var triedAll = false;
+    // opts.live: the "today" tab follows the board as it changes (word hive's
+    // climbing rows). opts.mine(): the id of this player's row, marked "you".
+    var stopWatch = null;
+    root._lbStop = function () { if (stopWatch) { stopWatch(); stopWatch = null; } };
 
     function render(rows, worst) {
       listEl.innerHTML = "";
@@ -604,19 +661,21 @@
       }
       if (!rows.length) {
         // standing board with nobody on it today: show the all-time board instead
-        if (period === "day" && opts.score == null && !triedAll) {
+        if (period === "day" && opts.score == null && !triedAll && !opts.live) {
           triedAll = true;
           tabs.forEach(function (x) { x.classList.toggle("on", x.dataset.p === "all"); });
           period = "all";
           load();
           return;
         }
-        msgEl.textContent = period === "day" ? "nobody yet today. be the first." : "nobody yet. be the first.";
+        msgEl.textContent = period === "day" ? (opts.live ? "nobody yet today. find a word and you're on." : "nobody yet today. be the first.") : "nobody yet. be the first.";
         return;
       }
-      msgEl.textContent = "";
+      msgEl.textContent = opts.live && period === "day" ? "live: scores climb as people find words, until midnight." : "";
+      var mine = opts.mine ? opts.mine() : null;
       rows.forEach(function (r) {
         var li = el("li");
+        if (mine && r.id === mine) li.classList.add("lb-you");
         var line = el("div", "lb-row");
         line.appendChild(el("span", "lb-name", r.name));
         line.appendChild(el("span", "lb-score", fmtScore(g, r.score)));
@@ -636,8 +695,20 @@
     }
 
     function load() {
+      root._lbStop();
       msgEl.textContent = "loading...";
       listEl.innerHTML = "";
+      if (opts.live && period === "day") {
+        stopWatch = watchTop(game, dayStr(), 10, function (rows) {
+          if (!root.isConnected) { root._lbStop(); return; }
+          render(rows, null);
+        }, function (e) {
+          listEl.innerHTML = "";
+          msgEl.textContent = state.offline ? "leaderboard offline" : "leaderboard error (open console)";
+          if (!state.offline) console.warn("[leaderboard]", e);
+        });
+        return;
+      }
       var jobs = [
         top(game, period),
         period === "all" ? lastPlace(game).catch(function () { return null; })
@@ -728,13 +799,13 @@
   // submit panel when a round ends (mountPanel with a score), and put back
   // whenever the game empties the spot again (new board / restart). game is
   // a key, or a function returning one (typing switches between two boards).
-  function keepBoard(target, game) {
+  function keepBoard(target, game, opts) {
     if (!target) return;
     var key = typeof game === "function" ? game : function () { return game; };
     function fill() {
       if (target.children.length || target.textContent.trim()) return;
       if (!GAMES[key()]) return;
-      mountPanel(target, key());
+      mountPanel(target, key(), opts || undefined);
     }
     fill();
     new MutationObserver(function () {
@@ -769,6 +840,8 @@
       ".lb-list li:nth-child(2) .lb-name::before{content:'\\1F948  ';}",
       ".lb-list li:nth-child(3) .lb-name::before{content:'\\1F949  ';}",
       ".lb-score{flex:none;color:#18a84b;font-weight:700;}",
+      ".lb-list li.lb-you{outline:3px solid #ffd43b;outline-offset:-3px;border-radius:8px;}",
+      ".lb-you .lb-name::after{content:' (you)';font-weight:normal;font-size:10px;color:#8a879c;}",
       ".lb-when{font-size:10.5px;color:#8a879c;margin-top:1px;}",
       ".lb-last{border-radius:8px;margin:2px 6px;padding:5px 8px;",
         "background:linear-gradient(90deg,#fff8d9,#ffe9a8)!important;",
@@ -814,6 +887,9 @@
     fmtWhen: fmtWhen,
     submit: submit,
     top: top,
+    watchTop: watchTop,
+    newLiveId: newLiveId,
+    liveSet: liveSet,
     topDay: topDay,
     lastPlace: lastPlace,
     bestByDay: bestByDay,

@@ -88,6 +88,19 @@ Collection `scores`, one document per submitted score:
 | `rankValue` | int    | higher = better always; "low" games store `-score` |
 | `day`       | string | `YYYY-MM-DD`, Singapore time (UTC+8, no DST)  |
 | `ts`        | timestamp | server time                               |
+| `bee`       | bool   | hive only, `true` = the bee all end all (2x queen bee) |
+| `arch`      | bool   | hive only, `true` = an archive round filed under its puzzle's day |
+| `live`      | bool   | hive only, `true` = today's live row (see below) |
+
+**Word hive live rows (since v0.9.8).** Today's hive has one `live: true` row
+per player that climbs with every word: `firestore.rules` `isHiveLiveUpdate`
+is the only update the `scores` collection allows (score only goes up, name
+and day never change, `ts` refreshed, and only while `day` is still today in
+Singapore time, so the board freezes at midnight). Anyone who knows a row's id
+could raise it, never lower or rename it: the same "stops junk, not forgers"
+trade as everything else here. `hive_saves/<codephrase>` is
+`{ day, words, ts, lb?, name? }`, where `lb` is the live row id and `name` the
+name on it, so another device with the codephrase keeps climbing the same row.
 
 Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram` (retired, see
