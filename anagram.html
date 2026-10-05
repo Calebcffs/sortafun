@@ -105,7 +105,7 @@
 </style>
 <script src="sfx.js?v=5233b886"></script>
 <script src="china.js?v=27cfcd3b"></script>
-<script src="feedback.js?v=0203cc3c"></script>
+<script src="feedback.js?v=cae8ac50"></script>
 <script src="panic-app.js?v=176165f9"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -693,5 +693,63 @@ document.getElementById("cin").addEventListener("keydown", function (e) {
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
 if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "hive");</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+<script>/* one day only (5 oct 2026): a get well soon card from a sick bee */
+(function () {
+  // the site's day is Singapore time (UTC+8)
+  if (new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) !== "2026-10-05" && !/gws/.test(location.hash)) return;
+  var css = document.createElement("style");
+  css.textContent =
+    "#gws{position:fixed;inset:0;z-index:9999;background:rgba(20,18,40,.55);display:flex;align-items:center;justify-content:center;padding:16px}" +
+    "#gws .card{background:#fffbe8;border:4px solid #1d1b2e;border-radius:18px;box-shadow:8px 8px 0 #1d1b2e;max-width:360px;width:100%;padding:18px 18px 16px;text-align:center;font-family:inherit;animation:gwsIn .35s cubic-bezier(.3,1.6,.6,1)}" +
+    "#gws svg{width:220px;max-width:80%;height:auto;animation:gwsBob 2.4s ease-in-out infinite}" +
+    "#gws h2{margin:8px 0 4px;font-size:26px;color:#1d1b2e;line-height:1.15}" +
+    "#gws p{margin:0 0 14px;color:#555}" +
+    "#gws button{font:inherit;font-weight:bold;font-size:16px;background:#ffc400;border:3px solid #1d1b2e;border-radius:10px;padding:8px 18px;cursor:pointer;box-shadow:3px 3px 0 #1d1b2e}" +
+    "@keyframes gwsIn{from{transform:scale(.6);opacity:0}}" +
+    "@keyframes gwsBob{50%{transform:translateY(5px) rotate(-2deg)}}";
+  document.head.appendChild(css);
+  var el = document.createElement("div");
+  el.id = "gws";
+  el.innerHTML =
+    '<div class="card" role="dialog" aria-label="get well soon">' +
+    '<svg viewBox="0 0 220 170" aria-hidden="true">' +
+      // blanket
+      '<path d="M18 128 Q110 108 202 128 L206 166 L14 166 Z" fill="#7ab8ff" stroke="#1d1b2e" stroke-width="4"/>' +
+      '<path d="M40 140 h20 M80 136 h20 M120 136 h20 M160 140 h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' +
+      // droopy wings
+      '<ellipse cx="88" cy="70" rx="24" ry="14" transform="rotate(25 88 70)" fill="rgba(230,240,255,.9)" stroke="#1d1b2e" stroke-width="3"/>' +
+      '<ellipse cx="128" cy="72" rx="22" ry="13" transform="rotate(-20 128 72)" fill="rgba(230,240,255,.9)" stroke="#1d1b2e" stroke-width="3"/>' +
+      // body
+      '<ellipse cx="110" cy="108" rx="52" ry="32" fill="#ffc400" stroke="#1d1b2e" stroke-width="4"/>' +
+      '<path d="M92 79 Q86 108 92 137 L104 139 Q98 108 104 77 Z M120 77 Q126 108 120 139 L132 137 Q138 108 132 80 Z" fill="#1d1b2e"/>' +
+      // head, a bit green
+      '<circle cx="168" cy="96" r="26" fill="#d9e8a0" stroke="#1d1b2e" stroke-width="4"/>' +
+      // floppy antennae
+      '<path d="M160 72 Q150 52 140 58" fill="none" stroke="#1d1b2e" stroke-width="3" stroke-linecap="round"/><circle cx="139" cy="59" r="4" fill="#1d1b2e"/>' +
+      '<path d="M174 71 Q186 50 196 62" fill="none" stroke="#1d1b2e" stroke-width="3" stroke-linecap="round"/><circle cx="197" cy="63" r="4" fill="#1d1b2e"/>' +
+      // tired eyes, flushed cheeks, wobbly mouth
+      '<path d="M156 92 q5 -4 10 0 M174 92 q5 -4 10 0" fill="none" stroke="#1d1b2e" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle cx="155" cy="102" r="5" fill="#ff8a8a" opacity=".7"/><circle cx="186" cy="102" r="5" fill="#ff8a8a" opacity=".7"/>' +
+      '<path d="M162 110 q4 -3 8 0 q4 3 8 0" fill="none" stroke="#1d1b2e" stroke-width="3" stroke-linecap="round"/>' +
+      // thermometer
+      '<g transform="rotate(-30 178 112)"><rect x="176" y="106" width="34" height="7" rx="3.5" fill="#fff" stroke="#1d1b2e" stroke-width="2.5"/><rect x="186" y="108.5" width="18" height="2" fill="#e53935"/><circle cx="210" cy="109.5" r="5" fill="#e53935" stroke="#1d1b2e" stroke-width="2.5"/></g>' +
+      // ice pack on head
+      '<rect x="150" y="62" width="34" height="14" rx="5" fill="#bfe6ff" stroke="#1d1b2e" stroke-width="3" transform="rotate(-8 167 69)"/>' +
+      // sniffle drop and a little zzz
+      '<path d="M150 104 q-3 6 0 8 q3 -2 0 -8" fill="#8fd3ff" stroke="#1d1b2e" stroke-width="1.5"/>' +
+      '<text x="196" y="40" font-size="18" font-weight="bold" fill="#1d1b2e" font-family="sans-serif">z</text><text x="206" y="26" font-size="13" font-weight="bold" fill="#1d1b2e" font-family="sans-serif">z</text>' +
+    '</svg>' +
+    '<h2>get well soon <span style="white-space:nowrap">bee-yonce</span></h2>' +
+    '<p>the whole hive is buzzing for you</p>' +
+    '<button type="button">thank bee</button>' +
+    '</div>';
+  function close() { el.remove(); document.removeEventListener("keydown", onKey, true); }
+  function onKey(e) { if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); close(); } }
+  el.addEventListener("click", function (e) { if (e.target === el || e.target.tagName === "BUTTON") close(); });
+  document.addEventListener("keydown", onKey, true);
+  document.body.appendChild(el);
+  el.querySelector("button").focus();
+})();
+</script>
 </body>
 </html>
