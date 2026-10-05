@@ -376,7 +376,9 @@
   function hiveSaveSet(code, day, words, extra) {
     return init().then(function () {
       var fs = state.fs;
-      var d = { day: day, words: words, ts: fs.serverTimestamp() };
+      // words are merged in, never replaced: two devices on one codephrase can't wipe each other's finds
+      if (!words.length) return null; // nothing found yet: nothing to save (and [] must never overwrite a list)
+      var d = { day: day, words: fs.arrayUnion.apply(null, words), ts: fs.serverTimestamp() };
       if (extra && extra.lb) d.lb = extra.lb;      // the live leaderboard row (newLiveId)
       if (extra && extra.name) d.name = extra.name; // the name on it, fixed for the day
       return fs.setDoc(fs.doc(state.db, "hive_saves", code), d, { merge: true });
