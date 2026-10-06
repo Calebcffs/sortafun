@@ -1,4 +1,4 @@
-// Builds sudoku/src/data.js (git-ignored): a year of daily puzzles for sudoku.html.
+// Builds sudoku/puzzles.js: a year of daily puzzles for sudoku.html.
 //
 //   node tools/build-sudoku.mjs <dir with easy.txt hard.txt diabolical.txt>
 //
@@ -11,7 +11,9 @@
 //   extreme <- diabolical.txt   (rating 5.0 to 7.5; above that is beyond most people)
 // Each puzzle is solved here and must have exactly one solution. Output:
 //   window.SUDOKU_DATA = { easy: [[puzzle, solution, rating], ...], hard, extreme }
-// Then encrypt it: node tools/build-vault.mjs sudoku <password>
+// (public since the 2026-10-06 release; it was an encrypted vault while in development).
+// Puzzle n is day n since sudoku/game.js EPOCH, so rebuilding with different
+// bands changes every day's puzzles: only append, or rebuild before EPOCH + 366.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
 const N = 366;
@@ -65,6 +67,6 @@ for (const [k, [file, lo, hi]] of Object.entries(BANDS)) {
   console.log(k + ": " + N + " puzzles, rating " + Math.min(...rs) + " to " + Math.max(...rs) + ", givens " +
     Math.min(...out[k].map((x) => x[0].replace(/0/g, "").length)) + " to " + Math.max(...out[k].map((x) => x[0].replace(/0/g, "").length)));
 }
-mkdirSync("sudoku/src", { recursive: true });
-writeFileSync("sudoku/src/data.js", "window.SUDOKU_DATA = " + JSON.stringify(out) + ";\n");
-console.log("sudoku/src/data.js written");
+mkdirSync("sudoku", { recursive: true });
+writeFileSync("sudoku/puzzles.js", "/* daily sudoku puzzles (tools/build-sudoku.mjs), Sudoku Exchange puzzle bank, public domain */\nwindow.SUDOKU_DATA = " + JSON.stringify(out) + ";\n");
+console.log("sudoku/puzzles.js written");

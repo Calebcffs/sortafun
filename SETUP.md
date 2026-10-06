@@ -92,6 +92,11 @@ Collection `scores`, one document per submitted score:
 | `arch`      | bool   | hive only, `true` = an archive round filed under its puzzle's day |
 | `live`      | bool   | hive only, `true` = today's live row (see below) |
 
+**Live rows** are word hive's and daily sudoku's (`isLiveGame`). Daily
+sudoku's codephrase saves are `sudoku_saves/<code>` =
+`{ day, ts, st: { easy?, hard?, extreme? }, lb?, name?, k? }`, each puzzle
+`{ v, t, e, done, score? }`, and a finished puzzle stays finished.
+
 **Word hive live rows (since v0.9.8).** Today's hive has one `live: true` row
 per player that climbs with every word: `firestore.rules` `isHiveLiveUpdate`
 is the only update the `scores` collection allows (score only goes up, name
@@ -113,7 +118,8 @@ Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram` (retired, see
 `CLAUDE.md`), `mines`, `fermi` (retired), `minute`, `callit`, `watch` (all three retired
 2026-09-28 with the basement), `hive`,
-`five`, `sides`, `grab`, `deeptime`, `taka`, `deeptime2`. The enum
+`five`, `sides`, `grab`, `deeptime`, `taka` (archived 2026-10-06), `deeptime2`,
+`sudoku` (daily total, a live row like the hive's). The enum
 lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
 sync, and **update `firestore.rules` in the same commit whenever a game is

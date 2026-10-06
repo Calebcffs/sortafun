@@ -149,6 +149,7 @@
     "live on today's board as": "正在今天的排行榜上实时更新，名字是", ". every word adds to it until midnight (singapore time).": "。每个单词都会加分，直到午夜（新加坡时间）。",
     "play today's hive": "玩今天的蜂巢", "live: scores climb as people find words, until midnight.": "实时：大家找到单词分数就会上涨，直到午夜。",
     "nobody yet today. find a word and you're on.": "今天还没人上榜。找到一个单词你就上榜了。",
+    "live: totals climb as people solve, until midnight.": "实时：大家每解开一道题总分就会上涨，直到午夜。", "nobody yet today. solve one and you're on.": "今天还没人上榜。解开一道题你就上榜了。",
     "the board didn't take that update. it tries again with your next word.": "排行榜没收到这次更新。下一个单词会再试。",
     "couldn't reach the board. it tries again with your next word.": "连不上排行榜。下一个单词会再试。", "rank": "等级", "archive: play a past day": "存档：玩过去的一天",
     "seven letters, one of them mandatory (gold). find every word you can, 4+ letters, reuse letters as often as you like. any real word counts, no names. no clock. every word you find goes straight onto today's leaderboard, live, until midnight. same seven letters for everyone today. the ranks on the meter scale with the day's letters: a hard hive gets you to the top with fewer points.": "七个字母，其中一个必须使用（金色）。找出你能找到的所有单词，至少4个字母，字母可重复使用。任何真正的单词都算，人名不算。没有计时。你找到的每个单词都会实时加到今天的排行榜上，直到午夜。今天所有人的七个字母相同。等级条随当天的字母调整：难的蜂巢用更少的分数就能到顶。",
@@ -215,6 +216,14 @@
     "daily sudoku": "每日数独", "daily sudoku (work in progress)": "每日数独（制作中）", "sudoku": "数独", "unlock": "解锁", "extreme": "极难", "errors": "错误", "notes (n)": "笔记 (N)", "erase": "擦除",
     "three new sudoku every day (singapore time): easy, hard and extreme. same puzzles for everyone. tap a square, then a number. score = a base for the difficulty, plus or minus time against par, minus a tenth of the base for every wrong number.":
       "每天三道新数独（新加坡时间）：简单、困难、极难。所有人同一题。先点格子，再点数字。得分 = 难度底分，加减与标准时间的差，每填错一个数字扣底分的十分之一。",
+    "three new sudoku every day (singapore time): easy, hard and extreme. same puzzles for everyone. tap a square, then a number. score = a base for the difficulty, plus or minus time against par, minus a tenth of the base for every wrong number. every puzzle you solve adds to your total on today's leaderboard, live, until midnight.":
+      "每天三道新数独（新加坡时间）：简单、困难、极难。所有人同一题。先点格子，再点数字。得分 = 难度底分，加减与标准时间的差，每填错一个数字扣底分的十分之一。每解开一道题，你在今天排行榜上的总分就实时增加，直到午夜。",
+    ". every solve adds to it until midnight (singapore time).": "。每解开一道题都会加分，直到午夜（新加坡时间）。",
+    "midnight: that day's board is closed. today's puzzles are new.": "午夜了：那天的排行榜已经关闭。今天是新题。",
+    "the board didn't take that update. it tries again next time.": "排行榜没收到这次更新。下次会再试。",
+    "couldn't reach the board. it tries again next time.": "连不上排行榜。下次会再试。",
+    "type it into \"continue\" on any device to pick up today's puzzles and your spot on the board.": "在任何设备的“继续”里输入它，就能接着做今天的题，排行榜上的位置也不变。",
+    "three new sudoku every day: easy, hard and extreme. score on time and mistakes. every solve climbs today's board, live.": "每天三道新数独：简单、困难、极难。按用时和错误计分。每解开一道题，今天的排行榜实时上涨。",
     "solved!": "解开了！", "solved": "已解开", "new best!": "新纪录！", "look at the grid": "看看棋盘", "new puzzles in": "新谜题倒计时",
     "9:00am. mr. goh is walking the floor. earn slack points for every second you're not working. three strikes and he'd like a quick word.": "早上9:00。吴先生正在巡视。你每一秒不工作都能赚摸鱼分。被抓三次他就要找你谈话了。",
     "stop the bar": "停住指针", "the marker sweeps back and forth. click or hit space to stop it inside the green band. every hit shrinks the band and speeds things up. one miss and you are out.": "指针来回摆动。点击或按空格把它停在绿色区域内。每次命中区域会变小，速度会变快。失误一次就出局。",
@@ -346,7 +355,7 @@
     "paused.": "已暂停。", "sushi goes round, endless service - most yen": "回转寿司，无尽营业：社会信用最高",
     "sushi goes round, lunch rush - most yen": "回转寿司，午餐高峰：社会信用最高",
     ": new: sushi goes round. you run a conveyor belt sushi bar. roll what each customer asks for, send it round the belt, phone the supplier before the salmon runs out, and pour sake on anyone about to storm off. career mode, endless service and a daily lunch rush with its own leaderboards.": "：新游戏：回转寿司。你来经营一家回转寿司店。按每位顾客点的菜卷寿司，送上传送带，三文鱼用完之前打电话向供应商订货，谁快要气走就给谁倒杯清酒。有生涯模式、无尽营业和每日午餐高峰，各有自己的社会信用榜。",
-    "twenty games, two of them online with friends. your best today lands on the leaderboards.": "二十个游戏，其中两个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
+    "twenty-one games, three of them online with friends. your best today lands on the leaderboards.": "二十一个游戏，其中三个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
   });
 
   // every scoreboard says social credits, so every "score" (分数) in the lines above is too

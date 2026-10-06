@@ -3,24 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>daily sudoku (work in progress) &middot; SORTAFUN.ORG</title>
-<meta name="robots" content="noindex">
+<title>daily sudoku &middot; SORTAFUN.ORG</title>
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css?v=f59c62c1">
 <style>
   .wrap.sd { max-width: 620px; }
-  .wip { display: inline-block; background: #ffd43b; color: #1d1b2e; font: 700 11px var(--body); padding: 2px 8px; border-radius: 6px; border: 2px solid #1d1b2e; transform: rotate(-2deg); }
-  #sd-game[hidden], #lock[hidden], #sd-done[hidden], #sd-paused[hidden] { display: none !important; }
+  #sd-game[hidden], #sd-done[hidden], #sd-paused[hidden], #sd-savebox[hidden], #sd-live[hidden] { display: none !important; }
 
-  /* lock */
-  #lock { text-align: center; padding: 26px 12px 18px; }
-  #lock h2 { margin: 0 0 6px; font: 400 30px var(--chunky); color: var(--accent); }
-  #lock p { margin: 6px 0; }
-  #lock-form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
-  #lock-form input { font-size: 16px; padding: 8px 12px; width: 220px; }
-  #lock-form.no { animation: no .4s; }
-  @keyframes no { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
-  #lock-msg { min-height: 1.3em; color: #c92a2a; font-size: 13px; }
+  /* codephrase + the live leaderboard row (live-row.js) */
+  .cont { font-size: 13px; margin: 2px 0 4px; text-align: center; }
+  .cont input { font: inherit; width: 150px; padding: 3px 6px; border: 3px solid var(--ink); border-radius: 8px; }
+  .cont button { padding: 3px 10px; }
+  #sd-cmsg { color: #b00; }
+  .livebox { font-size: 13px; margin: 10px auto 0; max-width: 450px; padding: 6px 10px; background: #fff9db; border: 2px dashed var(--ink); border-radius: 10px; text-align: center; }
+  .livebox input { font: inherit; width: 140px; padding: 3px 6px; border: 3px solid var(--ink); border-radius: 8px; }
+  .livebox button { padding: 3px 10px; }
+  .livebox .lchange { padding: 1px 8px; font-size: 12px; }
+  .livebox .lberr { color: #b00; margin-top: 3px; }
+  .savebox { font-size: 12px; text-align: center; color: #555; margin: 6px 0 0; }
+  .savebox b { font-size: 13px; color: var(--ink); user-select: all; }
 
   /* difficulty tabs */
   #sd-tabs { display: flex; gap: 6px; justify-content: center; margin: 10px 0 8px; }
@@ -83,8 +84,8 @@
   .sd-foot b { font-variant-numeric: tabular-nums; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=de56cfa9"></script>
-<script src="feedback.js?v=62d92f67"></script>
+<script src="china.js?v=749af224"></script>
+<script src="feedback.js?v=9e1cabc6"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -92,14 +93,9 @@
 <header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
 <div class="wrap sd">
   <h1>daily sudoku</h1>
-  <p class="sub"><span class="wip">WORK IN PROGRESS</span> three new sudoku every day (singapore time): easy, hard and extreme. same puzzles for everyone. tap a square, then a number. score = a base for the difficulty, plus or minus time against par, minus a tenth of the base for every wrong number.</p>
+  <p class="sub">three new sudoku every day (singapore time): easy, hard and extreme. same puzzles for everyone. tap a square, then a number. score = a base for the difficulty, plus or minus time against par, minus a tenth of the base for every wrong number. every puzzle you solve adds to your total on today's leaderboard, live, until midnight.</p>
 
-  <section id="lock">
-    <h2>coming soon</h2>
-    <p>this one's still being built. enter the password.</p>
-    <form id="lock-form" autocomplete="off"><input id="lock-pass" type="password" aria-label="password" placeholder="password" autocomplete="off"><button type="submit">unlock &#9654;</button></form>
-    <p id="lock-msg" role="status"></p>
-  </section>
+  <div class="cont">got a codephrase? <input id="sd-cin" placeholder="fluffy-antelope" maxlength="26" autocomplete="off" spellcheck="false"> <button type="button" id="sd-cgo">continue</button> <span id="sd-cmsg"></span></div>
 
   <section id="sd-game" hidden>
     <div id="sd-tabs" role="tablist">
@@ -130,16 +126,24 @@
       <button type="button" id="sd-erase">erase</button>
       <button type="button" id="sd-undo">undo</button>
     </div>
+    <div class="livebox" id="sd-live" hidden></div>
+    <p class="savebox" id="sd-savebox" hidden>saved with codephrase <b id="sd-scode"></b>. type it into "continue" on any device to pick up today's puzzles and your spot on the board.</p>
     <p class="sd-foot">keys: 1-9 fill &middot; arrows move &middot; N notes &middot; backspace erase &middot; ctrl+Z undo &middot; P pause<br>new puzzles in <b id="sd-next"></b> &middot; puzzles from the public-domain <a href="https://github.com/grantm/sudoku-exchange-puzzle-bank" target="_blank" rel="noopener">Sudoku Exchange puzzle bank</a></p>
   </section>
+
+  <div id="lb"></div>
 
   <a class="back" href="index.html#games">&laquo; back to all games</a>
 </div>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=cd32af5f"></script>
-<script src="sudoku/vault.js?v=0b1a8cc9"></script>
-<script src="sudoku/game.js?v=96f15530"></script>
-<script src="sudoku/lock.js?v=42e0250d"></script>
+<script src="leaderboard.js?v=309cb4d0"></script>
+<script src="live-row.js?v=bf0b3166"></script>
+<script src="sudoku/puzzles.js?v=a66e436e"></script>
+<script src="sudoku/game.js?v=9cbe263e"></script>
+<script>SudokuBoot({ data: window.SUDOKU_DATA });</script>
+<script>/* today's board is live (leaderboard.js keepBoard + live-row.js) */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "sudoku", { live: true, mine: function () { return window.__sudoku.state().live.id; },
+  liveNote: "live: totals climb as people solve, until midnight.", liveEmpty: "nobody yet today. solve one and you're on." });</script>
 <footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
 </body>
 </html>

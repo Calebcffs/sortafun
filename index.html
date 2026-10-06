@@ -729,8 +729,8 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=de56cfa9"></script>
-<script src="feedback.js?v=62d92f67"></script>
+<script src="china.js?v=749af224"></script>
+<script src="feedback.js?v=9e1cabc6"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 </head>
 <body>
@@ -825,7 +825,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>twenty games, two of them online with friends. your best today lands on the leaderboards.</p>
+      <p>twenty-one games, three of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -864,6 +864,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-06</span> <b>v0.10</b>: NEW: <b>daily sudoku</b>. three new puzzles every day (easy, hard, extreme), scored on time and mistakes. every solve climbs your total on today's board, live, and a codephrase takes it to any device. taka-san's dinner and frontier pets are off the homepage.</li>
         <li><span class="when">10-06</span> <b>v0.9.9</b>: word hive: you can change your name on today's board until midnight. only you (and your codephrase) can.</li>
         <li><span class="when">10-05</span> <b>v0.9.8</b>: word hive's daily leaderboard is live. your first word puts you on it, every word after climbs your score, and you can watch everyone else climb too. your codephrase keeps the same spot on any device. the board locks at midnight.</li>
         <li><span class="when">10-05</span> <b>v0.9.7</b>: another thing is being built behind closed doors. a puzzle, this time.</li>
@@ -958,7 +959,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=cd32af5f"></script>
+<script src="leaderboard.js?v=309cb4d0"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -973,10 +974,10 @@
  * ------------------------------------------------------------------ */
 
 var GAMES = [
+  { id: "sudoku",    name: "Daily Sudoku",   url: "sudoku.html",    cat: "puzzle", key: "sudoku",   badge: "daily", blurb: "three new sudoku every day: easy, hard and extreme. score on time and mistakes. every solve climbs today's board, live." },
   { id: "funstrike", name: "Fun Strike",     url: "funstrike.html", cat: "online", key: "funstrike", badge: "new",   blurb: "a Counter-Strike homage on a real map. team deathmatch and free for all, bots, kill cam, voice chat, servers that stay up, a leaderboard." },
   { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
-  { id: "taka",      name: "Taka-san Dinner", url: "taka.html",     cat: "skill",  key: "taka",     badge: "new",   blurb: "drive the boss to dinner, seat the table right, keep his glass full, answer his big questions, then karaoke. win a trip to japan." },
   { id: "deeptime2", name: "Deep Time 2",    url: "deeptime2.html", cat: "skill",  key: "deeptime2", badge: "new",  blurb: "part 2: body camera footage from the storm drains under a montana town. five samples. they hunt by sound." },
   { id: "deeptime",  name: "Deep Time",      url: "deeptime.html",  cat: "skill",  key: "deeptime", badge: "new",   blurb: "a camcorder tape from a forest in 1987. find the 8 parts of the time machine. something came through. headphones on." },
   { id: "city",      name: "City Sandbox",   url: "city.html",      cat: "online",  key: "city",     badge: "new",   blurb: "online zombie survival. crew up, hold your safehouse through the night, fuel the radio mast and catch the chopper out." },
@@ -1012,8 +1013,7 @@ var HANGOUT = [
 // live in UPCOMING.md; when one ships, move its row up into GAMES
 var SOON = [
   { id: "slack",  name: "SFSG Slacking Simulator",   cat: "soon", blurb: "the office, rebuilt in 3D. alt-tab before the manager walks past, answer Teams in time, and sneak down to Starbucks." },
-  { id: "hotdog", name: "Hot Dog Bush",              cat: "soon", blurb: "the old political hot dog stand. grill it, dress it, serve it before the queue loses its patience." },
-  { id: "pets",   name: "Frontier Pets",             cat: "soon", blurb: "adopt a pet and build it a home out of modular units. feed it with points from every game on the site." }
+  { id: "hotdog", name: "Hot Dog Bush",              cat: "soon", blurb: "the old political hot dog stand. grill it, dress it, serve it before the queue loses its patience." }
 ];
 
 var CAT_LABEL = { soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout" };
@@ -1212,24 +1212,6 @@ var THUMB = {
     g += '<g transform="rotate(20 134 92)"><rect x="129" y="84" width="10" height="24" rx="4" fill="#555"' + S + '/><circle cx="134" cy="80" r="8" fill="#ccc"' + S + '/></g>';
     return g + outlined(80, 20, "kanpai!", 15, "#fff");
   },
-  pets: function () {
-    // a little pet in front of its stacked modular units, with a crane
-    return bg("#a5d8ff") + '<circle cx="136" cy="18" r="11" fill="#ffd43b"' + S + '/>' +
-      '<rect x="0" y="100" width="160" height="20" fill="#69db7c"/>' +
-      // crane
-      '<path d="M18 100 V16 H70 M18 16 L30 28 M70 16 V34" fill="none" stroke="#ff922b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<rect x="62" y="34" width="16" height="9" fill="#fff"' + S + '/>' +
-      // modular units, stacked
-      '<rect x="84" y="58" width="60" height="22" fill="#fff"' + S + '/><rect x="84" y="80" width="60" height="22" fill="#e6eaf6"' + S + '/>' +
-      '<rect x="92" y="64" width="14" height="10" fill="#74c0fc" stroke="' + K + '" stroke-width="2"/><rect x="120" y="64" width="14" height="10" fill="#74c0fc" stroke="' + K + '" stroke-width="2"/>' +
-      '<rect x="92" y="86" width="12" height="16" fill="#ff922b" stroke="' + K + '" stroke-width="2"/>' +
-      '<rect x="112" y="86" width="22" height="9" fill="#74c0fc" stroke="' + K + '" stroke-width="2"/>' +
-      // the pet (a round blob in a hard hat)
-      '<ellipse cx="50" cy="94" rx="20" ry="17" fill="#b197fc"' + S + '/>' +
-      '<path d="M32 82 q18 -22 36 0 z" fill="#ffd43b"' + S + '/><path d="M28 82 h44" stroke="' + K + '" stroke-width="3" stroke-linecap="round"/>' +
-      '<circle cx="43" cy="92" r="3" fill="' + K + '"/><circle cx="57" cy="92" r="3" fill="' + K + '"/>' +
-      '<path d="M45 100 q5 4 10 0" fill="none" stroke="' + K + '" stroke-width="2.5" stroke-linecap="round"/>';
-  },
   funstrike: function () {
     // a counter-terrorist raising a rifle in a sandstone alley, crosshair on the end of it
     var g = '<defs><linearGradient id="fss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fc4ff"/><stop offset="1" stop-color="#d8ecff"/></linearGradient></defs>';
@@ -1375,6 +1357,20 @@ var THUMB = {
       '<text x="14" y="30" font-family="Courier New, monospace" font-weight="700" font-size="16" fill="#d1d0c5">the qu</text>' +
       '<rect x="72" y="16" width="2.5" height="18" fill="#e2b714"/>' +
       outlined(132, 46, "97", 30, "#e2b714") + txt(132, 18, "wpm", 11, "#e2b714");
+  },
+  sudoku: function () {
+    // a corner of a grid: thick box lines, givens in ink, one pencilled in purple, the picked square in yellow
+    var g = bg("#9775fa") + '<circle cx="150" cy="10" r="34" fill="#b197fc"/><circle cx="6" cy="116" r="30" fill="#7048e8"/>';
+    g += '<rect x="22" y="8" width="116" height="104" rx="6" fill="#fff"' + S + '/>';
+    g += '<rect x="61" y="43" width="19" height="17" fill="#ffe066"/>';
+    for (var i = 1; i < 6; i++) {
+      var x = 22 + i * 116 / 6, y = 8 + i * 104 / 6, thick = i === 3;
+      g += '<path d="M' + x.toFixed(1) + ' 8V112M22 ' + y.toFixed(1) + 'H138" stroke="' + K + '" stroke-width="' + (thick ? 3 : 1) + '" opacity="' + (thick ? 1 : .35) + '"/>';
+    }
+    var cell = function (c, r, n, col) { return txt(22 + (c + .5) * 116 / 6, 8 + (r + .5) * 104 / 6 + 6, n, 15, col); };
+    g += cell(0, 0, 5, K) + cell(2, 0, 3, K) + cell(4, 1, 7, K) + cell(1, 2, 9, K) + cell(5, 2, 1, K) + cell(3, 3, 4, K) + cell(0, 4, 8, K) + cell(4, 4, 2, K) + cell(2, 5, 6, K);
+    g += cell(2, 2, 4, "#7048e8") + cell(5, 5, 9, "#7048e8");
+    return g;
   },
   slider: function () {
     var cols = ["#ff8787", "#ffd43b", "#69db7c", "#74c0fc", "#ffa8a8", "#ffe066", "#8ce99a", "#a5d8ff"];

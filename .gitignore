@@ -13,6 +13,3 @@ slack/src/
 
 # fun strike: the original downloaded map model (the game uses the processed funstrike/assets/maps/cs.glb)
 counter_strike_map.glb
-
-# daily sudoku: the puzzle data. only the encrypted sudoku/vault.js is published
-sudoku/src/

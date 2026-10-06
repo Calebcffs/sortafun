@@ -93,7 +93,9 @@ Shipped 2026-09-29 as `taka.html` (see CLAUDE.md).
 
 ---
 
-## 4. Frontier Pets (a Neopets clone, Sankyo Frontier themed)
+## 4. Frontier Pets (a Neopets clone, Sankyo Frontier themed) - DROPPED 2026-10-06
+
+_Taken off the Coming Soon panel at Caleb's ask. Kept here in case it comes back._
 
 **Pitch:** adopt a little virtual pet and look after it, in a world built out
 of modular buildings, the thing Sankyo Frontier makes.

@@ -49,7 +49,11 @@
     callit:   { label: "call it",        unit: "streak", better: "high", retired: true },
     watch:    { label: "watch the guy",  unit: "s",     better: "high", retired: true },
     // parts * 10000 - seconds, so any 8/8 beats any 7/8 and faster beats slower
-    taka:     { label: "taka-san dinner", unit: "pts", better: "high" },
+    // archived 2026-10-06: off the homepage and the leaderboards page, out of the passport's "the lot";
+    // taka.html still works by URL and still submits to its own board
+    taka:     { label: "taka-san dinner", unit: "pts", better: "high", retired: true },
+    // daily sudoku: one live row per player per day, today's three puzzles' total (like word hive)
+    sudoku:   { label: "daily sudoku",   unit: "pts", better: "high" },
     deeptime: { label: "deep time",      unit: "parts", better: "high", format: function (v) {
       if (v <= 0) return "0/8";
       var p = Math.ceil(v / 10000), s = p * 10000 - v;
@@ -234,10 +238,11 @@
   function liveSet(id, o) {
     return init().then(function () {
       var fs = state.fs;
-      var doc = { game: "hive", name: String(o.name).trim().slice(0, 20), score: Math.round(Number(o.score)),
+      var game = o.game || "hive";
+      var doc = { game: game, name: String(o.name).trim().slice(0, 20), score: Math.round(Number(o.score)),
         day: o.day, ts: fs.serverTimestamp(), live: true };
       doc.rankValue = doc.score;
-      if (o.bee) doc.bee = true;
+      if (o.bee && game === "hive") doc.bee = true;
       var row = fs.doc(state.db, "scores", id), key = fs.doc(state.db, "hive_keys", id);
       // a rename from a device with fewer words than the row (the same codephrase played
       // elsewhere) keeps the row's higher score, or the rules would refuse it as a drop
@@ -245,12 +250,12 @@
         var cur = snap.exists() ? snap.data() : null;
         if (cur && cur.score > doc.score) { doc.score = doc.rankValue = cur.score; if (cur.bee) doc.bee = true; }
       });
-      return prep.then(function () { return liveWrite(fs, row, key, doc, o); });
-    }).then(function () {
-      try {
-        localStorage.setItem("sortafun-stamp-scored", "1");
-        localStorage.setItem("sortafun-stamp-game-hive", "1");
-      } catch (e) {}
+      return prep.then(function () { return liveWrite(fs, row, key, doc, o); }).then(function () {
+        try {
+          localStorage.setItem("sortafun-stamp-scored", "1");
+          localStorage.setItem("sortafun-stamp-game-" + game, "1");
+        } catch (e) {}
+      });
     });
   }
   function liveWrite(fs, row, key, doc, o) {
@@ -405,6 +410,26 @@
       if (extra && extra.name) d.name = extra.name; // the name on it (its owner can change it until midnight)
       if (extra && extra.k) d.k = extra.k;          // the row's secret, so another device can rename it too
       return fs.setDoc(fs.doc(state.db, "hive_saves", code), d, { merge: true });
+    });
+  }
+
+  // daily sudoku progress under a codephrase (sudoku_saves/<adjective-noun>):
+  // { day, ts, st: { easy?, hard?, extreme? }, lb?, name?, k? }, puzzle = { v, t, e, done, score? }.
+  // Only the puzzles passed in are written (merge), so a device never wipes another's.
+  function sudokuSaveGet(code) {
+    return init().then(function () {
+      var fs = state.fs;
+      return fs.getDoc(fs.doc(state.db, "sudoku_saves", code)).then(function (s) { return s.exists() ? s.data() : null; });
+    });
+  }
+  function sudokuSaveSet(code, day, st, extra) {
+    return init().then(function () {
+      var fs = state.fs;
+      var d = { day: day, st: st, ts: fs.serverTimestamp() };
+      if (extra && extra.lb) d.lb = extra.lb;
+      if (extra && extra.name) d.name = extra.name;
+      if (extra && extra.k) d.k = extra.k;
+      return fs.setDoc(fs.doc(state.db, "sudoku_saves", code), d, { merge: true });
     });
   }
 
@@ -693,10 +718,10 @@
           load();
           return;
         }
-        msgEl.textContent = period === "day" ? (opts.live ? "nobody yet today. find a word and you're on." : "nobody yet today. be the first.") : "nobody yet. be the first.";
+        msgEl.textContent = period === "day" ? (opts.live ? (opts.liveEmpty || "nobody yet today. find a word and you're on.") : "nobody yet today. be the first.") : "nobody yet. be the first.";
         return;
       }
-      msgEl.textContent = opts.live && period === "day" ? "live: scores climb as people find words, until midnight." : "";
+      msgEl.textContent = opts.live && period === "day" ? (opts.liveNote || "live: scores climb as people find words, until midnight.") : "";
       var mine = opts.mine ? opts.mine() : null;
       rows.forEach(function (r) {
         var li = el("li");
@@ -923,6 +948,8 @@
     guestbookSign: guestbookSign,
     hiveSaveGet: hiveSaveGet,
     hiveSaveSet: hiveSaveSet,
+    sudokuSaveGet: sudokuSaveGet,
+    sudokuSaveSet: sudokuSaveSet,
     guestbookList: guestbookList,
     getHits: getHits,
     bumpHits: bumpHits,

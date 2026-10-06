@@ -1,16 +1,19 @@
-/* daily sudoku: three a day (easy, hard, extreme). Work in progress.
+/* daily sudoku: three a day (easy, hard, extreme).
  *
- * SudokuBoot(content) is called by sudoku/lock.js once the password has
- * decrypted sudoku/vault.js. content.data = { easy, hard, extreme }, each a
- * list of [puzzle, solution, rating] (81 digit strings, 0 = blank), from the
- * Sudoku Exchange puzzle bank (public domain; tools/build-sudoku.mjs).
+ * SudokuBoot({ data }) is called by sudoku.html with sudoku/puzzles.js's
+ * window.SUDOKU_DATA = { easy, hard, extreme }, each a list of
+ * [puzzle, solution, rating] (81 digit strings, 0 = blank), from the Sudoku
+ * Exchange puzzle bank (public domain; tools/build-sudoku.mjs).
  *
  * Everyone gets the same three puzzles on the same Singapore day: puzzle
  * number = days since EPOCH, wrapped around the list. A wrong digit (checked
  * against the stored solution) is an error; pencil notes never are.
  * Score = base + time bonus (or minus, past par) - errors, never below 10% of
- * base (see score()). Progress and results live in localStorage only
- * (sortafun-sudoku-<day>-<diff>); no leaderboard yet.
+ * base (see score()). Progress lives in localStorage
+ * (sortafun-sudoku-<day>-<diff>) and, once you've played, under a codephrase
+ * (Firestore sudoku_saves, one puzzle at a time, merged). The leaderboard is
+ * live (live-row.js, key "sudoku"): one row per player per day, the total of
+ * the day's finished puzzles, climbing with every solve until midnight.
  */
 (function () {
   "use strict";
@@ -68,6 +71,91 @@
   }
   function save() { if (st) { ls.set(key(DAY, diff), st); saveAt = Date.now(); } }
 
+  // ---------------------------------------------------------------- live row + codephrase
+  var live = null, codeMaking = false, putTimers = {};
+  var CODE_RE = /^[a-z]{3,12}-[a-z]{3,12}$/;
+  function puzzleFor(k) { return k === diff && st ? st : ls.get(key(DAY, k)); }
+  // today's total: what goes on the board
+  function total() {
+    var t = 0;
+    DIFFS.forEach(function (k) { var s = puzzleFor(k); if (s && s.done) t += s.score || 0; });
+    return t;
+  }
+  function touched(k) { var s = puzzleFor(k); return !!(s && (s.done || s.v !== pick(k, DAY)[0])); }
+  function showCode() {
+    var on = !!(live && live.code);
+    $("sd-savebox").hidden = !on;
+    if (on) $("sd-scode").textContent = live.code;
+  }
+  // the codephrase, made the first time you put a digit in
+  function ensureCode() {
+    if (live.code || codeMaking || !window.SortafunLB || !SortafunLB.sudokuSaveGet) return;
+    codeMaking = true;
+    var d0 = DAY;
+    SortafunLiveRow.makeCode(SortafunLB.sudokuSaveGet).then(function (c) {
+      codeMaking = false;
+      if (DAY !== d0 || live.code) return;
+      live.code = c; live.save(); showCode();
+      DIFFS.forEach(function (k) { if (touched(k)) cloudPut(k); });
+    }, function () { codeMaking = false; }); // offline: tries again on the next move
+  }
+  // one puzzle into the codephrase save (debounced per puzzle; merged, so others stay)
+  function cloudPut(k) {
+    if (!live || !live.code || !window.SortafunLB || !SortafunLB.sudokuSaveSet) return;
+    var d0 = DAY;
+    clearTimeout(putTimers[k]);
+    putTimers[k] = setTimeout(function () {
+      var s = DAY === d0 ? puzzleFor(k) : null;
+      if (!s || !live.code) return;
+      var o = { v: s.v, t: Math.round(s.t), e: s.e, done: !!s.done };
+      if (s.done) o.score = s.score;
+      var stp = {}; stp[k] = o;
+      SortafunLB.sudokuSaveSet(live.code, d0, stp, live.saveExtra()).catch(function (e) { console.warn("[sudoku] cloud save failed", e); });
+    }, 1500);
+  }
+  function continueWith(code) {
+    var msg = $("sd-cmsg");
+    msg.style.color = "";
+    code = String(code || "").trim().toLowerCase().replace(/\s+/g, "-");
+    if (!CODE_RE.test(code)) { msg.textContent = "that doesn't look like a codephrase (like fluffy-antelope)"; return; }
+    if (!window.SortafunLB || !SortafunLB.sudokuSaveGet) { msg.textContent = "saves are offline right now"; return; }
+    msg.textContent = "looking...";
+    SortafunLB.sudokuSaveGet(code).then(function (d) {
+      if (!d) { msg.textContent = "no save with that codephrase"; return; }
+      if (d.day !== DAY) { msg.textContent = "that codephrase was for " + d.day + ". today's puzzles are new."; return; }
+      tick(); save();
+      var n = 0;
+      DIFFS.forEach(function (k) {
+        var c = d.st && d.st[k];
+        if (!c || typeof c.v !== "string" || !/^[0-9]{81}$/.test(c.v)) return;
+        var loc = puzzleFor(k) || { v: pick(k, DAY)[0], t: 0, done: false };
+        // a finished puzzle always wins; otherwise the one played longer
+        var take = (c.done && !loc.done) || (!c.done && !loc.done && (loc.v === pick(k, DAY)[0] || (c.t || 0) > (loc.t || 0)));
+        if (!take) return;
+        var ns = { v: c.v, n: new Array(81).fill(0), t: c.t || 0, e: c.e || 0, done: !!c.done };
+        if (c.done) { ns.score = c.score || 0; ns.fin = Date.now(); }
+        ls.set(key(DAY, k), ns);
+        n++;
+      });
+      live.code = code;
+      live.adopt(d);
+      showCode();
+      st = null;
+      open(diff);
+      msg.textContent = n ? "welcome back, " + n + " puzzle" + (n === 1 ? "" : "s") + " restored" : "that save has nothing newer than this device";
+      msg.style.color = "#1faf3a";
+      DIFFS.forEach(function (k) { if (touched(k)) cloudPut(k); });
+      live.push();
+    }).catch(function () { msg.textContent = "couldn't reach the save"; });
+  }
+  // a new Singapore day: its own row, its own codephrase, the board remounts for the day
+  function dayChanged() {
+    live.load(DAY);
+    showCode();
+    $("sd-cmsg").textContent = "";
+    var lb = $("lb"); if (lb) lb.innerHTML = ""; // keepBoard puts today's board back
+  }
+
   // ---------------------------------------------------------------- build
   var grid, cells = [], padBtns = [];
   function build() {
@@ -117,7 +205,7 @@
   function open(k) {
     if (st) { tick(); save(); }
     var today = sgDay();
-    if (today !== DAY) DAY = today;
+    if (today !== DAY) { DAY = today; dayChanged(); }
     diff = k;
     var row = pick(k, DAY); P = row[0]; S = row[1];
     st = stateFor(k, DAY);
@@ -200,6 +288,8 @@
     if (st.v === S) finish();
     render();
     save();
+    cloudPut(diff); // the codephrase copy follows moves (not the 5s clock saves)
+    ensureCode();
   }
 
   function finish() {
@@ -216,6 +306,7 @@
     save();
     sfx(newBest ? "highscore" : "win");
     showDone(true);
+    live.push(); // today's total climbs (refused, with a note, if this was yesterday's puzzle)
   }
 
   function flash(i) {
@@ -346,17 +437,29 @@
     DATA = content.data;
     DAY = sgDay();
     build();
+    live = SortafunLiveRow({ game: "sudoku", box: $("sd-live"), score: total, what: "solve",
+      onSaved: function () { DIFFS.forEach(function (k) { if (touched(k)) cloudPut(k); }); } }); // the save learns the row
+    live.load(DAY);
+    showCode();
+    $("sd-cgo").addEventListener("click", function () { continueWith($("sd-cin").value); });
+    $("sd-cin").addEventListener("keydown", function (e) {
+      e.stopPropagation(); // typing a codephrase isn't playing the game
+      if (e.key === "Enter") { e.preventDefault(); continueWith($("sd-cin").value); }
+    });
     $("sd-game").hidden = false;
     var tab = null;
     try { tab = localStorage.getItem("sortafun-sudoku-tab"); } catch (e) {}
     var first = DIFFS.filter(function (k) { var s = ls.get(key(DAY, k)); return !(s && s.done); })[0];
     open(CFG[tab] && !(ls.get(key(DAY, tab)) || {}).done ? tab : first || "easy");
-    sfx("start");
+    if (total() > 0) live.push(); // solves made offline reach the board now
+    var q = new URLSearchParams(location.search).get("code");
+    if (q) { $("sd-cin").value = q; continueWith(q); }
   };
 
   // tests: window.__sudoku.state() / solve(errors) / score(diff, ms, errors)
   window.__sudoku = {
-    state: function () { return { day: DAY, diff: diff, puzzle: P, solution: S, st: st, sel: sel, paused: paused }; },
+    state: function () { return { day: DAY, diff: diff, puzzle: P, solution: S, st: st, sel: sel, paused: paused, total: total(), live: live.state(), code: live.code }; },
+    continueWith: function (c) { continueWith(c); },
     score: score,
     input: input, select: function (i) { sel = i; render(); },
     solve: function () { for (var i = 0; i < 81; i++) if (P[i] === "0" && st.v[i] !== S[i]) { sel = i; input(+S[i]); } },
