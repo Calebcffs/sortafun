@@ -359,7 +359,7 @@ match `firestore.rules` `isValidScore` / `isLowGame` and `leaderboard.js`
 (it auto-deploys on push, see above); no new indexes needed. Retired keys get
 `retired: true` in `GAMES` so `passport.html` doesn't count them toward "the
 lot" stamp. A new game also needs a row + `THUMB` in `index.html`, a row in
-`leaderboards.html` ORDER, a row in `feedback.js` ITEMS (`game: true`), and the `.homebar` div.
+`leaderboards.html` ORDER, a row in `feedback.js` ITEMS (`game: true`), and the `.homebar` div. **And a row in `tools/seo.py` PAGES** (+ `LABEL`, and an og image: `node tools/og-images.mjs <id>`; seo.py refuses to run while any .html page has no row).
 
 ### The dictionary (`dict.js`)
 
@@ -1505,6 +1505,38 @@ leftovers are small); add a scheduled purge if storage ever matters.
 The homepage has an **Online** filter chip (`cat: "online"`, colour
 `--online` / `body.k-online` in `game.css`); Fun Strike and Draw and Guess
 are in it (City Sandbox was, until it was archived 2026-10-06).
+
+### Search engines + link previews (`tools/seo.py`, v0.11, 2026-10-06)
+
+Caleb's ask: as many visits as possible. **`python tools/seo.py`, then `tools/stamp.py`.** One table
+(`PAGES`) holds every page's title (keyword first, " | Sortafun"), description, preview image,
+kind, `index` and link-list group; seo.py writes a `<!-- seo -->` block into each `<head>` (title,
+description, canonical, robots noindex, Open Graph + Twitter card, JSON-LD: `VideoGame` + breadcrumbs
+on games, `WebSite` on the homepage, and `<meta name="sortafun:name">`, which china.js `doTitle()`
+uses to translate the tab title), plus body blocks: `seo:about` (how to play + questions, from
+`ABOUT`, on the top games, below the game and board), `seo:more` (a "more free games" strip of
+plain links) and the homepage `seo:links` (every listed page as a plain link above the footer). It
+rewrites `sitemap.xml` (indexable pages, lastmod from git) and `robots.txt` (allow all + sitemap;
+never Disallow a noindex page, Google can't read the noindex then). It strips any old title /
+description / og / canonical tags outside the block, keeps each file's line endings, and checks the
+text is plain ASCII and free of **trademarked game names** (the repo is on GitHub, which removes a
+whole repo on a DMCA notice: say "5-letter word game", never the newspaper's names; same for the
+shooter series and the map). Everything in `.seo-x` hides in panic mode. Edit text in PAGES / ABOUT
+and rerun, never by hand in the pages. ABOUT facts come from the game code: keep them true.
+
+- **noindex**: 404, admin, birdie, city, clarissa, deeptime2, gallery (easter egg), profile, slack,
+  taka. Archived or private = `index: False`.
+- **Preview images**: `assets/og/<id>.png`, 1200x630, drawn by `tools/og-images.mjs` from the
+  homepage THUMB pictures (needs a local `python -m http.server 8765` and Pillow; cut to 256
+  colours, ~75 KB each; WhatsApp drops previews over ~300 KB).
+- **Share buttons** (`share.js`, `SortafunShare.after(el, getText)`): phones get the share sheet,
+  desktops copy. On daily sudoku (results card), word hive (under the live box), five letters
+  (coloured squares only), word ladder and four sides (counts against par). **Share text never gives
+  the answer away** and ends with the game's https link.
+- **IndexNow** (Bing, Yandex): key file `<32 hex>.txt` in the root; after a deploy that adds or
+  changes pages, `node tools/indexnow.mjs` (or with page names). Google needs Search Console
+  (Caleb's account): a Domain property for sortafun.org verified through Cloudflare DNS, then
+  submit `https://sortafun.org/sitemap.xml`; import that into Bing Webmaster Tools.
 
 ### The site version (`feedback.js` `VERSION`)
 

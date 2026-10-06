@@ -224,6 +224,8 @@
     "couldn't reach the board. it tries again next time.": "连不上排行榜。下次会再试。",
     "type it into \"continue\" on any device to pick up today's puzzles and your spot on the board.": "在任何设备的“继续”里输入它，就能接着做今天的题，排行榜上的位置也不变。",
     "three new sudoku every day: easy, hard and extreme. score on time and mistakes. every solve climbs today's board, live.": "每天三道新数独：简单、困难、极难。按用时和错误计分。每解开一道题，今天的排行榜实时上涨。",
+    "share result": "分享成绩", "copied! paste it to your friends": "已复制！粘贴给朋友吧", "copied! paste it anywhere": "已复制！随便粘贴到哪里",
+    "more free games": "更多免费游戏", "all games »": "全部游戏 »", "questions": "常见问题",
     "solved!": "解开了！", "solved": "已解开", "new best!": "新纪录！", "look at the grid": "看看棋盘", "new puzzles in": "新谜题倒计时",
     "9:00am. mr. goh is walking the floor. earn slack points for every second you're not working. three strikes and he'd like a quick word.": "早上9:00。吴先生正在巡视。你每一秒不工作都能赚摸鱼分。被抓三次他就要找你谈话了。",
     "stop the bar": "停住指针", "the marker sweeps back and forth. click or hit space to stop it inside the green band. every hit shrinks the band and speeds things up. one miss and you are out.": "指针来回摆动。点击或按空格把它停在绿色区域内。每次命中区域会变小，速度会变快。失误一次就出局。",
@@ -524,6 +526,12 @@
     if (enTitle == null) enTitle = document.title;
     if (!on) { if (enTitle != null) document.title = enTitle; return; }
     var out = xlate(enTitle, null);
+    if (!out) {
+      // search-style titles ("Daily Sudoku: 3 Free ... | Sortafun"): use the page's short name (tools/seo.py)
+      var nm = document.querySelector('meta[name="sortafun:name"]'), key = nm && nm.content.toLowerCase();
+      if (key === "sortafun") out = D["sortafun"];
+      else if (key && D[key]) out = D[key] + " | 有点烦.org";
+    }
     if (out) document.title = out;
   }
 

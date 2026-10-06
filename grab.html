@@ -3,9 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>word grab &middot; SORTAFUN.ORG</title>
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>Word Grab: Find Words in a 4x4 Letter Grid | Sortafun</title>
+<meta name="description" content="Two minutes to find every word in a grid of 16 letter cubes. Letters must touch, longer words score way more. The same grid for everyone each day. Free, no sign-up.">
+<meta name="sortafun:name" content="word grab">
+<link rel="canonical" href="https://sortafun.org/grab.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sortafun">
+<meta property="og:title" content="Word Grab: Find Words in a 4x4 Letter Grid | Sortafun">
+<meta property="og:description" content="Two minutes to find every word in a grid of 16 letter cubes. Letters must touch, longer words score way more. The same grid for everyone each day. Free, no sign-up.">
+<meta property="og:url" content="https://sortafun.org/grab.html">
+<meta property="og:image" content="https://sortafun.org/assets/og/grab.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Word Grab on Sortafun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Word Grab: Find Words in a 4x4 Letter Grid | Sortafun">
+<meta name="twitter:description" content="Two minutes to find every word in a grid of 16 letter cubes. Letters must touch, longer words score way more. The same grid for everyone each day. Free, no sign-up.">
+<meta name="twitter:image" content="https://sortafun.org/assets/og/grab.png">
+<meta name="theme-color" content="#ffd43b">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Word Grab","url":"https://sortafun.org/grab.html","description":"Two minutes to find every word in a grid of 16 letter cubes. Letters must touch, longer words score way more. The same grid for everyone each day. Free, no sign-up.","image":"https://sortafun.org/assets/og/grab.png","genre":["Word game"],"gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Word Grab","item":"https://sortafun.org/grab.html"}]}</script>
+<!-- /seo -->
 <link rel="icon" href="favicon.ico">
-<link rel="stylesheet" href="game.css?v=f59c62c1">
+<link rel="stylesheet" href="game.css?v=53cf4bbc">
 <style>
   .hud { display: flex; justify-content: center; gap: 22px; font-size: 18px; margin: 6px 0 10px; }
   .hud b { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-size: 24px; }
@@ -46,8 +67,8 @@
   #missedWrap h3 { font-family: "Lilita One", "Arial Black", Verdana, sans-serif; font-weight: 400; margin: 14px 0 0; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=7b2e6003"></script>
-<script src="feedback.js?v=6d63fef0"></script>
+<script src="china.js?v=98d09322"></script>
+<script src="feedback.js?v=f3fdf01c"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -77,6 +98,20 @@
   <div id="lb"></div>
   <div id="missedWrap" hidden><h3>some you missed</h3><ul id="missed"></ul></div>
 
+  <!-- seo:about -->
+  <section class="seo-x about-game">
+    <h2>how to play word grab</h2>
+    <p>you have two minutes to find words in a 4x4 grid of letter cubes. a word is a path of cubes that touch, sideways, up, down or diagonally, and each cube can be used once per word. words need 3 or more letters.</p>
+    <p>longer words score far more: 3 and 4 letters 1 point, 5 letters 2, 6 letters 3, 7 letters 5, and 8 or more 11. at the end you see the common words you missed.</p>
+    <h3>questions</h3><dl>
+    <dt>is it the same grid for everyone?</dt><dd>yes, a new grid every day at midnight singapore time.</dd>
+    <dt>can i type instead of tapping?</dt><dd>yes, type the word and press enter, or tap the cubes in order.</dd>
+    </dl>
+  </section>
+  <!-- /seo:about -->
+  <!-- seo:more -->
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="typing.html">Typing Test</a></li><li><a href="crossword.html">Crossword</a></li><li><a href="sudoku.html">Daily Sudoku</a></li><li><a href="anagram.html">Word Hive</a></li><li><a href="five.html">Five Letters</a></li><li><a href="ladder.html">Word Ladder</a></li><li><a href="sides.html">Four Sides</a></li><li><a href="puzzle.html">Tile Slider</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <!-- /seo:more -->
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 

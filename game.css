@@ -236,3 +236,38 @@ body.k-art .n-art, body.k-hang .n-hang, body.k-base .n-base {
   text-shadow: 0 1px 0 rgba(0,0,0,.25);
 }
 .sitefoot a { color: #fff; }
+
+/* ================= how to play + more games (tools/seo.py writes them) ================= */
+
+.about-game, .more-games {
+  max-width: 640px;
+  margin: 26px auto 0;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.about-game h2, .more-games h2 {
+  font: 400 21px var(--chunky);
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.about-game h3 { font: 400 17px var(--chunky); margin: 14px 0 4px; }
+.about-game p { margin: 0 0 8px; }
+.about-game dt { font-weight: bold; margin-top: 8px; }
+.about-game dd { margin: 2px 0 0; }
+.more-games { text-align: center; }
+.more-games ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.more-games li a {
+  display: inline-block;
+  padding: 4px 11px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 2px 0 var(--ink);
+}
+.more-games li a:hover { background: #ffd43b; }
+.more-games p { margin: 8px 0 0; font-size: 12px; }
+html.panic .seo-x { display: none !important; }

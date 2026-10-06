@@ -3,9 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>word ladder &middot; SORTAFUN.ORG</title>
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>Word Ladder: Free Daily Word Ladder Puzzle | Sortafun</title>
+<meta name="description" content="Change one letter at a time to get from the top word to the bottom one, every step a real four letter word. A new word ladder every day. Fewest rungs wins.">
+<meta name="sortafun:name" content="word ladder">
+<link rel="canonical" href="https://sortafun.org/ladder.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sortafun">
+<meta property="og:title" content="Word Ladder: Free Daily Word Ladder Puzzle | Sortafun">
+<meta property="og:description" content="Change one letter at a time to get from the top word to the bottom one, every step a real four letter word. A new word ladder every day. Fewest rungs wins.">
+<meta property="og:url" content="https://sortafun.org/ladder.html">
+<meta property="og:image" content="https://sortafun.org/assets/og/ladder.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Word Ladder on Sortafun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Word Ladder: Free Daily Word Ladder Puzzle | Sortafun">
+<meta name="twitter:description" content="Change one letter at a time to get from the top word to the bottom one, every step a real four letter word. A new word ladder every day. Fewest rungs wins.">
+<meta name="twitter:image" content="https://sortafun.org/assets/og/ladder.png">
+<meta name="theme-color" content="#ffd43b">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Word Ladder","url":"https://sortafun.org/ladder.html","description":"Change one letter at a time to get from the top word to the bottom one, every step a real four letter word. A new word ladder every day. Fewest rungs wins.","image":"https://sortafun.org/assets/og/ladder.png","genre":["Word game","Puzzle"],"gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Word Ladder","item":"https://sortafun.org/ladder.html"}]}</script>
+<!-- /seo -->
 <link rel="icon" href="favicon.ico">
-<link rel="stylesheet" href="game.css?v=f59c62c1">
+<link rel="stylesheet" href="game.css?v=53cf4bbc">
 <style>
   .ends { display: flex; justify-content: center; gap: 18px; align-items: center; margin: 10px 0 6px; font-size: 26px; letter-spacing: 4px; }
   .ends .to { font-size: 16px; letter-spacing: 0; color: #777; }
@@ -21,8 +42,8 @@
   .meta { font-size: 14px; color: #444; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=7b2e6003"></script>
-<script src="feedback.js?v=6d63fef0"></script>
+<script src="china.js?v=98d09322"></script>
+<script src="feedback.js?v=f3fdf01c"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -46,12 +67,27 @@
   <div class="status" id="status"></div>
   <div id="lb"></div>
 
+  <!-- seo:about -->
+  <section class="seo-x about-game">
+    <h2>how to play word ladder</h2>
+    <p>start at the green word and climb to the red word by changing one letter at a time. every step has to be a real four letter word.</p>
+    <p>par is the shortest ladder possible. match it or beat everyone else's rung count on today's board. there is a new ladder every day at midnight singapore time.</p>
+    <h3>questions</h3><dl>
+    <dt>can i change the order of the letters?</dt><dd>no, only swap one letter for another, in the same place.</dd>
+    <dt>is there always a solution?</dt><dd>yes, every daily ladder is checked: par is the length of the shortest one.</dd>
+    </dl>
+  </section>
+  <!-- /seo:about -->
+  <!-- seo:more -->
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="sudoku.html">Daily Sudoku</a></li><li><a href="anagram.html">Word Hive</a></li><li><a href="five.html">Five Letters</a></li><li><a href="sides.html">Four Sides</a></li><li><a href="puzzle.html">Tile Slider</a></li><li><a href="grab.html">Word Grab</a></li><li><a href="typing.html">Typing Test</a></li><li><a href="crossword.html">Crossword</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <!-- /seo:more -->
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
 <script src="dict.js?v=8295ff80"></script>
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=a173fe0c"></script>
+<script src="share.js?v=7d993356"></script>
 <script>
 "use strict";
 
@@ -193,6 +229,12 @@ function win() {
   lbEl.innerHTML = "";
   if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "ladder", { score: rungs });
   else lbEl.textContent = "leaderboard offline";
+  // counts only, never the words (share.js)
+  if (window.SortafunShare) SortafunShare.after(statusEl, function () {
+    var day = window.SortafunLB ? SortafunLB.dayStr() : "";
+    return "Word Ladder " + day + ": " + rungs + " rung" + (rungs === 1 ? "" : "s") + " (par " + par + ")" +
+      (rungs < par ? ", under par!" : "") + "\nhttps://sortafun.org/ladder.html";
+  });
 }
 
 function start() {
