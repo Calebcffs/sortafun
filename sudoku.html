@@ -22,7 +22,7 @@
 <meta name="twitter:description" content="Three new sudoku every day, easy, hard and extreme, the same for everyone. Free, no sign-up, works on your phone. Score on time and mistakes and climb today's live leaderboard.">
 <meta name="twitter:image" content="https://sortafun.org/assets/og/sudoku.png">
 <meta name="theme-color" content="#ffd43b">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Daily Sudoku","url":"https://sortafun.org/sudoku.html","description":"Three new sudoku every day, easy, hard and extreme, the same for everyone. Free, no sign-up, works on your phone. Score on time and mistakes and climb today's live leaderboard.","image":"https://sortafun.org/assets/og/sudoku.png","genre":["Puzzle","Sudoku"],"gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Daily Sudoku","url":"https://sortafun.org/sudoku.html","description":"Three new sudoku every day, easy, hard and extreme, the same for everyone. Free, no sign-up, works on your phone. Score on time and mistakes and climb today's live leaderboard.","image":"https://sortafun.org/assets/og/sudoku.png","genre":["Puzzle","Sudoku"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Daily Sudoku","item":"https://sortafun.org/sudoku.html"}]}</script>
 <!-- /seo -->
 <link rel="icon" href="favicon.ico">
@@ -101,12 +101,30 @@
   .sd-card .go { margin-top: 8px; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
   .sd-card .go button { padding: 5px 10px; font-size: 13px; }
   #sd-look { margin-top: 8px; font-size: 12px; background: none; border: 0; box-shadow: none; color: #888; text-decoration: underline; padding: 0; }
+  /* the share button (share.js) lives in the card too: keep it all inside the board on a phone */
+  .sd-card .sf-share { margin-top: 7px; }
+  .sd-card .sf-share small:empty { display: none; }
+  @media (max-width: 480px) {
+    .sd-over { padding: 4px; }
+    .sd-card { padding: 8px 12px; }
+    .sd-card h2 { font-size: 22px; margin-bottom: 2px; }
+    .sd-card td { padding: 2px 4px; }
+    .sd-card tr.tot td { font-size: 19px; padding-top: 3px; }
+    .sd-card .go { margin-top: 5px; }
+    .sd-card .sf-share button { font-size: 15px; padding: 3px 14px 2px; }
+    #sd-look { margin-top: 4px; }
+  }
+  /* the smallest phones: the card can be taller than the board, so it starts at the top and scrolls inside it */
+  @media (max-width: 360px) {
+    #sd-done { align-items: flex-start; overflow-y: auto; }
+    .sd-card table { font-size: 12px; }
+  }
   .sd-foot { text-align: center; font-size: 12px; color: #777; margin: 10px 0 0; }
   .sd-foot b { font-variant-numeric: tabular-nums; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
 <script src="china.js?v=98d09322"></script>
-<script src="feedback.js?v=f3fdf01c"></script>
+<script src="feedback.js?v=b57c1c2f"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>

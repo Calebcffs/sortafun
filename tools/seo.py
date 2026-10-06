@@ -296,7 +296,7 @@ def head_block(fn, p):
         if p["kind"] == "game":
             ld.insert(0, {"@context": "https://schema.org", "@type": "VideoGame", "name": LABEL.get(fn, p["name"]), "url": url,
                           "description": p["desc"], "image": img, "genre": p.get("genre", []),
-                          "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any",
+                          "gamePlatform": "Web browser", "applicationCategory": "GameApplication", "operatingSystem": "Any",
                           "inLanguage": "en", "isAccessibleForFree": True,
                           "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "publisher": org})
     for item in ld:
