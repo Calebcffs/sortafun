@@ -130,8 +130,8 @@
   }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=98d09322"></script>
-<script src="feedback.js?v=b57c1c2f"></script>
+<script src="china.js?v=6a518523"></script>
+<script src="feedback.js?v=952ec8db"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -208,8 +208,8 @@
 <script src="dict.js?v=8295ff80"></script>
 <script src="freq.js?v=8508f925"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=a173fe0c"></script>
-<script src="share.js?v=7d993356"></script>
+<script src="leaderboard.js?v=63493e4f"></script>
+<script src="share.js?v=e240f67e"></script>
 <script>
 "use strict";
 
@@ -623,7 +623,7 @@ function finish() {
   document.getElementById("shuffle").disabled = true;
   hiveEl.querySelectorAll(".cell").forEach(function (c) { c.disabled = true; });
   lbEl.innerHTML = "";
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "hive", { score: score, bee: rankIndex(score) === RANKS.length - 1, day: IS_ARCHIVE ? VIEW_DAY : undefined });
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "hive", { score: score, bee: rankIndex(score) === RANKS.length - 1, day: IS_ARCHIVE ? VIEW_DAY : undefined, share: false });
   else lbEl.textContent = "leaderboard offline";
 }
 
@@ -684,13 +684,15 @@ function flush() {
       .catch(function (e) { console.warn("[hive] cloud save failed", e); });
   }, 700);
 }
-// a "share result" button under the live box once there's a word: rank and counts, never the words (share.js)
+// "challenge a friend" under the live box once there's a word: rank and counts, never the words (share.js)
 function showShare() {
   if (!window.SortafunShare || !Object.keys(foundWords).length) return;
   SortafunShare.after(document.getElementById("livebox"), function () {
-    var n = Object.keys(foundWords).length;
-    return "Word Hive " + VIEW_DAY + ": " + tierFor(score) + ", " + score + " pts, " + n + " word" + (n === 1 ? "" : "s") +
-      "\nhttps://sortafun.org/anagram.html" + (IS_ARCHIVE ? "?date=" + VIEW_DAY : "");
+    var n = Object.keys(foundWords).length, day = IS_ARCHIVE ? "the " + VIEW_DAY + " " : "today's ";
+    var pts = score + (score === 1 ? " pt" : " pts");
+    return { key: "hive", score: score, lead: "I scored", big: pts, path: IS_ARCHIVE ? "anagram.html?date=" + VIEW_DAY : null,
+      text: "I scored " + pts + " on " + day + "Word Hive (" + tierFor(score) + ", " + n + " word" + (n === 1 ? "" : "s") +
+        ") on Sortafun. Think you can beat my score?" };
   });
 }
 // after every word: this device now, and the codephrase (made the first time you find one)

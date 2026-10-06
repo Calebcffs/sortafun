@@ -402,16 +402,15 @@
       (left.length ? '<div class="go">' + left.map(function (k) { return '<button type="button" data-k="' + k + '">play ' + k + " &#9654;</button>"; }).join(" ") + "</div>"
         : '<div class="go">all three done. new puzzles in <b class="nx"></b>.</div>');
     var nx = $("sd-d-more").querySelector(".nx"); if (nx) nx.textContent = $("sd-next").textContent;
-    // scores per puzzle, never the grid (share.js)
+    // "challenge a friend": scores per puzzle, never the grid (share.js)
     if (window.SortafunShare) SortafunShare.after($("sd-d-more"), function () {
-      var lines = ["Daily Sudoku #" + (dayNum(DAY) + 1)], sum = 0;
+      var lines = [], sum = 0, n = 0;
       DIFFS.forEach(function (k) {
         var s = k === diff ? st : ls.get(key(DAY, k));
-        if (s && s.done) { sum += s.score || 0; lines.push(CFG[k].name + ": " + s.score + " (" + fmt(s.t) + ", " + s.e + " error" + (s.e === 1 ? "" : "s") + ")"); }
-        else lines.push(CFG[k].name + ": not yet");
+        if (s && s.done) { sum += s.score || 0; n++; lines.push(CFG[k].name + " " + s.score + " (" + fmt(s.t) + ", " + s.e + " error" + (s.e === 1 ? "" : "s") + ")"); }
       });
-      lines.push("total " + sum, "https://sortafun.org/sudoku.html");
-      return lines.join("\n");
+      return { key: "sudoku", score: sum, lead: "I scored", big: sum + " pts",
+        text: "I scored " + sum + " on today's Daily Sudoku #" + (dayNum(DAY) + 1) + " (" + n + " of 3 solved) on Sortafun. Think you can beat my score?\n" + lines.join("\n") };
     });
     $("sd-done").hidden = false;
   }

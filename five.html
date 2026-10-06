@@ -62,8 +62,8 @@
   .legend b { display: inline-block; width: 14px; height: 14px; border: 2px solid #1d1b2e; border-radius: 3px; vertical-align: -2px; margin: 0 3px 0 8px; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=98d09322"></script>
-<script src="feedback.js?v=b57c1c2f"></script>
+<script src="china.js?v=6a518523"></script>
+<script src="feedback.js?v=952ec8db"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -101,8 +101,8 @@
 
 <script src="dict.js?v=8295ff80"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=a173fe0c"></script>
-<script src="share.js?v=7d993356"></script>
+<script src="leaderboard.js?v=63493e4f"></script>
+<script src="share.js?v=e240f67e"></script>
 <script>
 "use strict";
 
@@ -243,17 +243,19 @@ function finish(won, animate) {
       var n = guesses.length;
       statusEl.textContent = PRAISE[n - 1] + " got it in " + n + ".";
       lbEl.innerHTML = "";
-      if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "five", { score: n });
+      if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "five", { score: n, share: false });
     } else {
       statusEl.textContent = "out of guesses. it was " + answer.toUpperCase() + ". new word tomorrow.";
       if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "five");
     }
     // the coloured squares only, never the letters (share.js)
     if (window.SortafunShare) SortafunShare.after(statusEl, function () {
-      var sq = { hit: "🟩", near: "🟨", miss: "⬛" };
-      return "Five Letters " + DAY + "  " + (won ? guesses.length : "X") + "/6\n" +
-        guesses.map(function (g) { return mark(g).map(function (c) { return sq[c]; }).join(""); }).join("\n") +
-        "\nhttps://sortafun.org/five.html";
+      var sq = { hit: "🟩", near: "🟨", miss: "⬛" }, n = guesses.length;
+      var grid = guesses.map(function (g) { return mark(g).map(function (c) { return sq[c]; }).join(""); }).join("\n");
+      return won
+        ? { key: "five", score: n, lead: "I got today's word in", big: n + "/6",
+            text: "I got today's Five Letters in " + n + "/6 on Sortafun. Think you can beat my score?\n" + grid }
+        : { lead: "today's word beat me", big: "X/6", text: "Today's Five Letters beat me (X/6) on Sortafun. Think you can get it?\n" + grid };
     });
   }, delay);
 }

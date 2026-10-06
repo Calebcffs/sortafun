@@ -1529,10 +1529,19 @@ and rerun, never by hand in the pages. ABOUT facts come from the game code: keep
 - **Preview images**: `assets/og/<id>.png`, 1200x630, drawn by `tools/og-images.mjs` from the
   homepage THUMB pictures (needs a local `python -m http.server 8765` and Pillow; cut to 256
   colours, ~75 KB each; WhatsApp drops previews over ~300 KB).
-- **Share buttons** (`share.js`, `SortafunShare.after(el, getText)`): phones get the share sheet,
-  desktops copy. On daily sudoku (results card), word hive (under the live box), five letters
-  (coloured squares only), word ladder and four sides (counts against par). **Share text never gives
-  the answer away** and ends with the game's https link.
+- **Challenge a friend** (`share.js`, v0.12, Caleb: "like hill climb racing"): a row of TELEGRAM
+  (`t.me/share/url`, message + link into a chat), INSTAGRAM (Instagram has no web share link, so it
+  draws a 1080x1920 story picture on a canvas: the page's og image, "I scored / 87 wpm / on Typing
+  Test / think you can beat my score?" and the link; phones get the share sheet with the file,
+  computers download it and copy the link) and SHARE (phone sheet) / COPY LINK. `mountPanel` adds it
+  to every end-of-round panel with a score (`SortafunShare.challenge`); the daily games pass
+  `share: false` and build their own (`SortafunShare.after(el, get)`, get returns
+  `{ key, score, text, big, lead, path? }`). The link carries `?beat=<n>&g=<key>&by=<name>`; on
+  any page with share.js a friend who opens it gets a banner "NAME scored X. think you can beat
+  it?" (name must match `[A-Za-z0-9 ._'-]{1,20}`, else "a friend"; score digits only; the text is
+  built with textContent and the score formatted from `GAMES`). **Share text never gives the answer
+  away** (five letters: squares only; ladder / sides: counts against par). A new scored game needs
+  the `share.js` tag after `leaderboard.js`. Never test with a real name: the hive / sudoku rows are live.
 - **IndexNow** (Bing, Yandex): key file `<32 hex>.txt` in the root; after a deploy that adds or
   changes pages, `node tools/indexnow.mjs` (or with page names). Google needs Search Console
   (Caleb's account): a Domain property for sortafun.org verified through Cloudflare DNS, then

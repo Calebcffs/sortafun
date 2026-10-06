@@ -42,8 +42,8 @@
   .meta { font-size: 14px; color: #444; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=98d09322"></script>
-<script src="feedback.js?v=b57c1c2f"></script>
+<script src="china.js?v=6a518523"></script>
+<script src="feedback.js?v=952ec8db"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -86,8 +86,8 @@
 
 <script src="dict.js?v=8295ff80"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=a173fe0c"></script>
-<script src="share.js?v=7d993356"></script>
+<script src="leaderboard.js?v=63493e4f"></script>
+<script src="share.js?v=e240f67e"></script>
 <script>
 "use strict";
 
@@ -227,13 +227,14 @@ function win() {
   wordEl.disabled = true;
   document.getElementById("add").disabled = true;
   lbEl.innerHTML = "";
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "ladder", { score: rungs });
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "ladder", { score: rungs, share: false });
   else lbEl.textContent = "leaderboard offline";
   // counts only, never the words (share.js)
   if (window.SortafunShare) SortafunShare.after(statusEl, function () {
-    var day = window.SortafunLB ? SortafunLB.dayStr() : "";
-    return "Word Ladder " + day + ": " + rungs + " rung" + (rungs === 1 ? "" : "s") + " (par " + par + ")" +
-      (rungs < par ? ", under par!" : "") + "\nhttps://sortafun.org/ladder.html";
+    var r = rungs + " rung" + (rungs === 1 ? "" : "s");
+    return { key: "ladder", score: rungs, lead: "I climbed today's ladder in", big: r,
+      text: "I climbed today's Word Ladder in " + r + " (par " + par + ")" + (rungs < par ? ", under par!" : "") +
+        " on Sortafun. Think you can beat my score?" };
   });
 }
 

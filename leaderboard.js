@@ -796,6 +796,8 @@
         '<input class="lb-input" maxlength="20" placeholder="your name" autocomplete="off" spellcheck="false">' +
         '<button class="lb-go">submit ' + fmtScore(g, opts.score) + "</button>";
       root.insertBefore(form, root.querySelector(".lb-list"));
+      // "challenge a friend": telegram / instagram / share (share.js); the daily games pass share: false and make their own
+      if (opts.share !== false && window.SortafunShare) window.SortafunShare.challenge(form, game, Math.round(Number(opts.score)));
       var input = form.querySelector(".lb-input");
       var go = form.querySelector(".lb-go");
       try { input.value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
@@ -965,6 +967,7 @@
     ANIM_MAX_BYTES: ANIM_MAX_BYTES,
     animEstimateBytes: animEstimateBytes,
     mountPanel: mountPanel,
+    fmtScore: function (key, v) { return GAMES[key] ? fmtScore(GAMES[key], v) : String(v); },
     keepBoard: keepBoard,
   };
 })();

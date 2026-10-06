@@ -49,8 +49,8 @@
   .meta { font-size: 14px; color: #444; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=98d09322"></script>
-<script src="feedback.js?v=b57c1c2f"></script>
+<script src="china.js?v=6a518523"></script>
+<script src="feedback.js?v=952ec8db"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -94,8 +94,8 @@
 
 <script src="dict.js?v=8295ff80"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=a173fe0c"></script>
-<script src="share.js?v=7d993356"></script>
+<script src="leaderboard.js?v=63493e4f"></script>
+<script src="share.js?v=e240f67e"></script>
 <script>
 "use strict";
 
@@ -296,13 +296,13 @@ function win() {
     (n < puzzle.par.length ? ", under par!" : n === puzzle.par.length ? ", that's par." : ".") +
     " our answer was " + puzzle.par.join(" - ").toUpperCase() + ".";
   lbEl.innerHTML = "";
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "sides", { score: n });
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "sides", { score: n, share: false });
   // counts only, never the words (share.js)
   if (window.SortafunShare) SortafunShare.after(statusEl, function () {
-    var day = window.SortafunLB ? SortafunLB.dayStr() : "";
-    var p = puzzle.par.length;
-    return "Four Sides " + day + ": all 12 letters in " + n + " word" + (n === 1 ? "" : "s") + " (par " + p + ")" +
-      (n < p ? ", under par!" : "") + "\nhttps://sortafun.org/sides.html";
+    var p = puzzle.par.length, w = n + " word" + (n === 1 ? "" : "s");
+    return { key: "sides", score: n, lead: "I used all 12 letters in", big: w,
+      text: "I used all 12 letters of today's Four Sides in " + w + " (par " + p + ")" + (n < p ? ", under par!" : "") +
+        " on Sortafun. Think you can beat my score?" };
   });
 }
 
