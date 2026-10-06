@@ -43,8 +43,8 @@
     five:     { label: "five letters",   unit: "guesses", better: "low" },
     sides:    { label: "four sides",     unit: "words", better: "low" },
     grab:     { label: "word grab",      unit: "pts",   better: "high" },
-    birdie:   { label: "birdie",         unit: "pts",   better: "high" },
-    city:     { label: "city sandbox",   unit: "cash",  better: "high", format: function (v) { return "$" + Number(v).toLocaleString("en-US"); } },
+    birdie:   { label: "birdie",         unit: "pts",   better: "high", retired: true }, // city sandbox's old name; archived with city 2026-10-06
+    city:     { label: "city sandbox",   unit: "cash",  better: "high", format: function (v) { return "$" + Number(v).toLocaleString("en-US"); }, retired: true }, // archived 2026-10-06: off the homepage/leaderboards/passport, city.html still works by URL
     minute:   { label: "how long is a minute", unit: "ms", better: "low", format: fmtMsOff, retired: true }, // basement removed 2026-09-28
     callit:   { label: "call it",        unit: "streak", better: "high", retired: true },
     watch:    { label: "watch the guy",  unit: "s",     better: "high", retired: true },
@@ -64,7 +64,8 @@
     funstrike: { label: "fun strike", unit: "pts", better: "high" },
     sushirush: { label: "sushi lunch rush",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
     // part 2: samples * 10000 - seconds, the same idea
-    deeptime2: { label: "deep time part 2", unit: "samples", better: "high", format: function (v) {
+    // archived 2026-10-06: off the homepage/leaderboards/passport, deeptime2.html still works by URL
+    deeptime2: { label: "deep time part 2", unit: "samples", better: "high", retired: true, format: function (v) {
       if (v <= 0) return "0/5";
       var p = Math.ceil(v / 10000), s = p * 10000 - v;
       return p + "/5, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");

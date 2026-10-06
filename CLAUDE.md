@@ -456,6 +456,10 @@ game with its own offset so they don't line up.
 
 ### City Sandbox (`city.html` + `city/`, was Birdie)
 
+**Archived 2026-10-06 (v0.10.1, Caleb's ask), like Taka-san:** off the homepage
+and the leaderboards page, `retired: true` in `leaderboard.js` (no passport
+count, `birdie` too). The page still works by URL with its own board.
+
 On 2026-09-25 Caleb asked for Birdie to grow into **City Sandbox**: a GTA /
 PUBG-without-the-circle open world where you mainly play as a person (loot,
 guns, a shop, cars, a motorbike, a plane in a secret hangar, wardens = police),
@@ -877,6 +881,10 @@ logic runs stub `deeptime.tape.render = () => {}` (0.3ms per step). The
 page's own rAF loop keeps stepping too, so timed screenshots drift.
 
 ### Deep Time: Part 2 (`deeptime2.html` + `deeptime/l2/`)
+
+**Archived 2026-10-06 (v0.10.1, Caleb's ask), like Taka-san:** off the homepage
+and the leaderboards page, `retired: true` in `leaderboard.js` (no passport
+count). The page still works by URL with its own board.
 
 Caleb asked (2026-09-29) for a level two: a town, back alleys as the intro,
 then ~80% in the sewers and control rooms, velociraptors, prehistoric horror.
@@ -1493,8 +1501,8 @@ Rooms are never cleaned up automatically yet (ink is deleted per turn, so
 leftovers are small); add a scheduled purge if storage ever matters.
 
 The homepage has an **Online** filter chip (`cat: "online"`, colour
-`--online` / `body.k-online` in `game.css`); City Sandbox and Draw and Guess
-are in it.
+`--online` / `body.k-online` in `game.css`); Fun Strike and Draw and Guess
+are in it (City Sandbox was, until it was archived 2026-10-06).
 
 ### The site version (`feedback.js` `VERSION`)
 

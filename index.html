@@ -729,8 +729,8 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=749af224"></script>
-<script src="feedback.js?v=9e1cabc6"></script>
+<script src="china.js?v=7b2e6003"></script>
+<script src="feedback.js?v=a67165b4"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 </head>
 <body>
@@ -825,7 +825,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>twenty-one games, three of them online with friends. your best today lands on the leaderboards.</p>
+      <p>nineteen games, two of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -864,6 +864,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-06</span> <b>v0.10.1</b>: deep time part 2 and city sandbox are off the homepage and the leaderboards for now.</li>
         <li><span class="when">10-06</span> <b>v0.10</b>: NEW: <b>daily sudoku</b>. three new puzzles every day (easy, hard, extreme), scored on time and mistakes. every solve climbs your total on today's board, live, and a codephrase takes it to any device. taka-san's dinner and frontier pets are off the homepage.</li>
         <li><span class="when">10-06</span> <b>v0.9.9</b>: word hive: you can change your name on today's board until midnight. only you (and your codephrase) can.</li>
         <li><span class="when">10-05</span> <b>v0.9.8</b>: word hive's daily leaderboard is live. your first word puts you on it, every word after climbs your score, and you can watch everyone else climb too. your codephrase keeps the same spot on any device. the board locks at midnight.</li>
@@ -959,7 +960,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=309cb4d0"></script>
+<script src="leaderboard.js?v=a173fe0c"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -978,9 +979,7 @@ var GAMES = [
   { id: "funstrike", name: "Fun Strike",     url: "funstrike.html", cat: "online", key: "funstrike", badge: "new",   blurb: "a Counter-Strike homage on a real map. team deathmatch and free for all, bots, kill cam, voice chat, servers that stay up, a leaderboard." },
   { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
-  { id: "deeptime2", name: "Deep Time 2",    url: "deeptime2.html", cat: "skill",  key: "deeptime2", badge: "new",  blurb: "part 2: body camera footage from the storm drains under a montana town. five samples. they hunt by sound." },
   { id: "deeptime",  name: "Deep Time",      url: "deeptime.html",  cat: "skill",  key: "deeptime", badge: "new",   blurb: "a camcorder tape from a forest in 1987. find the 8 parts of the time machine. something came through. headphones on." },
-  { id: "city",      name: "City Sandbox",   url: "city.html",      cat: "online",  key: "city",     badge: "new",   blurb: "online zombie survival. crew up, hold your safehouse through the night, fuel the radio mast and catch the chopper out." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
   { id: "sides",     name: "Four Sides",     url: "sides.html",     cat: "word",   key: "sides",    badge: "new",   blurb: "twelve letters round a box. chain words together until you've used them all." },

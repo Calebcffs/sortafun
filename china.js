@@ -355,7 +355,7 @@
     "paused.": "已暂停。", "sushi goes round, endless service - most yen": "回转寿司，无尽营业：社会信用最高",
     "sushi goes round, lunch rush - most yen": "回转寿司，午餐高峰：社会信用最高",
     ": new: sushi goes round. you run a conveyor belt sushi bar. roll what each customer asks for, send it round the belt, phone the supplier before the salmon runs out, and pour sake on anyone about to storm off. career mode, endless service and a daily lunch rush with its own leaderboards.": "：新游戏：回转寿司。你来经营一家回转寿司店。按每位顾客点的菜卷寿司，送上传送带，三文鱼用完之前打电话向供应商订货，谁快要气走就给谁倒杯清酒。有生涯模式、无尽营业和每日午餐高峰，各有自己的社会信用榜。",
-    "twenty-one games, three of them online with friends. your best today lands on the leaderboards.": "二十一个游戏，其中三个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
+    "nineteen games, two of them online with friends. your best today lands on the leaderboards.": "十九个游戏，其中两个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
   });
 
   // every scoreboard says social credits, so every "score" (分数) in the lines above is too
