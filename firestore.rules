@@ -2,8 +2,8 @@ rules_version = '2';
 
 // sortafun leaderboards — anyone can read scores, anyone can add one score at a
 // time (if it passes the shape checks below), nobody can delete, and the only
-// edit is word hive's live row climbing (and its owner renaming it) until
-// midnight (isHiveLiveUpdate).
+// edit is a live row (word hive, daily sudoku) climbing, and its owner
+// renaming it, until midnight (isLiveUpdate).
 //
 // Note: scores are submitted straight from the player's browser, so a determined
 // person can still forge a number. These rules stop junk data and drive-by
@@ -16,11 +16,13 @@ service cloud.firestore {
       allow read: if true;
       allow delete: if false;
       allow create: if isValidScore(request.resource.data);
-      // word hive's live row (live: true): it climbs with every word until Singapore midnight
-      allow update: if isHiveLiveUpdate(id, resource.data, request.resource.data);
+      // a live row (live: true; word hive, daily sudoku): it climbs until Singapore midnight
+      allow update: if isLiveUpdate(id, resource.data, request.resource.data);
     }
 
-    // --- the secret behind each live hive row: hive_keys/<row id> = { k, n } ---
+    // --- the secret behind each live row: hive_keys/<row id> = { k, n } ---
+    // (named for word hive, where it started; the id is the scores row id, so
+    // it serves every live game: hive and sudoku)
     // Nobody can read these (rules' get() still can). Renaming a live row
     // needs the same batch to bump n here, and bumping n needs k, which only
     // the player's devices know (this device, and the codephrase save). Made
@@ -55,13 +57,18 @@ service cloud.firestore {
     // name can change until then too, but only by its owner (ownsRow).
     // (anyone who knows the row id could raise it, never lower or rename it:
     // the same "stops junk, not a determined forger" trade as above)
-    function isHiveLiveUpdate(id, o, n) {
-      return o.game == 'hive' && o.get('live', false) == true
+    function isLiveUpdate(id, o, n) {
+      return isLiveGame(o.game) && o.get('live', false) == true
         && n.diff(o).affectedKeys().hasOnly(['score', 'rankValue', 'ts', 'bee', 'name'])
         && (!n.diff(o).affectedKeys().hasAny(['name']) || ownsRow(id))
         && isValidScore(n)
         && n.score >= o.score
         && isSgToday(o.day);
+    }
+
+    // games with a live daily row (one per player per day, climbing until midnight)
+    function isLiveGame(g) {
+      return g in ['hive', 'sudoku'];
     }
 
     // games whose leaderboard ranks lowest-score-best: they store rankValue == -score
@@ -73,12 +80,13 @@ service cloud.firestore {
       return d.keys().hasOnly(['game', 'name', 'score', 'rankValue', 'day', 'ts', 'bee', 'arch', 'live'])
         && (!('bee' in d) || (d.bee == true && d.game == 'hive'))
         && (!('arch' in d) || (d.arch == true && d.game == 'hive'))
-        && (!('live' in d) || (d.live == true && d.game == 'hive' && !('arch' in d) && isSgToday(d.day)))
+        && (!('live' in d) || (d.live == true && isLiveGame(d.game) && !('arch' in d) && isSgToday(d.day)))
         && d.game in ['typing', 'typing1000', 'driving', 'puzzle', 'circuit',
                       'reaction', 'maze', 'aim', 'stopbar', 'ladder', 'anagram',
                       'mines', 'fermi', 'minute', 'callit', 'watch', 'hive',
                       'five', 'sides', 'grab', 'birdie', 'city', 'deeptime',
-                      'taka', 'deeptime2', 'sushi', 'sushirush', 'funstrike']
+                      'taka', 'deeptime2', 'sushi', 'sushirush', 'funstrike',
+                      'sudoku']
         && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
         && d.score is int && d.score >= 0 && d.score <= 1000000
         && d.rankValue is int
@@ -150,6 +158,43 @@ service cloud.firestore {
         && d.keys().hasOnly(['day', 'words', 'ts', 'lb', 'name', 'k'])
         && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
         && d.words is list && d.words.size() <= 500
+        && (!('lb' in d) || (d.lb is string && d.lb.matches('[A-Za-z0-9]{20}')))
+        && (!('name' in d) || (d.name is string && d.name.size() >= 1 && d.name.size() <= 20))
+        && (!('k' in d) || (d.k is string && d.k.matches('[A-Za-z0-9]{24}')))
+        && d.ts == request.time;
+    }
+
+    // --- daily sudoku progress (sudoku.html) under a codephrase, like hive_saves ---
+    // { day, ts, st: { easy?, hard?, extreme? }, lb?, name?, k? }. Each puzzle is
+    // { v: 81 digits, t: ms, e: errors, done, score? }. A finished puzzle stays finished.
+    match /sudoku_saves/{code} {
+      allow get: if code.matches('[a-z]{3,12}-[a-z]{3,12}');
+      allow list, delete: if false;
+      allow create: if isValidSudokuSave(code, request.resource.data);
+      allow update: if isValidSudokuSave(code, request.resource.data)
+        && request.resource.data.day == resource.data.day
+        && stillDone(resource.data.st, request.resource.data.st, 'easy')
+        && stillDone(resource.data.st, request.resource.data.st, 'hard')
+        && stillDone(resource.data.st, request.resource.data.st, 'extreme');
+    }
+    function stillDone(o, n, k) {
+      return !(k in o) || o[k].done != true || (k in n && n[k].done == true);
+    }
+    function isValidSudokuPuzzle(st, k) {
+      return !(k in st) || (
+        st[k] is map && st[k].keys().hasOnly(['v', 't', 'e', 'done', 'score'])
+        && st[k].v is string && st[k].v.matches('[0-9]{81}')
+        && st[k].t is int && st[k].t >= 0
+        && st[k].e is int && st[k].e >= 0
+        && st[k].done is bool
+        && (!('score' in st[k]) || (st[k].score is int && st[k].score >= 0 && st[k].score <= 100000)));
+    }
+    function isValidSudokuSave(code, d) {
+      return code.matches('[a-z]{3,12}-[a-z]{3,12}')
+        && d.keys().hasOnly(['day', 'ts', 'st', 'lb', 'name', 'k'])
+        && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.st is map && d.st.keys().hasOnly(['easy', 'hard', 'extreme'])
+        && isValidSudokuPuzzle(d.st, 'easy') && isValidSudokuPuzzle(d.st, 'hard') && isValidSudokuPuzzle(d.st, 'extreme')
         && (!('lb' in d) || (d.lb is string && d.lb.matches('[A-Za-z0-9]{20}')))
         && (!('name' in d) || (d.name is string && d.name.size() >= 1 && d.name.size() <= 20))
         && (!('k' in d) || (d.k is string && d.k.matches('[A-Za-z0-9]{24}')))
