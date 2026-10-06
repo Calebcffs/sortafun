@@ -884,7 +884,9 @@ page's own rAF loop keeps stepping too, so timed screenshots drift.
 
 **Archived 2026-10-06 (v0.10.1, Caleb's ask), like Taka-san:** off the homepage
 and the leaderboards page, `retired: true` in `leaderboard.js` (no passport
-count). The page still works by URL with its own board.
+count). The page still works by URL with its own board. Deep Time part 1's
+links to it (the intro's "part 2 is out" and the title's PART 2 button) were
+removed too (v0.10.2), so it is only reachable by typing the URL.
 
 Caleb asked (2026-09-29) for a level two: a town, back alleys as the intro,
 then ~80% in the sewers and control rooms, velociraptors, prehistoric horror.
