@@ -422,7 +422,13 @@ every daily puzzle (they index into it), including today's.
   the same name). One debounced write path (`flush()`: live row, then the
   codephrase save), one live write in flight, always the full total (the rules
   refuse a lower score). At Singapore midnight the rules freeze the row and the
-  page locks the hive with "this hive's board is closed". The standing board is
+  page locks the hive with "this hive's board is closed". **The name can
+  change until midnight (v0.9.9)**: "change name" in the live box; only the
+  row's owner can (the `hive_keys/<id>` secret, made with the row, travels in
+  the localStorage + codephrase saves as `k`; a rename write bumps it in the same
+  batch, see SETUP.md). `liveName` is what the player wants, `sentName` what the
+  board has; a rename from a device with fewer words keeps the row's higher
+  score (liveSet reads it first). The standing board is
   `keepBoard(lb, "hive", { live, mine })`: the today tab is an `onSnapshot`
   listener (`watchTop`), your own row is outlined "(you)". Archive rounds keep
   the old "i'm done, submit score" one-shot submit. Limits: a device that had

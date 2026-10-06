@@ -219,13 +219,18 @@
   // isHiveLiveUpdate: score only goes up, name and day never change). The id
   // is made here, before the first write, so a reload mid-write can't make a
   // second row; every write is the whole doc via setDoc (create, then update).
-  function newLiveId() {
+  function newLiveId(len) {
+    len = len || 20;
     var A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", out = "";
-    var r = new Uint8Array(20);
+    var r = new Uint8Array(len);
     (window.crypto || window.msCrypto).getRandomValues(r);
-    for (var i = 0; i < 20; i++) out += A[r[i] % 62];
+    for (var i = 0; i < len; i++) out += A[r[i] % 62];
     return out;
   }
+  // o: { name, score, bee, day, key, mode }. mode "create" makes the row with
+  // its secret (hive_keys/<id> = { k: key, n: 0 }) in one batch; "rename"
+  // bumps that secret's n in the same batch, which is what lets the name
+  // change (firestore.rules ownsRow); anything else is a plain score update.
   function liveSet(id, o) {
     return init().then(function () {
       var fs = state.fs;
@@ -233,13 +238,30 @@
         day: o.day, ts: fs.serverTimestamp(), live: true };
       doc.rankValue = doc.score;
       if (o.bee) doc.bee = true;
-      return fs.setDoc(fs.doc(state.db, "scores", id), doc).then(function () {
-        try {
-          localStorage.setItem("sortafun-stamp-scored", "1");
-          localStorage.setItem("sortafun-stamp-game-hive", "1");
-        } catch (e) {}
+      var row = fs.doc(state.db, "scores", id), key = fs.doc(state.db, "hive_keys", id);
+      // a rename from a device with fewer words than the row (the same codephrase played
+      // elsewhere) keeps the row's higher score, or the rules would refuse it as a drop
+      var prep = o.mode !== "rename" ? Promise.resolve() : fs.getDoc(row).then(function (snap) {
+        var cur = snap.exists() ? snap.data() : null;
+        if (cur && cur.score > doc.score) { doc.score = doc.rankValue = cur.score; if (cur.bee) doc.bee = true; }
       });
+      return prep.then(function () { return liveWrite(fs, row, key, doc, o); });
+    }).then(function () {
+      try {
+        localStorage.setItem("sortafun-stamp-scored", "1");
+        localStorage.setItem("sortafun-stamp-game-hive", "1");
+      } catch (e) {}
     });
+  }
+  function liveWrite(fs, row, key, doc, o) {
+    if ((o.mode === "create" || o.mode === "rename") && o.key) {
+      var b = fs.writeBatch(state.db);
+      b.set(row, doc);
+      if (o.mode === "create") b.set(key, { k: o.key, n: 0 });
+      else b.update(key, { k: o.key, n: fs.increment(1) });
+      return b.commit();
+    }
+    return fs.setDoc(row, doc);
   }
 
   // period: "day" | "all". Returns [{ name, score, ts }], best first, max 10.
@@ -380,7 +402,8 @@
       if (!words.length) return null; // nothing found yet: nothing to save (and [] must never overwrite a list)
       var d = { day: day, words: fs.arrayUnion.apply(null, words), ts: fs.serverTimestamp() };
       if (extra && extra.lb) d.lb = extra.lb;      // the live leaderboard row (newLiveId)
-      if (extra && extra.name) d.name = extra.name; // the name on it, fixed for the day
+      if (extra && extra.name) d.name = extra.name; // the name on it (its owner can change it until midnight)
+      if (extra && extra.k) d.k = extra.k;          // the row's secret, so another device can rename it too
       return fs.setDoc(fs.doc(state.db, "hive_saves", code), d, { merge: true });
     });
   }

@@ -88,6 +88,7 @@
   .livebox input { font: inherit; width: 140px; padding: 3px 6px; border: 3px solid var(--ink); border-radius: 8px; }
   .livebox button { padding: 3px 10px; }
   .livebox .lberr { color: #b00; margin-top: 3px; }
+  .livebox .lchange { padding: 1px 8px; font-size: 12px; }
   .m-now { display: none; }
 
   @media (max-width: 560px) {
@@ -108,8 +109,8 @@
   }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=fa60ab7c"></script>
-<script src="feedback.js?v=2d542b28"></script>
+<script src="china.js?v=de56cfa9"></script>
+<script src="feedback.js?v=62d92f67"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -169,7 +170,7 @@
 <script src="dict.js?v=8295ff80"></script>
 <script src="freq.js?v=8508f925"></script>
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=c86f2b92"></script>
+<script src="leaderboard.js?v=cd32af5f"></script>
 <script>
 "use strict";
 
@@ -623,13 +624,16 @@ function showCode() {
   document.getElementById("savebox").hidden = false;
 }
 // today's live leaderboard row (leaderboard.js liveSet): every word climbs it until midnight.
-// liveId is made before the first write and kept with the save, so a reload or another device
-// (same codephrase) keeps writing the same row, under the name it started with.
-var LIVE = !IS_ARCHIVE, liveId = null, liveName = null, liveMade = false;
+// liveId (and liveKey, its secret) are made before the first write and kept with the save, so a
+// reload or another device (same codephrase) keeps writing the same row. The name can change until
+// midnight: liveName is what the player wants, sentName what the board has; a "rename" write bumps
+// the secret in the same batch (firestore.rules ownsRow), so only this player's devices can rename.
+var LIVE = !IS_ARCHIVE, liveId = null, liveKey = null, liveName = null, sentName = null, liveMade = false;
+var LIVE_KEY_RE = /^[A-Za-z0-9]{24}$/;
 var lbBusy = false, lbAgain = false, lbClosed = false;
 var LIVE_ID_RE = /^[A-Za-z0-9]{20}$/;
 function localSave() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ code: saveCode, words: Object.keys(foundWords), lb: liveId, name: liveName, made: liveMade })); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ code: saveCode, words: Object.keys(foundWords), lb: liveId, k: liveKey, name: liveName, sent: sentName, made: liveMade })); } catch (e) {}
 }
 // one debounced write path: the live row first (so a new row id goes into the save), then the codephrase save
 function flush() {
@@ -637,7 +641,7 @@ function flush() {
   saveTimer = setTimeout(function () {
     pushLive();
     if (!saveCode || !window.SortafunLB || !SortafunLB.hiveSaveSet) return;
-    SortafunLB.hiveSaveSet(saveCode, VIEW_DAY, Object.keys(foundWords), LIVE ? { lb: liveId, name: liveName } : null)
+    SortafunLB.hiveSaveSet(saveCode, VIEW_DAY, Object.keys(foundWords), LIVE ? { lb: liveId, name: sentName || liveName, k: liveKey } : null)
       .catch(function (e) { console.warn("[hive] cloud save failed", e); });
   }, 700);
 }
@@ -669,16 +673,36 @@ function pushLive() {
     if (!saved) { askName(); return; }
     liveName = saved.slice(0, 20);
   }
-  if (!liveId) { liveId = SortafunLB.newLiveId(); localSave(); }
+  if (!liveId) { liveId = SortafunLB.newLiveId(); liveKey = SortafunLB.newLiveId(24); localSave(); }
   if (lbBusy) { lbAgain = true; return; }
+  // rows made before renames existed have no secret: their name stays
+  if (liveMade && liveName !== sentName && !liveKey) {
+    liveName = sentName; localSave();
+    showLive("this entry was made before names could change, so its name stays today.", true);
+  }
+  var mode = !liveMade ? "create" : liveName !== sentName ? "rename" : "score", nm = liveName;
   lbBusy = true;
-  SortafunLB.liveSet(liveId, { name: liveName, score: score, bee: rankIndex(score) === RANKS.length - 1, day: VIEW_DAY }).then(function () {
-    if (!liveMade) { liveMade = true; localSave(); }
+  var o = { name: nm, score: score, bee: rankIndex(score) === RANKS.length - 1, day: VIEW_DAY, key: liveKey, mode: mode };
+  SortafunLB.liveSet(liveId, o).catch(function (e) {
+    // a first write whose answer got lost (reload, flaky network) already made the row and its
+    // secret, so making them again is refused: carry on with a plain update of the same row
+    if (mode !== "create") throw e;
+    o.mode = "score";
+    return SortafunLB.liveSet(liveId, o);
+  }).then(function () {
+    liveMade = true; sentName = nm;
+    localSave();
     showLive("");
   }, function (e) {
     console.warn("[hive] live board update failed", e);
     if (SortafunLB.dayStr() !== VIEW_DAY) { closeLive(); return; }
-    showLive(/permission/i.test(String(e && (e.code || e.message)))
+    var refused = /permission/i.test(String(e && (e.code || e.message)));
+    if (mode === "rename" && refused) {
+      liveName = sentName; localSave();
+      showLive("the board didn't take the new name. your words still count.", true);
+      return;
+    }
+    showLive(refused
       ? "the board didn't take that update. it tries again with your next word."
       : "couldn't reach the board. it tries again with your next word.");
   }).then(function () {
@@ -687,34 +711,68 @@ function pushLive() {
   });
 }
 function liveBox() { var b = document.getElementById("livebox"); b.hidden = false; b.innerHTML = ""; return b; }
-function askName() {
-  if (document.getElementById("lname")) return;
+function nameInput(id, value, label, onGo) {
   var b = liveBox();
-  b.appendChild(document.createTextNode("you're going on today's leaderboard. your name for today (it stays all day): "));
   var inp = document.createElement("input");
-  inp.id = "lname"; inp.maxLength = 20; inp.placeholder = "your name"; inp.autocomplete = "off"; inp.spellcheck = false;
+  inp.id = id; inp.maxLength = 20; inp.placeholder = "your name"; inp.autocomplete = "off"; inp.spellcheck = false; inp.value = value || "";
   var go = document.createElement("button");
-  go.textContent = "go on the board";
+  go.textContent = label;
   b.appendChild(inp); b.appendChild(document.createTextNode(" ")); b.appendChild(go);
   inp.addEventListener("keydown", function (e) {
     e.stopPropagation(); // typing a name isn't playing the game
     if (e.key === "Enter") { e.preventDefault(); go.click(); }
+    if (e.key === "Escape" && id === "lrename") { e.preventDefault(); showLive("", true); }
   });
   go.addEventListener("click", function () {
     var v = inp.value.trim().slice(0, 20);
     if (!v) { inp.focus(); return; }
+    onGo(v);
+  });
+  return b;
+}
+function askName() {
+  if (document.getElementById("lname")) return;
+  var b = nameInput("lname", "", "go on the board", function (v) {
     liveName = v;
     try { localStorage.setItem("sortafun-name", v); } catch (e) {}
     localSave();
-    showLive("");
+    showLive("", true);
     flush();
   });
+  b.insertBefore(document.createTextNode("you're going on today's leaderboard. your name (you can change it until midnight): "), b.firstChild);
 }
-function showLive(err) {
+function renameBox() {
+  var b = nameInput("lrename", liveName, "save name", function (v) {
+    var changed = v !== liveName;
+    if (changed) {
+      liveName = v;
+      try { localStorage.setItem("sortafun-name", v); } catch (e) {}
+      localSave();
+    }
+    showLive("", true);
+    if (changed) pushLive();
+  });
+  var cancel = document.createElement("button");
+  cancel.textContent = "cancel";
+  cancel.addEventListener("click", function () { showLive("", true); });
+  b.appendChild(document.createTextNode(" ")); b.appendChild(cancel);
+  b.insertBefore(document.createTextNode("new name for today's board: "), b.firstChild);
+  var inp = document.getElementById("lrename"); inp.focus(); inp.select();
+}
+// force: redraw even while the rename box is open (a word landing mustn't wipe what you're typing)
+function showLive(err, force) {
+  if (!force && document.getElementById("lrename")) return;
   var b = liveBox();
   b.appendChild(document.createTextNode("live on today's board as "));
   var nm = document.createElement("b"); nm.textContent = liveName; b.appendChild(nm);
-  b.appendChild(document.createTextNode(". every word adds to it until midnight (singapore time)."));
+  if (liveMade && liveName !== sentName) b.appendChild(document.createTextNode(" (saving...)"));
+  b.appendChild(document.createTextNode(". every word adds to it until midnight (singapore time). "));
+  if (liveMade) {
+    var ch = document.createElement("button");
+    ch.id = "lchange"; ch.className = "lchange"; ch.textContent = "change name";
+    ch.addEventListener("click", renameBox);
+    b.appendChild(ch);
+  }
   if (err) { var e = document.createElement("div"); e.className = "lberr"; e.textContent = err; b.appendChild(e); }
 }
 // midnight in Singapore: today's board is final, this hive is over
@@ -763,8 +821,11 @@ function continueWith(code) {
     }
     saveCode = code;
     // carry on the same leaderboard row, under the name it started with
-    if (LIVE && typeof d.lb === "string" && LIVE_ID_RE.test(d.lb)) { liveId = d.lb; liveMade = true; }
-    if (LIVE && typeof d.name === "string" && d.name.trim()) liveName = d.name.trim().slice(0, 20);
+    if (LIVE && typeof d.lb === "string" && LIVE_ID_RE.test(d.lb)) {
+      liveId = d.lb; liveMade = true;
+      liveKey = typeof d.k === "string" && LIVE_KEY_RE.test(d.k) ? d.k : null;
+    }
+    if (LIVE && typeof d.name === "string" && d.name.trim()) liveName = sentName = d.name.trim().slice(0, 20);
     var n = restoreWords(d.words);
     msg.textContent = n ? "welcome back, " + n + " word" + (n === 1 ? "" : "s") + " restored" : "that save has nothing new in it";
     msg.style.color = "#1faf3a";
@@ -781,8 +842,13 @@ document.getElementById("cin").addEventListener("keydown", function (e) {
   try { local = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
   if (local && Array.isArray(local.words) && local.words.length) {
     if (local.code && CODE_RE.test(local.code)) saveCode = local.code;
-    if (LIVE && typeof local.lb === "string" && LIVE_ID_RE.test(local.lb)) { liveId = local.lb; liveMade = !!local.made; }
+    if (LIVE && typeof local.lb === "string" && LIVE_ID_RE.test(local.lb)) {
+      liveId = local.lb; liveMade = !!local.made;
+      liveKey = typeof local.k === "string" && LIVE_KEY_RE.test(local.k) ? local.k : null;
+    }
     if (LIVE && typeof local.name === "string" && local.name) liveName = local.name.slice(0, 20);
+    if (LIVE && typeof local.sent === "string" && local.sent) sentName = local.sent.slice(0, 20);
+    else if (LIVE && liveMade) sentName = liveName; // a save from before renames: the board has its name
     restoreWords(local.words);
     showCode();
     flush(); // words found while offline reach the board now

@@ -99,8 +99,15 @@ and day never change, `ts` refreshed, and only while `day` is still today in
 Singapore time, so the board freezes at midnight). Anyone who knows a row's id
 could raise it, never lower or rename it: the same "stops junk, not forgers"
 trade as everything else here. `hive_saves/<codephrase>` is
-`{ day, words, ts, lb?, name? }`, where `lb` is the live row id and `name` the
-name on it, so another device with the codephrase keeps climbing the same row.
+`{ day, words, ts, lb?, name?, k? }`, where `lb` is the live row id, `name` the
+name on it and `k` its secret, so another device with the codephrase keeps
+climbing (and can rename) the same row.
+
+**Renaming a live row (since v0.9.9).** The name can change until midnight,
+but only by its owner: `hive_keys/<row id>` = `{ k, n }` is made in the same
+batch as the row (never for a row that already exists), nobody can read it,
+and a rename must bump `n` in the same batch, which needs `k` (`ownsRow`).
+Rows made before v0.9.9 have no key and keep their name.
 
 Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `reaction`, `maze`, `aim`, `stopbar`, `ladder`, `anagram` (retired, see
