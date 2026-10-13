@@ -28,7 +28,7 @@
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="game.css?v=53cf4bbc">
 <style>
-  .studio { max-width: 560px; }
+  .studio { max-width: 740px; }
   .bar {
     display: flex;
     flex-wrap: wrap;
@@ -63,7 +63,7 @@
   .kb small::after { content: "]"; }
   #view {
     width: 100%;
-    max-width: 480px;
+    max-width: 640px;
     height: auto;
     display: block;
     margin: 6px auto;
@@ -161,7 +161,7 @@
     </span>
   </div>
 
-  <canvas id="view" width="480" height="360"></canvas>
+  <canvas id="view" width="640" height="480"></canvas>
 
   <div class="frameinfo">frame <b id="fnum">1</b> / <b id="ftot">1</b></div>
 
@@ -172,10 +172,10 @@
     <button id="next">next &rarr;</button>
   </div>
   <div class="bar">
-    <span class="kb"><button id="addBlank">+ blank frame</button><small>a key</small></span>
-    <span class="kb"><button id="addCopy">+ copy frame</button><small>s key</small></span>
-    <span class="kb"><button id="clearFrame">clear frame</button><small>d key</small></span>
-    <span class="kb"><button id="del">delete frame</button><small>f key</small></span>
+    <span class="kb"><button id="addBlank">+ blank frame</button><small>1 key</small></span>
+    <span class="kb"><button id="addCopy">+ copy frame</button><small>2 key</small></span>
+    <span class="kb"><button id="clearFrame">clear frame</button><small>3 key</small></span>
+    <span class="kb"><button id="del">delete frame</button><small>4 key</small></span>
   </div>
 
   <div id="strip"></div>
@@ -191,7 +191,7 @@
     <div class="post-msg" id="postMsg"></div>
   </div>
 
-  <p class="hint">keys: space play &middot; , . frame &middot; a s d f blank / copy / clear / delete &middot; p l r c e tools &middot; o onion &middot; ctrl+z undo. saved in this browser.</p>
+  <p class="hint">keys: space play &middot; , . frame &middot; 1 2 3 4 blank / copy / clear / delete &middot; p l r c e tools &middot; o onion &middot; ctrl+z undo. saved in this browser.</p>
 
   <!-- seo:more -->
   <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="sudoku.html">Daily Sudoku</a></li><li><a href="anagram.html">Word Hive</a></li><li><a href="five.html">Five Letters</a></li><li><a href="ladder.html">Word Ladder</a></li><li><a href="sides.html">Four Sides</a></li><li><a href="puzzle.html">Tile Slider</a></li><li><a href="grab.html">Word Grab</a></li><li><a href="typing.html">Typing Test</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
@@ -204,7 +204,7 @@
 <script>
 "use strict";
 
-var W = 480, H = 360, FPS = 12;
+var W = 640, H = 480, FPS = 12;
 var LS_KEY = "sortafun-flipbook-v1";
 
 var view = document.getElementById("view");
@@ -551,7 +551,10 @@ function save() {
       v: 1, cur: cur, fps: FPS,
       frames: frames.map(function (f) { return f.toDataURL("image/png"); }),
     }));
-  } catch (e) {}
+  } catch (e) {
+    // localStorage is ~5MB; past that the draft stops autosaving
+    setMsg("browser storage full - autosave paused, post it to keep it", true);
+  }
 }
 
 function load(done) {
@@ -666,10 +669,10 @@ document.addEventListener("keydown", function (e) {
   if (playing && (k === "," || k === ".")) { stop(); }
   if (k === ",") { go(cur - 1); }
   else if (k === ".") { go(cur + 1); }
-  else if (k === "a") { if (playing) stop(); addFrame(false); }
-  else if (k === "s") { if (playing) stop(); addFrame(true); }
-  else if (k === "d") { if (playing) stop(); clearFrame(); }
-  else if (k === "f") { if (playing) stop(); delFrame(); }
+  else if (k === "1") { if (playing) stop(); addFrame(false); }
+  else if (k === "2") { if (playing) stop(); addFrame(true); }
+  else if (k === "3") { if (playing) stop(); clearFrame(); }
+  else if (k === "4") { if (playing) stop(); delFrame(); }
   else if (k === "p") { tool = "pen"; refreshUI(); }
   else if (k === "l") { tool = "line"; refreshUI(); }
   else if (k === "r") { tool = "rect"; refreshUI(); }

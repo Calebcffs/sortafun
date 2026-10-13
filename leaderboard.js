@@ -528,20 +528,40 @@
    * forgeable-but-fine trade as the scores.
    */
 
-  var ANIM_MAX_FRAMES = 1000;
+  var ANIM_MAX_FRAMES = 3000;
 
-  // Firestore hard-caps a document at 1,048,487 bytes, no plan raises it. A
-  // frame count limit alone doesn't track that: detailed drawings encode much
-  // bigger than sparse ones, so a fixed frame cap can pass here and still get
-  // rejected by Firestore itself with a confusing error. This checks the real
-  // encoded size instead. 900000 leaves headroom for title/author/fps/etc and
-  // Firestore's own per-document overhead.
-  var ANIM_MAX_BYTES = 900000;
+  // Firestore hard-caps a document at 1,048,487 bytes, no plan raises it, so a
+  // big flipbook is split across several documents: the main animations/{id}
+  // doc holds the first chunk of frames, and the rest go in
+  // animations/{id}/parts/{n} (n = 1..ANIM_MAX_PARTS). Everything is written in
+  // one atomic batch, which Firestore caps at 10 MiB, hence the 9,000,000 total.
+  // A flipbook that fits in one doc is still posted as a single doc exactly as
+  // before. CHUNK_BYTES leaves headroom under the per-document cap for the
+  // title/author/fps fields and Firestore's own overhead.
+  var ANIM_MAX_BYTES = 9000000;
+  var ANIM_CHUNK_BYTES = 900000;
+  var ANIM_CHUNK_FRAMES = 1000;
+  var ANIM_MAX_PARTS = 9;
 
   function animEstimateBytes(frames, title, author) {
     var total = (title || "").length + (author || "").length + 200; // fixed fields + doc overhead
-    (frames || []).forEach(function (f) { total += f.length; });
+    (frames || []).forEach(function (f) { total += f.length + 20; }); // + list entry overhead
     return total;
+  }
+
+  // Greedy split into chunks that each fit one document.
+  function animChunk(frames) {
+    var chunks = [], cur = [], bytes = 0;
+    frames.forEach(function (f) {
+      var sz = f.length + 20;
+      if (sz > ANIM_CHUNK_BYTES) throw new Error("one frame is too detailed to post - simplify it");
+      if (cur.length && (bytes + sz > ANIM_CHUNK_BYTES || cur.length >= ANIM_CHUNK_FRAMES)) {
+        chunks.push(cur); cur = []; bytes = 0;
+      }
+      cur.push(f); bytes += sz;
+    });
+    if (cur.length) chunks.push(cur);
+    return chunks;
   }
 
   function animPublish(a) {
@@ -558,18 +578,35 @@
         throw new Error("too large to post (" + Math.round(bytes / 1024) + "kb of ~" +
           Math.round(ANIM_MAX_BYTES / 1024) + "kb budget) - remove frames or simplify drawings");
       }
+      var chunks = animChunk(frames);
+      if (chunks.length > ANIM_MAX_PARTS + 1) {
+        throw new Error("too large to post - remove frames or simplify drawings");
+      }
       var fps = [8, 12, 16].indexOf(a.fps) !== -1 ? a.fps : 12;
-      return fs.addDoc(fs.collection(state.db, "animations"), {
+      var data = {
         title: title,
         author: author,
         fps: fps,
         w: Math.round(a.w) || 480,
         h: Math.round(a.h) || 360,
-        frames: frames,
+        frames: chunks[0],
         votes: 0,
         createdAt: fs.serverTimestamp(),
         day: dayStr(),
-      }).then(function (ref) { return ref.id; });
+      };
+      if (chunks.length === 1) {
+        return fs.addDoc(fs.collection(state.db, "animations"), data)
+          .then(function (ref) { return ref.id; });
+      }
+      data.parts = chunks.length - 1;
+      var ref = fs.doc(fs.collection(state.db, "animations"));
+      var batch = fs.writeBatch(state.db);
+      batch.set(ref, data);
+      chunks.slice(1).forEach(function (c, i) {
+        batch.set(fs.doc(state.db, "animations", ref.id, "parts", String(i + 1)),
+          { n: i + 1, frames: c });
+      });
+      return batch.commit().then(function () { return ref.id; });
     });
   }
 
@@ -583,18 +620,35 @@
       if (cursor) parts.push(fs.startAfter(cursor));
       parts.push(fs.limit(n || 24));
       return fs.getDocs(fs.query.apply(null, parts)).then(function (snap) {
-        var out = [];
+        var out = [], jobs = [];
         snap.forEach(function (doc) {
           var d = doc.data();
-          out.push({
+          var row = {
             id: doc.id, title: d.title || "", author: d.author || "anon",
             fps: d.fps || 12, w: d.w || 480, h: d.h || 360,
             frames: d.frames || [], votes: d.votes || 0,
             createdAt: d.createdAt || null, _cursor: doc,
-          });
+          };
+          out.push(row);
+          if (d.parts > 0) jobs.push(animLoadParts(doc.id, d.parts).then(function (more) {
+            row.frames = row.frames.concat(more);
+          }).catch(function (e) { console.warn("[anim] parts failed", e); }));
         });
-        return out;
+        return Promise.all(jobs).then(function () { return out; });
       });
+    });
+  }
+
+  // Frames of a multi-document animation beyond the first chunk, in order.
+  function animLoadParts(id, count) {
+    var fs = state.fs;
+    return fs.getDocs(fs.collection(state.db, "animations", id, "parts")).then(function (snap) {
+      var rows = [];
+      snap.forEach(function (doc) { rows.push(doc.data()); });
+      rows.sort(function (x, y) { return x.n - y.n; });
+      var all = [];
+      rows.slice(0, count).forEach(function (r) { all = all.concat(r.frames || []); });
+      return all;
     });
   }
 

@@ -224,6 +224,21 @@ service cloud.firestore {
       allow delete: if false;
       allow create: if isValidAnim(request.resource.data);
       allow update: if isVoteOnly(resource.data, request.resource.data);
+
+      // Extra frame chunks for animations too big for one document (1 MiB cap).
+      // Only creatable in the same batch as a parent that declares enough parts.
+      match /parts/{n} {
+        allow read: if true;
+        allow update, delete: if false;
+        allow create: if request.resource.data.keys().hasOnly(['n', 'frames'])
+          && request.resource.data.n is int
+          && request.resource.data.n >= 1 && request.resource.data.n <= 9
+          && string(request.resource.data.n) == n
+          && request.resource.data.frames is list
+          && request.resource.data.frames.size() >= 1
+          && request.resource.data.frames.size() <= 1000
+          && getAfter(/databases/$(database)/documents/animations/$(id)).data.parts >= request.resource.data.n;
+      }
     }
 
     match /anim_comments/{id} {
@@ -233,13 +248,14 @@ service cloud.firestore {
     }
 
     function isValidAnim(d) {
-      return d.keys().hasOnly(['title', 'author', 'fps', 'w', 'h', 'frames', 'votes', 'createdAt', 'day'])
+      return d.keys().hasOnly(['title', 'author', 'fps', 'w', 'h', 'frames', 'parts', 'votes', 'createdAt', 'day'])
         && d.title is string && d.title.size() <= 60
         && d.author is string && d.author.size() >= 1 && d.author.size() <= 20
         && d.fps is int && d.fps >= 1 && d.fps <= 24
         && d.w is int && d.w > 0 && d.w <= 2000
         && d.h is int && d.h > 0 && d.h <= 2000
         && d.frames is list && d.frames.size() >= 1 && d.frames.size() <= 1000
+        && (!('parts' in d) || (d.parts is int && d.parts >= 1 && d.parts <= 9))
         && d.votes == 0
         && d.createdAt == request.time
         && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
