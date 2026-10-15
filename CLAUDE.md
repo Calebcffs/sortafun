@@ -1240,6 +1240,9 @@ page right after `sfx.js` in `<head>` (not clarissa, admin, birdie), adds a "中
 
 ### SFSG Slacking Simulator (`slack.html` + `slack/`, WORK IN PROGRESS, 2026-09-29)
 
+**Off the homepage since 2026-10-15 (v0.12.1, Caleb's ask):** the Coming Soon
+tile is gone; `slack.html` still works by URL (noindex, password locked).
+
 Caleb's office rebuilt in 3D, first person, from 13 photos he took (they're
 in his Downloads, never in the repo). **Password protected while it's being
 built** (same scheme as taka: `slack/lock.js` decrypts `slack/vault.js`; the
@@ -1701,12 +1704,15 @@ hidden or 10 min idle (click in it to wake). Name = the leaderboards'
 emulators are already running, load new rules with a `Bearer owner` PUT to
 `/.settings/rules.json?ns=sortafun-ba7cb-default-rtdb`).
 
-**Featured game** (`#featured`, top of the homepage): Deep Time since
-2026-09-29 (was City Sandbox). The art is Deep Time's own `THUMB` drawing
-blown up to 16:9 (`#featshot`, drawn in by the script) under a CSS camcorder
-overlay; headless Chrome can't grab a real WebGL frame of it (the canvas
-capture stays stale). Drop `<img>`s into `.feature-shot` for real
-screenshots: the cross-fade script rotates any number of them.
+**Featured game** (`#featured`, top of the homepage): a different game every
+day since 2026-10-15 (v0.12.1, Caleb's ask): `GAMES[(SG_DAY + floor(n/2)) % n]`,
+half the list away from Game of the Day so the two never match. The static
+markup is Deep Time (no-JS / crawler fallback, with its CSS camcorder overlay);
+on any other day the script rebuilds the banner from the GAMES row: the game's
+`THUMB` drawing blown up to 16:9, its badge as the ribbon, its blurb, and a
+one-liner from `FEATURE_TAG` (a new game needs a row there + a `china.js` `D`
+entry, or the tagline falls back to the blurb). Drop `<img>`s into
+`.feature-shot` for real screenshots: the cross-fade script rotates any number.
 
 `gallery.html` is still an easter egg: the only link is the seedling emoji in
 the footer (`#plant`, `aria-hidden`, `tabindex="-1"`).
