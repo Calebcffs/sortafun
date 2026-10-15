@@ -1704,15 +1704,17 @@ hidden or 10 min idle (click in it to wake). Name = the leaderboards'
 emulators are already running, load new rules with a `Bearer owner` PUT to
 `/.settings/rules.json?ns=sortafun-ba7cb-default-rtdb`).
 
-**Featured game** (`#featured`, top of the homepage): a different game every
-day since 2026-10-15 (v0.12.1, Caleb's ask): `GAMES[(SG_DAY + floor(n/2)) % n]`,
-half the list away from Game of the Day so the two never match. The static
-markup is Deep Time (no-JS / crawler fallback, with its CSS camcorder overlay);
-on any other day the script rebuilds the banner from the GAMES row: the game's
-`THUMB` drawing blown up to 16:9, its badge as the ribbon, its blurb, and a
-one-liner from `FEATURE_TAG` (a new game needs a row there + a `china.js` `D`
-entry, or the tagline falls back to the blurb). Drop `<img>`s into
-`.feature-shot` for real screenshots: the cross-fade script rotates any number.
+**Featured game** banner: removed 2026-10-15 (v0.12.2, Caleb's ask); Game of
+the Day is the top box now. (It was Deep Time from 2026-09-29, then rotated
+daily for one version.)
+
+**Phone taps (v0.12.2):** `game.css` and `index.html` set `:where(*) {
+touch-action: manipulation }` so iPhone Safari stops reading quick taps as
+double-tap-to-zoom (pinch zoom still works), and on `(pointer: coarse)` every
+input/textarea/select is forced to 16px (`!important`) because Safari zooms
+into any text box smaller than that. A page that wants a bigger input on
+phones overrides with its own `!important` (ladder's `#word`). Canvases and
+joysticks keep their own `touch-action: none`.
 
 `gallery.html` is still an easter egg: the only link is the seedling emoji in
 the footer (`#plant`, `aria-hidden`, `tabindex="-1"`).

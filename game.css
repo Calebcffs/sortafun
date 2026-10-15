@@ -12,6 +12,13 @@
  * any page's own rules (the game itself) always win over them.
  * ------------------------------------------------------------------ */
 
+/* iPhone Safari: quick taps (word hive letters, keyboards, any button) were
+   read as double-tap-to-zoom, and tapping a text box under 16px zooms the page
+   in. manipulation still allows pinch zoom. Kept first so :where(canvas) below
+   and any page's own touch-action (joysticks, drawing) still win */
+:where(*) { touch-action: manipulation; }
+@media (pointer: coarse) { input, textarea, select { font-size: 16px !important; } }
+
 :root {
   --ink: #1d1b2e;
   --sky: #2f9bff;

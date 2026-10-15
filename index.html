@@ -322,50 +322,11 @@
   .h-news  { background: linear-gradient(#56d98a, var(--skill)); }
   .h-live  { background: linear-gradient(#ff5a5a, #e02828); }
 
-  /* ================= featured game ================= */
-  .feature .panel-head { background: linear-gradient(#56d98a, var(--skill)); }
-  .feature-body {
-    display: grid;
-    grid-template-columns: 1.35fr 1fr;
-    text-decoration: none;
-    color: var(--ink);
-  }
-  .feature-shot { position: relative; overflow: hidden; border-right: 3px solid var(--ink); aspect-ratio: 16 / 9; background: #7fb4e0; }
-  .feature-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 1.2s, transform 6s; }
-  .feature-shot img.off { opacity: 0; }
-  .feature-shot > svg { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform 6s; }
-  .feature-body:hover .feature-shot > svg { transform: scale(1.04); }
-  .dt-shot { background: #101814; }
-  .dt-shot .vhs {
-    position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    font: 700 15px/1.2 "Courier New", monospace; color: #f2f2e8; text-shadow: 2px 2px 0 #000;
-    background: repeating-linear-gradient(transparent 0 2px, rgba(0,0,0,.18) 2px 4px);
-  }
-  .dt-shot .vhs b { position: absolute; right: 40px; top: 12px; font-weight: 700; }
-  .dt-shot .vhs i { position: absolute; left: 16px; bottom: 12px; font-style: normal; }
-  .dt-shot .vhs em { position: absolute; right: 16px; bottom: 12px; font-style: normal; text-align: right; }
-  .dt-shot .vhs::after { content: ""; position: absolute; right: 18px; top: 14px; width: 12px; height: 12px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 6px #ff3b30; animation: rec 1s steps(1) infinite; }
-  @keyframes rec { 50% { opacity: 0; } }
-  .feature-body:hover .feature-shot img { transform: scale(1.04); }
-  .feature-shot .ribbon {
-    position: absolute; top: 14px; left: -34px; transform: rotate(-35deg);
-    background: #ff2e63; color: #fff; font-family: var(--chunky); font-size: 15px;
-    padding: 4px 42px; border: 2px solid var(--ink); letter-spacing: 1px;
-  }
-  .feature-text { padding: 16px 18px; display: flex; flex-direction: column; justify-content: center; gap: 8px;
-    background: repeating-linear-gradient(-45deg, #f2fff6 0 14px, #fff 14px 28px); }
-  .feature-text h3 {
-    margin: 0; font-family: var(--chunky); font-weight: 400; font-size: 52px; line-height: 1;
-    color: var(--sun); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink);
-  }
-  .feature-text p { margin: 0; font-size: 13px; }
-  .feature-text ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: #4a4760; }
-  .feature-text .play-big { align-self: flex-start; }
-  @media (max-width: 760px) {
-    .feature-body { grid-template-columns: 1fr; }
-    .feature-shot { border-right: 0; border-bottom: 3px solid var(--ink); }
-    .feature-text h3 { font-size: 42px; }
-  }
+  /* iPhone Safari: quick taps were read as double-tap-to-zoom, and tapping a
+     text box under 16px zooms the page in. manipulation still allows pinch
+     zoom (same fix as game.css) */
+  :where(*) { touch-action: manipulation; }
+  @media (pointer: coarse) { input, textarea, select { font-size: 16px !important; } }
 
   /* ================= hero ================= */
 
@@ -748,8 +709,8 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=83deebbc"></script>
-<script src="feedback.js?v=9c4a6fe1"></script>
+<script src="china.js?v=ea92c7de"></script>
+<script src="feedback.js?v=f0fb40ca"></script>
 <script src="panic-app.js?v=fa0aeabf"></script>
 </head>
 <body>
@@ -804,27 +765,6 @@
   </aside>
 
   <p class="noresults" id="noresults">nothing found. try "word" or "race".</p>
-
-  <!-- ================= FEATURED ================= -->
-  <section class="panel feature" id="featured">
-    <div class="panel-head"><h2>&#9733; Featured Game</h2><p>our scariest one yet. headphones on, lights off.</p></div>
-    <a class="feature-body" href="deeptime.html">
-      <span class="feature-shot dt-shot" id="featshot">
-        <span class="vhs" aria-hidden="true"><b>PLAY &#9654;</b><i>SP 0:14:23</i><em>OCT 14 1987<br>11:52:07 PM</em></span>
-        <span class="ribbon">NEW!</span>
-      </span>
-      <span class="feature-text">
-        <h3>Deep Time</h3>
-        <p>a camcorder tape from a forest in montana, october 1987. something came through a hole in time. find the 8 parts of the machine before it finds you.</p>
-        <ul>
-          <li>a flashlight, a camcorder, and eight parts hidden across the woods</li>
-          <li>something big turns up behind you, always looking at you</li>
-          <li>see it? switch off your torch and run</li>
-        </ul>
-        <span class="play-big">PLAY NOW! &#9654;</span>
-      </span>
-    </a>
-  </section>
 
   <!-- ================= GAME OF THE DAY + LIVE SCORES ================= -->
   <div class="hero" id="hero">
@@ -883,6 +823,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-15</span> <b>v0.12.2</b>: the featured game box is gone, game of the day is up top now. tapping fast on an iphone no longer zooms the page in, so word hive and the other tap games keep up with you.</li>
         <li><span class="when">10-15</span> <b>v0.12.1</b>: the featured game is a different one every day now. the slacking simulator is off the homepage.</li>
         <li><span class="when">10-06</span> <b>v0.12</b>: challenge a friend! after every game: send your score to telegram, make an instagram story picture of it, or copy the link. whoever opens it sees your score and has to beat it.</li>
         <li><span class="when">10-06</span> <b>v0.11.1</b>: daily sudoku's results card fits on small phones again.</li>
@@ -1666,63 +1607,6 @@ var SG_DAY = Math.floor((Date.now() + 8 * 3600 * 1000) / 86400000);
     "<div><h3>" + esc(g.name) + "</h3><p>" + esc(g.blurb) + '</p><span class="play-big">PLAY NOW! &#9654;</span></div>';
 })();
 
-/* featured banner: a different game every day, half the list away from the
-   game of the day so the two never match. The static markup is Deep Time (the
-   no-JS fallback); any other day it's rebuilt from the GAMES row, its tile art
-   big, and the one-liner from FEATURE_TAG */
-var FEATURE_TAG = {
-  sudoku:    "three fresh grids every morning. how fast can you go?",
-  funstrike: "grab a team and drop into a real map. bots fill the gaps.",
-  sushi:     "the lunch rush is coming. keep the belt moving.",
-  draw:      "bring friends. bad drawings encouraged.",
-  deeptime:  "our scariest one yet. headphones on, lights off.",
-  crossword: "pour a coffee and fill in the grid.",
-  five:      "one word, six guesses, the same word for everyone today.",
-  sides:     "a word chain puzzle for your coffee break.",
-  grab:      "two minutes on the clock. go.",
-  hive:      "no timer, no rush. just you and seven letters.",
-  ladder:    "one letter at a time, top to bottom.",
-  typing:    "thirty seconds. how fast are those fingers?",
-  slider:    "today's board is the same for everyone. beat them all.",
-  mines:     "the classic, still as tense as ever.",
-  maze:      "steady hands only. touch a wall and you're toast.",
-  race:      "three laps, one clock. hug the corners.",
-  reaction:  "how quick are you really? find out in one click.",
-  aim:       "click fast, click true.",
-  stopbar:   "one press. perfect timing wins."
-};
-
-(function () {
-  var g = GAMES[(SG_DAY + Math.floor(GAMES.length / 2)) % GAMES.length];
-  var sec = document.getElementById("featured");
-  var shot = document.getElementById("featshot");
-  var art = function (label) {
-    return '<svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + esc(label) + '">' + THUMB[g.id]() + "</svg>";
-  };
-  if (g.id === "deeptime") {
-    shot.insertAdjacentHTML("afterbegin", art("a t. rex silhouette against a misty moon in the pine woods, seen through a camcorder"));
-    return;
-  }
-  sec.querySelector(".panel-head p").textContent = FEATURE_TAG[g.id] || g.blurb;
-  sec.querySelector(".feature-body").href = g.url;
-  shot.className = "feature-shot";
-  shot.innerHTML = art(g.name) + '<span class="ribbon">' + BADGE_LABEL[g.badge || "pick"] + "</span>";
-  sec.querySelector(".feature-text").innerHTML =
-    "<h3>" + esc(g.name) + "</h3><p>" + esc(g.blurb) + '</p><span class="play-big">PLAY NOW! &#9654;</span>';
-})();
-
-/* featured banner: cross-fade between screenshots */
-(function () {
-  var imgs = document.querySelectorAll(".feature-shot img");
-  if (imgs.length < 2) return;
-  var i = 0;
-  setInterval(function () {
-    imgs[i].classList.add("off");
-    i = (i + 1) % imgs.length;
-    imgs[i].classList.remove("off");
-  }, 5000);
-})();
-
 /* ------------------------------------------------------------------ *
  * category chips + search
  * ------------------------------------------------------------------ */
@@ -1747,7 +1631,6 @@ function applyFilters() {
   });
 
   document.getElementById("hero").style.display = q ? "none" : "";
-  document.getElementById("featured").style.display = q ? "none" : "";
   document.getElementById("noresults").style.display = q && !anyShown ? "block" : "none";
 }
 
