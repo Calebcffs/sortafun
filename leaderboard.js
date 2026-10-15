@@ -62,6 +62,9 @@
     sushi:     { label: "sushi goes round",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
     // a Fun Strike match: kills x10 + headshots x5 + assists x3, sent when a match ends
     funstrike: { label: "fun strike", unit: "pts", better: "high" },
+    // piano rush: endless = tiles before a miss; today's song = ms for the whole tune
+    piano:     { label: "piano rush",     unit: "tiles", better: "high" },
+    pianoday:  { label: "piano rush, today's song", unit: "ms", better: "low", format: function (v) { return (v / 1000).toFixed(2) + " s"; } },
     sushirush: { label: "sushi lunch rush",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
     // part 2: samples * 10000 - seconds, the same idea
     // archived 2026-10-06: off the homepage/leaderboards/passport, deeptime2.html still works by URL

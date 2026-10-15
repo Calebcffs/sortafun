@@ -52,6 +52,7 @@
     "reaction.html": ["Reaction Light", "ppt"],
     "aim.html": ["Aim Trainer", "ppt"],
     "stopbar.html": ["Stop the Bar", "ppt"],
+    "piano.html": ["Piano Rush", "ppt"],
     "flipbook.html": ["Animation Studio", "ppt"],
     "anim-gallery.html": ["Animation Gallery", "ppt"],
   };

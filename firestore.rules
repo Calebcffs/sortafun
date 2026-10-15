@@ -73,7 +73,7 @@ service cloud.firestore {
 
     // games whose leaderboard ranks lowest-score-best: they store rankValue == -score
     function isLowGame(g) {
-      return g in ['puzzle', 'circuit', 'reaction', 'maze', 'ladder', 'mines', 'minute', 'five', 'sides'];
+      return g in ['puzzle', 'circuit', 'reaction', 'maze', 'ladder', 'mines', 'minute', 'five', 'sides', 'pianoday'];
     }
 
     function isValidScore(d) {
@@ -86,7 +86,7 @@ service cloud.firestore {
                       'mines', 'fermi', 'minute', 'callit', 'watch', 'hive',
                       'five', 'sides', 'grab', 'birdie', 'city', 'deeptime',
                       'taka', 'deeptime2', 'sushi', 'sushirush', 'funstrike',
-                      'sudoku']
+                      'sudoku', 'piano', 'pianoday']
         && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
         && d.score is int && d.score >= 0 && d.score <= 1000000
         && d.rankValue is int

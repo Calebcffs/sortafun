@@ -22,7 +22,7 @@ const CARDS = {
   grab: ["Word Grab", "2 minutes, 16 letters"], typing: ["Typing Test", "how fast do you type?"],
   crossword: ["Crossword", "a 15x15 themeless grid"], mines: ["Minesweeper", "first click is always safe"],
   maze: ["Cursor Maze", "don't touch the walls"], reaction: ["Reaction Time", "how fast are you?"],
-  aim: ["Aim Trainer", "30 seconds. count the hits"], stopbar: ["Stop the Bar", "hit the green"],
+  aim: ["Aim Trainer", "30 seconds. count the hits"], stopbar: ["Stop the Bar", "hit the green"], piano: ["Piano Rush", "tap the black tiles"],
   race: ["Circuit Race", "3D racing in your browser"], sushi: ["Sushi Goes Round", "run the conveyor belt"],
   deeptime: ["Deep Time", "headphones on. lights off."], funstrike: ["Fun Strike", "free browser shooter"],
   draw: ["Draw and Guess", "play with friends"], studio: ["Animation Studio", "make a flipbook"],

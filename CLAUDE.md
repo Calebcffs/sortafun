@@ -1439,6 +1439,35 @@ results) in `.sg-stage`. Dialogs go full screen under 900px wide.
   `art.js`; add it to a day's `menu` count (the order of `RECIPES` is the unlock order).
   `china.js` has the dish and UI strings; the day cards and bubbles are English.
 
+### Piano Rush (`piano.html`, 2026-10-15, v0.13)
+
+Caleb asked for a phone-first piano tile tapper, D F J K on a keyboard. The
+name is ours (the well-known app's name stays out of all text, see the
+trademark rule under SEO). One canvas, four columns, four rows on screen.
+- **Tunes:** `SONGS`, public-domain melodies only (no lyrics anywhere), notes
+  as `C4`, `D#5`, octave 4 by default. `songTiles()` puts low notes left and
+  high notes right, split by how often each note is played (the same note is
+  always the same column, so a song where one note dominates can leave a
+  column empty). Each tap plays the next note on a small WebAudio synth
+  (`note()`), silent when the site's speaker is off.
+- **Endless** (key `piano`, high, tiles): songs back to back in a shuffled
+  order, scrolling at 2.4 rows/s + 0.03 per tile (cap 8). A tile scrolling off
+  the bottom or a tap in the wrong column ends it. Taps on a tile that hasn't
+  scrolled on yet are ignored (otherwise you could tap ahead blind).
+- **Today's song** (key `pianoday`, low, ms): `SONGS[SG day % n]`, the board
+  only moves when you tap; the clock runs from the first tap to the last
+  note. Only a finished song is submitted.
+- A tap anywhere in a column counts (fingers are imprecise); several fingers
+  at once are fine. On phones the board is scrolled fully on screen at load.
+- The script is wrapped in an IIFE (a top-level `var scroll` would clobber
+  `window.scroll`); tests use `window.__piano` (`press(col)`, `state()`,
+  `key()`, `SONGS`, `songTiles`). Driven over CDP with real
+  `Input.dispatchTouchEvent` taps at 390px in the 2026-10-15 session.
+
+**Mobile chip** (homepage, v0.13): `MOBILE` in index.html lists the games that
+play well on a phone; their tiles get `data-mobile` and the chip filters on it
+(a game keeps its own category too). Add a new phone-friendly game there.
+
 ### The farewell card (`clarissa.html`, 2026-10-01, v0.5)
 
 An e-card dressed up as a game, made for a colleague's last day. **Unlisted on purpose**:

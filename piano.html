@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>Piano Rush: Free Piano Tapping Game for Phones | Sortafun</title>
+<meta name="description" content="Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
+<meta name="sortafun:name" content="piano rush">
+<link rel="canonical" href="https://sortafun.org/piano.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sortafun">
+<meta property="og:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
+<meta property="og:description" content="Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
+<meta property="og:url" content="https://sortafun.org/piano.html">
+<meta property="og:image" content="https://sortafun.org/assets/og/piano.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Piano Rush on Sortafun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
+<meta name="twitter:description" content="Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
+<meta name="twitter:image" content="https://sortafun.org/assets/og/piano.png">
+<meta name="theme-color" content="#ffd43b">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Piano Rush","url":"https://sortafun.org/piano.html","description":"Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.","image":"https://sortafun.org/assets/og/piano.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Piano Rush","item":"https://sortafun.org/piano.html"}]}</script>
+<!-- /seo -->
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=2cfb0408">
+<style>
+  .modes { display: flex; gap: 8px; justify-content: center; margin: 4px 0 10px; }
+  .modes button[aria-pressed="true"] { background: linear-gradient(#7af0a3, #1fb85a); color: #fff; text-shadow: 0 1px 0 var(--ink); }
+  #tune { font-size: 13px; color: #4a4760; min-height: 18px; margin: 0 0 6px; }
+  #board {
+    display: block; margin: 0 auto; width: 100%; max-width: 380px;
+    border: 3px solid var(--ink); border-radius: 12px; background: #fff;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    cursor: pointer;
+  }
+  #big { font-size: 20px; min-height: 26px; margin: 8px 0 4px; }
+  .keys { font-size: 12px; color: #6a6780; margin: 2px 0 8px; }
+  .keys kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border: 2px solid var(--ink); border-radius: 5px; background: #fff; font: 700 12px var(--body); color: var(--ink); }
+  @media (hover: none) { .keys { display: none; } }
+</style>
+<script src="sfx.js?v=5233b886"></script>
+<script src="china.js?v=c68df934"></script>
+<script src="feedback.js?v=470fc8f0"></script>
+<script src="panic-app.js?v=f332cce4"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-skill">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap">
+  <h1>piano rush</h1>
+  <p class="sub">tap the black tiles, lowest first, and play the tune. tap a white one or let a black one slip past and the song's over.</p>
+
+  <div class="modes" role="group" aria-label="mode">
+    <button type="button" data-mode="endless" aria-pressed="true">endless</button>
+    <button type="button" data-mode="daily" aria-pressed="false">today's song</button>
+  </div>
+  <p id="tune"></p>
+
+  <canvas id="board" width="380" height="600"></canvas>
+  <div id="big">tap the start tile</div>
+  <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns</p>
+
+  <div class="status" id="status"></div>
+  <div><button id="restart">start over</button></div>
+
+  <div id="lb"></div>
+
+  <!-- seo:more -->
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="maze.html">Cursor Maze</a></li><li><a href="reaction.html">Reaction Time Test</a></li><li><a href="aim.html">Aim Trainer</a></li><li><a href="stopbar.html">Stop the Bar</a></li><li><a href="driving.html">Circuit Race</a></li><li><a href="sushi.html">Sushi Goes Round</a></li><li><a href="deeptime.html">Deep Time</a></li><li><a href="sudoku.html">Daily Sudoku</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <!-- /seo:more -->
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=21ba0b13"></script>
+<script src="share.js?v=e240f67e"></script>
+<script>
+(function () {
+"use strict";
+
+/* ------------------------------------------------------------------ *
+ * the tunes. public domain melodies only (no lyrics anywhere). a note is
+ * a name + optional sharp + octave (default 4). higher notes sit in the
+ * columns further right, so the tiles move the way the tune does
+ * ------------------------------------------------------------------ */
+var SONGS = [
+  { name: "ode to joy", notes:
+    "E E F G G F E D C C D E E D D " +
+    "E E F G G F E D C C D E D C C " +
+    "D D E C D E F E C D E F E D C D G3 " +
+    "E E F G G F E D C C D E D C C" },
+  { name: "twinkle twinkle little star", notes:
+    "C C G G A A G F F E E D D C " +
+    "G G F F E E D G G F F E E D " +
+    "C C G G A A G F F E E D D C" },
+  { name: "frere jacques", notes:
+    "C D E C C D E C E F G E F G " +
+    "G A G F E C G A G F E C C G3 C C G3 C" },
+  { name: "mary had a little lamb", notes:
+    "E D C D E E E D D D E G G " +
+    "E D C D E E E E D D E D C" },
+  { name: "fur elise", notes:
+    "E5 D#5 E5 D#5 E5 B4 D5 C5 A4 C4 E4 A4 B4 E4 G#4 B4 C5 " +
+    "E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4 C4 E4 A4 B4 E4 C5 B4 A4" },
+  { name: "jingle bells", notes:
+    "E E E E E E E G C D E " +
+    "F F F F F E E E E E D D E D G " +
+    "E E E E E E E G C D E " +
+    "F F F F F E E E G G F D C" },
+  { name: "row, row, row your boat", notes:
+    "C C C D E E D E F G " +
+    "C5 C5 C5 G G G E E E C C C G F E D C" },
+  { name: "london bridge", notes:
+    "G A G F E F G D E F E F G " +
+    "G A G F E F G D G E C" },
+  { name: "old macdonald", notes:
+    "G G G D E E D B B A A G " +
+    "D G G G D E E D B B A A G" },
+  { name: "yankee doodle", notes:
+    "C C D E C E D G3 C C D E C B3 " +
+    "C C D E F E D C B3 G3 A3 B3 C C" }
+];
+
+var SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function midi(n) {
+  var m = /^([A-G])(#?)(\d?)$/.exec(n);
+  return 12 * ((m[3] ? +m[3] : 4) + 1) + SEMI[m[1]] + (m[2] ? 1 : 0);
+}
+// a song as tiles: [{ col, midi }]. Low notes left, high notes right, and the
+// split goes by how often each note is played, so all four columns get used
+function songTiles(song) {
+  var notes = song.notes.trim().split(/\s+/).map(midi);
+  var count = {}, col = {}, seen = 0;
+  notes.forEach(function (m) { count[m] = (count[m] || 0) + 1; });
+  Object.keys(count).map(Number).sort(function (a, b) { return a - b; }).forEach(function (m) {
+    col[m] = Math.min(3, Math.floor((seen + count[m] / 2) / notes.length * 4));
+    seen += count[m];
+  });
+  return notes.map(function (m) { return { col: col[m], midi: m }; });
+}
+
+/* ------------------------------------------------------------------ *
+ * the piano sound (its own little synth, quiet when the site's sound is off)
+ * ------------------------------------------------------------------ */
+var actx = null;
+function note(m) {
+  if (window.SortafunSFX && !SortafunSFX.enabled()) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    var t = actx.currentTime, f = 440 * Math.pow(2, (m - 69) / 12);
+    var g = actx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.32, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    var lp = actx.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 3200;
+    g.connect(lp); lp.connect(actx.destination);
+    [[1, "triangle", 1], [2, "sine", 0.35], [3, "sine", 0.12]].forEach(function (h) {
+      var o = actx.createOscillator(), og = actx.createGain();
+      o.type = h[1]; o.frequency.value = f * h[0]; og.gain.value = h[2];
+      o.connect(og); og.connect(g);
+      o.start(t); o.stop(t + 1.35);
+    });
+  } catch (e) {}
+}
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
+
+/* ------------------------------------------------------------------ *
+ * the board
+ * ------------------------------------------------------------------ */
+var cv = document.getElementById("board");
+var ctx = cv.getContext("2d");
+var big = document.getElementById("big");
+var statusEl = document.getElementById("status");
+var lbEl = document.getElementById("lb");
+var tuneEl = document.getElementById("tune");
+
+var W, H, RH, DPR;                 // css size, row height (4 rows on screen)
+var mode = "endless";
+var tiles, hits, scroll, target, phase, speed, t0, lastT, raf, bad, order, songAt;
+
+var SG_DAY = Math.floor((Date.now() + 8 * 3600 * 1000) / 86400000);
+var DAILY = SONGS[SG_DAY % SONGS.length];
+var zh = function () { return document.documentElement.classList.contains("zh"); };
+
+function boardKey() { return mode === "daily" ? "pianoday" : "piano"; }
+
+function size() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = cv.clientWidth || 380;
+  H = Math.round(Math.min(W * 1.55, Math.max(320, window.innerHeight * 0.68)));
+  cv.style.height = H + "px";
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  var oldRH = RH;
+  RH = H / 4;
+  if (phase === "run") scroll = scroll * RH / oldRH;
+  else if (tiles) scroll = target = hits * RH;
+  draw();
+}
+
+// endless: songs back to back in a shuffled order, forever
+function more() {
+  while (tiles.length < hits + 12) {
+    if (!order.length) {
+      order = SONGS.map(function (s, i) { return i; });
+      for (var i = order.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = order[i]; order[i] = order[j]; order[j] = x; }
+    }
+    var s = songTiles(SONGS[order.pop()]);
+    Array.prototype.push.apply(tiles, s);
+  }
+}
+
+function reset() {
+  cancelAnimationFrame(raf);
+  hits = 0; scroll = 0; target = 0; bad = null; phase = "ready"; order = [];
+  speed = 2.4;
+  if (mode === "daily") {
+    tiles = songTiles(DAILY);
+    tuneEl.textContent = "today's song: " + DAILY.name + " (" + tiles.length + " notes)";
+  } else {
+    tiles = [];
+    more();
+    tuneEl.textContent = "a new tune after every song. it keeps getting faster";
+  }
+  big.textContent = "tap the start tile";
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+  draw();
+  // phones: bring the whole board on screen (the start tile is at the bottom)
+  if (W && window.matchMedia && matchMedia("(pointer: coarse)").matches) {
+    var r = cv.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 8) window.scrollBy(0, r.bottom - window.innerHeight + 12);
+  }
+}
+
+// screen y of the top of tile i
+function rowY(i) { return H - RH * (i + 1) + scroll; }
+
+function draw() {
+  if (!W || !tiles) return;
+  ctx.clearRect(0, 0, W, H);
+  var cw = W / 4;
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  // column lines
+  ctx.strokeStyle = "#d9d6e8"; ctx.lineWidth = 2;
+  for (var c = 1; c < 4; c++) { ctx.beginPath(); ctx.moveTo(c * cw, 0); ctx.lineTo(c * cw, H); ctx.stroke(); }
+  // tiles on screen
+  var first = Math.max(0, Math.floor((scroll - RH) / RH));
+  for (var i = first; i < tiles.length; i++) {
+    var y = rowY(i);
+    if (y > H) continue;
+    if (y + RH < 0) break;
+    var t = tiles[i];
+    var x = t.col * cw;
+    if (i < hits) {
+      ctx.fillStyle = "rgba(29,27,46,.14)";
+      ctx.fillRect(x + 2, y + 2, cw - 4, RH - 4);
+    } else {
+      var grd = ctx.createLinearGradient(0, y, 0, y + RH);
+      grd.addColorStop(0, "#3a3752"); grd.addColorStop(1, "#14121f");
+      ctx.fillStyle = grd;
+      ctx.fillRect(x + 2, y + 2, cw - 4, RH - 4);
+      if (i === 0 && phase === "ready") {
+        ctx.fillStyle = "#ffd43b";
+        ctx.font = "700 " + Math.round(cw * 0.2) + "px Lilita One, Arial Black, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(zh() ? "开始" : "START", x + cw / 2, y + RH / 2);
+      }
+    }
+  }
+  // the miss: a red square where you tapped, or the tile that got away
+  if (bad) {
+    ctx.fillStyle = "rgba(255,46,99,.85)";
+    ctx.fillRect(bad.col * cw + 2, rowY(bad.row) + 2, cw - 4, RH - 4);
+  }
+  // score / clock
+  var label = mode === "daily"
+    ? (phase === "ready" ? "0.00" : ((phase === "over" ? endMs : performance.now() - t0) / 1000).toFixed(2))
+    : String(hits);
+  ctx.font = "400 " + Math.round(W * 0.13) + "px Lilita One, Arial Black, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.strokeText(label, W / 2, 10);
+  ctx.fillStyle = "#ff2e63"; ctx.fillText(label, W / 2, 10);
+}
+
+var endMs = 0;
+function frame(now) {
+  var dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  if (phase === "run") {
+    scroll += speed * RH * dt;
+    // the lowest black tile slid off the bottom
+    if (rowY(hits) >= H) {
+      bad = { row: hits, col: tiles[hits].col };
+      // wind back so you can see the one that got away
+      scroll = (hits - 1) * RH + RH * 0.5;
+      return over("one got away");
+    }
+  } else if (phase === "daily-run") {
+    scroll += (target - scroll) * Math.min(1, dt * 22);
+  }
+  draw();
+  raf = requestAnimationFrame(frame);
+}
+
+function press(col) {
+  if (phase === "over") return;
+  var t = tiles[hits];
+  if (phase === "ready") {
+    if (col !== t.col) return;           // only the start tile starts it
+    t0 = performance.now(); lastT = t0;
+    phase = mode === "daily" ? "daily-run" : "run";
+    big.textContent = mode === "daily" ? "go go go" : "keep up";
+    raf = requestAnimationFrame(frame);
+  }
+  // endless: no tapping ahead into tiles that haven't scrolled on yet
+  if (mode === "endless" && rowY(hits) < -RH * 0.4) return;
+  if (col !== t.col) {
+    bad = { row: hits, col: col };
+    return over("wrong key");
+  }
+  note(t.midi);
+  hits++;
+  if (mode === "daily") {
+    target = hits * RH;
+    if (hits === tiles.length) return done();
+  } else {
+    speed = Math.min(8, 2.4 + hits * 0.03);
+    more();
+  }
+}
+
+function over(why) {
+  cancelAnimationFrame(raf);
+  phase = "over";
+  endMs = performance.now() - t0;
+  sfx("bad");
+  draw();
+  lbEl.innerHTML = "";
+  if (mode === "daily") {
+    if (window.SortafunSFX) SortafunSFX.result("lose");
+    big.textContent = why + ". " + hits + " of " + tiles.length + " notes";
+    statusEl.textContent = "finish the whole song to get on today's board.";
+    return;
+  }
+  if (window.SortafunSFX) SortafunSFX.result(hits >= 50 ? "win" : "lose");
+  big.textContent = why + ". " + hits + " tile" + (hits === 1 ? "" : "s");
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "piano", { score: hits });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+function done() {
+  cancelAnimationFrame(raf);
+  phase = "over";
+  endMs = Math.round(performance.now() - t0);
+  scroll = target;
+  draw();
+  if (window.SortafunSFX) SortafunSFX.result("win");
+  big.textContent = "the whole song in " + (endMs / 1000).toFixed(2) + " s";
+  lbEl.innerHTML = "";
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "pianoday", { score: endMs });
+  else lbEl.textContent = "leaderboard offline";
+}
+
+/* ------------------------------------------------------------------ *
+ * input: a tap anywhere in a column counts (fingers aren't precise),
+ * several fingers at once are fine. D F J K on a keyboard
+ * ------------------------------------------------------------------ */
+cv.addEventListener("pointerdown", function (e) {
+  e.preventDefault();
+  var r = cv.getBoundingClientRect();
+  press(Math.max(0, Math.min(3, Math.floor((e.clientX - r.left) / r.width * 4))));
+});
+cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
+window.addEventListener("keydown", function (e) {
+  if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.code in KEYS) { e.preventDefault(); if (!e.repeat) press(KEYS[e.code]); }
+});
+
+Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
+  b.addEventListener("click", function () {
+    mode = b.dataset.mode;
+    Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+    reset();
+  });
+});
+document.getElementById("restart").addEventListener("click", reset);
+window.addEventListener("resize", size);
+
+window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press, state: function () { return { mode: mode, phase: phase, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, bad: bad }; } };
+
+size();
+reset();
+})();
+</script>
+<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), function () { return window.__piano.key(); });</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

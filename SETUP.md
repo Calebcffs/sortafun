@@ -119,7 +119,8 @@ Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 `CLAUDE.md`), `mines`, `fermi` (retired), `minute`, `callit`, `watch` (all three retired
 2026-09-28 with the basement), `hive`,
 `five`, `sides`, `grab`, `deeptime`, `taka` (archived 2026-10-06), `deeptime2`,
-`sudoku` (daily total, a live row like the hive's). The enum
+`sudoku` (daily total, a live row like the hive's), `piano` (piano rush endless,
+tiles) and `pianoday` (piano rush today's song, ms, low). The enum
 lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in
 sync, and **update `firestore.rules` in the same commit whenever a game is

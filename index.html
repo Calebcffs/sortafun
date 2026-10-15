@@ -517,6 +517,7 @@
   .c-art    { background: var(--art); }
   .c-hang   { background: var(--hang); }
   .c-online { background: var(--online); }
+  .c-mobile { background: #ff7ad9; }
 
   .badge {
     position: absolute;
@@ -709,9 +710,9 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=ea92c7de"></script>
-<script src="feedback.js?v=f0fb40ca"></script>
-<script src="panic-app.js?v=fa0aeabf"></script>
+<script src="china.js?v=c68df934"></script>
+<script src="feedback.js?v=470fc8f0"></script>
+<script src="panic-app.js?v=f332cce4"></script>
 </head>
 <body>
 <div class="site">
@@ -784,13 +785,14 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>nineteen games, two of them online with friends. your best today lands on the leaderboards.</p>
+      <p>twenty games, two of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
         <button class="chip" data-cat="puzzle" aria-pressed="false"><i class="c-puzzle"></i>Puzzles</button>
         <button class="chip" data-cat="skill" aria-pressed="false"><i class="c-skill"></i>Skill</button>
         <button class="chip" data-cat="online" aria-pressed="false"><i class="c-online"></i>Online</button>
+        <button class="chip" data-cat="mobile" aria-pressed="false"><i class="c-mobile"></i>Mobile</button>
       </div>
     </div>
     <div class="panel-body"><div class="grid" id="gamegrid"></div></div>
@@ -823,6 +825,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-15</span> <b>v0.13</b>: NEW: <b>piano rush</b>. tap the black tiles and play the tune, endless or today's song (the same one for everyone). d f j k on a keyboard. there is a mobile chip in games now for everything that plays well on a phone.</li>
         <li><span class="when">10-15</span> <b>v0.12.2</b>: the featured game box is gone, game of the day is up top now. tapping fast on an iphone no longer zooms the page in, so word hive and the other tap games keep up with you.</li>
         <li><span class="when">10-15</span> <b>v0.12.1</b>: the featured game is a different one every day now. the slacking simulator is off the homepage.</li>
         <li><span class="when">10-06</span> <b>v0.12</b>: challenge a friend! after every game: send your score to telegram, make an instagram story picture of it, or copy the link. whoever opens it sees your score and has to beat it.</li>
@@ -915,7 +918,7 @@
     <p><b>daily puzzles:</b> <a href="sudoku.html">Daily Sudoku</a> &middot; <a href="anagram.html">Word Hive</a> &middot; <a href="five.html">Five Letters</a> &middot; <a href="ladder.html">Word Ladder</a> &middot; <a href="sides.html">Four Sides</a> &middot; <a href="puzzle.html">Tile Slider</a></p>
     <p><b>word games:</b> <a href="grab.html">Word Grab</a> &middot; <a href="typing.html">Typing Test</a> &middot; <a href="crossword.html">Crossword</a></p>
     <p><b>puzzle:</b> <a href="mines.html">Minesweeper</a></p>
-    <p><b>skill and action:</b> <a href="maze.html">Cursor Maze</a> &middot; <a href="reaction.html">Reaction Time Test</a> &middot; <a href="aim.html">Aim Trainer</a> &middot; <a href="stopbar.html">Stop the Bar</a> &middot; <a href="driving.html">Circuit Race</a> &middot; <a href="sushi.html">Sushi Goes Round</a> &middot; <a href="deeptime.html">Deep Time</a></p>
+    <p><b>skill and action:</b> <a href="maze.html">Cursor Maze</a> &middot; <a href="reaction.html">Reaction Time Test</a> &middot; <a href="aim.html">Aim Trainer</a> &middot; <a href="stopbar.html">Stop the Bar</a> &middot; <a href="piano.html">Piano Rush</a> &middot; <a href="driving.html">Circuit Race</a> &middot; <a href="sushi.html">Sushi Goes Round</a> &middot; <a href="deeptime.html">Deep Time</a></p>
     <p><b>play with friends:</b> <a href="funstrike.html">Fun Strike</a> &middot; <a href="draw.html">Draw and Guess</a></p>
     <p><b>art:</b> <a href="flipbook.html">Animation Studio</a> &middot; <a href="anim-gallery.html">Animation Gallery</a></p>
     <p><b>hang out:</b> <a href="leaderboards.html">Leaderboards</a> &middot; <a href="forum.html">The Forum</a> &middot; <a href="guestbook.html">Guestbook</a> &middot; <a href="passport.html">Passport</a></p>
@@ -936,7 +939,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=32674f63"></script>
+<script src="leaderboard.js?v=21ba0b13"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -952,6 +955,7 @@
 
 var GAMES = [
   { id: "sudoku",    name: "Daily Sudoku",   url: "sudoku.html",    cat: "puzzle", key: "sudoku",   badge: "daily", blurb: "three new sudoku every day: easy, hard and extreme. score on time and mistakes. every solve climbs today's board, live." },
+  { id: "piano",     name: "Piano Rush",     url: "piano.html",     cat: "skill",  key: "piano",    badge: "new",   blurb: "tap the black tiles in order and play the tune. endless gets faster, and today's song is the same for everyone." },
   { id: "funstrike", name: "Fun Strike",     url: "funstrike.html", cat: "online", key: "funstrike", badge: "new",   blurb: "a Counter-Strike homage on a real map. team deathmatch and free for all, bots, kill cam, voice chat, servers that stay up, a leaderboard." },
   { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
@@ -989,6 +993,9 @@ var HANGOUT = [
 var SOON = [
   { id: "hotdog", name: "Hot Dog Bush",              cat: "soon", blurb: "the old political hot dog stand. grill it, dress it, serve it before the queue loses its patience." }
 ];
+
+// the Mobile chip: games that play well on a phone (a game keeps its own category too)
+var MOBILE = { piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1 };
 
 var CAT_LABEL = { soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout" };
 var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY", wip: "WIP" };
@@ -1457,6 +1464,22 @@ var THUMB = {
       '<polygon points="96,58 100,66 109,64 103,71 108,79 99,76 94,84 92,75 83,74 90,68 86,60 94,63" fill="#ffd43b" stroke="' + K + '" stroke-width="2" stroke-linejoin="round"/>' +
       outlined(24, 110, "+1", 18, "#ffd43b");
   },
+  piano: function () {
+    // four columns, black tiles climbing, a finger on the bottom one
+    var out = bg("#74c0fc") + '<circle cx="150" cy="8" r="36" fill="#a5d8ff"/>' +
+      '<rect x="28" y="6" width="104" height="110" rx="6" fill="#fff"' + S + '/>' +
+      '<path d="M54 8v106M80 8v106M106 8v106" stroke="#ced4da" stroke-width="2"/>';
+    [[0, 84], [2, 58], [1, 32], [3, 6]].forEach(function (t) {
+      out += '<rect x="' + (30 + t[0] * 26) + '" y="' + (t[1] + 2) + '" width="22" height="22" rx="2" fill="#1d1b2e"/>';
+    });
+    out += '<rect x="28" y="6" width="104" height="110" rx="6" fill="none"' + S + '/>' +
+      '<path d="M41 112q-2-16 0-22q3-4 6 0v10q4-2 7 1q4-1 6 2v12z" fill="#ffd8a8"' + S + '/>' +
+      '<path d="M140 46q0-10 8-14v26" fill="none" stroke="' + K + '" stroke-width="3" stroke-linecap="round"/>' +
+      '<ellipse cx="142" cy="60" rx="6" ry="4.5" fill="' + K + '"/>' +
+      '<path d="M12 70v-18l10-3v18" fill="none" stroke="' + K + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<ellipse cx="9" cy="72" rx="5" ry="4" fill="' + K + '"/><ellipse cx="19" cy="69" rx="5" ry="4" fill="' + K + '"/>';
+    return out;
+  },
   stopbar: function () {
     return bg("#f06595") + '<circle cx="150" cy="10" r="40" fill="#f783ac"/><circle cx="10" cy="120" r="40" fill="#e64980"/>' +
       outlined(80, 36, "STOP!", 32, "#fff") +
@@ -1559,7 +1582,8 @@ function tile(item, badge) {
   a.href = item.url;
   a.title = item.name + ": " + item.blurb;
   a.dataset.cat = item.cat;
-  a.dataset.find = (item.name + " " + item.blurb + " " + CAT_LABEL[item.cat]).toLowerCase();
+  if (MOBILE[item.id]) a.dataset.mobile = "1";
+  a.dataset.find = (item.name + " " + item.blurb + " " + CAT_LABEL[item.cat] + (MOBILE[item.id] ? " mobile phone" : "")).toLowerCase();
   var b = badge || item.badge;
   var isGame = /^(online|word|puzzle|skill)$/.test(item.cat);
   a.innerHTML =
@@ -1622,7 +1646,8 @@ function applyFilters() {
     var shown = 0;
     Array.prototype.forEach.call(tiles, function (t) {
       var ok = !q || t.dataset.find.indexOf(q) !== -1;
-      if (panel.id === "games" && chipCat !== "all" && t.dataset.cat !== chipCat) ok = false;
+      if (panel.id === "games" && chipCat !== "all" &&
+          (chipCat === "mobile" ? !t.dataset.mobile : t.dataset.cat !== chipCat)) ok = false;
       t.hidden = !ok;
       if (ok) shown++;
     });

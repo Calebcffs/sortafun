@@ -93,6 +93,17 @@
     "just played": "刚刚玩过", "checking the scoreboard...": "正在查看社会信用榜...", "see all leaderboards": "查看所有社会信用榜", "see all leaderboards »": "查看所有社会信用榜 »",
     "eighteen games, two of them online with friends. your best today lands on the leaderboards.": "十八个游戏，其中两个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
     "all": "全部", "words": "文字", "puzzles": "解谜", "skill": "技巧", "online": "联机", "coming soon": "即将推出",
+    "mobile": "手机",
+    // piano rush (piano.html)
+    "piano rush": "钢琴快手",
+    "tap the black tiles in order and play the tune. endless gets faster, and today's song is the same for everyone.": "按顺序点黑色方块，弹出曲子。无尽模式越来越快，今日歌曲所有人都一样。",
+    "tap the black tiles, lowest first, and play the tune. tap a white one or let a black one slip past and the song's over.": "点黑色方块，先点最下面的，弹出曲子。点到白色的或者漏掉一个黑色的，歌就结束了。",
+    "endless": "无尽", "today's song": "今日歌曲", "tap the start tile": "点开始方块", "go go go": "冲冲冲", "keep up": "跟上",
+    "on a keyboard: d f j k for the four columns": "用键盘：D F J K 对应四列",
+    "a new tune after every song. it keeps getting faster": "每首歌之后换新曲子。会越来越快",
+    "finish the whole song to get on today's board.": "弹完整首歌才能上今天的社会信用榜。",
+    "piano rush, endless - most tiles": "钢琴快手，无尽：社会信用最高", "piano rush, today's song - fastest": "钢琴快手，今日歌曲：最快",
+    ": new: piano rush. tap the black tiles and play the tune, endless or today's song (the same one for everyone). d f j k on a keyboard. there is a mobile chip in games now for everything that plays well on a phone.": "：新游戏：钢琴快手。点黑色方块弹曲子，无尽模式或今日歌曲（所有人同一首）。键盘用 D F J K。游戏栏现在有一个手机分类，收录所有适合手机玩的游戏。",
     "being built right now. nothing to click yet, but tell us which one you want first (feedback bubble).": "正在制作中。暂时不能点，但请告诉我们你最想先玩哪个（反馈气泡）。",
     "draw a flipbook, see everyone else's.": "画一本翻页动画，看看大家的作品。", "talk to whoever else is on the site right now.": "和此刻在网站上的人聊天。",
     "what's new": "最新动态", "how it works": "玩法说明",
@@ -362,7 +373,7 @@
     "paused.": "已暂停。", "sushi goes round, endless service - most yen": "回转寿司，无尽营业：社会信用最高",
     "sushi goes round, lunch rush - most yen": "回转寿司，午餐高峰：社会信用最高",
     ": new: sushi goes round. you run a conveyor belt sushi bar. roll what each customer asks for, send it round the belt, phone the supplier before the salmon runs out, and pour sake on anyone about to storm off. career mode, endless service and a daily lunch rush with its own leaderboards.": "：新游戏：回转寿司。你来经营一家回转寿司店。按每位顾客点的菜卷寿司，送上传送带，三文鱼用完之前打电话向供应商订货，谁快要气走就给谁倒杯清酒。有生涯模式、无尽营业和每日午餐高峰，各有自己的社会信用榜。",
-    "nineteen games, two of them online with friends. your best today lands on the leaderboards.": "十九个游戏，其中两个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
+    "twenty games, two of them online with friends. your best today lands on the leaderboards.": "二十个游戏，其中两个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
   });
 
   // every scoreboard says social credits, so every "score" (分数) in the lines above is too
