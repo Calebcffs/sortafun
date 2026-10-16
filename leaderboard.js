@@ -751,21 +751,29 @@
     for (var k in d.fields || {}) o[k] = restVal(d.fields[k]);
     return o;
   }
+  // the newest 300, plus every official level however old (an equality filter
+  // on its own needs no composite index), merged by id
   function rhythmList() {
     if (!configLooksReal(window.SORTAFUN_FIREBASE)) return Promise.reject(new Error("firebase not configured"));
     var r = FS_REST();
-    return fetch(r.base + ":runQuery?key=" + r.key, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ structuredQuery: {
-        from: [{ collectionId: "rhythm_levels" }],
-        select: { fields: ["vid", "title", "author", "n", "dur", "plays", "official", "ts"].map(function (f) { return { fieldPath: f }; }) },
-        orderBy: [{ field: { fieldPath: "ts" }, direction: "DESCENDING" }],
-        limit: 300 } })
-    }).then(function (res) {
-      if (!res.ok) throw new Error("list failed " + res.status);
-      return res.json();
-    }).then(function (rows) {
-      return rows.filter(function (x) { return x.document; }).map(function (x) { return restDoc(x.document); });
+    var select = { fields: ["vid", "title", "author", "n", "dur", "plays", "official", "ts"].map(function (f) { return { fieldPath: f }; }) };
+    function run(q) {
+      q.from = [{ collectionId: "rhythm_levels" }]; q.select = select;
+      return fetch(r.base + ":runQuery?key=" + r.key, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ structuredQuery: q })
+      }).then(function (res) {
+        if (!res.ok) throw new Error("list failed " + res.status);
+        return res.json();
+      }).then(function (rows) {
+        return rows.filter(function (x) { return x.document; }).map(function (x) { return restDoc(x.document); });
+      });
+    }
+    return Promise.all([
+      run({ orderBy: [{ field: { fieldPath: "ts" }, direction: "DESCENDING" }], limit: 300 }),
+      run({ where: { fieldFilter: { field: { fieldPath: "official" }, op: "EQUAL", value: { booleanValue: true } } }, limit: 50 })
+    ]).then(function (res) {
+      var seen = {};
+      return res[1].concat(res[0]).filter(function (d) { if (seen[d.id]) return false; seen[d.id] = 1; return true; });
     });
   }
   function rhythmGet(id) {

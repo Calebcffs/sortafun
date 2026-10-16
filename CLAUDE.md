@@ -1520,7 +1520,8 @@ to two existing apps; the well-known tap game's name stays out of all text).
 - **Data** (`leaderboard.js` `SortafunLB.rhythm.{list, get, create, played,
   top, score}`): `rhythm_levels/<id>` = `{vid, title, author, notes: JSON
   string of [[ms, lane]], offset, n, dur, plays, official?, day, ts}`. The list
-  is ONE REST runQuery with a field mask (no notes, newest 300); notes are
+  is two REST runQueries with a field mask (no notes): the newest 300, plus every
+  `official == true` level (equality only, so no index), merged by id; notes are
   fetched when a level opens and checked (`parseNotes`: lanes 0-3, finite ms,
   sorted, capped). Sorting (official first, then newest or most played) and the
   song filter are client side, so no composite index. Boards are the
