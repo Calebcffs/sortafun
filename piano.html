@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
 <title>Piano Rush: Free Piano Tapping Game for Phones | Sortafun</title>
-<meta name="description" content="Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
+<meta name="description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.">
 <meta name="sortafun:name" content="piano rush">
 <link rel="canonical" href="https://sortafun.org/piano.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sortafun">
 <meta property="og:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
-<meta property="og:description" content="Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
+<meta property="og:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.">
 <meta property="og:url" content="https://sortafun.org/piano.html">
 <meta property="og:image" content="https://sortafun.org/assets/og/piano.png">
 <meta property="og:image:width" content="1200">
@@ -19,10 +19,10 @@
 <meta property="og:image:alt" content="Piano Rush on Sortafun">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
-<meta name="twitter:description" content="Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
+<meta name="twitter:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.">
 <meta name="twitter:image" content="https://sortafun.org/assets/og/piano.png">
 <meta name="theme-color" content="#ffd43b">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Piano Rush","url":"https://sortafun.org/piano.html","description":"Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.","image":"https://sortafun.org/assets/og/piano.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Piano Rush","url":"https://sortafun.org/piano.html","description":"Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.","image":"https://sortafun.org/assets/og/piano.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Piano Rush","item":"https://sortafun.org/piano.html"}]}</script>
 <!-- /seo -->
 <link rel="icon" href="favicon.ico">
@@ -37,6 +37,8 @@
     background: #100e24; box-shadow: 0 5px 0 var(--ink);
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
+  /* no grey/blue flash over the board on every tap (phones paint one on anything tappable) */
+  .stage, .stage * { -webkit-tap-highlight-color: transparent; }
   #board { display: block; width: 100%; touch-action: none; cursor: pointer; }
   /* play again: a big target over the bottom of the board, live half a second after the miss */
   .again {
@@ -57,33 +59,67 @@
   }
   .again .res { font-size: 14px; opacity: .9; text-shadow: 0 1px 2px #000; }
   .again:hover, .again:active { transform: none; background: linear-gradient(rgba(16,14,36,0), rgba(16,14,36,.9) 34%); }
-  .modes .fsbtn { background: linear-gradient(#b8a6ff, #7c5cff); color: #fff; text-shadow: 0 1px 0 var(--ink); }
-  .fsx { display: none; }
+  /* little buttons in the board's top corners (hidden mid-song): levels, full screen */
+  .corner {
+    position: absolute; top: 8px; z-index: 3; height: 34px; margin: 0; padding: 0 12px; border-radius: 999px;
+    background: rgba(255,255,255,.16); color: #fff; border: 2px solid rgba(255,255,255,.45);
+    box-shadow: none; font: 700 13px/1 var(--body); touch-action: manipulation; transition: opacity .2s;
+  }
+  .corner:hover { background: rgba(255,255,255,.3); }
+  .corner:active { transform: none; box-shadow: none; }
+  #fs { right: 8px; }
+  #lv { left: 8px; display: none; }
+  .stage.camp #lv { display: block; }
+  .fs-out { display: none; }
+  html.pfs .fs-out { display: inline; }
+  html.pfs .fs-in { display: none; }
+  .stage.running .corner, .stage.picking #lv { opacity: 0; pointer-events: none; }
+  .stage.picking #fs { z-index: 5; }
+  /* campaign: the level picker sits over the board */
+  .levels {
+    position: absolute; inset: 0; z-index: 4; display: none; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 12px; background: rgba(6,5,18,.96); color: #fff; touch-action: pan-y; text-align: left;
+  }
+  .stage.picking .levels { display: block; }
+  .levels h2 { margin: 4px 0 14px 2px; min-height: 30px; text-align: left; font: 400 22px "Lilita One", "Arial Black", sans-serif; color: #ffe066; letter-spacing: .5px; }
+  .lv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .lv {
+    display: block; width: 100%; min-width: 0; margin: 0; padding: 8px 10px; min-height: 72px; text-align: left;
+    border-radius: 12px; border: 2px solid rgba(255,255,255,.28); box-shadow: none;
+    background: linear-gradient(#2b2160, #191242); color: #fff; font: 400 12px/1.3 var(--body);
+    touch-action: manipulation;
+  }
+  .lv:hover { background: linear-gradient(#372a7a, #221858); }
+  .lv:active { transform: translateY(1px); box-shadow: none; }
+  .lv b { display: flex; justify-content: space-between; align-items: center; font: 400 20px "Lilita One", "Arial Black", sans-serif; color: #ffe066; }
+  .lv b i { font-style: normal; font-size: 15px; }
+  .lv .song { display: block; font-weight: 700; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lv .by { display: block; color: #c9c2f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lv.won { border-color: #ffd43b; }
+  .lv.next { border-color: #ff4fb0; box-shadow: 0 0 0 3px rgba(255,79,176,.35); }
+  .lv:disabled { opacity: .42; cursor: default; }
   /* full screen: the real Fullscreen API where there is one, and on iPhone (which has none for pages)
      the board fills the window, and pinch, double-tap zoom and scrolling are all switched off */
   html.pfs, html.pfs body { overflow: hidden; overscroll-behavior: none; }
   html.pfs .stage {
     position: fixed; inset: 0; z-index: 2147483000; max-width: none; height: 100vh; height: 100dvh;
     border: 0; border-radius: 0; box-shadow: none; touch-action: none;
-    display: flex; justify-content: center; align-items: center; background: #100e24;
+    display: flex; justify-content: center; align-items: center; background: #04030c;
   }
   html.pfs #board { width: auto; }
   html.pfs .again, html.pfs .again:hover, html.pfs .again:active { left: 50%; right: auto; width: var(--bw, 100%); transform: translateX(-50%); }
-  html.pfs .fsx {
-    display: block; position: absolute; top: max(10px, env(safe-area-inset-top)); left: 10px; z-index: 2;
-    width: 40px; height: 40px; padding: 0; border-radius: 50%;
-    background: rgba(255,255,255,.14); color: #fff; border: 2px solid rgba(255,255,255,.35);
-    box-shadow: none; font: 700 18px/1 sans-serif; touch-action: manipulation;
-  }
-  html.pfs .stage.running .fsx { opacity: 0; pointer-events: none; }
+  html.pfs .corner { top: max(10px, env(safe-area-inset-top)); }
+  html.pfs #fs { right: calc(50% - var(--bw, 100%) / 2 + 10px); }
+  html.pfs #lv { left: calc(50% - var(--bw, 100%) / 2 + 10px); }
+  html.pfs .levels { left: 50%; right: auto; width: var(--bw, 100%); transform: translateX(-50%); padding-top: max(12px, env(safe-area-inset-top)); }
   #big { font-size: 20px; min-height: 26px; margin: 12px 0 4px; }
   .keys { font-size: 12px; color: #6a6780; margin: 2px 0 8px; }
   .keys kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border: 2px solid var(--ink); border-radius: 5px; background: #fff; font: 700 12px var(--body); color: var(--ink); }
   @media (hover: none) { .keys { display: none; } }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=0349a59b"></script>
-<script src="feedback.js?v=44f8e876"></script>
+<script src="china.js?v=baf0541e"></script>
+<script src="feedback.js?v=ffcbd69e"></script>
 <script src="panic-app.js?v=f332cce4"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -96,14 +132,16 @@
   <div class="modes" role="group" aria-label="mode">
     <button type="button" data-mode="endless" aria-pressed="true">endless</button>
     <button type="button" data-mode="daily" aria-pressed="false">today's song</button>
-    <button type="button" class="fsbtn" id="fs">&#x26F6; full screen</button>
+    <button type="button" data-mode="camp" aria-pressed="false">campaign</button>
   </div>
   <p id="tune"></p>
 
   <div class="stage" id="stage">
     <canvas id="board" width="380" height="600"></canvas>
     <button type="button" class="again" id="again" data-nosfx><span class="pill">play again</span><span class="res" id="res"></span></button>
-    <button type="button" class="fsx" id="fsx" data-nosfx aria-label="leave full screen">&#x2715;</button>
+    <button type="button" class="corner" id="lv">&#x2630; levels</button>
+    <button type="button" class="corner" id="fs" data-nosfx><span class="fs-in">&#x26F6; full screen</span><span class="fs-out">&#x2715; exit</span></button>
+    <div class="levels" id="levels"><h2>campaign</h2><div class="lv-grid" id="lvgrid"></div></div>
   </div>
   <div id="big">tap the start tile</div>
   <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns, <kbd>space</kbd> to play again</p>
@@ -241,6 +279,189 @@ function note(m) {
 }
 
 /* ------------------------------------------------------------------ *
+ * campaign: ten levels, each at the tempo of a big dance track. The beat
+ * underneath is our own little synth (kick, clap, hats, bass, pads), not
+ * the record. Tiles sit on an eighth-note grid, so every tile lands on the
+ * beat or halfway between; later levels are faster, longer and busier.
+ * Not on any leaderboard: the only prize is the next level
+ * ------------------------------------------------------------------ */
+var LEVELS = [
+  { song: "Firestone", by: "Kygo", bpm: 114 },
+  { song: "Wake Me Up", by: "Avicii", bpm: 124 },
+  { song: "Levels", by: "Avicii", bpm: 126 },
+  { song: "Summer", by: "Calvin Harris", bpm: 128 },
+  { song: "Animals", by: "Martin Garrix", bpm: 128 },
+  { song: "Don't You Worry Child", by: "Swedish House Mafia", bpm: 129 },
+  { song: "Sandstorm", by: "Darude", bpm: 136 },
+  { song: "Scary Monsters and Nice Sprites", by: "Skrillex", bpm: 140 },
+  { song: "Alone", by: "Marshmello", bpm: 142 },
+  { song: "Now You're Gone", by: "Basshunter", bpm: 148 }
+];
+// one bar = 8 eighth notes; x = a tile. Busier rhythms in the higher tiers
+var RHYTHM = [
+  null,
+  ["x.x.x.x.", "x.x.x...", "x...x.x.", "x.x.x.x."],
+  ["x.x.xxx.", "xxx.x.x.", "x.x.x.xx", "x.xxx.x."],
+  ["xx.xx.x.", "x.xx.xx.", "xxx.xxx.", "x.xxxx.x"],
+  ["xxxxx.x.", "x.xxxxx.", "xx.xxx.x", "xxxxxxx."],
+  ["xxxxxxxx", "xxx.xxxx", "xx.xxxxx", "xxxxx.xx"]
+];
+// chord progressions (semitones from the key note; minor or major)
+var PROGS = [
+  [[0, "m"], [8, "M"], [3, "M"], [10, "M"]],
+  [[8, "M"], [10, "M"], [0, "m"], [0, "m"]],
+  [[0, "m"], [10, "M"], [8, "M"], [10, "M"]],
+  [[0, "m"], [5, "m"], [8, "M"], [10, "M"]]
+];
+var KEYS_AT = [57, 54, 59, 56, 53, 58, 55, 52, 57, 54];   // each level's key note (A3 = 57)
+
+// a chord's root near the key note
+function chordRoot(key, ch) { return key + (ch[0] > 6 ? ch[0] - 12 : ch[0]); }
+
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// a level's chart: tiles [{ col, midi, row }] (row = eighth note from the start)
+// and the bar plan the backing track follows
+function levelChart(n) {
+  var L = LEVELS[n - 1], r = rng(n * 7919 + 13);
+  var top = Math.ceil(n / 2), busy = n % 2 ? 0.5 : 0.8;   // main rhythm tier, how often it's used
+  var bars = 12 + Math.round((n - 1) * 4 / 3);
+  var prog = PROGS[(n - 1) % PROGS.length], key = KEYS_AT[n - 1];
+  function bar(tier, part) { var p = RHYTHM[Math.max(1, tier)]; return { p: p[Math.floor(r() * p.length)], part: part }; }
+  function phrase() { var a = []; for (var i = 0; i < 4; i++) a.push(bar(r() < busy ? top : top - 1, "drop")); return a; }
+  // sections: an easy intro, two phrases, a breather, the phrases again (a song
+  // repeats itself, and repeats are learnable), a single last note
+  var A = phrase(), B = phrase(), plan = [bar(top - 2, "intro"), bar(top - 2, "intro")];
+  plan[0].p = "x" + plan[0].p.slice(1);
+  var body = A.concat(B, [bar(top - 1, "break"), bar(top - 1, "break")], A, B);
+  while (plan.length < bars - 1 && body.length) plan.push(body.shift());
+  plan.push({ p: "x.......", part: "end" });
+  // a repeated bar keeps its columns (unless that would start on the column just played)
+  var prev = -1, tiles = [];
+  plan.forEach(function (b, bi) {
+    var ch = prog[bi % 4], root = chordRoot(key, ch), xs = [];
+    for (var s = 0; s < 8; s++) if (b.p[s] === "x") xs.push(s);
+    var cols = b.cols && b.cols.length && b.cols[0] !== prev ? b.cols : null;
+    if (!cols) {
+      cols = [];
+      var last = prev;
+      xs.forEach(function () {
+        var c = Math.floor(r() * (last < 0 ? 4 : 3));
+        if (last >= 0 && c >= last) c++;               // never the same column twice running
+        cols.push(c); last = c;
+      });
+      b.cols = cols;
+    }
+    xs.forEach(function (s, i) {
+      var tone = [0, ch[1] === "m" ? 3 : 4, 7, 12][cols[i]];
+      tiles.push({ col: cols[i], midi: root + 12 + tone, row: bi * 8 + s });
+    });
+    if (cols.length) prev = cols[cols.length - 1];
+  });
+  return { tiles: tiles, plan: plan, prog: prog, key: key, bpm: L.bpm, rate: L.bpm / 60 * 2 };
+}
+
+// the backing track: scheduled a little ahead on the audio clock
+var NOISE = null;
+function noise() {
+  if (!NOISE) {
+    NOISE = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+    var d = NOISE.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  var s = actx.createBufferSource(); s.buffer = NOISE; return s;
+}
+function env(g, t, peak, a, d) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+}
+function kick(t, to) {
+  var o = actx.createOscillator(), g = actx.createGain();
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+  env(g, t, 0.9, 0.002, 0.26); o.connect(g); g.connect(to); o.start(t); o.stop(t + 0.3);
+}
+function hiss(t, to, type, freq, peak, d) {
+  var s = noise(), f = actx.createBiquadFilter(), g = actx.createGain();
+  f.type = type; f.frequency.value = freq; f.Q.value = 0.8;
+  env(g, t, peak, 0.002, d); s.connect(f); f.connect(g); g.connect(to); s.start(t); s.stop(t + d + 0.05);
+}
+function synth(t, to, m, type, cut, peak, a, d) {
+  var f = actx.createBiquadFilter(), g = actx.createGain();
+  f.type = "lowpass"; f.frequency.value = cut;
+  env(g, t, peak, a, d); f.connect(g); g.connect(to);
+  [-6, 6].forEach(function (cents) {
+    var o = actx.createOscillator();
+    o.type = type; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12); o.detune.value = cents;
+    o.connect(f); o.start(t); o.stop(t + a + d + 0.05);
+  });
+}
+// a tapped tile in the campaign: a bright pluck in the chord of the bar
+function pluck(m) {
+  if (!sound()) return;
+  try {
+    if (!bus) newBus();
+    var t = actx.currentTime, f = actx.createBiquadFilter(), g = actx.createGain();
+    f.type = "lowpass"; f.Q.value = 4;
+    f.frequency.setValueAtTime(5200, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.28);
+    env(g, t, 0.26, 0.003, 0.42); f.connect(g); g.connect(bus);
+    [-8, 8].forEach(function (cents) {
+      var o = actx.createOscillator();
+      o.type = "sawtooth"; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12); o.detune.value = cents;
+      o.connect(f); o.start(t); o.stop(t + 0.48);
+    });
+  } catch (e) {}
+}
+var beat = null;   // { a0, chart, next, timer }
+// newer iPhones: let the beat play even with the ring/silent switch on silent (it is the game's
+// music, like a video's). Put back when the level stops, so other apps' audio isn't held up
+function session(type) { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) {} }
+function beatStart(chart, a0) {
+  beatStop();
+  session("playback");
+  beat = { a0: a0, chart: chart, next: 0, last: chart.plan.length * 8 };
+  var slot = 60 / chart.bpm / 2;
+  function pump() {
+    if (!beat || !bus) return;
+    var to = bus, ahead = actx.currentTime + 0.15;
+    while (beat.next < beat.last && beat.a0 + beat.next * slot < ahead) {
+      var s = beat.next++, t = Math.max(actx.currentTime, beat.a0 + s * slot);
+      var bi = Math.floor(s / 8), pos = s % 8, part = chart.plan[bi].part;
+      var ch = chart.prog[bi % 4], root = chordRoot(chart.key, ch);
+      try {
+        if (part === "end") {
+          if (pos === 0) { kick(t, to); hiss(t, to, "highpass", 4000, 0.3, 1.6); }
+          continue;
+        }
+        if (pos % 2 === 0 && (part !== "break" || pos % 4 === 0)) kick(t, to);
+        if (part !== "intro" && (pos === 2 || pos === 6)) hiss(t, to, "bandpass", 1500, 0.35, 0.14);
+        if (pos % 2 === 1) hiss(t, to, "highpass", 7500, part === "break" ? 0.09 : 0.14, 0.04);
+        if (part === "drop" && pos % 2 === 1) synth(t, to, root - 12, "sawtooth", 520, 0.2, 0.01, slot * 0.8);
+        if (pos === 0 && part !== "intro") {
+          var third = ch[1] === "m" ? 3 : 4;
+          [0, third, 7].forEach(function (i) { synth(t, to, root + i, "sawtooth", 1100, 0.035, 0.25, slot * 7); });
+        }
+      } catch (e) {}
+    }
+    if (beat.next >= beat.last) beatStop();
+  }
+  pump();
+  beat.timer = setInterval(pump, 25);
+}
+function beatStop() { if (beat) { clearInterval(beat.timer); beat = null; session("auto"); } }
+
+// progress: how many levels are cleared (this browser only)
+function cleared() { try { return Math.max(0, Math.min(LEVELS.length, +localStorage.getItem("sortafun-piano-camp") || 0)); } catch (e) { return 0; } }
+function setCleared(n) { try { localStorage.setItem("sortafun-piano-camp", String(n)); } catch (e) {} }
+
+/* ------------------------------------------------------------------ *
  * the board
  * ------------------------------------------------------------------ */
 var cv = document.getElementById("board");
@@ -256,6 +477,8 @@ var tuneEl = document.getElementById("tune");
 var W, H, RH, DPR;                 // css size, row height (4 rows on screen)
 var mode = "endless";
 var tiles, hits, scroll, target, phase, speed, t0, lastT, bad, order, armT;
+var level = 0, chart = null, won = false;   // campaign: the level being played, its chart, cleared it?
+var pillEl = again.querySelector(".pill"), grid = document.getElementById("lvgrid");
 var lastHit = 0, held = null;      // when the last tile went down; a tap that came in a hair early
 var rings = [], lane = [0, 0, 0, 0];
 
@@ -264,7 +487,8 @@ var DAILY = SONGS[SG_DAY % SONGS.length];
 var zh = function () { return document.documentElement.classList.contains("zh"); };
 var full = function () { return document.documentElement.classList.contains("pfs"); };
 
-function boardKey() { return mode === "daily" ? "pianoday" : "piano"; }
+// (the campaign's key is on no leaderboard, so no board shows under it)
+function boardKey() { return mode === "daily" ? "pianoday" : mode === "camp" ? "pianocamp" : "piano"; }
 
 function size() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -307,7 +531,22 @@ function reset() {
   speed = 2.4;
   if (bus) hush();
   hushed = false;
-  if (mode === "daily") {
+  beatStop();
+  won = false;
+  stage.classList.toggle("camp", mode === "camp");
+  stage.classList.toggle("picking", mode === "camp" && !level);
+  if (mode === "camp") {
+    if (!level) {
+      phase = "pick"; tiles = [];
+      buildLevels();
+      tuneEl.textContent = "ten levels, each faster than the last. clear one to unlock the next";
+    } else {
+      var L = LEVELS[level - 1];
+      chart = levelChart(level);
+      tiles = chart.tiles;
+      tuneEl.textContent = "level " + level + ": " + L.song + " (" + L.by + "), " + L.bpm + " bpm, " + tiles.length + " notes";
+    }
+  } else if (mode === "daily") {
     tiles = songTiles(DAILY).map(function (t, i) { t.row = i; return t; });
     tuneEl.textContent = "today's song: " + DAILY.name + " (" + tiles.length + " notes)";
   } else {
@@ -318,7 +557,8 @@ function reset() {
   clearTimeout(armT);
   again.classList.remove("show", "armed");
   stage.classList.remove("running");
-  big.textContent = "tap the start tile";
+  big.textContent = phase === "pick" ? "pick a level" : "tap the start tile";
+  pillEl.textContent = "play again";
   statusEl.textContent = "";
   lbEl.innerHTML = "";
   draw();
@@ -329,6 +569,28 @@ function reset() {
   }
 }
 
+// the campaign's level cards: cleared ones get a tick, the next one glows, the rest are locked
+function buildLevels() {
+  var done = cleared();
+  grid.innerHTML = "";
+  LEVELS.forEach(function (L, i) {
+    var n = i + 1, b = document.createElement("button");
+    b.type = "button";
+    b.className = "lv" + (n <= done ? " won" : n === done + 1 ? " next" : "");
+    b.disabled = n > done + 1;
+    b.innerHTML = "<b><span></span><i></i></b><span class=song data-noxlate></span><span class=by></span>";   // (song titles stay as they are in chinese mode)
+    b.querySelector("b span").textContent = zh() ? "\u7B2C " + n + " \u5173" : "level " + n;
+    b.querySelector("b i").textContent = n <= done ? "\u2714" : n > done + 1 ? "\uD83D\uDD12" : "\u25B6";
+    b.querySelector(".song").textContent = L.song;
+    b.querySelector(".by").textContent = L.by + " \u00B7 " + L.bpm + " bpm";
+    b.addEventListener("click", function () { if (!b.disabled) { level = n; reset(); } });
+    grid.appendChild(b);
+  });
+}
+document.getElementById("lv").addEventListener("click", function () {
+  if (phase !== "run" && phase !== "camp-run") { level = 0; reset(); }
+});
+
 // screen y of the top of tile i
 function rowY(i) { return H - RH * (tiles[i].row + 1) + scroll; }
 
@@ -336,7 +598,7 @@ function rowY(i) { return H - RH * (tiles[i].row + 1) + scroll; }
  * drawing. The tiles are painted once per board size into little
  * canvases and stamped, so a frame is cheap even on an old phone
  * ------------------------------------------------------------------ */
-var SPR = {}, BG = null, LANE = null;
+var SPR = {}, BG = null, LANE = null, PULSE = null;
 function rrect(c, x, y, w, h, r) {
   c.beginPath();
   c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -369,6 +631,8 @@ function sprites() {
   BG.addColorStop(0, "#0b0920"); BG.addColorStop(1, "#04030c");
   LANE = ctx.createLinearGradient(0, H, 0, H * 0.35);
   LANE.addColorStop(0, "rgba(255,80,180,.42)"); LANE.addColorStop(1, "rgba(255,80,180,0)");
+  PULSE = ctx.createLinearGradient(0, H, 0, H - RH * 0.9);
+  PULSE.addColorStop(0, "rgba(120,220,255,.55)"); PULSE.addColorStop(1, "rgba(120,220,255,0)");
 }
 
 function draw() {
@@ -381,6 +645,12 @@ function draw() {
   for (var c = 0; c < 4; c++) {
     var a = 1 - (now - lane[c]) / 260;
     if (a > 0) { ctx.globalAlpha = a; ctx.fillRect(c * cw, 0, cw, H); }
+  }
+  // campaign: the floor of the board thumps on every beat
+  if (phase === "camp-run" && now > t0) {
+    var f = ((now - t0) / 1000 * chart.bpm / 60) % 1;
+    ctx.globalAlpha = (1 - f) * (1 - f);
+    ctx.fillStyle = PULSE; ctx.fillRect(0, H - RH * 0.9, W, RH * 0.9);
   }
   ctx.globalAlpha = 1;
   ctx.fillStyle = "rgba(255,255,255,.13)";
@@ -419,7 +689,7 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(cx - m, cy - m); ctx.lineTo(cx + m, cy + m); ctx.moveTo(cx + m, cy - m); ctx.lineTo(cx - m, cy + m); ctx.stroke();
   }
   // today's song: how far through it you are
-  if (mode === "daily") {
+  if ((mode === "daily" || mode === "camp") && tiles.length) {
     ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(0, 0, W, 5);
     ctx.fillStyle = "#ffd43b"; ctx.fillRect(0, 0, W * hits / tiles.length, 5);
   }
@@ -447,6 +717,13 @@ function frame(now) {
     }
   } else if (phase === "daily-run") {
     scroll += (target - scroll) * Math.min(1, dt * 22);
+  } else if (phase === "camp-run") {
+    // on the clock, not added up frame by frame, so a dropped frame never puts the tiles off the beat
+    scroll = Math.max(0, (now - t0) / 1000) * chart.rate * RH;
+    if (rowY(hits) >= H) {
+      bad = { row: tiles[hits].row, col: tiles[hits].col };
+      over("one got away");
+    }
   }
   draw();
   requestAnimationFrame(frame);
@@ -468,7 +745,7 @@ function inTile(i, y) {
   return y >= top - h * 0.15 && y <= top + h * 1.15;
 }
 function press(col, x, y) {
-  if (phase === "over") return;
+  if (phase === "over" || phase === "pick" || !tiles.length) return;
   var t = tiles[hits], now = performance.now();
   // a finger a hair over the line into the right column
   if (x != null && col !== t.col && Math.abs(col - t.col) === 1) {
@@ -479,9 +756,16 @@ function press(col, x, y) {
     if (col !== t.col) return;           // only the start tile starts it
     t0 = now;
     newBus();
-    phase = mode === "daily" ? "daily-run" : "run";
+    phase = mode === "daily" ? "daily-run" : mode === "camp" ? "camp-run" : "run";
+    if (mode === "camp" && sound()) {
+      // the beat starts a hair from now; the tiles wait for it (and for the speaker's delay)
+      if (!bus) newBus();
+      var lat = actx.outputLatency || actx.baseLatency || 0;
+      beatStart(chart, actx.currentTime + 0.05);
+      t0 = now + 50 + lat * 1000;
+    }
     stage.classList.add("running");
-    big.textContent = mode === "daily" ? "go go go" : "keep up";
+    big.textContent = mode === "daily" ? "go go go" : mode === "camp" ? "on the beat" : "keep up";
   }
   if (rowY(hits) + RH <= 0) return;      // not on screen at all yet
   if (col === t.col) {
@@ -505,13 +789,15 @@ function press(col, x, y) {
 
 function hit(col) {
   var t = tiles[hits];
-  note(t.midi);
+  if (mode === "camp") pluck(t.midi); else note(t.midi);
   lastHit = lane[col] = performance.now();
   rings.push({ row: t.row, col: col, t: lastHit });
   hits++;
   if (mode === "daily") {
     target = hits * RH;
     if (hits === tiles.length) return done();
+  } else if (mode === "camp") {
+    if (hits === tiles.length) return clearLevel();
   } else {
     speed = Math.min(8, 2.4 + hits * 0.03);
     more();
@@ -528,7 +814,12 @@ function offerAgain(res) {
   clearTimeout(armT);
   armT = setTimeout(function () { again.classList.add("armed"); }, 500);
 }
-again.addEventListener("click", function () { if (again.classList.contains("armed")) reset(); });
+function playAgain() {
+  if (!again.classList.contains("armed")) return;
+  if (mode === "camp" && won && level < LEVELS.length) level++;
+  reset();
+}
+again.addEventListener("click", playAgain);
 
 // a miss makes no sound at all: the round's bus is cut, ringing notes too
 function over(why) {
@@ -538,6 +829,12 @@ function over(why) {
   scroll = (bad.row - 1) * RH;
   rings = [];
   lbEl.innerHTML = "";
+  beatStop();
+  if (mode === "camp") {
+    big.textContent = why + ". " + hits + " of " + tiles.length + " notes";
+    offerAgain(big.textContent);
+    return;
+  }
   if (mode === "daily") {
     big.textContent = why + ". " + hits + " of " + tiles.length + " notes";
     statusEl.textContent = "finish the whole song to get on today's board.";
@@ -561,6 +858,18 @@ function done() {
   else lbEl.textContent = "leaderboard offline";
 }
 
+// a campaign level cleared: the next one unlocks (the beat plays out its last bar)
+function clearLevel() {
+  endMs = performance.now() - t0;
+  if (level > cleared()) setCleared(level);
+  won = true;
+  var last = level === LEVELS.length;
+  big.textContent = last ? "level " + level + " cleared. that's the whole campaign!" : "level " + level + " cleared!";
+  offerAgain(big.textContent);
+  pillEl.textContent = last ? "play again" : "next level";
+  setTimeout(function () { if (won && window.SortafunSFX) SortafunSFX.result("win"); }, 700);
+}
+
 /* ------------------------------------------------------------------ *
  * full screen. The Fullscreen API where the browser has one (android,
  * desktop, ipad), and the board filling the window either way, which is
@@ -580,15 +889,16 @@ function leaveFull() {
   if (fe && ex) { try { var p = ex.call(document); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
   size();
 }
-document.getElementById("fs").addEventListener("click", enterFull);
-document.getElementById("fsx").addEventListener("click", leaveFull);
+document.getElementById("fs").addEventListener("click", function () { full() ? leaveFull() : enterFull(); });
 ["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) {
   document.addEventListener(ev, function () {
     // esc (or the system back gesture) left the real full screen: leave ours too
     if (!(document.fullscreenElement || document.webkitFullscreenElement) && full()) { root.classList.remove("pfs"); size(); }
   });
 });
-document.addEventListener("touchmove", function (e) { if (full()) e.preventDefault(); }, { passive: false });
+document.addEventListener("touchmove", function (e) {
+  if (full() && !(e.target.closest && e.target.closest(".levels"))) e.preventDefault();   // the level list can still scroll
+}, { passive: false });
 ["gesturestart", "gesturechange", "dblclick"].forEach(function (ev) {
   document.addEventListener(ev, function (e) { if (full()) e.preventDefault(); }, { passive: false });
 });
@@ -610,7 +920,7 @@ window.addEventListener("keydown", function (e) {
   if (e.code in KEYS) { e.preventDefault(); if (!e.repeat) press(KEYS[e.code]); return; }
   if ((e.code === "Space" || e.code === "Enter") && phase === "over") {
     e.preventDefault();
-    if (again.classList.contains("armed")) reset();
+    playAgain();
     return;
   }
   if (e.code === "Escape" && full()) leaveFull();
@@ -619,6 +929,7 @@ window.addEventListener("keydown", function (e) {
 Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]"), function (b) {
   b.addEventListener("click", function () {
     mode = b.dataset.mode;
+    if (mode === "camp") level = 0;
     Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]"), function (o) { o.setAttribute("aria-pressed", String(o === b)); });
     reset();
   });
@@ -626,7 +937,8 @@ Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]
 window.addEventListener("resize", size);
 
 window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press,
-  again: function () { if (again.classList.contains("armed")) reset(); },
+  again: playAgain,
+  camp: { LEVELS: LEVELS, chart: levelChart, cleared: cleared, setCleared: setCleared, pick: function (n) { level = n; reset(); } },
   full: function (on) { on ? enterFull() : leaveFull(); },
   // test hook: an empty spot on the board (0..1) in a column that isn't the next tile's
   spot: function () {
@@ -640,7 +952,7 @@ window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: pre
     }
   },
   gain: function () { var b = bus || lastBus; return b ? b.gain.value : null; },
-  state: function () { return { mode: mode, phase: phase, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, next2: tiles[hits + 1] && tiles[hits + 1].col, nextY: tiles[hits] ? rowY(hits) / RH : null, prevY: hits ? rowY(hits - 1) / RH : null, next2Y: tiles[hits + 1] ? rowY(hits + 1) / RH : null, why: big.textContent, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
+  state: function () { return { mode: mode, phase: phase, level: level, won: won, picking: stage.classList.contains("picking"), beat: !!beat, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, next2: tiles[hits + 1] && tiles[hits + 1].col, nextY: tiles[hits] ? rowY(hits) / RH : null, prevY: hits ? rowY(hits - 1) / RH : null, next2Y: tiles[hits + 1] ? rowY(hits + 1) / RH : null, why: big.textContent, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
 
 size();
 reset();

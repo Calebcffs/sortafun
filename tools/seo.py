@@ -110,7 +110,7 @@ PAGES = {
         desc="The marker sweeps back and forth. Stop it inside the green band. Every hit shrinks the band and speeds it up, one miss and you are out. How far can you get?"),
     "piano.html": dict(name="piano rush", kind="game", og="piano", list="skill", genre=["Music", "Rhythm"],
         title="Piano Rush: Free Piano Tapping Game for Phones",
-        desc="Tap the black tiles in order and play the tune. Endless mode speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard."),
+        desc="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard."),
     "driving.html": dict(name="circuit race", kind="game", og="race", list="skill", genre=["Racing"],
         title="Circuit Race: Free 3D Racing Game in Your Browser",
         desc="Race a 3D track against the clock. Hit every checkpoint, drift the corners, boost on the straights and set your best lap. Free racing game, no download."),

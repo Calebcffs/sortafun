@@ -1452,17 +1452,49 @@ trademark rule under SEO). One canvas, four columns, four rows on screen.
   (`note()`), silent when the site's speaker is off.
 - **Endless** (key `piano`, high, tiles): songs back to back in a shuffled
   order, scrolling at 2.4 rows/s + 0.03 per tile (cap 8). A tile scrolling off
-  the bottom or a tap in the wrong column ends it. Taps on a tile that hasn't
-  scrolled on yet are ignored (otherwise you could tap ahead blind).
+  the bottom or a tap on empty board in the wrong column ends it.
 - **Today's song** (key `pianoday`, low, ms): `SONGS[SG day % n]`, the board
   only moves when you tap; the clock runs from the first tap to the last
   note. Only a finished song is submitted.
-- A tap anywhere in a column counts (fingers are imprecise); several fingers
-  at once are fine. On phones the board is scrolled fully on screen at load.
+- **Campaign** (v0.14, key `pianocamp`, on NO leaderboard, so `keepBoard`
+  mounts nothing): `LEVELS`, ten levels named after big dance tracks at their
+  real tempo (Caleb approved the list 2026-10-16). The music is our own
+  WebAudio beat (`beatStart`: kick, clap, hats, offbeat bass, pads), never the
+  record: ripping/hosting the real tracks would get the repo DMCA'd. Song
+  titles go on the level cards and the tune line only, never in seo.py,
+  share text or What's New. `levelChart(n)` is seeded (same chart every
+  time): an eighth-note grid (`row` = eighth note), rhythm tiers in `RHYTHM`,
+  intro / two 4-bar phrases / break / phrases again / one last note, never
+  the same column twice running; tapped tiles play a pluck in the bar's chord.
+  Scroll comes from the clock (`(now - t0) * rate`), not summed frame time, so
+  it never drifts off the beat; `t0` is pushed back by the audio start offset
+  + `outputLatency`. Unlocks: localStorage `sortafun-piano-camp` (number
+  cleared). `navigator.audioSession.type = "playback"` while a level plays (so
+  the iPhone silent switch doesn't mute it; untested on a real phone).
+- **Taps are forgiving** (Caleb: "a lot of false errors", v0.13.2): anywhere
+  in the right column counts, so does a tap within a quarter column over the
+  line; a tap on the tile just hit (or in its column within 250 ms) is
+  ignored; a tap on the tile after next is held 140 ms and counts if the
+  right tile follows (two-finger rolls). Only a tap on empty board fails.
+  `%TEMP%/sfchk/humantest.mjs` plays human-paced runs with re-taps and rolls
+  and counts false fails (was 8 of 8 runs before the fix, 0 after).
+- **A miss is silent** (Caleb's ask): every note and the beat go through one
+  gain bus per round, cut to 0 in 12 ms on a miss; `mountPanel` gets
+  `quiet: true` (no "done" jingle); the play-again button has `data-nosfx`.
+- **Play again** is a big button over the bottom 30% of the board, live after
+  0.5 s (space on a keyboard). The miss is parked on the second row up so it
+  shows above it. **Full screen** (corner button): the Fullscreen API where
+  there is one, and `html.pfs` (board fixed over the whole window, touch-action
+  none, touchmove/gesture events blocked) everywhere, since iPhone has no
+  Fullscreen API for pages. Tiles are pre-rendered sprites (no per-frame
+  gradients, no shadowBlur: phones drop frames), and `.stage *` has
+  `-webkit-tap-highlight-color: transparent` (phones flashed the whole board
+  on every tap).
 - The script is wrapped in an IIFE (a top-level `var scroll` would clobber
-  `window.scroll`); tests use `window.__piano` (`press(col)`, `state()`,
-  `key()`, `SONGS`, `songTiles`). Driven over CDP with real
-  `Input.dispatchTouchEvent` taps at 390px in the 2026-10-15 session.
+  `window.scroll`); tests use `window.__piano` (`press`, `state()`, `key()`,
+  `spot()`, `gain()`, `camp.{pick, chart, cleared, setCleared}`). Driven over
+  CDP with real `Input.dispatchTouchEvent` taps at 390px:
+  `%TEMP%/sfchk/pianotest.mjs`, `camptest.mjs`, `humantest.mjs`.
 
 **Mobile chip** (homepage, v0.13): `MOBILE` in index.html lists the games that
 play well on a phone; their tiles get `data-mobile` and the chip filters on it
