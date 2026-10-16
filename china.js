@@ -109,6 +109,7 @@
     "loading the song...": "正在加载歌曲……", "tap play on the video to start": "点视频上的播放键开始",
     "press space or click the board to start": "按空格或点棋盘开始", "no notes for this song yet": "这首歌还没有音符",
     "go!": "开始！", "song:": "歌曲：", ". music provided by": "。音乐由", "out of health.": "血量用完了。",
+    ": piano rush's campaign levels now go live the moment their notes are finished, no site update needed, so new songs open up as soon as they're tapped in.": "：钢琴快手闯关模式的音符一做好就直接上线，不用等网站更新，新歌打好一首开一首。",
     ": piano rush's campaign now plays real NCS (NoCopyrightSounds) tracks through YouTube, tap tap revenge style: notes fall to a line and every tap is judged perfect, great or good. build a combo for up to 4x points, and miss too many and the song stops. the notes are being tapped in by hand, so levels open up as they're ready.": "：钢琴快手的闯关模式现在通过 YouTube 播放真正的 NCS（NoCopyrightSounds）歌曲，玩法像 Tap Tap Revenge：音符落到线上，每一下都按时机判定为完美、很好或不错。连击越多分数最多翻 4 倍，漏太多歌就停。音符是一首一首手动打出来的，做好一关开一关。",
     ": NEW in piano rush: campaign mode. ten levels of dance beats, each one faster and busier than the last, and each unlocks when you clear the one before. it's just for you, not on the scoreboard. there's a full screen button in the corner of the board now too.": "：钢琴快手新增闯关模式。十关舞曲节拍，一关比一关快、一关比一关密，过了上一关才能开下一关。只给你自己玩，不上社会信用榜。棋盘角上现在也有全屏按钮了。",
     "full screen": "全屏", "play again": "再来一局", "leave full screen": "退出全屏",

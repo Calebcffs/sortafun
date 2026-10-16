@@ -130,6 +130,21 @@ service cloud.firestore {
     }
     match /admin_todos/{id} { allow read, write: if isAdmin(); }
     match /admin_state/{id} { allow read, write: if isAdmin(); }
+
+    // --- piano rush campaign notes: made in admin.html's recording studio ---
+    // piano_charts/<video id> = { notes: JSON string of [[ms, lane], ...] (Firestore
+    // can't hold nested arrays), offset, n, ts }: anyone reads (piano.html), only the
+    // admin publishes. piano_drafts/<video id> = { draft: JSON string, ts }: admin only.
+    match /piano_charts/{vid} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['notes', 'offset', 'n', 'ts'])
+        && request.resource.data.notes is string && request.resource.data.notes.size() <= 500000
+        && request.resource.data.offset is int && request.resource.data.n is int
+        && request.resource.data.ts == request.time;
+      allow delete: if isAdmin();
+    }
+    match /piano_drafts/{vid} { allow read, write: if isAdmin(); }
     function isValidFeedback(d) {
       return d.keys().hasOnly(['game', 'rating', 'kind', 'msg', 'name', 'page', 'day', 'ts', 'ver'])
         && d.keys().hasAll(['game', 'rating', 'kind', 'msg', 'day', 'ts'])

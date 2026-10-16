@@ -1477,14 +1477,29 @@ trademark rule under SEO). One canvas, four columns, four rows on screen.
   `sortafun-piano-ncs`; best grade per song `sortafun-piano-best-<vid>`;
   `sortafun-piano-lag` (ms) shifts judging for slow speakers. Credit line under
   the board, as NCS asks (artist, title, link to their upload).
-  **Notes come from Caleb**, tapped in **record mode** (`piano.html?record`:
-  every level open, a panel under the board: record a pass, 1/0.75/0.5x speed,
-  passes merge with same-lane taps within 60 ms deduped, offset nudge, undo,
-  play it back, save file -> `~/Downloads/piano-<vid>.json`, copy). Drafts live
-  in localStorage on his machine. To ship a chart: copy its `offset` + `notes`
-  into `piano-charts.js` under the video id. Tests: `%TEMP%/sfchk/ncstest.mjs`
-  (fake player via `__piano.camp.fake()`, plus one real-YouTube layout/clock
-  check).
+  **Notes come from Caleb**, tapped in the **recording studio on admin.html**
+  (v0.15.1; `piano.html` has no record mode any more, `?record` does
+  nothing). `piano-charts.js` holds the ten songs (`PIANO_LEVELS`, shared by
+  game and studio) and an empty fallback `PIANO_CHARTS`. `piano-studio.js`
+  (`PianoStudio.mount(el, store, {fake})`) is the studio: YouTube player with
+  its own controls (scrub, then record from there), a lane canvas, D F J K or
+  tap the lanes (ignored while typing in a box or with the section closed),
+  record a pass (taps stamped raw on `getCurrentTime()`; the game adds the
+  player's lag), 1/0.75/0.5x, passes merge with same-lane taps within 60 ms
+  deduped, "replace" makes a pass wipe the old notes in the stretch it
+  covered, -10/+10 ms offset, undo, clear, play it back with a tick per note,
+  publish / take it down, save file. admin.html mounts it on opening the
+  `<details id="studio">` with a Firestore store: drafts in
+  `piano_drafts/<vid>` (`{draft: JSON string}`, admin only) and published
+  notes in `piano_charts/<vid>` (`{notes: JSON string of [[ms, lane]], offset,
+  n, ts}`; Firestore can't store nested arrays; anyone reads, only
+  `isAdmin()` writes). The game lists `piano_charts` with one REST GET (no
+  SDK) the first time the campaign opens (`loadLive` / `applyLive`) and
+  rebuilds the level list or starts a waiting level when they land. Tests:
+  `%TEMP%/sfchk/studiotest.mjs` (run `python serve.py` there first: it serves
+  the repo plus `harness/__studio.html`, a localStorage store) and
+  `ncstest.mjs` (fake player via `__piano.camp.fake()`, notes injected into
+  `PIANO_CHARTS` or through `__piano.camp.live(<REST body>)`).
 - **Taps are forgiving** (Caleb: "a lot of false errors", v0.13.2): anywhere
   in the right column counts, so does a tap within a quarter column over the
   line; a tap on the tile just hit (or in its column within 250 ms) is
@@ -1506,7 +1521,7 @@ trademark rule under SEO). One canvas, four columns, four rows on screen.
   on every tap).
 - The script is wrapped in an IIFE (a top-level `var scroll` would clobber
   `window.scroll`); tests use `window.__piano` (`press`, `state()`, `key()`,
-  `spot()`, `gain()`, `camp.{pick, fake, start, time, state, rec, cleared}`).
+  `spot()`, `gain()`, `camp.{pick, fake, start, time, state, live, cleared}`).
   Driven over CDP with real `Input.dispatchTouchEvent` taps at 390px:
   `%TEMP%/sfchk/pianotest.mjs`, `ncstest.mjs`, `humantest.mjs`.
 
@@ -1644,6 +1659,7 @@ submitted per day / per game, "plays" = submitted scores) and latest scores + gu
 just a client check: it signs in to Firebase Auth as `admin@sortafun.org` (email/password provider, account made
 with the service-account key) and `firestore.rules` `isAdmin()` lets only that account read `feedback` and
 read/write `admin_todos` / `admin_state` (feedback "done" flags; feedback docs themselves stay immutable).
+It also holds the **Piano Rush recording studio** (see Piano Rush), the only place campaign notes are made.
 The "in development" table near the top is static HTML: WIP games (Daily Sudoku, the slacking simulator) with links
 and what's next. Never write their passwords in it (the page source is public even though the data isn't).
 Uses its own named Firebase app, session persistence only.

@@ -61,6 +61,11 @@
   </tbody></table>
   <div class="muted" style="margin-top:4px">not on the homepage yet. the pages are unlisted (noindex); passwords are Caleb's, not in the repo.</div>
 
+  <h2>piano rush recording studio</h2>
+  <details id="studio"><summary>open the studio (tap the campaign songs in, then publish them to the game)</summary>
+    <div id="studio-in" style="margin-top:10px"></div>
+  </details>
+
   <h2>overview</h2>
   <div class="cards" id="cards"></div>
 
@@ -91,11 +96,34 @@
   <table id="gtable"><thead><tr><th>when (SGT)</th><th>name</th><th>message</th></tr></thead><tbody></tbody></table>
 </div>
 
+<script src="piano-charts.js?v=f9133931"></script>
+<script src="piano-studio.js?v=6aabe517"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, query, orderBy, limit, getDocs, getCountFromServer, doc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import "./firebase-config.js";
+
+// ---------------- piano rush studio (piano-studio.js), on first open ----------------
+const studioStore = {
+  async load() {
+    const [d, c] = await Promise.all([getDocs(collection(db, "piano_drafts")), getDocs(collection(db, "piano_charts"))]);
+    const drafts = {}, live = {};
+    d.forEach((x) => { try { drafts[x.id] = JSON.parse(x.data().draft); } catch (e) {} });
+    c.forEach((x) => { const v = x.data(); try { live[x.id] = { offset: v.offset || 0, notes: JSON.parse(v.notes) }; } catch (e) {} });
+    return { drafts, live };
+  },
+  saveDraft: (vid, d) => setDoc(doc(db, "piano_drafts", vid), { draft: JSON.stringify(d), ts: serverTimestamp() }),
+  // the game reads notes as a JSON string: Firestore can't store arrays inside arrays
+  publish: (vid, c) => setDoc(doc(db, "piano_charts", vid), { notes: JSON.stringify(c.notes), offset: Math.round(c.offset || 0), n: c.notes.length, ts: serverTimestamp() }),
+  unpublish: (vid) => deleteDoc(doc(db, "piano_charts", vid)),
+};
+let studioUp = false;
+document.getElementById("studio").addEventListener("toggle", (e) => {
+  if (!e.target.open || studioUp || !auth.currentUser) return;
+  studioUp = true;
+  window.__studio = PianoStudio.mount(document.getElementById("studio-in"), studioStore);
+});
 
 const ADMIN_EMAIL = "admin@sortafun.org";
 const app = initializeApp(window.SORTAFUN_FIREBASE, "admin");

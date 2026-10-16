@@ -107,11 +107,6 @@
   .stage.camp:not(.picking) .corner { top: 208px; }
   .credit { font-size: 11px; color: #6a6780; margin: 6px 0 0; min-height: 0; }
   .credit a { color: inherit; }
-  .rec { margin: 10px auto 0; max-width: 380px; padding: 8px 10px; border: 2px dashed #ff4d6d; border-radius: 12px; font-size: 13px; text-align: left; }
-  .rec p { margin: 0 0 6px; }
-  .rec-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
-  .rec-row button { padding: 5px 10px; font-size: 12px; }
-  .rec-row button[aria-pressed="true"] { background: linear-gradient(#7af0a3, #1fb85a); color: #fff; }
   /* full screen: the real Fullscreen API where there is one, and on iPhone (which has none for pages)
      the board fills the window, and pinch, double-tap zoom and scrolling are all switched off */
   html.pfs, html.pfs body { overflow: hidden; overscroll-behavior: none; }
@@ -134,8 +129,8 @@
   @media (hover: none) { .keys { display: none; } }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=d2259610"></script>
-<script src="feedback.js?v=80ff7ee7"></script>
+<script src="china.js?v=2b834e0b"></script>
+<script src="feedback.js?v=e6a371e6"></script>
 <script src="panic-app.js?v=f332cce4"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -161,13 +156,6 @@
     <div class="levels" id="levels"><h2>campaign</h2><div class="lv-grid" id="lvgrid"></div></div>
   </div>
   <p class="credit" id="credit"></p>
-  <div class="rec" id="rec" hidden>
-    <p><b>record mode</b>: <span id="recinfo"></span></p>
-    <div class="rec-row"><button type="button" id="recgo">&#x25CF; record a pass</button><button type="button" id="recstop">&#x25A0; stop</button><button type="button" id="recplay">&#x25B6; play it</button></div>
-    <div class="rec-row">speed <button type="button" data-rate="1">1x</button><button type="button" data-rate="0.75">0.75x</button><button type="button" data-rate="0.5">0.5x</button></div>
-    <div class="rec-row">notes <button type="button" data-nudge="-10">&minus;10 ms</button><button type="button" data-nudge="10">+10 ms</button><button type="button" id="recundo">undo</button><button type="button" id="recclear">clear</button></div>
-    <div class="rec-row"><button type="button" id="recsave">save file</button><button type="button" id="reccopy">copy</button></div>
-  </div>
   <div id="big">tap the start tile</div>
   <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns, <kbd>space</kbd> to play again</p>
 
@@ -183,7 +171,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=7dc50db3"></script>
-<script src="piano-charts.js?v=eef551fc"></script>
+<script src="piano-charts.js?v=f9133931"></script>
 <script src="share.js?v=e240f67e"></script>
 <script>
 (function () {
@@ -386,7 +374,7 @@ function reset() {
   lbEl.innerHTML = "";
   if (mode === "camp") return campReset();
   stage.classList.remove("picking");
-  creditEl.textContent = ""; recEl.hidden = true;
+  creditEl.textContent = "";
   ytPause();
   if (mode === "daily") {
     tiles = songTiles(DAILY).map(function (t, i) { t.row = i; return t; });
@@ -652,30 +640,18 @@ function done() {
  * embedded player above the board (their free licence covers videos and
  * streams, not games, so nothing is downloaded or hosted here). Notes fall
  * to a line and each tap is judged on timing, Tap Tap Revenge style. The
- * notes are tapped in by hand in record mode (piano.html?record) and live
- * in piano-charts.js. Not on any leaderboard: the prize is the next level
+ * songs are in piano-charts.js; the notes are tapped in by hand in the
+ * recording studio on admin.html and published to Firestore (piano_charts),
+ * read here with one REST call. Not on any leaderboard: the prize is the next level
  * ------------------------------------------------------------------ */
-var LEVELS = [
-  { song: "Feel Good", by: "Syn Cole", vid: "q1ULJ92aldE" },
-  { song: "Sky High", by: "Elektronomia", vid: "TW9d8vYrVFQ" },
-  { song: "Heroes Tonight (feat. Johnning)", by: "Janji", vid: "3nQNiWdeH2Q" },
-  { song: "Shine", by: "Spektrem", vid: "n4tK7LYFxI0" },
-  { song: "On & On (feat. Daniel Levi)", by: "Cartoon", vid: "K4DyBUG242c" },
-  { song: "Symbolism", by: "Electro-Light", vid: "__CRWE-L45k" },
-  { song: "Mortals (feat. Laura Brehm)", by: "Warriyo", vid: "yJg-Y5byMMw" },
-  { song: "Invincible", by: "DEAF KEV", vid: "J2X5mJ3HDYE" },
-  { song: "Blank", by: "Disfigure", vid: "p7ZsBPK656s" },
-  { song: "My Heart", by: "Different Heaven & EH!DE", vid: "jK2aIUmmdP4" }
-];
-var RECORD = /[?&]record\b/.test(location.search);
+var LEVELS = window.PIANO_LEVELS;
 var COLORS = ["#ff4fb0", "#3fd5ff", "#9dff57", "#ffd43b"];
 var APPROACH = 1.25;                                    // seconds from the top of the board to the line
 var WIN = [[0.05, "perfect", 300, "#7dffb0"], [0.1, "great", 200, "#3fd5ff"], [0.15, "good", 100, "#ffd43b"]];
 var YTH = 200;                                          // the video strip (YouTube asks for at least 200 x 200)
 var ytbox = document.getElementById("ytbox"), ytmsg = document.getElementById("ytmsg");
-var creditEl = document.getElementById("credit"), recEl = document.getElementById("rec");
+var creditEl = document.getElementById("credit");
 var cs = null;                                          // this round: notes, score, combo, health
-var recPass = null, recRate = 1, recUndo = [];
 
 function store(k, v) {
   try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; }
@@ -683,13 +659,36 @@ function store(k, v) {
 function cleared() { return Math.max(0, Math.min(LEVELS.length, +store("sortafun-piano-ncs") || 0)); }
 function setCleared(n) { store("sortafun-piano-ncs", n); }
 function calib() { return +store("sortafun-piano-lag") || 0; }     // ms, this device's audio delay
-function draftKey(L) { return "sortafun-piano-draft-" + L.vid; }
-// a level's notes: in record mode the draft on this machine wins, otherwise piano-charts.js
+// a level's notes: published from the studio (Firestore), else the copy in piano-charts.js
 function chartFor(L) {
-  var d = RECORD && store(draftKey(L));
-  if (d && d.notes && d.notes.length) return d;
   var c = (window.PIANO_CHARTS || {})[L.vid];
   return c && c.notes && c.notes.length ? c : null;
+}
+// the published notes: one REST read of piano_charts (no SDK needed), the first time the campaign opens
+var liveAsked = false;
+function loadLive() {
+  var cfg = window.SORTAFUN_FIREBASE;
+  if (liveAsked || !cfg || !cfg.projectId || !window.fetch) return;
+  liveAsked = true;
+  fetch("https://firestore.googleapis.com/v1/projects/" + cfg.projectId + "/databases/(default)/documents/piano_charts?pageSize=100&key=" + cfg.apiKey)
+    .then(function (r) { return r.ok ? r.json() : null; }).then(applyLive).catch(function () {});
+}
+function applyLive(j) {
+  (j && j.documents || []).forEach(function (d) {
+    try {
+      var f = d.fields, notes = JSON.parse(f.notes.stringValue), off = f.offset || {};
+      if (notes.length) window.PIANO_CHARTS[d.name.split("/").pop()] = { offset: +(off.integerValue || off.doubleValue || 0), notes: notes };
+    } catch (e) {}
+  });
+  // the list and a level still waiting to start pick them up
+  if (mode !== "camp") return;
+  if (!level) return buildLevels();
+  var L = LEVELS[level - 1], ch = chartFor(L);
+  if (!cs && ch && (phase === "load" || phase === "ready")) {
+    cs = newRound(ch);
+    tuneEl.textContent = "level " + level + ": " + L.by + " - " + L.song + ", " + ch.notes.length + " notes";
+    if (phase === "ready") { phase = "load"; campReady(); }
+  }
 }
 
 /* ---- YouTube's player (or a stand-in clock in tests) ---- */
@@ -767,7 +766,8 @@ function newRound(ch) {
 function songT() { return ytTime() - calib() / 1000; }
 
 function campReset() {
-  cs = null; recPass = null;
+  cs = null;
+  loadLive();
   stage.classList.toggle("picking", !level);
   tiles = [];
   if (!level) {
@@ -777,7 +777,6 @@ function campReset() {
     tuneEl.textContent = "ten NCS tracks. clear one to unlock the next";
     big.textContent = "pick a level";
     creditEl.textContent = "";
-    recEl.hidden = true;
     size();
     return;
   }
@@ -786,8 +785,6 @@ function campReset() {
   phase = "load";
   tuneEl.textContent = "level " + level + ": " + L.by + " - " + L.song + (ch ? ", " + ch.notes.length + " notes" : ", no notes yet");
   credit(L);
-  recEl.hidden = !RECORD;
-  recInfo();
   size();
   intoView();
   big.textContent = "loading the song...";
@@ -797,22 +794,19 @@ function campReset() {
 function campReady() {
   if (mode !== "camp" || !level || phase !== "load") return;
   phase = "ready";
-  big.textContent = RECORD ? "record mode: hit record, then tap along" :
-    cs ? (matchMedia("(hover: none)").matches ? "tap play on the video to start" : "press space or click the board to start") :
+  big.textContent = cs ? (matchMedia("(hover: none)").matches ? "tap play on the video to start" : "press space or click the board to start") :
     "no notes for this song yet";
 }
 function campStart() {
-  if (phase !== "ready" || !(cs || recPass)) return;
+  if (phase !== "ready" || !cs) return;
   ytPlay();
 }
 // what YouTube says it's doing. The round starts the moment the song does
 function ytState(s) {
   if (mode !== "camp" || !level) return;
   if (s === 1) {
-    if (phase === "ready" && recPass) { phase = "rec"; stage.classList.add("running"); big.textContent = "recording. tap along"; }
-    else if (phase === "ready" && cs && ytTime() < 2) { phase = "camp-run"; stage.classList.add("running"); big.textContent = "go!"; }
+    if (phase === "ready" && cs && ytTime() < 2) { phase = "camp-run"; stage.classList.add("running"); big.textContent = "go!"; }
   } else if (s === 0 && phase === "camp-run") finishRound();
-  else if (s === 0 && phase === "rec") recStop();
 }
 
 function judge(nt, name, pts, color) {
@@ -841,7 +835,6 @@ function campFrame() {
 }
 function campPress(col) {
   lane[col] = performance.now();
-  if (phase === "rec") { recPass.push([Math.round(ytTime() * 1000), col]); return; }
   if (phase === "ready") return campStart();
   if (phase !== "camp-run" || !cs) return;
   var T = songT(), ns = cs.notes, hitN = null;
@@ -886,7 +879,7 @@ function buildLevels() {
   var done = cleared();
   grid.innerHTML = "";
   LEVELS.forEach(function (L, i) {
-    var n = i + 1, b = document.createElement("button"), open = RECORD || n <= done + 1;
+    var n = i + 1, b = document.createElement("button"), open = n <= done + 1;
     var best = store("sortafun-piano-best-" + L.vid), has = !!chartFor(L);
     b.type = "button";
     b.className = "lv" + (n <= done ? " won" : n === done + 1 ? " next" : "");
@@ -901,7 +894,7 @@ function buildLevels() {
   });
 }
 document.getElementById("lv").addEventListener("click", function () {
-  if (phase !== "camp-run" && phase !== "rec") { level = 0; reset(); }
+  if (phase !== "camp-run") { level = 0; reset(); }
 });
 // NCS asks for a credit with the track, artist and a link to their upload
 function credit(L) {
@@ -931,7 +924,7 @@ function drawCamp() {
     ctx.lineWidth = 3; ctx.strokeStyle = COLORS[c];
     rrect(ctx, c * cw + 6, HY - NH / 2 - 4, cw - 12, NH + 8, 10); ctx.stroke();
   }
-  var T = phase === "camp-run" || phase === "over" || phase === "rec" || phase === "ready" ? songT() : 0;
+  var T = phase === "camp-run" || phase === "over" || phase === "ready" ? songT() : 0;
   // falling notes
   if (cs) {
     for (var i = Math.max(0, cs.i0 - 4); i < cs.notes.length; i++) {
@@ -957,18 +950,7 @@ function drawCamp() {
       return true;
     });
   }
-  // recording: this pass's taps fall away below the line
-  if (recPass) {
-    recPass.forEach(function (p) {
-      var y = HY - (p[0] / 1000 - ytTime()) / APPROACH * HY;
-      if (y < H + NH && y > -NH) { ctx.globalAlpha = 0.7; ctx.fillStyle = COLORS[p[1]]; rrect(ctx, p[1] * cw + 8, y - NH / 2, cw - 16, NH, NH / 2); ctx.fill(); ctx.globalAlpha = 1; }
-    });
-    if (phase === "rec") {
-      ctx.fillStyle = "#ff4d6d"; ctx.font = "700 14px Verdana, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText("● REC  " + recPass.length + " taps  " + recRate + "x", 10, 12);
-    }
-  }
-  if (cs && phase !== "rec") {
+  if (cs) {
     // health and how far through the song
     var last = cs.notes.length ? cs.notes[cs.notes.length - 1].t : 1;
     ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(0, 0, W, 6);
@@ -1001,86 +983,8 @@ function drawCamp() {
   if (phase === "ready" || phase === "load") {
     ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.font = "400 " + Math.round(W * 0.07) + "px Lilita One, Arial Black, sans-serif";
-    ctx.fillText(phase === "load" ? "…" : cs || RECORD ? "▲ " + (zh() ? "点视频开始" : "play the video") : (zh() ? "还没有音符" : "no notes yet"), W / 2, H * 0.4);
+    ctx.fillText(phase === "load" ? "…" : cs ? "▲ " + (zh() ? "点视频开始" : "play the video") : (zh() ? "还没有音符" : "no notes yet"), W / 2, H * 0.4);
   }
-}
-
-/* ---- record mode (piano.html?record): tap a song in, a pass at a time ---- */
-function recLevel() { return LEVELS[level - 1]; }
-function recDraft() { return store(draftKey(recLevel())) || { vid: recLevel().vid, offset: 0, notes: [], passes: [] }; }
-function recInfo() {
-  if (!RECORD || !level) return;
-  var d = recDraft();
-  document.getElementById("recinfo").textContent = d.notes.length + " notes in " + d.passes.length + " pass" + (d.passes.length === 1 ? "" : "es") + ", offset " + (d.offset || 0) + " ms";
-  Array.prototype.forEach.call(recEl.querySelectorAll("[data-rate]"), function (b) { b.setAttribute("aria-pressed", String(+b.dataset.rate === recRate)); });
-}
-function recSave(d) {
-  store(draftKey(recLevel()), d);
-  cs = d.notes.length ? newRound(d) : null;
-  recInfo();
-}
-function recStart() {
-  if (!level || !yt.ready || phase === "rec" || phase === "camp-run") return;
-  phase = "ready"; recPass = [];
-  yt.p.seekTo(0, true);
-  if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(recRate);
-  ytPlay();
-}
-// a finished pass joins the draft; the same lane twice within 60 ms is one note
-function recStop() {
-  if (!recPass) return;
-  ytPause();
-  var d = recDraft();
-  recUndo.push(JSON.stringify(d));
-  var all = d.notes.concat(recPass).sort(function (a, b) { return a[0] - b[0]; }), out = [];
-  all.forEach(function (n) {
-    for (var i = out.length - 1; i >= 0 && n[0] - out[i][0] < 60; i--) if (out[i][1] === n[1]) return;
-    out.push(n);
-  });
-  d.notes = out; d.passes.push({ rate: recRate, taps: recPass.length, at: new Date().toISOString() });
-  recPass = null; phase = "ready"; stage.classList.remove("running");
-  if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(1);
-  yt.p.seekTo(0, true);
-  recSave(d);
-  big.textContent = "pass saved. play it back to check, or record another pass";
-}
-function recFile() {
-  var L = recLevel(), d = recDraft();
-  d.song = L.song; d.by = L.by; d.made = new Date().toISOString();
-  return JSON.stringify(d);
-}
-if (RECORD) {
-  document.getElementById("recgo").addEventListener("click", recStart);
-  document.getElementById("recstop").addEventListener("click", function () {
-    if (recPass) return recStop();
-    if (phase === "camp-run") { ytPause(); reset(); }      // stop a play-back
-  });
-  Array.prototype.forEach.call(recEl.querySelectorAll("[data-rate]"), function (b) {
-    b.addEventListener("click", function () { recRate = +b.dataset.rate; recInfo(); });
-  });
-  document.getElementById("recplay").addEventListener("click", function () {
-    if (phase === "rec") return;
-    var d = recDraft(); if (!d.notes.length) return;
-    cs = newRound(d); phase = "ready"; yt.p.seekTo(0, true); if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(1); ytPlay();
-  });
-  document.getElementById("recundo").addEventListener("click", function () {
-    if (recUndo.length) recSave(JSON.parse(recUndo.pop()));
-  });
-  document.getElementById("recclear").addEventListener("click", function () {
-    if (confirm("throw away every note for this song?")) { recUndo.push(JSON.stringify(recDraft())); recSave({ vid: recLevel().vid, offset: 0, notes: [], passes: [] }); }
-  });
-  Array.prototype.forEach.call(recEl.querySelectorAll("[data-nudge]"), function (b) {
-    b.addEventListener("click", function () { var d = recDraft(); recUndo.push(JSON.stringify(d)); d.offset = (d.offset || 0) + +b.dataset.nudge; recSave(d); });
-  });
-  document.getElementById("recsave").addEventListener("click", function () {
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([recFile()], { type: "application/json" }));
-    a.download = "piano-" + recLevel().vid + ".json";
-    document.body.appendChild(a); a.click(); a.remove();
-  });
-  document.getElementById("reccopy").addEventListener("click", function () {
-    try { navigator.clipboard.writeText(recFile()); big.textContent = "copied"; } catch (e) {}
-  });
 }
 
 /* ------------------------------------------------------------------ *
@@ -1156,7 +1060,7 @@ window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: pre
     fake: function () { yt.fake = true; }, start: campStart, time: songT, player: function () { return yt.p; },
     state: function () { return cs && { score: cs.score, combo: cs.combo, best: cs.best, hp: cs.hp, n: cs.n, notes: cs.notes.length, i0: cs.i0,
       next: cs.notes.filter(function (n) { return !n.j; }).slice(0, 6).map(function (n) { return [n.t, n.lane]; }) }; },
-    rec: function () { return { pass: recPass && recPass.length, draft: RECORD && level ? recDraft() : null }; } },
+    live: applyLive },
   full: function (on) { on ? enterFull() : leaveFull(); },
   // test hook: an empty spot on the board (0..1) in a column that isn't the next tile's
   spot: function () {
