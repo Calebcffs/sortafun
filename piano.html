@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
 <title>Piano Rush: Free Piano Tapping Game for Phones | Sortafun</title>
-<meta name="description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.">
+<meta name="description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.">
 <meta name="sortafun:name" content="piano rush">
 <link rel="canonical" href="https://sortafun.org/piano.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sortafun">
 <meta property="og:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
-<meta property="og:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.">
+<meta property="og:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.">
 <meta property="og:url" content="https://sortafun.org/piano.html">
 <meta property="og:image" content="https://sortafun.org/assets/og/piano.png">
 <meta property="og:image:width" content="1200">
@@ -19,10 +19,10 @@
 <meta property="og:image:alt" content="Piano Rush on Sortafun">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
-<meta name="twitter:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.">
+<meta name="twitter:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.">
 <meta name="twitter:image" content="https://sortafun.org/assets/og/piano.png">
 <meta name="theme-color" content="#ffd43b">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Piano Rush","url":"https://sortafun.org/piano.html","description":"Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign has ten levels of dance beats. Tap on a phone, or D F J K on a keyboard.","image":"https://sortafun.org/assets/og/piano.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Piano Rush","url":"https://sortafun.org/piano.html","description":"Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.","image":"https://sortafun.org/assets/og/piano.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Piano Rush","item":"https://sortafun.org/piano.html"}]}</script>
 <!-- /seo -->
 <link rel="icon" href="favicon.ico">
@@ -98,6 +98,20 @@
   .lv.won { border-color: #ffd43b; }
   .lv.next { border-color: #ff4fb0; box-shadow: 0 0 0 3px rgba(255,79,176,.35); }
   .lv:disabled { opacity: .42; cursor: default; }
+  /* campaign: YouTube's player sits above the board, never under or behind anything */
+  .ytbox { display: none; position: relative; height: 200px; background: #000; }
+  .stage.camp:not(.picking) .ytbox { display: block; }
+  .ytbox iframe, #yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .ytmsg { position: absolute; inset: 0; margin: 0; display: none; align-items: center; justify-content: center; padding: 16px; background: #100e24; color: #fff; font-size: 14px; text-align: center; }
+  .ytmsg.on { display: flex; }
+  .stage.camp:not(.picking) .corner { top: 208px; }
+  .credit { font-size: 11px; color: #6a6780; margin: 6px 0 0; min-height: 0; }
+  .credit a { color: inherit; }
+  .rec { margin: 10px auto 0; max-width: 380px; padding: 8px 10px; border: 2px dashed #ff4d6d; border-radius: 12px; font-size: 13px; text-align: left; }
+  .rec p { margin: 0 0 6px; }
+  .rec-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+  .rec-row button { padding: 5px 10px; font-size: 12px; }
+  .rec-row button[aria-pressed="true"] { background: linear-gradient(#7af0a3, #1fb85a); color: #fff; }
   /* full screen: the real Fullscreen API where there is one, and on iPhone (which has none for pages)
      the board fills the window, and pinch, double-tap zoom and scrolling are all switched off */
   html.pfs, html.pfs body { overflow: hidden; overscroll-behavior: none; }
@@ -107,6 +121,8 @@
     display: flex; justify-content: center; align-items: center; background: #04030c;
   }
   html.pfs #board { width: auto; }
+  html.pfs .stage.camp { flex-direction: column; }
+  html.pfs .stage.camp .ytbox { width: var(--bw, 100%); flex: none; }
   html.pfs .again, html.pfs .again:hover, html.pfs .again:active { left: 50%; right: auto; width: var(--bw, 100%); transform: translateX(-50%); }
   html.pfs .corner { top: max(10px, env(safe-area-inset-top)); }
   html.pfs #fs { right: calc(50% - var(--bw, 100%) / 2 + 10px); }
@@ -118,8 +134,8 @@
   @media (hover: none) { .keys { display: none; } }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=baf0541e"></script>
-<script src="feedback.js?v=ffcbd69e"></script>
+<script src="china.js?v=d2259610"></script>
+<script src="feedback.js?v=80ff7ee7"></script>
 <script src="panic-app.js?v=f332cce4"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -137,11 +153,20 @@
   <p id="tune"></p>
 
   <div class="stage" id="stage">
+    <div class="ytbox" id="ytbox"><div id="yt"></div><p class="ytmsg" id="ytmsg"></p></div>
     <canvas id="board" width="380" height="600"></canvas>
     <button type="button" class="again" id="again" data-nosfx><span class="pill">play again</span><span class="res" id="res"></span></button>
     <button type="button" class="corner" id="lv">&#x2630; levels</button>
     <button type="button" class="corner" id="fs" data-nosfx><span class="fs-in">&#x26F6; full screen</span><span class="fs-out">&#x2715; exit</span></button>
     <div class="levels" id="levels"><h2>campaign</h2><div class="lv-grid" id="lvgrid"></div></div>
+  </div>
+  <p class="credit" id="credit"></p>
+  <div class="rec" id="rec" hidden>
+    <p><b>record mode</b>: <span id="recinfo"></span></p>
+    <div class="rec-row"><button type="button" id="recgo">&#x25CF; record a pass</button><button type="button" id="recstop">&#x25A0; stop</button><button type="button" id="recplay">&#x25B6; play it</button></div>
+    <div class="rec-row">speed <button type="button" data-rate="1">1x</button><button type="button" data-rate="0.75">0.75x</button><button type="button" data-rate="0.5">0.5x</button></div>
+    <div class="rec-row">notes <button type="button" data-nudge="-10">&minus;10 ms</button><button type="button" data-nudge="10">+10 ms</button><button type="button" id="recundo">undo</button><button type="button" id="recclear">clear</button></div>
+    <div class="rec-row"><button type="button" id="recsave">save file</button><button type="button" id="reccopy">copy</button></div>
   </div>
   <div id="big">tap the start tile</div>
   <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns, <kbd>space</kbd> to play again</p>
@@ -158,6 +183,7 @@
 
 <script src="firebase-config.js?v=4115083e"></script>
 <script src="leaderboard.js?v=7dc50db3"></script>
+<script src="piano-charts.js?v=eef551fc"></script>
 <script src="share.js?v=e240f67e"></script>
 <script>
 (function () {
@@ -279,189 +305,6 @@ function note(m) {
 }
 
 /* ------------------------------------------------------------------ *
- * campaign: ten levels, each at the tempo of a big dance track. The beat
- * underneath is our own little synth (kick, clap, hats, bass, pads), not
- * the record. Tiles sit on an eighth-note grid, so every tile lands on the
- * beat or halfway between; later levels are faster, longer and busier.
- * Not on any leaderboard: the only prize is the next level
- * ------------------------------------------------------------------ */
-var LEVELS = [
-  { song: "Firestone", by: "Kygo", bpm: 114 },
-  { song: "Wake Me Up", by: "Avicii", bpm: 124 },
-  { song: "Levels", by: "Avicii", bpm: 126 },
-  { song: "Summer", by: "Calvin Harris", bpm: 128 },
-  { song: "Animals", by: "Martin Garrix", bpm: 128 },
-  { song: "Don't You Worry Child", by: "Swedish House Mafia", bpm: 129 },
-  { song: "Sandstorm", by: "Darude", bpm: 136 },
-  { song: "Scary Monsters and Nice Sprites", by: "Skrillex", bpm: 140 },
-  { song: "Alone", by: "Marshmello", bpm: 142 },
-  { song: "Now You're Gone", by: "Basshunter", bpm: 148 }
-];
-// one bar = 8 eighth notes; x = a tile. Busier rhythms in the higher tiers
-var RHYTHM = [
-  null,
-  ["x.x.x.x.", "x.x.x...", "x...x.x.", "x.x.x.x."],
-  ["x.x.xxx.", "xxx.x.x.", "x.x.x.xx", "x.xxx.x."],
-  ["xx.xx.x.", "x.xx.xx.", "xxx.xxx.", "x.xxxx.x"],
-  ["xxxxx.x.", "x.xxxxx.", "xx.xxx.x", "xxxxxxx."],
-  ["xxxxxxxx", "xxx.xxxx", "xx.xxxxx", "xxxxx.xx"]
-];
-// chord progressions (semitones from the key note; minor or major)
-var PROGS = [
-  [[0, "m"], [8, "M"], [3, "M"], [10, "M"]],
-  [[8, "M"], [10, "M"], [0, "m"], [0, "m"]],
-  [[0, "m"], [10, "M"], [8, "M"], [10, "M"]],
-  [[0, "m"], [5, "m"], [8, "M"], [10, "M"]]
-];
-var KEYS_AT = [57, 54, 59, 56, 53, 58, 55, 52, 57, 54];   // each level's key note (A3 = 57)
-
-// a chord's root near the key note
-function chordRoot(key, ch) { return key + (ch[0] > 6 ? ch[0] - 12 : ch[0]); }
-
-function rng(seed) {
-  return function () {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-// a level's chart: tiles [{ col, midi, row }] (row = eighth note from the start)
-// and the bar plan the backing track follows
-function levelChart(n) {
-  var L = LEVELS[n - 1], r = rng(n * 7919 + 13);
-  var top = Math.ceil(n / 2), busy = n % 2 ? 0.5 : 0.8;   // main rhythm tier, how often it's used
-  var bars = 12 + Math.round((n - 1) * 4 / 3);
-  var prog = PROGS[(n - 1) % PROGS.length], key = KEYS_AT[n - 1];
-  function bar(tier, part) { var p = RHYTHM[Math.max(1, tier)]; return { p: p[Math.floor(r() * p.length)], part: part }; }
-  function phrase() { var a = []; for (var i = 0; i < 4; i++) a.push(bar(r() < busy ? top : top - 1, "drop")); return a; }
-  // sections: an easy intro, two phrases, a breather, the phrases again (a song
-  // repeats itself, and repeats are learnable), a single last note
-  var A = phrase(), B = phrase(), plan = [bar(top - 2, "intro"), bar(top - 2, "intro")];
-  plan[0].p = "x" + plan[0].p.slice(1);
-  var body = A.concat(B, [bar(top - 1, "break"), bar(top - 1, "break")], A, B);
-  while (plan.length < bars - 1 && body.length) plan.push(body.shift());
-  plan.push({ p: "x.......", part: "end" });
-  // a repeated bar keeps its columns (unless that would start on the column just played)
-  var prev = -1, tiles = [];
-  plan.forEach(function (b, bi) {
-    var ch = prog[bi % 4], root = chordRoot(key, ch), xs = [];
-    for (var s = 0; s < 8; s++) if (b.p[s] === "x") xs.push(s);
-    var cols = b.cols && b.cols.length && b.cols[0] !== prev ? b.cols : null;
-    if (!cols) {
-      cols = [];
-      var last = prev;
-      xs.forEach(function () {
-        var c = Math.floor(r() * (last < 0 ? 4 : 3));
-        if (last >= 0 && c >= last) c++;               // never the same column twice running
-        cols.push(c); last = c;
-      });
-      b.cols = cols;
-    }
-    xs.forEach(function (s, i) {
-      var tone = [0, ch[1] === "m" ? 3 : 4, 7, 12][cols[i]];
-      tiles.push({ col: cols[i], midi: root + 12 + tone, row: bi * 8 + s });
-    });
-    if (cols.length) prev = cols[cols.length - 1];
-  });
-  return { tiles: tiles, plan: plan, prog: prog, key: key, bpm: L.bpm, rate: L.bpm / 60 * 2 };
-}
-
-// the backing track: scheduled a little ahead on the audio clock
-var NOISE = null;
-function noise() {
-  if (!NOISE) {
-    NOISE = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
-    var d = NOISE.getChannelData(0);
-    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  }
-  var s = actx.createBufferSource(); s.buffer = NOISE; return s;
-}
-function env(g, t, peak, a, d) {
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(peak, t + a);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
-}
-function kick(t, to) {
-  var o = actx.createOscillator(), g = actx.createGain();
-  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-  env(g, t, 0.9, 0.002, 0.26); o.connect(g); g.connect(to); o.start(t); o.stop(t + 0.3);
-}
-function hiss(t, to, type, freq, peak, d) {
-  var s = noise(), f = actx.createBiquadFilter(), g = actx.createGain();
-  f.type = type; f.frequency.value = freq; f.Q.value = 0.8;
-  env(g, t, peak, 0.002, d); s.connect(f); f.connect(g); g.connect(to); s.start(t); s.stop(t + d + 0.05);
-}
-function synth(t, to, m, type, cut, peak, a, d) {
-  var f = actx.createBiquadFilter(), g = actx.createGain();
-  f.type = "lowpass"; f.frequency.value = cut;
-  env(g, t, peak, a, d); f.connect(g); g.connect(to);
-  [-6, 6].forEach(function (cents) {
-    var o = actx.createOscillator();
-    o.type = type; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12); o.detune.value = cents;
-    o.connect(f); o.start(t); o.stop(t + a + d + 0.05);
-  });
-}
-// a tapped tile in the campaign: a bright pluck in the chord of the bar
-function pluck(m) {
-  if (!sound()) return;
-  try {
-    if (!bus) newBus();
-    var t = actx.currentTime, f = actx.createBiquadFilter(), g = actx.createGain();
-    f.type = "lowpass"; f.Q.value = 4;
-    f.frequency.setValueAtTime(5200, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.28);
-    env(g, t, 0.26, 0.003, 0.42); f.connect(g); g.connect(bus);
-    [-8, 8].forEach(function (cents) {
-      var o = actx.createOscillator();
-      o.type = "sawtooth"; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12); o.detune.value = cents;
-      o.connect(f); o.start(t); o.stop(t + 0.48);
-    });
-  } catch (e) {}
-}
-var beat = null;   // { a0, chart, next, timer }
-// newer iPhones: let the beat play even with the ring/silent switch on silent (it is the game's
-// music, like a video's). Put back when the level stops, so other apps' audio isn't held up
-function session(type) { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) {} }
-function beatStart(chart, a0) {
-  beatStop();
-  session("playback");
-  beat = { a0: a0, chart: chart, next: 0, last: chart.plan.length * 8 };
-  var slot = 60 / chart.bpm / 2;
-  function pump() {
-    if (!beat || !bus) return;
-    var to = bus, ahead = actx.currentTime + 0.15;
-    while (beat.next < beat.last && beat.a0 + beat.next * slot < ahead) {
-      var s = beat.next++, t = Math.max(actx.currentTime, beat.a0 + s * slot);
-      var bi = Math.floor(s / 8), pos = s % 8, part = chart.plan[bi].part;
-      var ch = chart.prog[bi % 4], root = chordRoot(chart.key, ch);
-      try {
-        if (part === "end") {
-          if (pos === 0) { kick(t, to); hiss(t, to, "highpass", 4000, 0.3, 1.6); }
-          continue;
-        }
-        if (pos % 2 === 0 && (part !== "break" || pos % 4 === 0)) kick(t, to);
-        if (part !== "intro" && (pos === 2 || pos === 6)) hiss(t, to, "bandpass", 1500, 0.35, 0.14);
-        if (pos % 2 === 1) hiss(t, to, "highpass", 7500, part === "break" ? 0.09 : 0.14, 0.04);
-        if (part === "drop" && pos % 2 === 1) synth(t, to, root - 12, "sawtooth", 520, 0.2, 0.01, slot * 0.8);
-        if (pos === 0 && part !== "intro") {
-          var third = ch[1] === "m" ? 3 : 4;
-          [0, third, 7].forEach(function (i) { synth(t, to, root + i, "sawtooth", 1100, 0.035, 0.25, slot * 7); });
-        }
-      } catch (e) {}
-    }
-    if (beat.next >= beat.last) beatStop();
-  }
-  pump();
-  beat.timer = setInterval(pump, 25);
-}
-function beatStop() { if (beat) { clearInterval(beat.timer); beat = null; session("auto"); } }
-
-// progress: how many levels are cleared (this browser only)
-function cleared() { try { return Math.max(0, Math.min(LEVELS.length, +localStorage.getItem("sortafun-piano-camp") || 0)); } catch (e) { return 0; } }
-function setCleared(n) { try { localStorage.setItem("sortafun-piano-camp", String(n)); } catch (e) {} }
-
-/* ------------------------------------------------------------------ *
  * the board
  * ------------------------------------------------------------------ */
 var cv = document.getElementById("board");
@@ -477,7 +320,7 @@ var tuneEl = document.getElementById("tune");
 var W, H, RH, DPR;                 // css size, row height (4 rows on screen)
 var mode = "endless";
 var tiles, hits, scroll, target, phase, speed, t0, lastT, bad, order, armT;
-var level = 0, chart = null, won = false;   // campaign: the level being played, its chart, cleared it?
+var level = 0, won = false;        // campaign: the level being played, cleared it?
 var pillEl = again.querySelector(".pill"), grid = document.getElementById("lvgrid");
 var lastHit = 0, held = null;      // when the last tile went down; a tap that came in a hair early
 var rings = [], lane = [0, 0, 0, 0];
@@ -492,16 +335,18 @@ function boardKey() { return mode === "daily" ? "pianoday" : mode === "camp" ? "
 
 function size() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
+  var vid = mode === "camp" && level ? YTH : 0;   // the campaign's video strip above the board
   if (full()) {
     var vw = window.innerWidth, vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    H = Math.round(vh);
-    W = Math.round(Math.min(vw, H * 0.62));      // a phone held upright uses the whole width
+    H = Math.round(vh) - vid;
+    W = Math.round(Math.min(vw, H * (vid ? 0.75 : 0.62)));      // a phone held upright uses the whole width
     cv.style.width = W + "px";
     stage.style.setProperty("--bw", W + "px");
   } else {
     cv.style.width = "";
     W = cv.clientWidth || 380;
-    H = Math.round(Math.min(W * 1.55, Math.max(320, window.innerHeight * 0.68)));
+    H = vid ? Math.round(Math.min(W * 1.35, Math.max(300, window.innerHeight * 0.6)))
+      : Math.round(Math.min(W * 1.55, Math.max(320, window.innerHeight * 0.68)));
   }
   cv.style.height = H + "px";
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
@@ -531,22 +376,19 @@ function reset() {
   speed = 2.4;
   if (bus) hush();
   hushed = false;
-  beatStop();
   won = false;
+  clearTimeout(armT);
+  again.classList.remove("show", "armed");
+  stage.classList.remove("running");
   stage.classList.toggle("camp", mode === "camp");
-  stage.classList.toggle("picking", mode === "camp" && !level);
-  if (mode === "camp") {
-    if (!level) {
-      phase = "pick"; tiles = [];
-      buildLevels();
-      tuneEl.textContent = "ten levels, each faster than the last. clear one to unlock the next";
-    } else {
-      var L = LEVELS[level - 1];
-      chart = levelChart(level);
-      tiles = chart.tiles;
-      tuneEl.textContent = "level " + level + ": " + L.song + " (" + L.by + "), " + L.bpm + " bpm, " + tiles.length + " notes";
-    }
-  } else if (mode === "daily") {
+  pillEl.textContent = "play again";
+  statusEl.textContent = "";
+  lbEl.innerHTML = "";
+  if (mode === "camp") return campReset();
+  stage.classList.remove("picking");
+  creditEl.textContent = ""; recEl.hidden = true;
+  ytPause();
+  if (mode === "daily") {
     tiles = songTiles(DAILY).map(function (t, i) { t.row = i; return t; });
     tuneEl.textContent = "today's song: " + DAILY.name + " (" + tiles.length + " notes)";
   } else {
@@ -554,42 +396,17 @@ function reset() {
     more();
     tuneEl.textContent = "a new tune after every song. it keeps getting faster";
   }
-  clearTimeout(armT);
-  again.classList.remove("show", "armed");
-  stage.classList.remove("running");
-  big.textContent = phase === "pick" ? "pick a level" : "tap the start tile";
-  pillEl.textContent = "play again";
-  statusEl.textContent = "";
-  lbEl.innerHTML = "";
-  draw();
-  // phones: bring the whole board on screen (the start tile is at the bottom)
+  big.textContent = "tap the start tile";
+  size();
+  intoView();
+}
+// phones: bring the whole board (and the campaign's video) on screen
+function intoView() {
   if (!full() && W && window.matchMedia && matchMedia("(pointer: coarse)").matches) {
     var r = stage.getBoundingClientRect();
-    if (r.bottom > window.innerHeight - 8) window.scrollBy(0, r.bottom - window.innerHeight + 12);
+    if (r.bottom > window.innerHeight - 8) window.scrollBy(0, Math.min(r.top - 4, r.bottom - window.innerHeight + 12));
   }
 }
-
-// the campaign's level cards: cleared ones get a tick, the next one glows, the rest are locked
-function buildLevels() {
-  var done = cleared();
-  grid.innerHTML = "";
-  LEVELS.forEach(function (L, i) {
-    var n = i + 1, b = document.createElement("button");
-    b.type = "button";
-    b.className = "lv" + (n <= done ? " won" : n === done + 1 ? " next" : "");
-    b.disabled = n > done + 1;
-    b.innerHTML = "<b><span></span><i></i></b><span class=song data-noxlate></span><span class=by></span>";   // (song titles stay as they are in chinese mode)
-    b.querySelector("b span").textContent = zh() ? "\u7B2C " + n + " \u5173" : "level " + n;
-    b.querySelector("b i").textContent = n <= done ? "\u2714" : n > done + 1 ? "\uD83D\uDD12" : "\u25B6";
-    b.querySelector(".song").textContent = L.song;
-    b.querySelector(".by").textContent = L.by + " \u00B7 " + L.bpm + " bpm";
-    b.addEventListener("click", function () { if (!b.disabled) { level = n; reset(); } });
-    grid.appendChild(b);
-  });
-}
-document.getElementById("lv").addEventListener("click", function () {
-  if (phase !== "run" && phase !== "camp-run") { level = 0; reset(); }
-});
 
 // screen y of the top of tile i
 function rowY(i) { return H - RH * (tiles[i].row + 1) + scroll; }
@@ -598,7 +415,7 @@ function rowY(i) { return H - RH * (tiles[i].row + 1) + scroll; }
  * drawing. The tiles are painted once per board size into little
  * canvases and stamped, so a frame is cheap even on an old phone
  * ------------------------------------------------------------------ */
-var SPR = {}, BG = null, LANE = null, PULSE = null;
+var SPR = {}, BG = null, LANE = null;
 function rrect(c, x, y, w, h, r) {
   c.beginPath();
   c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -631,12 +448,11 @@ function sprites() {
   BG.addColorStop(0, "#0b0920"); BG.addColorStop(1, "#04030c");
   LANE = ctx.createLinearGradient(0, H, 0, H * 0.35);
   LANE.addColorStop(0, "rgba(255,80,180,.42)"); LANE.addColorStop(1, "rgba(255,80,180,0)");
-  PULSE = ctx.createLinearGradient(0, H, 0, H - RH * 0.9);
-  PULSE.addColorStop(0, "rgba(120,220,255,.55)"); PULSE.addColorStop(1, "rgba(120,220,255,0)");
 }
 
 function draw() {
   if (!W || !tiles || !SPR.tile) return;
+  if (mode === "camp") return drawCamp();
   var now = performance.now();
   var cw = W / 4;
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
@@ -645,12 +461,6 @@ function draw() {
   for (var c = 0; c < 4; c++) {
     var a = 1 - (now - lane[c]) / 260;
     if (a > 0) { ctx.globalAlpha = a; ctx.fillRect(c * cw, 0, cw, H); }
-  }
-  // campaign: the floor of the board thumps on every beat
-  if (phase === "camp-run" && now > t0) {
-    var f = ((now - t0) / 1000 * chart.bpm / 60) % 1;
-    ctx.globalAlpha = (1 - f) * (1 - f);
-    ctx.fillStyle = PULSE; ctx.fillRect(0, H - RH * 0.9, W, RH * 0.9);
   }
   ctx.globalAlpha = 1;
   ctx.fillStyle = "rgba(255,255,255,.13)";
@@ -689,7 +499,7 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(cx - m, cy - m); ctx.lineTo(cx + m, cy + m); ctx.moveTo(cx + m, cy - m); ctx.lineTo(cx - m, cy + m); ctx.stroke();
   }
   // today's song: how far through it you are
-  if ((mode === "daily" || mode === "camp") && tiles.length) {
+  if (mode === "daily") {
     ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(0, 0, W, 5);
     ctx.fillStyle = "#ffd43b"; ctx.fillRect(0, 0, W * hits / tiles.length, 5);
   }
@@ -717,14 +527,7 @@ function frame(now) {
     }
   } else if (phase === "daily-run") {
     scroll += (target - scroll) * Math.min(1, dt * 22);
-  } else if (phase === "camp-run") {
-    // on the clock, not added up frame by frame, so a dropped frame never puts the tiles off the beat
-    scroll = Math.max(0, (now - t0) / 1000) * chart.rate * RH;
-    if (rowY(hits) >= H) {
-      bad = { row: tiles[hits].row, col: tiles[hits].col };
-      over("one got away");
-    }
-  }
+  } else if (mode === "camp") campFrame();
   draw();
   requestAnimationFrame(frame);
 }
@@ -745,6 +548,7 @@ function inTile(i, y) {
   return y >= top - h * 0.15 && y <= top + h * 1.15;
 }
 function press(col, x, y) {
+  if (mode === "camp") return campPress(col);
   if (phase === "over" || phase === "pick" || !tiles.length) return;
   var t = tiles[hits], now = performance.now();
   // a finger a hair over the line into the right column
@@ -756,16 +560,9 @@ function press(col, x, y) {
     if (col !== t.col) return;           // only the start tile starts it
     t0 = now;
     newBus();
-    phase = mode === "daily" ? "daily-run" : mode === "camp" ? "camp-run" : "run";
-    if (mode === "camp" && sound()) {
-      // the beat starts a hair from now; the tiles wait for it (and for the speaker's delay)
-      if (!bus) newBus();
-      var lat = actx.outputLatency || actx.baseLatency || 0;
-      beatStart(chart, actx.currentTime + 0.05);
-      t0 = now + 50 + lat * 1000;
-    }
+    phase = mode === "daily" ? "daily-run" : "run";
     stage.classList.add("running");
-    big.textContent = mode === "daily" ? "go go go" : mode === "camp" ? "on the beat" : "keep up";
+    big.textContent = mode === "daily" ? "go go go" : "keep up";
   }
   if (rowY(hits) + RH <= 0) return;      // not on screen at all yet
   if (col === t.col) {
@@ -789,15 +586,13 @@ function press(col, x, y) {
 
 function hit(col) {
   var t = tiles[hits];
-  if (mode === "camp") pluck(t.midi); else note(t.midi);
+  note(t.midi);
   lastHit = lane[col] = performance.now();
   rings.push({ row: t.row, col: col, t: lastHit });
   hits++;
   if (mode === "daily") {
     target = hits * RH;
     if (hits === tiles.length) return done();
-  } else if (mode === "camp") {
-    if (hits === tiles.length) return clearLevel();
   } else {
     speed = Math.min(8, 2.4 + hits * 0.03);
     more();
@@ -816,7 +611,7 @@ function offerAgain(res) {
 }
 function playAgain() {
   if (!again.classList.contains("armed")) return;
-  if (mode === "camp" && won && level < LEVELS.length) level++;
+  if (mode === "camp") return campAgain();
   reset();
 }
 again.addEventListener("click", playAgain);
@@ -829,12 +624,6 @@ function over(why) {
   scroll = (bad.row - 1) * RH;
   rings = [];
   lbEl.innerHTML = "";
-  beatStop();
-  if (mode === "camp") {
-    big.textContent = why + ". " + hits + " of " + tiles.length + " notes";
-    offerAgain(big.textContent);
-    return;
-  }
   if (mode === "daily") {
     big.textContent = why + ". " + hits + " of " + tiles.length + " notes";
     statusEl.textContent = "finish the whole song to get on today's board.";
@@ -858,16 +647,440 @@ function done() {
   else lbEl.textContent = "leaderboard offline";
 }
 
-// a campaign level cleared: the next one unlocks (the beat plays out its last bar)
-function clearLevel() {
-  endMs = performance.now() - t0;
-  if (level > cleared()) setCleared(level);
-  won = true;
-  var last = level === LEVELS.length;
-  big.textContent = last ? "level " + level + " cleared. that's the whole campaign!" : "level " + level + " cleared!";
+/* ------------------------------------------------------------------ *
+ * campaign: real NCS (NoCopyrightSounds) tracks, played by YouTube's own
+ * embedded player above the board (their free licence covers videos and
+ * streams, not games, so nothing is downloaded or hosted here). Notes fall
+ * to a line and each tap is judged on timing, Tap Tap Revenge style. The
+ * notes are tapped in by hand in record mode (piano.html?record) and live
+ * in piano-charts.js. Not on any leaderboard: the prize is the next level
+ * ------------------------------------------------------------------ */
+var LEVELS = [
+  { song: "Feel Good", by: "Syn Cole", vid: "q1ULJ92aldE" },
+  { song: "Sky High", by: "Elektronomia", vid: "TW9d8vYrVFQ" },
+  { song: "Heroes Tonight (feat. Johnning)", by: "Janji", vid: "3nQNiWdeH2Q" },
+  { song: "Shine", by: "Spektrem", vid: "n4tK7LYFxI0" },
+  { song: "On & On (feat. Daniel Levi)", by: "Cartoon", vid: "K4DyBUG242c" },
+  { song: "Symbolism", by: "Electro-Light", vid: "__CRWE-L45k" },
+  { song: "Mortals (feat. Laura Brehm)", by: "Warriyo", vid: "yJg-Y5byMMw" },
+  { song: "Invincible", by: "DEAF KEV", vid: "J2X5mJ3HDYE" },
+  { song: "Blank", by: "Disfigure", vid: "p7ZsBPK656s" },
+  { song: "My Heart", by: "Different Heaven & EH!DE", vid: "jK2aIUmmdP4" }
+];
+var RECORD = /[?&]record\b/.test(location.search);
+var COLORS = ["#ff4fb0", "#3fd5ff", "#9dff57", "#ffd43b"];
+var APPROACH = 1.25;                                    // seconds from the top of the board to the line
+var WIN = [[0.05, "perfect", 300, "#7dffb0"], [0.1, "great", 200, "#3fd5ff"], [0.15, "good", 100, "#ffd43b"]];
+var YTH = 200;                                          // the video strip (YouTube asks for at least 200 x 200)
+var ytbox = document.getElementById("ytbox"), ytmsg = document.getElementById("ytmsg");
+var creditEl = document.getElementById("credit"), recEl = document.getElementById("rec");
+var cs = null;                                          // this round: notes, score, combo, health
+var recPass = null, recRate = 1, recUndo = [];
+
+function store(k, v) {
+  try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; }
+}
+function cleared() { return Math.max(0, Math.min(LEVELS.length, +store("sortafun-piano-ncs") || 0)); }
+function setCleared(n) { store("sortafun-piano-ncs", n); }
+function calib() { return +store("sortafun-piano-lag") || 0; }     // ms, this device's audio delay
+function draftKey(L) { return "sortafun-piano-draft-" + L.vid; }
+// a level's notes: in record mode the draft on this machine wins, otherwise piano-charts.js
+function chartFor(L) {
+  var d = RECORD && store(draftKey(L));
+  if (d && d.notes && d.notes.length) return d;
+  var c = (window.PIANO_CHARTS || {})[L.vid];
+  return c && c.notes && c.notes.length ? c : null;
+}
+
+/* ---- YouTube's player (or a stand-in clock in tests) ---- */
+var yt = { p: null, ready: false, vid: null, fake: false, failT: 0 };
+function ytApi(cb) {
+  if (window.YT && YT.Player) return cb();
+  var prev = window.onYouTubeIframeAPIReady;           // china.js may be waiting on the same script
+  window.onYouTubeIframeAPIReady = function () { if (prev) { try { prev(); } catch (e) {} } cb(); };
+  if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+    var s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    s.onerror = function () { ytFail(); };
+    document.head.appendChild(s);
+  }
+}
+function ytFail(why) {
+  clearTimeout(yt.failT);
+  ytmsg.textContent = why || "YouTube didn't load. It may be blocked on this network (work and school wifi often block it).";
+  ytmsg.classList.add("on");
+  if (mode === "camp" && level) big.textContent = "no video, no music. try another network";
+}
+function ytLoad(vid) {
+  ytmsg.classList.remove("on");
+  if (yt.p && yt.ready) {
+    if (yt.vid !== vid) { yt.vid = vid; yt.p.cueVideoById(vid); } else { yt.p.pauseVideo(); yt.p.seekTo(0, true); }
+    if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(1);
+    return campReady();
+  }
+  yt.vid = vid;
+  if (yt.p) return;                                     // still loading; it picks up yt.vid when ready
+  if (yt.fake) { yt.p = fakePlayer(); yt.ready = true; return campReady(); }
+  clearTimeout(yt.failT);
+  yt.failT = setTimeout(function () { if (!yt.ready) ytFail(); }, 12000);
+  ytApi(function () {
+    yt.p = new YT.Player("yt", {
+      width: "100%", height: "100%", videoId: yt.vid,
+      playerVars: { playsinline: 1, controls: 0, rel: 0, disablekb: 1, iv_load_policy: 3, fs: 0 },
+      events: {
+        onReady: function () {
+          yt.ready = true; clearTimeout(yt.failT);
+          if (yt.p.getVideoData && yt.p.getVideoData().video_id !== yt.vid) yt.p.cueVideoById(yt.vid);
+          campReady();
+        },
+        onStateChange: function (e) { ytState(e.data); },
+        onError: function () { ytFail("this video won't play here. try the next level, or another network."); }
+      }
+    });
+  });
+}
+function ytTime() { return yt.p && yt.ready ? yt.p.getCurrentTime() || 0 : 0; }
+function ytPlay() { if (yt.p && yt.ready) yt.p.playVideo(); }
+function ytPause() { if (yt.p && yt.ready && yt.p.pauseVideo) yt.p.pauseVideo(); }
+// tests: a clock that behaves like the player
+function fakePlayer() {
+  var f = { t: 0, at: 0, on: false, rate: 1, paused: 0 };
+  f.getCurrentTime = function () { return f.on ? f.t + (performance.now() - f.at) / 1000 * f.rate : f.t; };
+  f.playVideo = function () { if (f.on) return; f.at = performance.now(); f.on = true; setTimeout(function () { ytState(1); }, 20); };
+  f.pauseVideo = function () { if (!f.on) return; f.t = f.getCurrentTime(); f.on = false; f.paused++; ytState(2); };
+  f.seekTo = function (s) { f.t = s; f.at = performance.now(); };
+  f.cueVideoById = function () { f.t = 0; f.on = false; };
+  f.setPlaybackRate = function (r) { f.t = f.getCurrentTime(); f.at = performance.now(); f.rate = r; };
+  return f;
+}
+// panic key (0): the music stops with everything else
+new MutationObserver(function () { if (document.documentElement.classList.contains("panic")) ytPause(); })
+  .observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+/* ---- a round ---- */
+function newRound(ch) {
+  var off = (ch.offset || 0) / 1000;
+  var notes = ch.notes.map(function (n) { return { t: n[0] / 1000 + off, lane: n[1], j: null }; })
+    .sort(function (a, b) { return a.t - b.t; });
+  return { notes: notes, i0: 0, score: 0, combo: 0, best: 0, hp: 100, n: { perfect: 0, great: 0, good: 0, miss: 0 }, fx: [], judge: null };
+}
+function songT() { return ytTime() - calib() / 1000; }
+
+function campReset() {
+  cs = null; recPass = null;
+  stage.classList.toggle("picking", !level);
+  tiles = [];
+  if (!level) {
+    phase = "pick";
+    ytPause();
+    buildLevels();
+    tuneEl.textContent = "ten NCS tracks. clear one to unlock the next";
+    big.textContent = "pick a level";
+    creditEl.textContent = "";
+    recEl.hidden = true;
+    size();
+    return;
+  }
+  var L = LEVELS[level - 1], ch = chartFor(L);
+  if (ch) cs = newRound(ch);
+  phase = "load";
+  tuneEl.textContent = "level " + level + ": " + L.by + " - " + L.song + (ch ? ", " + ch.notes.length + " notes" : ", no notes yet");
+  credit(L);
+  recEl.hidden = !RECORD;
+  recInfo();
+  size();
+  intoView();
+  big.textContent = "loading the song...";
+  ytLoad(L.vid);
+}
+// the video is cued: waiting for play
+function campReady() {
+  if (mode !== "camp" || !level || phase !== "load") return;
+  phase = "ready";
+  big.textContent = RECORD ? "record mode: hit record, then tap along" :
+    cs ? (matchMedia("(hover: none)").matches ? "tap play on the video to start" : "press space or click the board to start") :
+    "no notes for this song yet";
+}
+function campStart() {
+  if (phase !== "ready" || !(cs || recPass)) return;
+  ytPlay();
+}
+// what YouTube says it's doing. The round starts the moment the song does
+function ytState(s) {
+  if (mode !== "camp" || !level) return;
+  if (s === 1) {
+    if (phase === "ready" && recPass) { phase = "rec"; stage.classList.add("running"); big.textContent = "recording. tap along"; }
+    else if (phase === "ready" && cs && ytTime() < 2) { phase = "camp-run"; stage.classList.add("running"); big.textContent = "go!"; }
+  } else if (s === 0 && phase === "camp-run") finishRound();
+  else if (s === 0 && phase === "rec") recStop();
+}
+
+function judge(nt, name, pts, color) {
+  var now = performance.now();
+  nt.j = name;
+  cs.n[name]++;
+  if (name === "miss") {
+    cs.combo = 0; cs.hp = Math.max(0, cs.hp - 7);
+  } else {
+    cs.combo++; cs.best = Math.max(cs.best, cs.combo);
+    cs.score += pts * Math.min(4, 1 + Math.floor(cs.combo / 10));
+    cs.hp = Math.min(100, cs.hp + (name === "perfect" ? 2 : 1));
+    cs.fx.push({ lane: nt.lane, t: now });
+  }
+  cs.judge = { text: name, color: color, t: now };
+}
+function campFrame() {
+  if (phase !== "camp-run" || !cs) return;
+  var T = songT(), ns = cs.notes;
+  while (cs.i0 < ns.length && (ns[cs.i0].j || ns[cs.i0].t + WIN[2][0] < T)) {
+    if (!ns[cs.i0].j) judge(ns[cs.i0], "miss", 0, "#ff4d6d");
+    cs.i0++;
+  }
+  if (cs.hp <= 0) return failRound();
+  if (cs.i0 >= ns.length && T > ns[ns.length - 1].t + 1) finishRound();
+}
+function campPress(col) {
+  lane[col] = performance.now();
+  if (phase === "rec") { recPass.push([Math.round(ytTime() * 1000), col]); return; }
+  if (phase === "ready") return campStart();
+  if (phase !== "camp-run" || !cs) return;
+  var T = songT(), ns = cs.notes, hitN = null;
+  for (var i = cs.i0; i < ns.length && ns[i].t <= T + WIN[2][0]; i++) {
+    var n = ns[i];
+    if (n.j || n.lane !== col || Math.abs(n.t - T) > WIN[2][0]) continue;
+    if (!hitN || Math.abs(n.t - T) < Math.abs(hitN.t - T)) hitN = n;
+  }
+  if (!hitN) { cs.combo = 0; return; }                   // a tap on nothing breaks the combo (no mashing)
+  var d = Math.abs(hitN.t - T);
+  for (var w = 0; w < WIN.length; w++) if (d <= WIN[w][0]) return judge(hitN, WIN[w][1], WIN[w][2], WIN[w][3]);
+}
+function grade(acc) { return acc >= 0.95 ? "S" : acc >= 0.9 ? "A" : acc >= 0.8 ? "B" : acc >= 0.7 ? "C" : "D"; }
+function accuracy() {
+  var n = cs.n, tot = n.perfect + n.great + n.good + n.miss;
+  return tot ? (n.perfect + n.great * 0.7 + n.good * 0.4) / tot : 0;
+}
+// out of health: the song stops dead, no sound
+function failRound() {
+  ytPause();
+  big.textContent = "out of health. " + Math.round(accuracy() * 100) + "% so far";
   offerAgain(big.textContent);
-  pillEl.textContent = last ? "play again" : "next level";
-  setTimeout(function () { if (won && window.SortafunSFX) SortafunSFX.result("win"); }, 700);
+}
+function finishRound() {
+  if (phase !== "camp-run") return;
+  var acc = accuracy(), g = grade(acc), L = LEVELS[level - 1];
+  won = true;
+  if (level > cleared()) setCleared(level);
+  var best = store("sortafun-piano-best-" + L.vid);
+  if (!best || cs.score > best.score) store("sortafun-piano-best-" + L.vid, { score: cs.score, grade: g, acc: Math.round(acc * 100) });
+  big.textContent = "level " + level + " cleared! " + g + ", " + Math.round(acc * 100) + "%, " + cs.score + " points, best combo " + cs.best;
+  offerAgain(big.textContent);
+  pillEl.textContent = level < LEVELS.length ? "next level" : "play again";
+}
+function campAgain() {
+  if (won && level < LEVELS.length) level++;
+  reset();
+}
+
+// the campaign's level cards: cleared ones get a tick and their best grade, the next one glows, the rest are locked
+function buildLevels() {
+  var done = cleared();
+  grid.innerHTML = "";
+  LEVELS.forEach(function (L, i) {
+    var n = i + 1, b = document.createElement("button"), open = RECORD || n <= done + 1;
+    var best = store("sortafun-piano-best-" + L.vid), has = !!chartFor(L);
+    b.type = "button";
+    b.className = "lv" + (n <= done ? " won" : n === done + 1 ? " next" : "");
+    b.disabled = !open;
+    b.innerHTML = "<b><span></span><i></i></b><span class=song data-noxlate></span><span class=by data-noxlate></span>";
+    b.querySelector("b span").textContent = zh() ? "第 " + n + " 关" : "level " + n;
+    b.querySelector("b i").textContent = !open ? "🔒" : best ? best.grade : n <= done ? "✔" : "▶";
+    b.querySelector(".song").textContent = L.song;
+    b.querySelector(".by").textContent = has ? L.by : L.by + " · no notes yet";
+    b.addEventListener("click", function () { if (!b.disabled) { level = n; reset(); } });
+    grid.appendChild(b);
+  });
+}
+document.getElementById("lv").addEventListener("click", function () {
+  if (phase !== "camp-run" && phase !== "rec") { level = 0; reset(); }
+});
+// NCS asks for a credit with the track, artist and a link to their upload
+function credit(L) {
+  creditEl.innerHTML = "";
+  var a = document.createElement("a"), b = document.createElement("a");
+  a.href = "https://youtu.be/" + L.vid; a.target = "_blank"; a.rel = "noopener";
+  a.textContent = L.by + " - " + L.song + " [NCS Release]"; a.setAttribute("data-noxlate", "");
+  b.href = "https://ncs.io/"; b.target = "_blank"; b.rel = "noopener"; b.textContent = "NoCopyrightSounds";
+  creditEl.append("song: ", a, ". music provided by ", b, ".");
+}
+
+/* ---- drawing the campaign ---- */
+function drawCamp() {
+  var now = performance.now(), cw = W / 4, HY = Math.round(H * 0.86), NH = Math.max(16, Math.round(H * 0.045));
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  for (var c = 0; c < 4; c++) {
+    var a = 1 - (now - lane[c]) / 220;
+    ctx.globalAlpha = 0.07 + Math.max(0, a) * 0.3;
+    ctx.fillStyle = COLORS[c]; ctx.fillRect(c * cw, 0, cw, H);
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(255,255,255,.12)";
+  for (c = 1; c < 4; c++) ctx.fillRect(Math.round(c * cw), 0, 1, H);
+  // the line and the four pads
+  ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.fillRect(0, HY - 1, W, 2);
+  for (c = 0; c < 4; c++) {
+    ctx.lineWidth = 3; ctx.strokeStyle = COLORS[c];
+    rrect(ctx, c * cw + 6, HY - NH / 2 - 4, cw - 12, NH + 8, 10); ctx.stroke();
+  }
+  var T = phase === "camp-run" || phase === "over" || phase === "rec" || phase === "ready" ? songT() : 0;
+  // falling notes
+  if (cs) {
+    for (var i = Math.max(0, cs.i0 - 4); i < cs.notes.length; i++) {
+      var n = cs.notes[i];
+      var y = HY - (n.t - T) / APPROACH * HY;
+      if (y < -NH) break;
+      if (n.j || y > H + NH) continue;
+      var x = n.lane * cw + 8;
+      ctx.fillStyle = COLORS[n.lane];
+      rrect(ctx, x, y - NH / 2, cw - 16, NH, NH / 2); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      rrect(ctx, x + 6, y - NH / 2 + 3, cw - 28, Math.max(3, NH * 0.22), 3); ctx.fill();
+    }
+    // hits burst from the pad
+    cs.fx = cs.fx.filter(function (f) {
+      var k = (now - f.t) / 220;
+      if (k >= 1) return false;
+      ctx.globalAlpha = 1 - k; ctx.strokeStyle = COLORS[f.lane]; ctx.lineWidth = 4;
+      var g = k * cw * 0.25;
+      rrect(ctx, f.lane * cw + 6 - g, HY - NH / 2 - 4 - g, cw - 12 + 2 * g, NH + 8 + 2 * g, 12); ctx.stroke();
+      ctx.globalAlpha = 1;
+      return true;
+    });
+  }
+  // recording: this pass's taps fall away below the line
+  if (recPass) {
+    recPass.forEach(function (p) {
+      var y = HY - (p[0] / 1000 - ytTime()) / APPROACH * HY;
+      if (y < H + NH && y > -NH) { ctx.globalAlpha = 0.7; ctx.fillStyle = COLORS[p[1]]; rrect(ctx, p[1] * cw + 8, y - NH / 2, cw - 16, NH, NH / 2); ctx.fill(); ctx.globalAlpha = 1; }
+    });
+    if (phase === "rec") {
+      ctx.fillStyle = "#ff4d6d"; ctx.font = "700 14px Verdana, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText("● REC  " + recPass.length + " taps  " + recRate + "x", 10, 12);
+    }
+  }
+  if (cs && phase !== "rec") {
+    // health and how far through the song
+    var last = cs.notes.length ? cs.notes[cs.notes.length - 1].t : 1;
+    ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(0, 0, W, 6);
+    ctx.fillStyle = cs.hp > 50 ? "#7dffb0" : cs.hp > 25 ? "#ffd43b" : "#ff4d6d"; ctx.fillRect(0, 0, W * cs.hp / 100, 6);
+    ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.fillRect(0, 6, W * Math.max(0, Math.min(1, T / last)), 2);
+    // score, multiplier, combo
+    var mult = Math.min(4, 1 + Math.floor(cs.combo / 10));
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.lineJoin = "round";
+    ctx.font = "400 " + Math.round(W * 0.1) + "px Lilita One, Arial Black, sans-serif";
+    ctx.lineWidth = 6; ctx.strokeStyle = "#ff2d95"; ctx.strokeText(String(cs.score), W / 2, 16);
+    ctx.fillStyle = "#fff"; ctx.fillText(String(cs.score), W / 2, 16);
+    if (mult > 1) { ctx.font = "700 15px Verdana, sans-serif"; ctx.fillStyle = "#ffd43b"; ctx.fillText("x" + mult, W / 2, 16 + W * 0.11); }
+    if (cs.combo >= 5) {
+      ctx.font = "400 " + Math.round(W * 0.16) + "px Lilita One, Arial Black, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,.22)"; ctx.textBaseline = "middle";
+      ctx.fillText(String(cs.combo), W / 2, H * 0.42);
+      ctx.font = "700 13px Verdana, sans-serif"; ctx.fillText(zh() ? "连击" : "COMBO", W / 2, H * 0.42 + W * 0.1);
+    }
+    // the last judgement, just above the line
+    if (cs.judge && now - cs.judge.t < 450) {
+      var k = (now - cs.judge.t) / 450;
+      ctx.globalAlpha = 1 - k * k;
+      ctx.font = "400 " + Math.round(W * (0.085 + 0.02 * (1 - k))) + "px Lilita One, Arial Black, sans-serif";
+      ctx.textBaseline = "middle"; ctx.lineWidth = 5; ctx.strokeStyle = "#04030c";
+      var word = zh() ? { perfect: "完美", great: "很好", good: "不错", miss: "失误" }[cs.judge.text] : cs.judge.text.toUpperCase();
+      ctx.strokeText(word, W / 2, HY - H * 0.12); ctx.fillStyle = cs.judge.color; ctx.fillText(word, W / 2, HY - H * 0.12);
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (phase === "ready" || phase === "load") {
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "400 " + Math.round(W * 0.07) + "px Lilita One, Arial Black, sans-serif";
+    ctx.fillText(phase === "load" ? "…" : cs || RECORD ? "▲ " + (zh() ? "点视频开始" : "play the video") : (zh() ? "还没有音符" : "no notes yet"), W / 2, H * 0.4);
+  }
+}
+
+/* ---- record mode (piano.html?record): tap a song in, a pass at a time ---- */
+function recLevel() { return LEVELS[level - 1]; }
+function recDraft() { return store(draftKey(recLevel())) || { vid: recLevel().vid, offset: 0, notes: [], passes: [] }; }
+function recInfo() {
+  if (!RECORD || !level) return;
+  var d = recDraft();
+  document.getElementById("recinfo").textContent = d.notes.length + " notes in " + d.passes.length + " pass" + (d.passes.length === 1 ? "" : "es") + ", offset " + (d.offset || 0) + " ms";
+  Array.prototype.forEach.call(recEl.querySelectorAll("[data-rate]"), function (b) { b.setAttribute("aria-pressed", String(+b.dataset.rate === recRate)); });
+}
+function recSave(d) {
+  store(draftKey(recLevel()), d);
+  cs = d.notes.length ? newRound(d) : null;
+  recInfo();
+}
+function recStart() {
+  if (!level || !yt.ready || phase === "rec" || phase === "camp-run") return;
+  phase = "ready"; recPass = [];
+  yt.p.seekTo(0, true);
+  if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(recRate);
+  ytPlay();
+}
+// a finished pass joins the draft; the same lane twice within 60 ms is one note
+function recStop() {
+  if (!recPass) return;
+  ytPause();
+  var d = recDraft();
+  recUndo.push(JSON.stringify(d));
+  var all = d.notes.concat(recPass).sort(function (a, b) { return a[0] - b[0]; }), out = [];
+  all.forEach(function (n) {
+    for (var i = out.length - 1; i >= 0 && n[0] - out[i][0] < 60; i--) if (out[i][1] === n[1]) return;
+    out.push(n);
+  });
+  d.notes = out; d.passes.push({ rate: recRate, taps: recPass.length, at: new Date().toISOString() });
+  recPass = null; phase = "ready"; stage.classList.remove("running");
+  if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(1);
+  yt.p.seekTo(0, true);
+  recSave(d);
+  big.textContent = "pass saved. play it back to check, or record another pass";
+}
+function recFile() {
+  var L = recLevel(), d = recDraft();
+  d.song = L.song; d.by = L.by; d.made = new Date().toISOString();
+  return JSON.stringify(d);
+}
+if (RECORD) {
+  document.getElementById("recgo").addEventListener("click", recStart);
+  document.getElementById("recstop").addEventListener("click", function () {
+    if (recPass) return recStop();
+    if (phase === "camp-run") { ytPause(); reset(); }      // stop a play-back
+  });
+  Array.prototype.forEach.call(recEl.querySelectorAll("[data-rate]"), function (b) {
+    b.addEventListener("click", function () { recRate = +b.dataset.rate; recInfo(); });
+  });
+  document.getElementById("recplay").addEventListener("click", function () {
+    if (phase === "rec") return;
+    var d = recDraft(); if (!d.notes.length) return;
+    cs = newRound(d); phase = "ready"; yt.p.seekTo(0, true); if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(1); ytPlay();
+  });
+  document.getElementById("recundo").addEventListener("click", function () {
+    if (recUndo.length) recSave(JSON.parse(recUndo.pop()));
+  });
+  document.getElementById("recclear").addEventListener("click", function () {
+    if (confirm("throw away every note for this song?")) { recUndo.push(JSON.stringify(recDraft())); recSave({ vid: recLevel().vid, offset: 0, notes: [], passes: [] }); }
+  });
+  Array.prototype.forEach.call(recEl.querySelectorAll("[data-nudge]"), function (b) {
+    b.addEventListener("click", function () { var d = recDraft(); recUndo.push(JSON.stringify(d)); d.offset = (d.offset || 0) + +b.dataset.nudge; recSave(d); });
+  });
+  document.getElementById("recsave").addEventListener("click", function () {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([recFile()], { type: "application/json" }));
+    a.download = "piano-" + recLevel().vid + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  document.getElementById("reccopy").addEventListener("click", function () {
+    try { navigator.clipboard.writeText(recFile()); big.textContent = "copied"; } catch (e) {}
+  });
 }
 
 /* ------------------------------------------------------------------ *
@@ -918,6 +1131,7 @@ var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
 window.addEventListener("keydown", function (e) {
   if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   if (e.code in KEYS) { e.preventDefault(); if (!e.repeat) press(KEYS[e.code]); return; }
+  if ((e.code === "Space" || e.code === "Enter") && mode === "camp" && phase === "ready") { e.preventDefault(); campStart(); return; }
   if ((e.code === "Space" || e.code === "Enter") && phase === "over") {
     e.preventDefault();
     playAgain();
@@ -938,7 +1152,11 @@ window.addEventListener("resize", size);
 
 window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press,
   again: playAgain,
-  camp: { LEVELS: LEVELS, chart: levelChart, cleared: cleared, setCleared: setCleared, pick: function (n) { level = n; reset(); } },
+  camp: { LEVELS: LEVELS, cleared: cleared, setCleared: setCleared, pick: function (n) { level = n; reset(); },
+    fake: function () { yt.fake = true; }, start: campStart, time: songT, player: function () { return yt.p; },
+    state: function () { return cs && { score: cs.score, combo: cs.combo, best: cs.best, hp: cs.hp, n: cs.n, notes: cs.notes.length, i0: cs.i0,
+      next: cs.notes.filter(function (n) { return !n.j; }).slice(0, 6).map(function (n) { return [n.t, n.lane]; }) }; },
+    rec: function () { return { pass: recPass && recPass.length, draft: RECORD && level ? recDraft() : null }; } },
   full: function (on) { on ? enterFull() : leaveFull(); },
   // test hook: an empty spot on the board (0..1) in a column that isn't the next tile's
   spot: function () {
@@ -952,7 +1170,7 @@ window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: pre
     }
   },
   gain: function () { var b = bus || lastBus; return b ? b.gain.value : null; },
-  state: function () { return { mode: mode, phase: phase, level: level, won: won, picking: stage.classList.contains("picking"), beat: !!beat, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, next2: tiles[hits + 1] && tiles[hits + 1].col, nextY: tiles[hits] ? rowY(hits) / RH : null, prevY: hits ? rowY(hits - 1) / RH : null, next2Y: tiles[hits + 1] ? rowY(hits + 1) / RH : null, why: big.textContent, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
+  state: function () { return { mode: mode, phase: phase, level: level, won: won, picking: stage.classList.contains("picking"), hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, next2: tiles[hits + 1] && tiles[hits + 1].col, nextY: tiles[hits] ? rowY(hits) / RH : null, prevY: hits ? rowY(hits - 1) / RH : null, next2Y: tiles[hits + 1] ? rowY(hits + 1) / RH : null, why: big.textContent, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
 
 size();
 reset();

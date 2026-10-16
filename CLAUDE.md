@@ -1456,21 +1456,35 @@ trademark rule under SEO). One canvas, four columns, four rows on screen.
 - **Today's song** (key `pianoday`, low, ms): `SONGS[SG day % n]`, the board
   only moves when you tap; the clock runs from the first tap to the last
   note. Only a finished song is submitted.
-- **Campaign** (v0.14, key `pianocamp`, on NO leaderboard, so `keepBoard`
-  mounts nothing): `LEVELS`, ten levels named after big dance tracks at their
-  real tempo (Caleb approved the list 2026-10-16). The music is our own
-  WebAudio beat (`beatStart`: kick, clap, hats, offbeat bass, pads), never the
-  record: ripping/hosting the real tracks would get the repo DMCA'd. Song
-  titles go on the level cards and the tune line only, never in seo.py,
-  share text or What's New. `levelChart(n)` is seeded (same chart every
-  time): an eighth-note grid (`row` = eighth note), rhythm tiers in `RHYTHM`,
-  intro / two 4-bar phrases / break / phrases again / one last note, never
-  the same column twice running; tapped tiles play a pluck in the bar's chord.
-  Scroll comes from the clock (`(now - t0) * rate`), not summed frame time, so
-  it never drifts off the beat; `t0` is pushed back by the audio start offset
-  + `outputLatency`. Unlocks: localStorage `sortafun-piano-camp` (number
-  cleared). `navigator.audioSession.type = "playback"` while a level plays (so
-  the iPhone silent switch doesn't mute it; untested on a real phone).
+- **Campaign** (v0.15, key `pianocamp`, on NO leaderboard, so `keepBoard`
+  mounts nothing; its own code path: `campReset/campPress/campFrame/drawCamp`,
+  endless and daily untouched). Ten NCS (NoCopyrightSounds) tracks in `LEVELS`
+  (`vid` = their official YouTube upload), played by **YouTube's own embedded
+  player** in a 200px strip above the board (`#ytbox`). Not MP3s: NCS's free
+  licence covers videos/streams and their policy sends games to a commercial
+  licensing form, and ripping from YouTube breaks YouTube's terms. If Caleb
+  ever gets an NCS licence, use the official ncs.io downloads. YouTube's rules
+  (Required Minimum Functionality): player at least 200x200, **nothing drawn
+  over it** (the corner buttons move below it in the campaign; the level list
+  hides it). On iPhone the reliable start is the player's own play button;
+  space / a board tap call `playVideo()`. The round starts on PLAYING with the
+  time near 0, and notes run on `getCurrentTime()` (measured: updates every
+  frame, ~1 ms jitter), so buffering or a pre-roll ad just freezes them. Tap
+  Tap Revenge rules: notes fall to a line (`APPROACH` 1.25 s), judged perfect
+  50 ms / great 100 / good 150 (`WIN`), a tap on nothing breaks the combo,
+  combo x10 steps the multiplier to 4x, a miss costs 7 health, 0 health pauses
+  the video and ends it. No sounds of its own. Unlocks: localStorage
+  `sortafun-piano-ncs`; best grade per song `sortafun-piano-best-<vid>`;
+  `sortafun-piano-lag` (ms) shifts judging for slow speakers. Credit line under
+  the board, as NCS asks (artist, title, link to their upload).
+  **Notes come from Caleb**, tapped in **record mode** (`piano.html?record`:
+  every level open, a panel under the board: record a pass, 1/0.75/0.5x speed,
+  passes merge with same-lane taps within 60 ms deduped, offset nudge, undo,
+  play it back, save file -> `~/Downloads/piano-<vid>.json`, copy). Drafts live
+  in localStorage on his machine. To ship a chart: copy its `offset` + `notes`
+  into `piano-charts.js` under the video id. Tests: `%TEMP%/sfchk/ncstest.mjs`
+  (fake player via `__piano.camp.fake()`, plus one real-YouTube layout/clock
+  check).
 - **Taps are forgiving** (Caleb: "a lot of false errors", v0.13.2): anywhere
   in the right column counts, so does a tap within a quarter column over the
   line; a tap on the tile just hit (or in its column within 250 ms) is
@@ -1492,9 +1506,9 @@ trademark rule under SEO). One canvas, four columns, four rows on screen.
   on every tap).
 - The script is wrapped in an IIFE (a top-level `var scroll` would clobber
   `window.scroll`); tests use `window.__piano` (`press`, `state()`, `key()`,
-  `spot()`, `gain()`, `camp.{pick, chart, cleared, setCleared}`). Driven over
-  CDP with real `Input.dispatchTouchEvent` taps at 390px:
-  `%TEMP%/sfchk/pianotest.mjs`, `camptest.mjs`, `humantest.mjs`.
+  `spot()`, `gain()`, `camp.{pick, fake, start, time, state, rec, cleared}`).
+  Driven over CDP with real `Input.dispatchTouchEvent` taps at 390px:
+  `%TEMP%/sfchk/pianotest.mjs`, `ncstest.mjs`, `humantest.mjs`.
 
 **Mobile chip** (homepage, v0.13): `MOBILE` in index.html lists the games that
 play well on a phone; their tiles get `data-mobile` and the chip filters on it
