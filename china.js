@@ -118,7 +118,7 @@
     "couldn't load the levels. check your connection and try again": "关卡加载不了。检查一下网络再试",
     "no levels for this song yet. make one!": "这首歌还没有关卡。做一个吧！",
     "no levels yet. make the first one!": "还没有关卡。做第一个吧！",
-    "pick one of the ten songs, tap the notes in along with it, play it back to check, then share it. it goes straight into the level list for everyone.": "从十首歌里挑一首，跟着歌点出音符，回放检查一下，然后分享。它会直接出现在大家的关卡列表里。",
+    "pick a song, tap the notes in along with it, play it back to check, then share it. it goes straight into the level list for everyone.": "挑一首歌，跟着歌点出音符，回放检查一下，然后分享。它会直接出现在大家的关卡列表里。",
     "new personal best!": "个人新纪录！",
     "made by": "制作者",
     "for the four lanes,": "对应四条轨道，",

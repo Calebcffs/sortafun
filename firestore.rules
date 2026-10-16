@@ -134,7 +134,7 @@ service cloud.firestore {
     // --- rhythm rush (rhythm.html): levels players tap in themselves, one board each ---
     // rhythm_levels/<id> = { vid, title, author, notes: JSON string of [[ms, lane], ...]
     // (Firestore can't hold nested arrays), offset, n, dur, plays, official?, day, ts }.
-    // Anyone reads and anyone shares a level (auto id, one of the ten NCS videos, so
+    // Anyone reads and anyone shares a level (auto id, one of the listed videos, so
     // nobody can embed any other video). The only edit is plays +1. Official levels
     // are the admin's: id "o-<video id>", made and changed in admin.html's studio.
     // Only the admin deletes (moderation). Same "stops junk, not a determined
@@ -160,7 +160,8 @@ service cloud.firestore {
       return d.keys().hasOnly(['vid', 'title', 'author', 'notes', 'offset', 'n', 'dur', 'plays', 'official', 'day', 'ts'])
         && d.keys().hasAll(['vid', 'title', 'author', 'notes', 'offset', 'n', 'dur', 'plays', 'day', 'ts'])
         && d.vid in ['q1ULJ92aldE', 'TW9d8vYrVFQ', '3nQNiWdeH2Q', 'n4tK7LYFxI0', 'K4DyBUG242c',
-                     '__CRWE-L45k', 'yJg-Y5byMMw', 'J2X5mJ3HDYE', 'p7ZsBPK656s', 'jK2aIUmmdP4']
+                     '__CRWE-L45k', 'yJg-Y5byMMw', 'J2X5mJ3HDYE', 'p7ZsBPK656s', 'jK2aIUmmdP4',
+                     'h7ITAdTxdxM']
         && (
              (id.matches('[A-Za-z0-9]{20}') && !('official' in d)) ||
              (isAdmin() && id == 'o-' + d.vid && d.official == true)

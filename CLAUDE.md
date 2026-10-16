@@ -1490,7 +1490,9 @@ Caleb: tap-tap style is more fun, so make it accuracy based, no tap sounds,
 player-made levels in a scrollable list, a mini leaderboard per level, an
 accuracy graph and grades D to SSS. The name is ours ("Beat Tap" was too close
 to two existing apps; the well-known tap game's name stays out of all text).
-- **Songs:** the ten NCS tracks in `piano-charts.js` (`PIANO_LEVELS`), played by
+- **Songs:** the ten NCS tracks in `piano-charts.js` (`PIANO_LEVELS`), plus CORTIS'
+  MOTION (feat. Juicy J) (v0.16.3, Caleb's ask; HYBE LABELS' official visualizer,
+  `ncs: false` so the credit drops the NCS line), played by
   **YouTube's own embedded player** in a 200px strip above the board. Not MP3s:
   NCS's free licence covers videos/streams and sends games to a commercial
   licensing form, and ripping from YouTube breaks YouTube's terms (with an NCS

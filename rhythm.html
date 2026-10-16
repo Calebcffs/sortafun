@@ -220,7 +220,7 @@
 
   <!-- making a level -->
   <section id="vMake" hidden>
-    <p class="note">pick one of the ten songs, tap the notes in along with it, play it back to check, then share it. it goes straight into the level list for everyone.</p>
+    <p class="note">pick a song, tap the notes in along with it, play it back to check, then share it. it goes straight into the level list for everyone.</p>
     <div id="studio"></div>
   </section>
 
@@ -231,9 +231,9 @@
     <p>every tap is scored on how close it lands. within 25 milliseconds is perfect and worth the most, then great, good and ok are worth less and less. a note you let past is a miss, and a tap on an empty lane is a stray that breaks your combo.</p>
     <p>at the end you get a grade from D to SSS, your accuracy, your best combo and a graph of how early or late every tap was. put your score on that level's top 10.</p>
     <h3>questions</h3><dl>
-    <dt>who makes the levels?</dt><dd>players. open make a level, pick one of the ten songs, tap the notes in along with it, play it back to check and share it. it goes straight into the list for everyone.</dd>
+    <dt>who makes the levels?</dt><dd>players. open make a level, pick a song, tap the notes in along with it, play it back to check and share it. it goes straight into the list for everyone.</dd>
     <dt>my taps all feel late. what do i do?</dt><dd>bluetooth headphones and some speakers play the sound a little late. after a song, the results tell you how early or late you tapped on average, with a button that shifts the timing on your device to match.</dd>
-    <dt>where does the music come from?</dt><dd>the songs are NCS (NoCopyrightSounds) releases, played by YouTube's own player. nothing is downloaded.</dd>
+    <dt>where does the music come from?</dt><dd>the songs are NCS (NoCopyrightSounds) releases, plus MOTION by CORTIS, all played by YouTube's own player. nothing is downloaded.</dd>
     </dl>
   </section>
   <!-- /seo:about -->
@@ -252,7 +252,7 @@
 "use strict";
 
 /* ------------------------------------------------------------------ *
- * Rhythm Rush. Real NCS (NoCopyrightSounds) tracks, played by YouTube's own
+ * Rhythm Rush. Real NCS (NoCopyrightSounds) tracks (plus CORTIS' MOTION), played by YouTube's own
  * embedded player above the board (nothing is downloaded or hosted here).
  * Every level is a player's: they tap it in with the studio (piano-studio.js)
  * and share it. Each tap is judged on how close it lands to its note:
@@ -705,12 +705,14 @@ Array.prototype.forEach.call(document.querySelectorAll("[data-lag]"), function (
     $("lagv").textContent = (v > 0 ? "+" : "") + v + " ms";
   });
 });
-// NCS asks for a credit with the track, artist and a link to their upload
+// NCS asks for a credit with the track, artist and a link to their upload.
+// A song that isn't NCS (ncs: false) just links to the label's own video
 function credit(S) {
   creditEl.innerHTML = "";
   var a = document.createElement("a"), b = document.createElement("a");
   a.href = "https://youtu.be/" + S.vid; a.target = "_blank"; a.rel = "noopener";
-  a.textContent = S.by + " - " + S.song + " [NCS Release]"; a.setAttribute("data-noxlate", "");
+  a.textContent = S.by + " - " + S.song + (S.ncs === false ? "" : " [NCS Release]"); a.setAttribute("data-noxlate", "");
+  if (S.ncs === false) { creditEl.append("song: ", a, "."); return; }
   b.href = "https://ncs.io/"; b.target = "_blank"; b.rel = "noopener"; b.textContent = "NoCopyrightSounds";
   creditEl.append("song: ", a, ". music provided by ", b, ".");
 }
