@@ -227,7 +227,7 @@
   <!-- seo:about -->
   <section class="seo-x about-game">
     <h2>how to play rhythm rush</h2>
-    <p>pick a level and the song plays in the video above the board. notes fall down four lanes to the white line. tap a note's lane just as it reaches the line: on a phone tap the lane, on a keyboard use D F J K.</p>
+    <p>pick a level and the song plays in the video above the board. notes fall down four lanes to the white line. tap a note's lane just as it reaches the line: on a phone tap the lane, on a keyboard use J K L ;.</p>
     <p>every tap is scored on how close it lands. within 25 milliseconds is perfect and worth the most, then great, good and ok are worth less and less. a note you let past is a miss, and a tap on an empty lane is a stray that breaks your combo.</p>
     <p>at the end you get a grade from D to SSS, your accuracy, your best combo and a graph of how early or late every tap was. put your score on that level's top 10.</p>
     <h3>questions</h3><dl>
@@ -861,14 +861,14 @@ document.addEventListener("touchmove", function (e) { if (full()) e.preventDefau
 });
 if (window.visualViewport) visualViewport.addEventListener("resize", function () { if (full()) size(); });
 
-/* ---- input: several fingers at once, D F J K on a keyboard. Silent ---- */
+/* ---- input: several fingers at once, J K L ; on a keyboard. Silent ---- */
 cv.addEventListener("pointerdown", function (e) {
   e.preventDefault();
   var r = cv.getBoundingClientRect();
   press(Math.max(0, Math.min(3, Math.floor((e.clientX - r.left) / r.width * 4))));
 });
 cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
-var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
+var KEYS = { KeyJ: 0, KeyK: 1, KeyL: 2, Semicolon: 3 };
 window.addEventListener("keydown", function (e) {
   if (view !== "play") return;                          // the studio has its own keys
   if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;

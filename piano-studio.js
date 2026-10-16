@@ -21,7 +21,7 @@
  * YouTube's rules: the player stays at least 200 x 200 with nothing over it. */
 (function () {
   var COLORS = ["#ff4fb0", "#3fd5ff", "#9dff57", "#ffd43b"];
-  var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
+  var KEYS = { KeyJ: 0, KeyK: 1, KeyL: 2, Semicolon: 3 };
   var APPROACH = 1.25;                                   // same fall time as the game
   var CSS = [
     ".pst { max-width: 760px; text-align: left; }",
@@ -53,7 +53,7 @@
       '<div class="pst">' +
       '<div class="pst-top">song <select class="pst-song"></select> <span class="pst-state"></span></div>' +
       '<div class="pst-main"><div><div class="pst-yt"><div class="pst-ytin"></div></div></div>' +
-      '<canvas width="300" height="420" tabindex="0" aria-label="the four lanes: D F J K, or tap here"></canvas>' +
+      '<canvas width="300" height="420" tabindex="0" aria-label="the four lanes: J K L ;, or tap here"></canvas>' +
       '<div class="pst-side">' +
       '<div class="pst-row"><button type="button" data-k="rec" class="pst-rec">&#x25CF; record a pass</button><button type="button" data-k="stop">&#x25A0; stop</button><button type="button" data-k="play">&#x25B6; play it</button><button type="button" data-k="top">&#x23EE; to the start</button></div>' +
       '<div class="pst-row"><label><input type="checkbox" class="pst-replace"> next pass replaces the notes in the part it covers</label></div>' +
@@ -65,7 +65,7 @@
           '<div class="pst-row"><button type="button" data-k="publish"><b>share it</b></button><button type="button" data-k="file">save file</button></div>'
         : '<div class="pst-row"><button type="button" data-k="publish"><b>publish to the game</b></button><button type="button" data-k="unpublish">take it down</button><button type="button" data-k="file">save file</button></div>') +
       '<p class="pst-info"></p><p class="pst-msg"></p>' +
-      '<ol><li>pick a song, hit <b>record a pass</b>, tap along with <b>D F J K</b> (or tap the lanes)</li>' +
+      '<ol><li>pick a song, hit <b>record a pass</b>, tap along with <b>J K L ;</b> (or tap the lanes)</li>' +
       '<li><b>stop</b>, then <b>play it</b> to check. early or late? -10 / +10 ms</li>' +
       '<li>more passes add notes (0.5x for fast bits). a pass starts wherever the video is</li>' +
       (opts.public ? '<li>name it and <b>share it</b> (20 notes or more). anyone can play it straight away</li></ol>'
@@ -253,7 +253,7 @@
       ctx.fillText(fmt(T) + (rate !== 1 ? "  " + rate + "x" : ""), 8, 8);
       if (phase === "rec") { ctx.fillStyle = "#ff4d6d"; ctx.textAlign = "right"; ctx.fillText("● REC " + (pass ? pass.taps.length : 0), W - 8, 8); }
       ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      for (c = 0; c < 4; c++) ctx.fillText("DFJK"[c], c * cw + cw / 2, HY + (H - HY) / 2);
+      for (c = 0; c < 4; c++) ctx.fillText("JKL;"[c], c * cw + cw / 2, HY + (H - HY) / 2);
     }
 
     /* ---- wiring ---- */
