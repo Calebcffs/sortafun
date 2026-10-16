@@ -97,11 +97,12 @@
     // piano rush (piano.html)
     "piano rush": "钢琴快手",
     "tap the black tiles in order and play the tune. endless gets faster, and today's song is the same for everyone.": "按顺序点黑色方块，弹出曲子。无尽模式越来越快，今日歌曲所有人都一样。",
-    "tap the black tiles, lowest first, and play the tune. tap a white one or let a black one slip past and the song's over.": "点黑色方块，先点最下面的，弹出曲子。点到白色的或者漏掉一个黑色的，歌就结束了。",
+    "tap the glowing tiles, lowest first, and play the tune. tap an empty spot or let a tile slip past and the song's over.": "点发光的方块，先点最下面的，弹出曲子。点到空白处或者漏掉一个方块，歌就结束了。",
     "endless": "无尽", "today's song": "今日歌曲", "tap the start tile": "点开始方块", "go go go": "冲冲冲", "keep up": "跟上",
     "on a keyboard: d f j k for the four columns": "用键盘：D F J K 对应四列",
     "on a keyboard: d f j k for the four columns, space to play again": "用键盘：D F J K 对应四列，空格键再来一局",
     ": piano rush got a new look, no more buzz when you miss, a big play again button right on the board, and a full screen button (no zooming while it's up).": "：钢琴快手换了新样子，失误不再有嗡嗡声，棋盘上有一个大大的再来一局按钮，还有全屏按钮（全屏时不会缩放）。",
+    ": piano rush is much more forgiving: a second tap on the tile you just hit, a finger just over the line, or two fingers landing in the wrong order no longer end the song. a miss is completely silent now, and the tiles are brighter.": "：钢琴快手宽容多了：对刚点过的方块再点一下、手指稍微越线、或者两根手指落下顺序反了，都不会结束歌曲。失误现在完全没有声音，方块也更亮了。",
     "full screen": "全屏", "play again": "再来一局", "leave full screen": "退出全屏",
     "a new tune after every song. it keeps getting faster": "每首歌之后换新曲子。会越来越快",
     "finish the whole song to get on today's board.": "弹完整首歌才能上今天的社会信用榜。",

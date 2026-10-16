@@ -82,8 +82,8 @@
   @media (hover: none) { .keys { display: none; } }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=6372930a"></script>
-<script src="feedback.js?v=36b237a2"></script>
+<script src="china.js?v=0349a59b"></script>
+<script src="feedback.js?v=44f8e876"></script>
 <script src="panic-app.js?v=f332cce4"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -91,7 +91,7 @@
 <header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
 <div class="wrap">
   <h1>piano rush</h1>
-  <p class="sub">tap the black tiles, lowest first, and play the tune. tap a white one or let a black one slip past and the song's over.</p>
+  <p class="sub">tap the glowing tiles, lowest first, and play the tune. tap an empty spot or let a tile slip past and the song's over.</p>
 
   <div class="modes" role="group" aria-label="mode">
     <button type="button" data-mode="endless" aria-pressed="true">endless</button>
@@ -102,8 +102,8 @@
 
   <div class="stage" id="stage">
     <canvas id="board" width="380" height="600"></canvas>
-    <button type="button" class="again" id="again"><span class="pill">play again</span><span class="res" id="res"></span></button>
-    <button type="button" class="fsx" id="fsx" aria-label="leave full screen">&#x2715;</button>
+    <button type="button" class="again" id="again" data-nosfx><span class="pill">play again</span><span class="res" id="res"></span></button>
+    <button type="button" class="fsx" id="fsx" data-nosfx aria-label="leave full screen">&#x2715;</button>
   </div>
   <div id="big">tap the start tile</div>
   <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns, <kbd>space</kbd> to play again</p>
@@ -187,27 +187,55 @@ function songTiles(song) {
 }
 
 /* ------------------------------------------------------------------ *
- * the piano sound (its own little synth, quiet when the site's sound is off)
+ * sound. Everything goes through one bus per round, so a miss can cut the
+ * lot (ringing notes included) to dead silence. A compressor at the end
+ * stops fast tapping from clipping. Quiet when the site's sound is off
  * ------------------------------------------------------------------ */
-var actx = null;
-function note(m) {
-  if (window.SortafunSFX && !SortafunSFX.enabled()) return;
+var actx = null, out = null, bus = null, hushed = false, lastBus = null;
+function audio() {
   try {
-    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!actx) {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      out = actx.createDynamicsCompressor();
+      out.threshold.value = -12; out.knee.value = 6; out.ratio.value = 8;
+      out.attack.value = 0.002; out.release.value = 0.12;
+      out.connect(actx.destination);
+    }
     if (actx.state === "suspended") actx.resume();
+  } catch (e) { actx = null; }
+  return actx;
+}
+function newBus() {
+  hushed = false;
+  if (!actx) { bus = null; return; }
+  bus = actx.createGain(); bus.gain.value = 1; bus.connect(out);
+}
+function hush() {
+  hushed = true;
+  if (!bus) return;
+  var t = actx.currentTime;
+  bus.gain.cancelScheduledValues(t);
+  bus.gain.setValueAtTime(bus.gain.value, t);
+  bus.gain.linearRampToValueAtTime(0, t + 0.012);
+  var old = lastBus = bus; bus = null;
+  setTimeout(function () { try { old.disconnect(); } catch (e) {} }, 200);
+}
+function sound() { return !hushed && !(window.SortafunSFX && !SortafunSFX.enabled()) && audio(); }
+function note(m) {
+  if (!sound()) return;
+  try {
+    if (!bus) newBus();
     var t = actx.currentTime, f = 440 * Math.pow(2, (m - 69) / 12);
     var g = actx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.32, t + 0.006);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
-    var lp = actx.createBiquadFilter();
-    lp.type = "lowpass"; lp.frequency.value = 3200;
-    g.connect(lp); lp.connect(actx.destination);
-    [[1, "triangle", 1], [2, "sine", 0.35], [3, "sine", 0.12]].forEach(function (h) {
+    g.gain.exponentialRampToValueAtTime(0.3, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    g.connect(bus);
+    [[1, "triangle", 1], [2, "sine", 0.3]].forEach(function (h) {
       var o = actx.createOscillator(), og = actx.createGain();
       o.type = h[1]; o.frequency.value = f * h[0]; og.gain.value = h[2];
       o.connect(og); og.connect(g);
-      o.start(t); o.stop(t + 1.35);
+      o.start(t); o.stop(t + 0.92);
     });
   } catch (e) {}
 }
@@ -228,7 +256,8 @@ var tuneEl = document.getElementById("tune");
 var W, H, RH, DPR;                 // css size, row height (4 rows on screen)
 var mode = "endless";
 var tiles, hits, scroll, target, phase, speed, t0, lastT, bad, order, armT;
-var hitAt = {}, lane = [0, 0, 0, 0];   // when each tile / column was last hit (for the flashes)
+var lastHit = 0, held = null;      // when the last tile went down; a tap that came in a hair early
+var rings = [], lane = [0, 0, 0, 0];
 
 var SG_DAY = Math.floor((Date.now() + 8 * 3600 * 1000) / 86400000);
 var DAILY = SONGS[SG_DAY % SONGS.length];
@@ -257,6 +286,7 @@ function size() {
   RH = H / 4;
   if (scroll && oldRH) scroll = scroll * RH / oldRH;
   if (target && oldRH) target = target * RH / oldRH;
+  sprites();
   draw();
 }
 
@@ -267,17 +297,18 @@ function more() {
       order = SONGS.map(function (s, i) { return i; });
       for (var i = order.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = order[i]; order[i] = order[j]; order[j] = x; }
     }
-    var s = songTiles(SONGS[order.pop()]);
-    Array.prototype.push.apply(tiles, s);
+    songTiles(SONGS[order.pop()]).forEach(function (t) { t.row = tiles.length; tiles.push(t); });
   }
 }
 
 function reset() {
   hits = 0; scroll = 0; target = 0; bad = null; phase = "ready"; order = [];
-  hitAt = {}; lane = [0, 0, 0, 0];
+  rings = []; lane = [0, 0, 0, 0]; held = null; lastHit = 0;
   speed = 2.4;
+  if (bus) hush();
+  hushed = false;
   if (mode === "daily") {
-    tiles = songTiles(DAILY);
+    tiles = songTiles(DAILY).map(function (t, i) { t.row = i; return t; });
     tuneEl.textContent = "today's song: " + DAILY.name + " (" + tiles.length + " notes)";
   } else {
     tiles = [];
@@ -299,106 +330,108 @@ function reset() {
 }
 
 // screen y of the top of tile i
-function rowY(i) { return H - RH * (i + 1) + scroll; }
+function rowY(i) { return H - RH * (tiles[i].row + 1) + scroll; }
 
-function rrect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
+/* ------------------------------------------------------------------ *
+ * drawing. The tiles are painted once per board size into little
+ * canvases and stamped, so a frame is cheap even on an old phone
+ * ------------------------------------------------------------------ */
+var SPR = {}, BG = null, LANE = null;
+function rrect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+  c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
+  c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y);
+  c.closePath();
+}
+function sprite(top, bottom, edge) {
+  var cw = W / 4, pad = Math.max(3, cw * 0.05), rad = Math.min(14, cw * 0.12);
+  var s = document.createElement("canvas");
+  s.width = Math.round(cw * DPR); s.height = Math.round(RH * DPR);
+  var c = s.getContext("2d");
+  c.scale(DPR, DPR);
+  var g = c.createLinearGradient(0, 0, 0, RH);
+  g.addColorStop(0, top); g.addColorStop(1, bottom);
+  c.fillStyle = g;
+  rrect(c, pad, pad, cw - 2 * pad, RH - 2 * pad, rad); c.fill();
+  c.lineWidth = 2; c.strokeStyle = edge;
+  rrect(c, pad + 1, pad + 1, cw - 2 * pad - 2, RH - 2 * pad - 2, rad - 1); c.stroke();
+  c.fillStyle = "rgba(255,255,255,.45)";
+  rrect(c, pad + 6, pad + 6, cw - 2 * pad - 12, Math.max(3, RH * 0.045), 3); c.fill();
+  return s;
+}
+function sprites() {
+  SPR.tile = sprite("#d7b8ff", "#ff2d95", "rgba(255,255,255,.9)");
+  SPR.start = sprite("#fff176", "#ffa000", "rgba(255,255,255,.95)");
+  SPR.miss = sprite("#ff6b6b", "#d90429", "#fff");
+  BG = ctx.createLinearGradient(0, 0, 0, H);
+  BG.addColorStop(0, "#0b0920"); BG.addColorStop(1, "#04030c");
+  LANE = ctx.createLinearGradient(0, H, 0, H * 0.35);
+  LANE.addColorStop(0, "rgba(255,80,180,.42)"); LANE.addColorStop(1, "rgba(255,80,180,0)");
 }
 
-var BG = null, BGH = 0;
 function draw() {
-  if (!W || !tiles) return;
+  if (!W || !tiles || !SPR.tile) return;
   var now = performance.now();
-  var cw = W / 4, pad = Math.max(3, cw * 0.05), rad = Math.min(14, cw * 0.12);
-  // the night-sky stage
-  if (!BG || BGH !== H) {
-    BG = ctx.createLinearGradient(0, 0, 0, H);
-    BG.addColorStop(0, "#1b1440"); BG.addColorStop(0.6, "#120f2c"); BG.addColorStop(1, "#0b0a1c");
-    BGH = H;
-  }
+  var cw = W / 4;
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-  // a column lights up when it's hit, then fades
+  // a column lights up from the bottom when it's hit
+  ctx.fillStyle = LANE;
   for (var c = 0; c < 4; c++) {
-    var a = 1 - (now - lane[c]) / 320;
-    if (a > 0) {
-      var lg = ctx.createLinearGradient(0, H, 0, 0);
-      lg.addColorStop(0, "rgba(255,92,190," + (0.32 * a).toFixed(3) + ")");
-      lg.addColorStop(1, "rgba(124,92,255,0)");
-      ctx.fillStyle = lg; ctx.fillRect(c * cw, 0, cw, H);
-    }
+    var a = 1 - (now - lane[c]) / 260;
+    if (a > 0) { ctx.globalAlpha = a; ctx.fillRect(c * cw, 0, cw, H); }
   }
-  ctx.strokeStyle = "rgba(255,255,255,.07)"; ctx.lineWidth = 1;
-  for (c = 1; c < 4; c++) { ctx.beginPath(); ctx.moveTo(c * cw + 0.5, 0); ctx.lineTo(c * cw + 0.5, H); ctx.stroke(); }
-  // tiles on screen
-  var first = Math.max(0, Math.floor((scroll - RH) / RH));
-  for (var i = first; i < tiles.length; i++) {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(255,255,255,.13)";
+  for (c = 1; c < 4; c++) ctx.fillRect(Math.round(c * cw), 0, 1, H);
+  // live tiles (hit ones are simply gone)
+  for (var i = hits; i < tiles.length; i++) {
     var y = rowY(i);
     if (y > H) continue;
     if (y + RH < 0) break;
-    var x = tiles[i].col * cw;
-    if (i < hits) {
-      // a hit tile pops and fades out
-      var k = Math.min(1, (now - (hitAt[i] || 0)) / 260);
-      if (k < 1) {
-        var g = (1 - k) * pad * 1.6;
-        ctx.globalAlpha = 0.85 * (1 - k);
-        ctx.fillStyle = "#ffd6f0";
-        rrect(x + pad - g, y + pad - g, cw - 2 * pad + 2 * g, RH - 2 * pad + 2 * g, rad);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-      ctx.fillStyle = "rgba(255,255,255,.05)";
-      rrect(x + pad, y + pad, cw - 2 * pad, RH - 2 * pad, rad); ctx.fill();
-      continue;
-    }
     var start = i === 0 && phase === "ready";
-    // soft glow, then the tile, then a shine along the top
-    ctx.fillStyle = start ? "rgba(255,212,59,.18)" : "rgba(160,92,255,.16)";
-    rrect(x + 1, y + 1, cw - 2, RH - 2, rad + 2); ctx.fill();
-    var grd = ctx.createLinearGradient(0, y, 0, y + RH);
-    if (start) { grd.addColorStop(0, "#ffe066"); grd.addColorStop(1, "#ff9f1c"); }
-    else { grd.addColorStop(0, "#8a5cff"); grd.addColorStop(1, "#ff3d9a"); }
-    ctx.fillStyle = grd;
-    rrect(x + pad, y + pad, cw - 2 * pad, RH - 2 * pad, rad); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.28)";
-    rrect(x + pad + 4, y + pad + 4, cw - 2 * pad - 8, Math.max(3, RH * 0.05), 3); ctx.fill();
+    ctx.drawImage(start ? SPR.start : SPR.tile, tiles[i].col * cw, y, cw, RH);
     if (start) {
       ctx.fillStyle = "#1d1b2e";
       ctx.font = "400 " + Math.round(cw * 0.22) + "px Lilita One, Arial Black, sans-serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(zh() ? "开始" : "START", x + cw / 2, y + RH / 2);
+      ctx.fillText(zh() ? "开始" : "START", tiles[i].col * cw + cw / 2, y + RH / 2);
     }
   }
+  // hit: a thin white outline that grows and fades (never looks like a tile)
+  ctx.lineWidth = 2;
+  rings = rings.filter(function (r) {
+    var k = (now - r.t) / 180;
+    if (k >= 1) return false;
+    var ry = H - RH * (r.row + 1) + scroll, g = k * cw * 0.12;
+    ctx.strokeStyle = "rgba(255,255,255," + (0.7 * (1 - k)).toFixed(3) + ")";
+    rrect(ctx, r.col * cw + 4 - g, ry + 4 - g, cw - 8 + 2 * g, RH - 8 + 2 * g, 10); ctx.stroke();
+    return true;
+  });
   // the miss: a red tile where you tapped, or the tile that got away
   if (bad) {
-    var by = rowY(bad.row), bx = bad.col * cw;
-    var blink = 0.75 + 0.25 * Math.sin(now / 90);
-    ctx.fillStyle = "rgba(255,46,99," + blink.toFixed(3) + ")";
-    rrect(bx + pad, by + pad, cw - 2 * pad, RH - 2 * pad, rad); ctx.fill();
+    ctx.globalAlpha = 0.8 + 0.2 * Math.sin(now / 90);
+    ctx.drawImage(SPR.miss, bad.col * cw, H - RH * (bad.row + 1) + scroll, cw, RH);
+    ctx.globalAlpha = 1;
+    var m = Math.min(cw, RH) * 0.16, cx = bad.col * cw + cw / 2, cy = H - RH * (bad.row + 1) + scroll + RH / 2;
     ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(3, cw * 0.05); ctx.lineCap = "round";
-    var m = Math.min(cw, RH) * 0.16, cx = bx + cw / 2, cy = by + RH / 2;
     ctx.beginPath(); ctx.moveTo(cx - m, cy - m); ctx.lineTo(cx + m, cy + m); ctx.moveTo(cx + m, cy - m); ctx.lineTo(cx - m, cy + m); ctx.stroke();
   }
   // today's song: how far through it you are
   if (mode === "daily") {
-    ctx.fillStyle = "rgba(255,255,255,.1)"; ctx.fillRect(0, 0, W, 5);
+    ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(0, 0, W, 5);
     ctx.fillStyle = "#ffd43b"; ctx.fillRect(0, 0, W * hits / tiles.length, 5);
   }
-  // score / clock
+  // score / clock (a dark outline instead of a blur: blur is slow on phones)
   var label = mode === "daily"
     ? (phase === "ready" ? "0.00" : ((phase === "over" ? endMs : now - t0) / 1000).toFixed(2))
     : String(hits);
   ctx.font = "400 " + Math.round(W * 0.14) + "px Lilita One, Arial Black, sans-serif";
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   var ty = full() ? Math.max(14, H * 0.03) : 12;
-  ctx.shadowColor = "rgba(255,61,154,.9)"; ctx.shadowBlur = 16;
+  ctx.lineJoin = "round"; ctx.lineWidth = 7; ctx.strokeStyle = "#ff2d95"; ctx.strokeText(label, W / 2, ty);
   ctx.fillStyle = "#fff"; ctx.fillText(label, W / 2, ty);
-  ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
 }
 
 var endMs = 0;
@@ -409,7 +442,7 @@ function frame(now) {
     scroll += speed * RH * dt;
     // the lowest black tile slid off the bottom
     if (rowY(hits) >= H) {
-      bad = { row: hits, col: tiles[hits].col };
+      bad = { row: tiles[hits].row, col: tiles[hits].col };
       over("one got away");
     }
   } else if (phase === "daily-run") {
@@ -419,24 +452,62 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-function press(col) {
+/* ------------------------------------------------------------------ *
+ * a tap. Kind on purpose, because fingers are sloppy:
+ *  - anywhere in the right column counts, and so does a tap just over
+ *    the line into the next column
+ *  - tapping a tile you already hit does nothing
+ *  - two fingers landing in the wrong order (the tile after next a few
+ *    ms first) counts as both
+ * Only a tap on empty board in the wrong column ends the song.
+ * x, y are 0..1 across / down the board (keys send the column only)
+ * ------------------------------------------------------------------ */
+function inTile(i, y) {
+  if (y == null || !tiles[i]) return false;
+  var top = rowY(i) / H, h = RH / H;
+  return y >= top - h * 0.15 && y <= top + h * 1.15;
+}
+function press(col, x, y) {
   if (phase === "over") return;
-  var t = tiles[hits];
+  var t = tiles[hits], now = performance.now();
+  // a finger a hair over the line into the right column
+  if (x != null && col !== t.col && Math.abs(col - t.col) === 1) {
+    var edge = Math.max(col, t.col) / 4;
+    if (Math.abs(x - edge) < 0.25 / 4) col = t.col;
+  }
   if (phase === "ready") {
     if (col !== t.col) return;           // only the start tile starts it
-    t0 = performance.now();
+    t0 = now;
+    newBus();
     phase = mode === "daily" ? "daily-run" : "run";
     stage.classList.add("running");
     big.textContent = mode === "daily" ? "go go go" : "keep up";
   }
-  // endless: no tapping ahead into tiles that haven't scrolled on yet
-  if (mode === "endless" && rowY(hits) < -RH * 0.4) return;
-  if (col !== t.col) {
-    bad = { row: hits, col: col };
-    return over("wrong key");
+  if (rowY(hits) + RH <= 0) return;      // not on screen at all yet
+  if (col === t.col) {
+    hit(col);
+    // the other finger of a roll, held for a moment
+    if (held && now - held.t < 140 && phase !== "over" && tiles[hits] && tiles[hits].col === held.col) hit(held.col);
+    held = null;
+    return;
   }
+  // a second tap on the tile that just went down
+  var p = hits - 1;
+  if (p >= 0 && tiles[p].col === col && (inTile(p, y) || now - lastHit < 250)) return;
+  // the tile after next, a few ms early: hold it, the next tap may make it right
+  for (var k = 1; k <= 2; k++) {
+    var n = tiles[hits + k];
+    if (n && n.col === col && (y == null ? k === 1 : inTile(hits + k, y))) { held = { col: col, t: now }; return; }
+  }
+  bad = { row: t.row, col: col };
+  over("wrong key");
+}
+
+function hit(col) {
+  var t = tiles[hits];
   note(t.midi);
-  hitAt[hits] = lane[col] = performance.now();
+  lastHit = lane[col] = performance.now();
+  rings.push({ row: t.row, col: col, t: lastHit });
   hits++;
   if (mode === "daily") {
     target = hits * RH;
@@ -459,10 +530,13 @@ function offerAgain(res) {
 }
 again.addEventListener("click", function () { if (again.classList.contains("armed")) reset(); });
 
+// a miss makes no sound at all: the round's bus is cut, ringing notes too
 function over(why) {
+  hush();
   endMs = performance.now() - t0;
   // park the miss on the second row up, so it shows above the play-again button
   scroll = (bad.row - 1) * RH;
+  rings = [];
   lbEl.innerHTML = "";
   if (mode === "daily") {
     big.textContent = why + ". " + hits + " of " + tiles.length + " notes";
@@ -470,10 +544,9 @@ function over(why) {
     offerAgain(big.textContent);
     return;
   }
-  if (hits >= 50 && window.SortafunSFX) SortafunSFX.result("win");
   big.textContent = why + ". " + hits + " tile" + (hits === 1 ? "" : "s");
   offerAgain(big.textContent);
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "piano", { score: hits, quiet: true });  // no sound on a miss
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "piano", { score: hits, quiet: true });
   else lbEl.textContent = "leaderboard offline";
 }
 
@@ -522,13 +595,13 @@ document.addEventListener("touchmove", function (e) { if (full()) e.preventDefau
 if (window.visualViewport) visualViewport.addEventListener("resize", function () { if (full()) size(); });
 
 /* ------------------------------------------------------------------ *
- * input: a tap anywhere in a column counts (fingers aren't precise),
- * several fingers at once are fine. D F J K on a keyboard
+ * input: several fingers at once are fine. D F J K on a keyboard
  * ------------------------------------------------------------------ */
 cv.addEventListener("pointerdown", function (e) {
   e.preventDefault();
   var r = cv.getBoundingClientRect();
-  press(Math.max(0, Math.min(3, Math.floor((e.clientX - r.left) / r.width * 4))));
+  var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  press(Math.max(0, Math.min(3, Math.floor(x * 4))), x, y);
 });
 cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
@@ -552,7 +625,22 @@ Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]
 });
 window.addEventListener("resize", size);
 
-window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press, again: function () { if (again.classList.contains("armed")) reset(); }, full: function (on) { on ? enterFull() : leaveFull(); }, state: function () { return { mode: mode, phase: phase, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
+window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press,
+  again: function () { if (again.classList.contains("armed")) reset(); },
+  full: function (on) { on ? enterFull() : leaveFull(); },
+  // test hook: an empty spot on the board (0..1) in a column that isn't the next tile's
+  spot: function () {
+    for (var c = 0; c < 4; c++) {
+      if (c === tiles[hits].col) continue;
+      for (var y = 0.92; y > 0.1; y -= 0.04) {
+        var clear = true;
+        for (var i = Math.max(0, hits - 3); i < hits + 8 && i < tiles.length; i++) if (tiles[i].col === c && inTile(i, y)) clear = false;
+        if (clear) return { x: (c + 0.5) / 4, y: y };
+      }
+    }
+  },
+  gain: function () { var b = bus || lastBus; return b ? b.gain.value : null; },
+  state: function () { return { mode: mode, phase: phase, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, next2: tiles[hits + 1] && tiles[hits + 1].col, nextY: tiles[hits] ? rowY(hits) / RH : null, prevY: hits ? rowY(hits - 1) / RH : null, next2Y: tiles[hits + 1] ? rowY(hits + 1) / RH : null, why: big.textContent, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
 
 size();
 reset();
