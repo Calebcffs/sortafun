@@ -110,7 +110,10 @@ PAGES = {
         desc="The marker sweeps back and forth. Stop it inside the green band. Every hit shrinks the band and speeds it up, one miss and you are out. How far can you get?"),
     "piano.html": dict(name="piano rush", kind="game", og="piano", list="skill", genre=["Music", "Rhythm"],
         title="Piano Rush: Free Piano Tapping Game for Phones",
-        desc="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard."),
+        desc="Tap the tiles in order and play the tune. Endless speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard."),
+    "rhythm.html": dict(name="rhythm rush", kind="game", og="rhythm", list="skill", genre=["Music", "Rhythm"],
+        title="Rhythm Rush: Free Rhythm Game With Player-Made Levels",
+        desc="Real NCS songs, notes falling to the line. Tap each one right on the beat: dead on scores the most. Get a grade from D to SSS and a timing graph, then make a level of your own and share it."),
     "driving.html": dict(name="circuit race", kind="game", og="race", list="skill", genre=["Racing"],
         title="Circuit Race: Free 3D Racing Game in Your Browser",
         desc="Race a 3D track against the clock. Hit every checkpoint, drift the corners, boost on the straights and set your best lap. Free racing game, no download."),
@@ -169,7 +172,7 @@ LABEL = {
     "sudoku.html": "Daily Sudoku", "anagram.html": "Word Hive", "five.html": "Five Letters", "ladder.html": "Word Ladder",
     "sides.html": "Four Sides", "puzzle.html": "Tile Slider", "grab.html": "Word Grab", "typing.html": "Typing Test",
     "crossword.html": "Crossword", "mines.html": "Minesweeper", "maze.html": "Cursor Maze", "reaction.html": "Reaction Time Test",
-    "aim.html": "Aim Trainer", "stopbar.html": "Stop the Bar", "piano.html": "Piano Rush", "driving.html": "Circuit Race", "sushi.html": "Sushi Goes Round",
+    "aim.html": "Aim Trainer", "stopbar.html": "Stop the Bar", "piano.html": "Piano Rush", "rhythm.html": "Rhythm Rush", "driving.html": "Circuit Race", "sushi.html": "Sushi Goes Round",
     "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "flipbook.html": "Animation Studio",
     "anim-gallery.html": "Animation Gallery", "leaderboards.html": "Leaderboards", "forum.html": "The Forum",
     "guestbook.html": "Guestbook", "passport.html": "Passport",
@@ -182,6 +185,13 @@ GROUPS = [("daily", "daily puzzles"), ("word", "word games"), ("puzzle", "puzzle
 # game code, keep them true when a game changes.
 # ---------------------------------------------------------------------------
 ABOUT = {
+    "rhythm.html": dict(h="how to play rhythm rush", p=[
+        "pick a level and the song plays in the video above the board. notes fall down four lanes to the white line. tap a note's lane just as it reaches the line: on a phone tap the lane, on a keyboard use D F J K.",
+        "every tap is scored on how close it lands. within 25 milliseconds is perfect and worth the most, then great, good and ok are worth less and less. a note you let past is a miss, and a tap on an empty lane is a stray that breaks your combo.",
+        "at the end you get a grade from D to SSS, your accuracy, your best combo and a graph of how early or late every tap was. put your score on that level's top 10."],
+        faq=[("who makes the levels?", "players. open make a level, pick one of the ten songs, tap the notes in along with it, play it back to check and share it. it goes straight into the list for everyone."),
+             ("my taps all feel late. what do i do?", "bluetooth headphones and some speakers play the sound a little late. after a song, the results tell you how early or late you tapped on average, with a button that shifts the timing on your device to match."),
+             ("where does the music come from?", "the songs are NCS (NoCopyrightSounds) releases, played by YouTube's own player. nothing is downloaded.")]),
     "sudoku.html": dict(h="how to play daily sudoku", p=[
         "fill the 9x9 grid so every row, every column and every 3x3 box has the digits 1 to 9 once each. tap a square, then a number (or type it). the grey digits are given and can't change.",
         "there are three puzzles every day: easy, hard and extreme. everyone gets the same three, and they change at midnight singapore time. every puzzle has exactly one solution.",

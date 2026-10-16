@@ -722,6 +722,97 @@
     return g.format ? g.format(score) : score + " " + g.unit;
   }
 
+  /* ------------------------------------------------------------------ *
+   * Rhythm Rush (rhythm.html): player-made levels and a board per level.
+   * collection "rhythm_levels", one doc per level:
+   *   { vid, title, author, notes: JSON string of [[ms, lane], ...] (Firestore
+   *     can't hold arrays in arrays), offset, n, dur, plays, official?, day, ts }
+   * Players make them with an auto id; Caleb's official ones are "o-<vid>"
+   * (admin.html). Each level has its own board, rhythm_levels/<id>/scores:
+   *   { name, score (0..1e6), acc (0..10000 = 0..100.00%), grade, combo, day, ts }
+   * The list is one REST query that leaves the notes out (they're big); a
+   * level's notes are fetched when it's opened.
+   * ------------------------------------------------------------------ */
+  var FS_REST = function () {
+    var c = window.SORTAFUN_FIREBASE || {};
+    return { base: "https://firestore.googleapis.com/v1/projects/" + c.projectId + "/databases/(default)/documents", key: c.apiKey };
+  };
+  function restVal(v) {
+    if (!v) return null;
+    if ("stringValue" in v) return v.stringValue;
+    if ("integerValue" in v) return +v.integerValue;
+    if ("doubleValue" in v) return +v.doubleValue;
+    if ("booleanValue" in v) return v.booleanValue;
+    if ("timestampValue" in v) return Date.parse(v.timestampValue);
+    return null;
+  }
+  function restDoc(d) {
+    var o = { id: d.name.split("/").pop() };
+    for (var k in d.fields || {}) o[k] = restVal(d.fields[k]);
+    return o;
+  }
+  function rhythmList() {
+    if (!configLooksReal(window.SORTAFUN_FIREBASE)) return Promise.reject(new Error("firebase not configured"));
+    var r = FS_REST();
+    return fetch(r.base + ":runQuery?key=" + r.key, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: "rhythm_levels" }],
+        select: { fields: ["vid", "title", "author", "n", "dur", "plays", "official", "ts"].map(function (f) { return { fieldPath: f }; }) },
+        orderBy: [{ field: { fieldPath: "ts" }, direction: "DESCENDING" }],
+        limit: 300 } })
+    }).then(function (res) {
+      if (!res.ok) throw new Error("list failed " + res.status);
+      return res.json();
+    }).then(function (rows) {
+      return rows.filter(function (x) { return x.document; }).map(function (x) { return restDoc(x.document); });
+    });
+  }
+  function rhythmGet(id) {
+    var r = FS_REST();
+    return fetch(r.base + "/rhythm_levels/" + encodeURIComponent(id) + "?key=" + r.key).then(function (res) {
+      if (!res.ok) throw new Error("level not found " + res.status);
+      return res.json();
+    }).then(restDoc);
+  }
+  // lv: { vid, title, author, notes: [[ms, lane]], offset }. Resolves the new id
+  function rhythmCreate(lv) {
+    return init().then(function () {
+      var fs = state.fs, notes = lv.notes;
+      return fs.addDoc(fs.collection(state.db, "rhythm_levels"), {
+        vid: lv.vid, title: String(lv.title).trim().slice(0, 40), author: String(lv.author).trim().slice(0, 20),
+        notes: JSON.stringify(notes), offset: Math.round(lv.offset || 0), n: notes.length,
+        dur: Math.round(notes.length ? notes[notes.length - 1][0] - notes[0][0] : 0),
+        plays: 0, day: dayStr(), ts: fs.serverTimestamp()
+      }).then(function (ref) { return ref.id; });
+    });
+  }
+  function rhythmPlayed(id) {
+    return init().then(function () {
+      return state.fs.updateDoc(state.fs.doc(state.db, "rhythm_levels", id), { plays: state.fs.increment(1) });
+    });
+  }
+  function rhythmTop(id, n) {
+    return init().then(function () {
+      var fs = state.fs;
+      return fs.getDocs(fs.query(fs.collection(state.db, "rhythm_levels", id, "scores"), fs.orderBy("score", "desc"), fs.limit(n || 10)));
+    }).then(function (snap) {
+      var out = [];
+      snap.forEach(function (doc) { var d = doc.data(); out.push({ name: d.name, score: d.score, acc: d.acc, grade: d.grade, combo: d.combo, ts: d.ts || null }); });
+      return out;
+    });
+  }
+  // row: { name, score, acc, grade, combo }
+  function rhythmScore(id, row) {
+    return init().then(function () {
+      var fs = state.fs;
+      return fs.addDoc(fs.collection(state.db, "rhythm_levels", id, "scores"), {
+        name: String(row.name).trim().slice(0, 20), score: Math.round(row.score), acc: Math.round(row.acc),
+        grade: row.grade, combo: Math.round(row.combo), day: dayStr(), ts: fs.serverTimestamp()
+      });
+    });
+  }
+
   // opts: { score?: number, onSubmitted?: fn }  — pass score to show the submit row
   function sfx(name) { if (window.SortafunSFX) window.SortafunSFX.play(name); }
 
@@ -1026,5 +1117,6 @@
     mountPanel: mountPanel,
     fmtScore: function (key, v) { return GAMES[key] ? fmtScore(GAMES[key], v) : String(v); },
     keepBoard: keepBoard,
+    rhythm: { list: rhythmList, get: rhythmGet, create: rhythmCreate, played: rhythmPlayed, top: rhythmTop, score: rhythmScore },
   };
 })();

@@ -1,13 +1,16 @@
-/* Piano Rush recording studio. Lives on admin.html only (signed in as the
- * admin account), so only Caleb can make or change the campaign's notes.
+/* Rhythm Rush recording studio: tap a level in along with the song.
+ * Two homes: rhythm.html (opts.public: anyone makes a level and shares it,
+ * drafts stay on their device) and admin.html (Caleb's official levels).
  *
  *   PianoStudio.mount(el, store, opts) builds the studio inside el.
- *   store (admin.html passes a Firestore one, tests a localStorage one):
+ *   store (admin.html passes a Firestore one, rhythm.html a local one, tests a localStorage one):
  *     load()                -> Promise<{ drafts: { vid: draft }, live: { vid: { offset, notes } } }>
  *     saveDraft(vid, draft) -> Promise
- *     publish(vid, chart)   -> Promise   (chart = { offset, notes }; live in the game at once)
- *     unpublish(vid)        -> Promise
+ *     publish(vid, chart, meta) -> Promise<id>  (chart = { offset, notes }; meta = { title, author } when public)
+ *     unpublish(vid)        -> Promise   (admin only)
  *   opts.fake: a stand-in clock instead of YouTube (tests).
+ *   opts.public: the players' version (a level name and their name, "share it",
+ *     no take-down); opts.onPublish(id) runs after a share.
  *
  * A draft is { vid, offset, notes: [[ms into the video, lane 0-3], ...], passes: [...] }.
  * Taps are stamped with the video's own clock (getCurrentTime), raw: the game
@@ -21,10 +24,12 @@
   var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
   var APPROACH = 1.25;                                   // same fall time as the game
   var CSS = [
-    ".pst { max-width: 760px; }",
+    ".pst { max-width: 760px; text-align: left; }",
     ".pst-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }",
     ".pst-main { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }",
-    ".pst-yt { position: relative; width: 356px; height: 200px; background: #000; flex: none; }",
+    ".pst-yt { position: relative; width: 356px; max-width: 100%; height: 200px; background: #000; flex: none; }",
+    ".pst-main > div:first-child { max-width: 100%; }",
+    ".pst-meta input { width: 150px; max-width: 100%; }",
     ".pst-yt iframe, .pst-yt > div { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }",
     ".pst canvas { width: 300px; height: 420px; background: #0b0a18; border-radius: 8px; touch-action: none; outline: none; cursor: pointer; }",
     ".pst canvas:focus { box-shadow: 0 0 0 3px #3fd5ff; }",
@@ -55,12 +60,16 @@
       '<div class="pst-row"><label><input type="checkbox" class="pst-tick" checked> tick on each note when playing</label></div>' +
       '<div class="pst-row">speed <button type="button" data-rate="1">1x</button><button type="button" data-rate="0.75">0.75x</button><button type="button" data-rate="0.5">0.5x</button></div>' +
       '<div class="pst-row">notes <button type="button" data-nudge="-10">-10 ms</button><button type="button" data-nudge="10">+10 ms</button><button type="button" data-k="undo">undo</button><button type="button" data-k="clear">clear</button></div>' +
-      '<div class="pst-row"><button type="button" data-k="publish"><b>publish to the game</b></button><button type="button" data-k="unpublish">take it down</button><button type="button" data-k="file">save file</button></div>' +
+      (opts.public
+        ? '<div class="pst-row pst-meta"><input class="pst-title" maxlength="40" placeholder="level name" autocomplete="off"><input class="pst-author" maxlength="20" placeholder="your name" autocomplete="off"></div>' +
+          '<div class="pst-row"><button type="button" data-k="publish"><b>share it</b></button><button type="button" data-k="file">save file</button></div>'
+        : '<div class="pst-row"><button type="button" data-k="publish"><b>publish to the game</b></button><button type="button" data-k="unpublish">take it down</button><button type="button" data-k="file">save file</button></div>') +
       '<p class="pst-info"></p><p class="pst-msg"></p>' +
       '<ol><li>pick a song, hit <b>record a pass</b>, tap along with <b>D F J K</b> (or tap the lanes)</li>' +
       '<li><b>stop</b>, then <b>play it</b> to check. early or late? -10 / +10 ms</li>' +
       '<li>more passes add notes (0.5x for fast bits). a pass starts wherever the video is</li>' +
-      '<li><b>publish</b> when it plays right. it is live in the game straight away</li></ol>' +
+      (opts.public ? '<li>name it and <b>share it</b> (20 notes or more). anyone can play it straight away</li></ol>'
+        : '<li><b>publish</b> when it plays right. it is live in the game straight away</li></ol>') +
       '</div></div></div>';
     var $ = function (s) { return root.querySelector(s); };
     var cv = $("canvas"), ctx = cv.getContext("2d"), sel = $(".pst-song");
@@ -80,14 +89,15 @@
       Array.prototype.forEach.call(sel.options, function (o, i) {
         var Lv = LEVELS[i], d = data.drafts[Lv.vid], lv = data.live[Lv.vid];
         o.textContent = (i + 1) + ". " + Lv.by + " - " + Lv.song +
-          "  (" + (d && d.notes.length ? d.notes.length + " notes" : "empty") + (lv ? ", live " + lv.notes.length : "") + ")";
+          "  (" + (d && d.notes.length ? d.notes.length + " notes" : "empty") + (lv && !opts.public ? ", live " + lv.notes.length : "") + ")";
       });
     }
     function info() {
       var d = draft(), lv = data.live[L().vid];
       $(".pst-info").textContent = "draft: " + d.notes.length + " notes from " + d.passes.length + " pass" + (d.passes.length === 1 ? "" : "es") +
         ", offset " + (d.offset || 0) + " ms. " +
-        (lv ? "in the game: " + lv.notes.length + " notes" + (same(d, lv) ? " (same as the draft)" : " (the draft has changes, publish to send them)") : "not in the game yet.");
+        (opts.public ? (d.shared ? "shared it already: sharing again makes a second level." : d.notes.length < 20 ? "a level needs 20 notes or more." : "") :
+        lv ? "in the game: " + lv.notes.length + " notes" + (same(d, lv) ? " (same as the draft)" : " (the draft has changes, publish to send them)") : "not in the game yet.");
       Array.prototype.forEach.call(root.querySelectorAll("[data-rate]"), function (b) { b.setAttribute("aria-pressed", String(+b.dataset.rate === rate)); });
       $(".pst-state").textContent = phase === "rec" ? "RECORDING" : phase === "play" ? "playing back" : phase === "load" ? "loading..." : "";
       labels();
@@ -265,6 +275,7 @@
       else if (k === "top") { stop(); if (yt.ready) yt.p.seekTo(0, true); }
       else if (k === "undo") { if (undo.length) { save(JSON.parse(undo.pop())); msg("undone"); } else msg("nothing to undo"); }
       else if (k === "clear") { if (draft().notes.length && confirm("throw away every note in the draft for " + L().song + "?")) change(function (d) { d.notes = []; d.passes = []; d.offset = 0; }); }
+      else if (k === "publish" && opts.public) share();
       else if (k === "publish") {
         var d = draft(), vid = L().vid;
         if (!d.notes.length) return msg("nothing to publish", true);
@@ -284,6 +295,22 @@
         a.download = "piano-" + L().vid + ".json"; document.body.appendChild(a); a.click(); a.remove();
       }
     });
+    // the players' share: a name for the level and for them, then it's in the list for anyone
+    function share() {
+      var d = draft(), vid = L().vid, title = $(".pst-title").value.trim(), author = $(".pst-author").value.trim();
+      if (phase === "rec") stopPass();
+      if (d.notes.length < 20) return msg("a level needs at least 20 notes (" + d.notes.length + " so far)", true);
+      if (!title) { $(".pst-title").focus(); return msg("give your level a name", true); }
+      if (!author) { $(".pst-author").focus(); return msg("type your name", true); }
+      if (!confirm("share \"" + title + "\" (" + d.notes.length + " notes, " + L().song + ")? anyone can play it straight away, and it can't be edited after")) return;
+      try { localStorage.setItem("sortafun-name", author); } catch (e) {}
+      msg("sharing...");
+      Promise.resolve(store.publish(vid, { offset: d.offset || 0, notes: d.notes.slice() }, { title: title, author: author })).then(function (id) {
+        d.shared = id; save(d);
+        msg("shared! \"" + title + "\" is in the level list now");
+        if (opts.onPublish) opts.onPublish(id);
+      }, function (e) { msg("didn't share: " + (e && (e.code || e.message)), true); });
+    }
     // keys only while the studio is on screen and nobody is typing in a box
     function onKey(e) {
       if (!(e.code in KEYS) || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !root.isConnected || !root.offsetParent) return;
@@ -298,6 +325,7 @@
       e.preventDefault();
     });
 
+    if (opts.public) try { $(".pst-author").value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
     Promise.resolve(store.load()).then(function (got) {
       data.drafts = got.drafts || {}; data.live = got.live || {};
       pick(0);
@@ -306,7 +334,9 @@
 
     return {   // test hook
       state: function () { return { phase: phase, idx: idx, rate: rate, t: now(), pass: pass && pass.taps.length, draft: draft(), live: data.live[L().vid] || null }; },
-      pick: pick, tap: tap, player: function () { return yt.p; }
+      pick: pick, tap: tap, player: function () { return yt.p; },
+      // leaving the studio's view: stop any pass and the video
+      hide: function () { if (phase === "rec") stopPass(); else if (phase === "play") stop(); else if (yt.ready && yt.p.pauseVideo) yt.p.pauseVideo(); }
     };
   }
   window.PianoStudio = { mount: mount };

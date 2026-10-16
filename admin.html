@@ -61,9 +61,15 @@
   </tbody></table>
   <div class="muted" style="margin-top:4px">not on the homepage yet. the pages are unlisted (noindex); passwords are Caleb's, not in the repo.</div>
 
-  <h2>piano rush recording studio</h2>
-  <details id="studio"><summary>open the studio (tap the campaign songs in, then publish them to the game)</summary>
+  <h2>rhythm rush: official levels</h2>
+  <details id="studio"><summary>open the studio (tap a song in, then publish it as the official level for that song)</summary>
     <div id="studio-in" style="margin-top:10px"></div>
+  </details>
+
+  <h2>rhythm rush: player levels</h2>
+  <details id="rlevels"><summary>show every level (delete takes a level and its board down for good)</summary>
+    <div class="row"><button id="rl-reload">reload</button> <span class="muted" id="rl-count"></span></div>
+    <table id="rltable"><thead><tr><th>when (SGT)</th><th>level</th><th>song</th><th>by</th><th>notes</th><th>plays</th><th></th></tr></thead><tbody></tbody></table>
   </details>
 
   <h2>overview</h2>
@@ -96,28 +102,63 @@
   <table id="gtable"><thead><tr><th>when (SGT)</th><th>name</th><th>message</th></tr></thead><tbody></tbody></table>
 </div>
 
-<script src="piano-charts.js?v=f9133931"></script>
-<script src="piano-studio.js?v=6aabe517"></script>
+<script src="piano-charts.js?v=5d58f9f4"></script>
+<script src="piano-studio.js?v=8818fba6"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, query, orderBy, limit, getDocs, getCountFromServer, doc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import "./firebase-config.js";
 
-// ---------------- piano rush studio (piano-studio.js), on first open ----------------
+// ---------------- rhythm rush studio (piano-studio.js), on first open ----------------
+// Caleb's drafts live in piano_drafts; a published one is the official level for
+// its song, rhythm_levels/o-<vid> (official: true, pinned at the top of the list)
+const sgDay = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 const studioStore = {
   async load() {
-    const [d, c] = await Promise.all([getDocs(collection(db, "piano_drafts")), getDocs(collection(db, "piano_charts"))]);
+    const [d, c] = await Promise.all([getDocs(collection(db, "piano_drafts")), getDocs(collection(db, "rhythm_levels"))]);
     const drafts = {}, live = {};
     d.forEach((x) => { try { drafts[x.id] = JSON.parse(x.data().draft); } catch (e) {} });
-    c.forEach((x) => { const v = x.data(); try { live[x.id] = { offset: v.offset || 0, notes: JSON.parse(v.notes) }; } catch (e) {} });
+    c.forEach((x) => { const v = x.data(); if (!v.official) return; try { live[v.vid] = { offset: v.offset || 0, notes: JSON.parse(v.notes) }; } catch (e) {} });
     return { drafts, live };
   },
   saveDraft: (vid, d) => setDoc(doc(db, "piano_drafts", vid), { draft: JSON.stringify(d), ts: serverTimestamp() }),
   // the game reads notes as a JSON string: Firestore can't store arrays inside arrays
-  publish: (vid, c) => setDoc(doc(db, "piano_charts", vid), { notes: JSON.stringify(c.notes), offset: Math.round(c.offset || 0), n: c.notes.length, ts: serverTimestamp() }),
-  unpublish: (vid) => deleteDoc(doc(db, "piano_charts", vid)),
+  async publish(vid, c) {
+    if (c.notes.length < 20) throw new Error("a level needs 20 notes or more");
+    const ref = doc(db, "rhythm_levels", "o-" + vid), old = await getDoc(ref);
+    const L = window.PIANO_LEVELS.find((x) => x.vid === vid), ms = c.notes.map((n) => n[0]);
+    await setDoc(ref, { vid, title: L.song.slice(0, 40), author: "sortafun", notes: JSON.stringify(c.notes), offset: Math.round(c.offset || 0),
+      n: c.notes.length, dur: Math.round(Math.max(...ms) - Math.min(...ms)), plays: old.exists() ? old.data().plays || 0 : 0,
+      official: true, day: sgDay(), ts: serverTimestamp() });
+    return ref.id;
+  },
+  unpublish: (vid) => dropLevel("o-" + vid),
 };
+// a level and its board, gone for good
+async function dropLevel(id) {
+  const sc = await getDocs(collection(db, "rhythm_levels", id, "scores"));
+  await Promise.all(sc.docs.map((x) => deleteDoc(x.ref)));
+  await deleteDoc(doc(db, "rhythm_levels", id));
+}
+async function loadLevels() {
+  $("rl-count").textContent = "loading...";
+  const snap = await getDocs(query(collection(db, "rhythm_levels"), orderBy("ts", "desc"), limit(500)));
+  const song = (v) => { const L = window.PIANO_LEVELS.find((x) => x.vid === v); return L ? L.by + " - " + L.song : v; };
+  $("rltable").tBodies[0].innerHTML = snap.docs.map((x) => { const v = x.data();
+    return `<tr><td>${esc(when(v.ts))}</td><td><a href="rhythm.html?l=${encodeURIComponent(x.id)}" target="_blank">${esc(v.title)}</a>${v.official ? " (official)" : ""}</td>` +
+      `<td>${esc(song(v.vid))}</td><td>${esc(v.author)}</td><td>${esc(v.n)}</td><td>${esc(v.plays || 0)}</td><td><button data-drop="${esc(x.id)}">delete</button></td></tr>`; }).join("") ||
+    '<tr><td colspan="7" class="muted">no levels yet</td></tr>';
+  $("rl-count").textContent = snap.size + " level" + (snap.size === 1 ? "" : "s");
+}
+document.getElementById("rlevels").addEventListener("toggle", (e) => { if (e.target.open && auth.currentUser) loadLevels().catch((err) => { $("rl-count").textContent = "error: " + (err.code || err.message); }); });
+document.getElementById("rl-reload").addEventListener("click", () => loadLevels());
+document.getElementById("rltable").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-drop]"); if (!b) return;
+  if (!confirm("delete this level and its leaderboard for good?")) return;
+  b.disabled = true;
+  try { await dropLevel(b.dataset.drop); b.closest("tr").remove(); } catch (err) { b.disabled = false; alert("didn't delete: " + (err.code || err.message)); }
+});
 let studioUp = false;
 document.getElementById("studio").addEventListener("toggle", (e) => {
   if (!e.target.open || studioUp || !auth.currentUser) return;

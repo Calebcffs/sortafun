@@ -1,11 +1,9 @@
-/* Piano Rush campaign: the ten songs, shared by the game (piano.html) and the
- * recording studio on admin.html (piano-studio.js), so the two never drift.
+/* Rhythm Rush (rhythm.html): the ten songs a level can be made for, shared by
+ * the game and the recording studio (piano-studio.js, on rhythm.html for
+ * players and on admin.html for Caleb's official levels), so they never drift.
  *   vid: the official NoCopyrightSounds upload on YouTube (played by YouTube's own player)
- *
- * The notes are tapped in by hand in the studio and published to Firestore
- * (piano_charts/<vid>, readable by anyone, writable only by the admin account).
- * PIANO_CHARTS below is the fallback the game uses if Firestore can't be
- * reached: { "<vid>": { offset: ms, notes: [[ms into the video, lane 0-3], ...] } }. */
+ * firestore.rules lists the same ten video ids: a level for any other video is refused.
+ * (The file keeps its old name: it started as Piano Rush's campaign.) */
 window.PIANO_LEVELS = [
   { song: "Feel Good", by: "Syn Cole", vid: "q1ULJ92aldE" },
   { song: "Sky High", by: "Elektronomia", vid: "TW9d8vYrVFQ" },
@@ -18,5 +16,3 @@ window.PIANO_LEVELS = [
   { song: "Blank", by: "Disfigure", vid: "p7ZsBPK656s" },
   { song: "My Heart", by: "Different Heaven & EH!DE", vid: "jK2aIUmmdP4" }
 ];
-window.PIANO_CHARTS = {
-};

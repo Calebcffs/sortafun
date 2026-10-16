@@ -1456,50 +1456,10 @@ trademark rule under SEO). One canvas, four columns, four rows on screen.
 - **Today's song** (key `pianoday`, low, ms): `SONGS[SG day % n]`, the board
   only moves when you tap; the clock runs from the first tap to the last
   note. Only a finished song is submitted.
-- **Campaign** (v0.15, key `pianocamp`, on NO leaderboard, so `keepBoard`
-  mounts nothing; its own code path: `campReset/campPress/campFrame/drawCamp`,
-  endless and daily untouched). Ten NCS (NoCopyrightSounds) tracks in `LEVELS`
-  (`vid` = their official YouTube upload), played by **YouTube's own embedded
-  player** in a 200px strip above the board (`#ytbox`). Not MP3s: NCS's free
-  licence covers videos/streams and their policy sends games to a commercial
-  licensing form, and ripping from YouTube breaks YouTube's terms. If Caleb
-  ever gets an NCS licence, use the official ncs.io downloads. YouTube's rules
-  (Required Minimum Functionality): player at least 200x200, **nothing drawn
-  over it** (the corner buttons move below it in the campaign; the level list
-  hides it). On iPhone the reliable start is the player's own play button;
-  space / a board tap call `playVideo()`. The round starts on PLAYING with the
-  time near 0, and notes run on `getCurrentTime()` (measured: updates every
-  frame, ~1 ms jitter), so buffering or a pre-roll ad just freezes them. Tap
-  Tap Revenge rules: notes fall to a line (`APPROACH` 1.25 s), judged perfect
-  50 ms / great 100 / good 150 (`WIN`), a tap on nothing breaks the combo,
-  combo x10 steps the multiplier to 4x, a miss costs 7 health, 0 health pauses
-  the video and ends it. No sounds of its own. Unlocks: localStorage
-  `sortafun-piano-ncs`; best grade per song `sortafun-piano-best-<vid>`;
-  `sortafun-piano-lag` (ms) shifts judging for slow speakers. Credit line under
-  the board, as NCS asks (artist, title, link to their upload).
-  **Notes come from Caleb**, tapped in the **recording studio on admin.html**
-  (v0.15.1; `piano.html` has no record mode any more, `?record` does
-  nothing). `piano-charts.js` holds the ten songs (`PIANO_LEVELS`, shared by
-  game and studio) and an empty fallback `PIANO_CHARTS`. `piano-studio.js`
-  (`PianoStudio.mount(el, store, {fake})`) is the studio: YouTube player with
-  its own controls (scrub, then record from there), a lane canvas, D F J K or
-  tap the lanes (ignored while typing in a box or with the section closed),
-  record a pass (taps stamped raw on `getCurrentTime()`; the game adds the
-  player's lag), 1/0.75/0.5x, passes merge with same-lane taps within 60 ms
-  deduped, "replace" makes a pass wipe the old notes in the stretch it
-  covered, -10/+10 ms offset, undo, clear, play it back with a tick per note,
-  publish / take it down, save file. admin.html mounts it on opening the
-  `<details id="studio">` with a Firestore store: drafts in
-  `piano_drafts/<vid>` (`{draft: JSON string}`, admin only) and published
-  notes in `piano_charts/<vid>` (`{notes: JSON string of [[ms, lane]], offset,
-  n, ts}`; Firestore can't store nested arrays; anyone reads, only
-  `isAdmin()` writes). The game lists `piano_charts` with one REST GET (no
-  SDK) the first time the campaign opens (`loadLive` / `applyLive`) and
-  rebuilds the level list or starts a waiting level when they land. Tests:
-  `%TEMP%/sfchk/studiotest.mjs` (run `python serve.py` there first: it serves
-  the repo plus `harness/__studio.html`, a localStorage store) and
-  `ncstest.mjs` (fake player via `__piano.camp.fake()`, notes injected into
-  `PIANO_CHARTS` or through `__piano.camp.live(<REST body>)`).
+- **The campaign is gone** (v0.16): Caleb found the timing-judged NCS mode
+  more fun than the tiles, so it grew into its own game, **Rhythm Rush**
+  (`rhythm.html`, below). piano.html links to it (`.rrlink`) and keeps
+  endless and today's song only.
 - **Taps are forgiving** (Caleb: "a lot of false errors", v0.13.2): anywhere
   in the right column counts, so does a tap within a quarter column over the
   line; a tap on the tile just hit (or in its column within 250 ms) is
@@ -1521,9 +1481,73 @@ trademark rule under SEO). One canvas, four columns, four rows on screen.
   on every tap).
 - The script is wrapped in an IIFE (a top-level `var scroll` would clobber
   `window.scroll`); tests use `window.__piano` (`press`, `state()`, `key()`,
-  `spot()`, `gain()`, `camp.{pick, fake, start, time, state, live, cleared}`).
-  Driven over CDP with real `Input.dispatchTouchEvent` taps at 390px:
-  `%TEMP%/sfchk/pianotest.mjs`, `ncstest.mjs`, `humantest.mjs`.
+  `spot()`, `gain()`). Driven over CDP with real `Input.dispatchTouchEvent`
+  taps at 390px: `%TEMP%/sfchk/pianotest.mjs`, `humantest.mjs`.
+
+### Rhythm Rush (`rhythm.html`, 2026-10-16, v0.16)
+
+Caleb: tap-tap style is more fun, so make it accuracy based, no tap sounds,
+player-made levels in a scrollable list, a mini leaderboard per level, an
+accuracy graph and grades D to SSS. The name is ours ("Beat Tap" was too close
+to two existing apps; the well-known tap game's name stays out of all text).
+- **Songs:** the ten NCS tracks in `piano-charts.js` (`PIANO_LEVELS`), played by
+  **YouTube's own embedded player** in a 200px strip above the board. Not MP3s:
+  NCS's free licence covers videos/streams and sends games to a commercial
+  licensing form, and ripping from YouTube breaks YouTube's terms (with an NCS
+  licence, use the official ncs.io downloads). YouTube's Required Minimum
+  Functionality: player at least 200x200, **nothing drawn over it** (the corner
+  buttons sit below it). `<html data-nomusic>`: the site tune never plays here.
+- **Judging:** notes fall to a line (`APPROACH` 1.25 s). Each tap is worth
+  1.0 within 25 ms (perfect), then falls linearly to 0.3 at the 140 ms edge
+  (great 60, good 100, ok 140). A note let past is a miss (0); a tap on an
+  empty lane is a **stray** (breaks the combo, adds 0.25 to the accuracy
+  denominator, so mashing doesn't pay). Accuracy = sum / (notes + 0.25 x
+  strays). Score = 1,000,000 x (0.9 x accuracy + 0.1 x best combo / notes).
+  Grades: SSS 98%, SS 95, S 90, A 80, B 70, C 60, else D. **No sound on any
+  tap** (only the end-of-song jingle, after the music stops). No health, no
+  fail: the level runs to its last note + 1.2 s.
+- **Clock:** `vidT()` runs on `performance.now()` and leans 15% per call toward
+  `getCurrentTime()` (snaps if 60 ms off). Measured on the real embed: ±7 ms,
+  0.4 ms per-frame jitter, so this is insurance for phones. `songT()` subtracts
+  `sortafun-rhythm-lag` (ms, per device). The results offer "shift timing" when
+  the average tap is 15+ ms early or late (Bluetooth headphones); the play view
+  has -10 / +10 too.
+- **Results:** grade tile, score, accuracy, best combo, counts (perfect, great,
+  good, ok, miss, stray), a canvas graph of every tap's offset across the song
+  (green band = perfect, red ticks = misses, white line = average), name +
+  submit, the level's top 10. Personal best per level in localStorage
+  `sortafun-rhythm-best-<id>`, shown in the list.
+- **Data** (`leaderboard.js` `SortafunLB.rhythm.{list, get, create, played,
+  top, score}`): `rhythm_levels/<id>` = `{vid, title, author, notes: JSON
+  string of [[ms, lane]], offset, n, dur, plays, official?, day, ts}`. The list
+  is ONE REST runQuery with a field mask (no notes, newest 300); notes are
+  fetched when a level opens and checked (`parseNotes`: lanes 0-3, finite ms,
+  sorted, capped). Sorting (official first, then newest or most played) and the
+  song filter are client side, so no composite index. Boards are the
+  subcollection `rhythm_levels/<id>/scores` (`{name, score, acc 0..10000,
+  grade, combo, day, ts}`, `orderBy(score desc) limit 10`). Rules: anyone
+  creates a level with a 20-char auto id, one of the ten video ids (no other
+  video can be embedded), n 20..6000, notes string <= 120000, plays 0, no
+  `official`; the only public edit is plays +1; scores need the level to exist;
+  only `isAdmin()` deletes (moderation) or writes `o-<vid>` official levels.
+  Links: `rhythm.html?l=<id>` opens a level.
+- **Making levels:** the "make a level" tab mounts the studio
+  (`piano-studio.js`, `{public: true}`): same tools as before (record passes,
+  speeds, merge, replace, nudge, undo, play back with ticks), drafts in
+  localStorage `sortafun-rhythm-drafts`, then a level name + their name and
+  "share it" (20 notes minimum, can't be edited after). The game's keys only
+  act in the play view and the studio's only while it's on screen.
+- **Admin** (admin.html): the studio there publishes the **official** level for
+  a song (`rhythm_levels/o-<vid>`, author "sortafun", pinned first with an
+  "official" chip; drafts stay in `piano_drafts`). "rhythm rush: player levels"
+  lists every level with a delete button (deletes its scores, then the level).
+- Tests: `%TEMP%/sfchk/rhythmtest.mjs` (`python serve.py` first). An in-page
+  localStorage store (`window.__rhythmStore`) and fake clock
+  (`window.__rhythmFake`) injected before load, a bot that taps at a set
+  offset; covers list/sort/filter, a dead-on run (SSS, no tap sounds), a late
+  run with misses and strays (D, lag tip, shift, then SSS), submit, quit,
+  sharing from the studio, 360px phone layout + full screen, and one run on the
+  **real** YouTube player (`?real`). Test hook `window.__rhythm`.
 
 **Mobile chip** (homepage, v0.13): `MOBILE` in index.html lists the games that
 play well on a phone; their tiles get `data-mobile` and the chip filters on it
@@ -1659,7 +1683,7 @@ submitted per day / per game, "plays" = submitted scores) and latest scores + gu
 just a client check: it signs in to Firebase Auth as `admin@sortafun.org` (email/password provider, account made
 with the service-account key) and `firestore.rules` `isAdmin()` lets only that account read `feedback` and
 read/write `admin_todos` / `admin_state` (feedback "done" flags; feedback docs themselves stay immutable).
-It also holds the **Piano Rush recording studio** (see Piano Rush), the only place campaign notes are made.
+It also holds the **Rhythm Rush studio** for Caleb's official levels and a list of every player level with delete (see Rhythm Rush).
 The "in development" table near the top is static HTML: WIP games (Daily Sudoku, the slacking simulator) with links
 and what's next. Never write their passwords in it (the page source is public even though the data isn't).
 Uses its own named Firebase app, session persistence only.

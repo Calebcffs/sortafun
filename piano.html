@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
 <title>Piano Rush: Free Piano Tapping Game for Phones | Sortafun</title>
-<meta name="description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.">
+<meta name="description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
 <meta name="sortafun:name" content="piano rush">
 <link rel="canonical" href="https://sortafun.org/piano.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sortafun">
 <meta property="og:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
-<meta property="og:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.">
+<meta property="og:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
 <meta property="og:url" content="https://sortafun.org/piano.html">
 <meta property="og:image" content="https://sortafun.org/assets/og/piano.png">
 <meta property="og:image:width" content="1200">
@@ -19,10 +19,10 @@
 <meta property="og:image:alt" content="Piano Rush on Sortafun">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Piano Rush: Free Piano Tapping Game for Phones | Sortafun">
-<meta name="twitter:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.">
+<meta name="twitter:description" content="Tap the tiles in order and play the tune. Endless speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.">
 <meta name="twitter:image" content="https://sortafun.org/assets/og/piano.png">
 <meta name="theme-color" content="#ffd43b">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Piano Rush","url":"https://sortafun.org/piano.html","description":"Tap the tiles in order and play the tune. Endless speeds up until you miss, today's song is the same for everyone, and the campaign plays real NCS dance tracks with notes judged on timing. Tap on a phone, or D F J K on a keyboard.","image":"https://sortafun.org/assets/og/piano.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Piano Rush","url":"https://sortafun.org/piano.html","description":"Tap the tiles in order and play the tune. Endless speeds up until you miss, and today's song is the same for everyone. Tap on a phone, or D F J K on a keyboard.","image":"https://sortafun.org/assets/og/piano.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Piano Rush","item":"https://sortafun.org/piano.html"}]}</script>
 <!-- /seo -->
 <link rel="icon" href="favicon.ico">
@@ -59,7 +59,7 @@
   }
   .again .res { font-size: 14px; opacity: .9; text-shadow: 0 1px 2px #000; }
   .again:hover, .again:active { transform: none; background: linear-gradient(rgba(16,14,36,0), rgba(16,14,36,.9) 34%); }
-  /* little buttons in the board's top corners (hidden mid-song): levels, full screen */
+  /* a little button in the board's top corner (hidden mid-song): full screen */
   .corner {
     position: absolute; top: 8px; z-index: 3; height: 34px; margin: 0; padding: 0 12px; border-radius: 999px;
     background: rgba(255,255,255,.16); color: #fff; border: 2px solid rgba(255,255,255,.45);
@@ -68,45 +68,10 @@
   .corner:hover { background: rgba(255,255,255,.3); }
   .corner:active { transform: none; box-shadow: none; }
   #fs { right: 8px; }
-  #lv { left: 8px; display: none; }
-  .stage.camp #lv { display: block; }
   .fs-out { display: none; }
   html.pfs .fs-out { display: inline; }
   html.pfs .fs-in { display: none; }
-  .stage.running .corner, .stage.picking #lv { opacity: 0; pointer-events: none; }
-  .stage.picking #fs { z-index: 5; }
-  /* campaign: the level picker sits over the board */
-  .levels {
-    position: absolute; inset: 0; z-index: 4; display: none; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding: 12px; background: rgba(6,5,18,.96); color: #fff; touch-action: pan-y; text-align: left;
-  }
-  .stage.picking .levels { display: block; }
-  .levels h2 { margin: 4px 0 14px 2px; min-height: 30px; text-align: left; font: 400 22px "Lilita One", "Arial Black", sans-serif; color: #ffe066; letter-spacing: .5px; }
-  .lv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .lv {
-    display: block; width: 100%; min-width: 0; margin: 0; padding: 8px 10px; min-height: 72px; text-align: left;
-    border-radius: 12px; border: 2px solid rgba(255,255,255,.28); box-shadow: none;
-    background: linear-gradient(#2b2160, #191242); color: #fff; font: 400 12px/1.3 var(--body);
-    touch-action: manipulation;
-  }
-  .lv:hover { background: linear-gradient(#372a7a, #221858); }
-  .lv:active { transform: translateY(1px); box-shadow: none; }
-  .lv b { display: flex; justify-content: space-between; align-items: center; font: 400 20px "Lilita One", "Arial Black", sans-serif; color: #ffe066; }
-  .lv b i { font-style: normal; font-size: 15px; }
-  .lv .song { display: block; font-weight: 700; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lv .by { display: block; color: #c9c2f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lv.won { border-color: #ffd43b; }
-  .lv.next { border-color: #ff4fb0; box-shadow: 0 0 0 3px rgba(255,79,176,.35); }
-  .lv:disabled { opacity: .42; cursor: default; }
-  /* campaign: YouTube's player sits above the board, never under or behind anything */
-  .ytbox { display: none; position: relative; height: 200px; background: #000; }
-  .stage.camp:not(.picking) .ytbox { display: block; }
-  .ytbox iframe, #yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  .ytmsg { position: absolute; inset: 0; margin: 0; display: none; align-items: center; justify-content: center; padding: 16px; background: #100e24; color: #fff; font-size: 14px; text-align: center; }
-  .ytmsg.on { display: flex; }
-  .stage.camp:not(.picking) .corner { top: 208px; }
-  .credit { font-size: 11px; color: #6a6780; margin: 6px 0 0; min-height: 0; }
-  .credit a { color: inherit; }
+  .stage.running .corner { opacity: 0; pointer-events: none; }
   /* full screen: the real Fullscreen API where there is one, and on iPhone (which has none for pages)
      the board fills the window, and pinch, double-tap zoom and scrolling are all switched off */
   html.pfs, html.pfs body { overflow: hidden; overscroll-behavior: none; }
@@ -116,21 +81,18 @@
     display: flex; justify-content: center; align-items: center; background: #04030c;
   }
   html.pfs #board { width: auto; }
-  html.pfs .stage.camp { flex-direction: column; }
-  html.pfs .stage.camp .ytbox { width: var(--bw, 100%); flex: none; }
   html.pfs .again, html.pfs .again:hover, html.pfs .again:active { left: 50%; right: auto; width: var(--bw, 100%); transform: translateX(-50%); }
   html.pfs .corner { top: max(10px, env(safe-area-inset-top)); }
   html.pfs #fs { right: calc(50% - var(--bw, 100%) / 2 + 10px); }
-  html.pfs #lv { left: calc(50% - var(--bw, 100%) / 2 + 10px); }
-  html.pfs .levels { left: 50%; right: auto; width: var(--bw, 100%); transform: translateX(-50%); padding-top: max(12px, env(safe-area-inset-top)); }
   #big { font-size: 20px; min-height: 26px; margin: 12px 0 4px; }
+  .rrlink { font-size: 13px; color: #4a4760; margin: 6px 0; }
   .keys { font-size: 12px; color: #6a6780; margin: 2px 0 8px; }
   .keys kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border: 2px solid var(--ink); border-radius: 5px; background: #fff; font: 700 12px var(--body); color: var(--ink); }
   @media (hover: none) { .keys { display: none; } }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=2b834e0b"></script>
-<script src="feedback.js?v=e6a371e6"></script>
+<script src="china.js?v=24eaaa17"></script>
+<script src="feedback.js?v=a4a074e7"></script>
 <script src="panic-app.js?v=f332cce4"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -143,20 +105,16 @@
   <div class="modes" role="group" aria-label="mode">
     <button type="button" data-mode="endless" aria-pressed="true">endless</button>
     <button type="button" data-mode="daily" aria-pressed="false">today's song</button>
-    <button type="button" data-mode="camp" aria-pressed="false">campaign</button>
   </div>
   <p id="tune"></p>
 
   <div class="stage" id="stage">
-    <div class="ytbox" id="ytbox"><div id="yt"></div><p class="ytmsg" id="ytmsg"></p></div>
     <canvas id="board" width="380" height="600"></canvas>
     <button type="button" class="again" id="again" data-nosfx><span class="pill">play again</span><span class="res" id="res"></span></button>
-    <button type="button" class="corner" id="lv">&#x2630; levels</button>
     <button type="button" class="corner" id="fs" data-nosfx><span class="fs-in">&#x26F6; full screen</span><span class="fs-out">&#x2715; exit</span></button>
-    <div class="levels" id="levels"><h2>campaign</h2><div class="lv-grid" id="lvgrid"></div></div>
   </div>
-  <p class="credit" id="credit"></p>
   <div id="big">tap the start tile</div>
+  <p class="rrlink">want real songs, judged on timing? play <a href="rhythm.html">rhythm rush</a>.</p>
   <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns, <kbd>space</kbd> to play again</p>
 
   <div class="status" id="status"></div>
@@ -164,14 +122,13 @@
   <div id="lb"></div>
 
   <!-- seo:more -->
-  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="maze.html">Cursor Maze</a></li><li><a href="reaction.html">Reaction Time Test</a></li><li><a href="aim.html">Aim Trainer</a></li><li><a href="stopbar.html">Stop the Bar</a></li><li><a href="driving.html">Circuit Race</a></li><li><a href="sushi.html">Sushi Goes Round</a></li><li><a href="deeptime.html">Deep Time</a></li><li><a href="sudoku.html">Daily Sudoku</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="maze.html">Cursor Maze</a></li><li><a href="reaction.html">Reaction Time Test</a></li><li><a href="aim.html">Aim Trainer</a></li><li><a href="stopbar.html">Stop the Bar</a></li><li><a href="rhythm.html">Rhythm Rush</a></li><li><a href="driving.html">Circuit Race</a></li><li><a href="sushi.html">Sushi Goes Round</a></li><li><a href="deeptime.html">Deep Time</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
   <!-- /seo:more -->
   <a class="back" href="index.html">&larr; back up the pipe</a>
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=7dc50db3"></script>
-<script src="piano-charts.js?v=f9133931"></script>
+<script src="leaderboard.js?v=d56e2710"></script>
 <script src="share.js?v=e240f67e"></script>
 <script>
 (function () {
@@ -308,8 +265,7 @@ var tuneEl = document.getElementById("tune");
 var W, H, RH, DPR;                 // css size, row height (4 rows on screen)
 var mode = "endless";
 var tiles, hits, scroll, target, phase, speed, t0, lastT, bad, order, armT;
-var level = 0, won = false;        // campaign: the level being played, cleared it?
-var pillEl = again.querySelector(".pill"), grid = document.getElementById("lvgrid");
+var pillEl = again.querySelector(".pill");
 var lastHit = 0, held = null;      // when the last tile went down; a tap that came in a hair early
 var rings = [], lane = [0, 0, 0, 0];
 
@@ -318,23 +274,20 @@ var DAILY = SONGS[SG_DAY % SONGS.length];
 var zh = function () { return document.documentElement.classList.contains("zh"); };
 var full = function () { return document.documentElement.classList.contains("pfs"); };
 
-// (the campaign's key is on no leaderboard, so no board shows under it)
-function boardKey() { return mode === "daily" ? "pianoday" : mode === "camp" ? "pianocamp" : "piano"; }
+function boardKey() { return mode === "daily" ? "pianoday" : "piano"; }
 
 function size() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
-  var vid = mode === "camp" && level ? YTH : 0;   // the campaign's video strip above the board
   if (full()) {
     var vw = window.innerWidth, vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    H = Math.round(vh) - vid;
-    W = Math.round(Math.min(vw, H * (vid ? 0.75 : 0.62)));      // a phone held upright uses the whole width
+    H = Math.round(vh);
+    W = Math.round(Math.min(vw, H * 0.62));      // a phone held upright uses the whole width
     cv.style.width = W + "px";
     stage.style.setProperty("--bw", W + "px");
   } else {
     cv.style.width = "";
     W = cv.clientWidth || 380;
-    H = vid ? Math.round(Math.min(W * 1.35, Math.max(300, window.innerHeight * 0.6)))
-      : Math.round(Math.min(W * 1.55, Math.max(320, window.innerHeight * 0.68)));
+    H = Math.round(Math.min(W * 1.55, Math.max(320, window.innerHeight * 0.68)));
   }
   cv.style.height = H + "px";
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
@@ -364,18 +317,12 @@ function reset() {
   speed = 2.4;
   if (bus) hush();
   hushed = false;
-  won = false;
   clearTimeout(armT);
   again.classList.remove("show", "armed");
   stage.classList.remove("running");
-  stage.classList.toggle("camp", mode === "camp");
   pillEl.textContent = "play again";
   statusEl.textContent = "";
   lbEl.innerHTML = "";
-  if (mode === "camp") return campReset();
-  stage.classList.remove("picking");
-  creditEl.textContent = "";
-  ytPause();
   if (mode === "daily") {
     tiles = songTiles(DAILY).map(function (t, i) { t.row = i; return t; });
     tuneEl.textContent = "today's song: " + DAILY.name + " (" + tiles.length + " notes)";
@@ -388,7 +335,7 @@ function reset() {
   size();
   intoView();
 }
-// phones: bring the whole board (and the campaign's video) on screen
+// phones: bring the whole board on screen
 function intoView() {
   if (!full() && W && window.matchMedia && matchMedia("(pointer: coarse)").matches) {
     var r = stage.getBoundingClientRect();
@@ -440,7 +387,6 @@ function sprites() {
 
 function draw() {
   if (!W || !tiles || !SPR.tile) return;
-  if (mode === "camp") return drawCamp();
   var now = performance.now();
   var cw = W / 4;
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
@@ -515,7 +461,7 @@ function frame(now) {
     }
   } else if (phase === "daily-run") {
     scroll += (target - scroll) * Math.min(1, dt * 22);
-  } else if (mode === "camp") campFrame();
+  }
   draw();
   requestAnimationFrame(frame);
 }
@@ -536,8 +482,7 @@ function inTile(i, y) {
   return y >= top - h * 0.15 && y <= top + h * 1.15;
 }
 function press(col, x, y) {
-  if (mode === "camp") return campPress(col);
-  if (phase === "over" || phase === "pick" || !tiles.length) return;
+  if (phase === "over" || !tiles.length) return;
   var t = tiles[hits], now = performance.now();
   // a finger a hair over the line into the right column
   if (x != null && col !== t.col && Math.abs(col - t.col) === 1) {
@@ -599,7 +544,6 @@ function offerAgain(res) {
 }
 function playAgain() {
   if (!again.classList.contains("armed")) return;
-  if (mode === "camp") return campAgain();
   reset();
 }
 again.addEventListener("click", playAgain);
@@ -636,358 +580,6 @@ function done() {
 }
 
 /* ------------------------------------------------------------------ *
- * campaign: real NCS (NoCopyrightSounds) tracks, played by YouTube's own
- * embedded player above the board (their free licence covers videos and
- * streams, not games, so nothing is downloaded or hosted here). Notes fall
- * to a line and each tap is judged on timing, Tap Tap Revenge style. The
- * songs are in piano-charts.js; the notes are tapped in by hand in the
- * recording studio on admin.html and published to Firestore (piano_charts),
- * read here with one REST call. Not on any leaderboard: the prize is the next level
- * ------------------------------------------------------------------ */
-var LEVELS = window.PIANO_LEVELS;
-var COLORS = ["#ff4fb0", "#3fd5ff", "#9dff57", "#ffd43b"];
-var APPROACH = 1.25;                                    // seconds from the top of the board to the line
-var WIN = [[0.05, "perfect", 300, "#7dffb0"], [0.1, "great", 200, "#3fd5ff"], [0.15, "good", 100, "#ffd43b"]];
-var YTH = 200;                                          // the video strip (YouTube asks for at least 200 x 200)
-var ytbox = document.getElementById("ytbox"), ytmsg = document.getElementById("ytmsg");
-var creditEl = document.getElementById("credit");
-var cs = null;                                          // this round: notes, score, combo, health
-
-function store(k, v) {
-  try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; }
-}
-function cleared() { return Math.max(0, Math.min(LEVELS.length, +store("sortafun-piano-ncs") || 0)); }
-function setCleared(n) { store("sortafun-piano-ncs", n); }
-function calib() { return +store("sortafun-piano-lag") || 0; }     // ms, this device's audio delay
-// a level's notes: published from the studio (Firestore), else the copy in piano-charts.js
-function chartFor(L) {
-  var c = (window.PIANO_CHARTS || {})[L.vid];
-  return c && c.notes && c.notes.length ? c : null;
-}
-// the published notes: one REST read of piano_charts (no SDK needed), the first time the campaign opens
-var liveAsked = false;
-function loadLive() {
-  var cfg = window.SORTAFUN_FIREBASE;
-  if (liveAsked || !cfg || !cfg.projectId || !window.fetch) return;
-  liveAsked = true;
-  fetch("https://firestore.googleapis.com/v1/projects/" + cfg.projectId + "/databases/(default)/documents/piano_charts?pageSize=100&key=" + cfg.apiKey)
-    .then(function (r) { return r.ok ? r.json() : null; }).then(applyLive).catch(function () {});
-}
-function applyLive(j) {
-  (j && j.documents || []).forEach(function (d) {
-    try {
-      var f = d.fields, notes = JSON.parse(f.notes.stringValue), off = f.offset || {};
-      if (notes.length) window.PIANO_CHARTS[d.name.split("/").pop()] = { offset: +(off.integerValue || off.doubleValue || 0), notes: notes };
-    } catch (e) {}
-  });
-  // the list and a level still waiting to start pick them up
-  if (mode !== "camp") return;
-  if (!level) return buildLevels();
-  var L = LEVELS[level - 1], ch = chartFor(L);
-  if (!cs && ch && (phase === "load" || phase === "ready")) {
-    cs = newRound(ch);
-    tuneEl.textContent = "level " + level + ": " + L.by + " - " + L.song + ", " + ch.notes.length + " notes";
-    if (phase === "ready") { phase = "load"; campReady(); }
-  }
-}
-
-/* ---- YouTube's player (or a stand-in clock in tests) ---- */
-var yt = { p: null, ready: false, vid: null, fake: false, failT: 0 };
-function ytApi(cb) {
-  if (window.YT && YT.Player) return cb();
-  var prev = window.onYouTubeIframeAPIReady;           // china.js may be waiting on the same script
-  window.onYouTubeIframeAPIReady = function () { if (prev) { try { prev(); } catch (e) {} } cb(); };
-  if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-    var s = document.createElement("script");
-    s.src = "https://www.youtube.com/iframe_api";
-    s.onerror = function () { ytFail(); };
-    document.head.appendChild(s);
-  }
-}
-function ytFail(why) {
-  clearTimeout(yt.failT);
-  ytmsg.textContent = why || "YouTube didn't load. It may be blocked on this network (work and school wifi often block it).";
-  ytmsg.classList.add("on");
-  if (mode === "camp" && level) big.textContent = "no video, no music. try another network";
-}
-function ytLoad(vid) {
-  ytmsg.classList.remove("on");
-  if (yt.p && yt.ready) {
-    if (yt.vid !== vid) { yt.vid = vid; yt.p.cueVideoById(vid); } else { yt.p.pauseVideo(); yt.p.seekTo(0, true); }
-    if (yt.p.setPlaybackRate) yt.p.setPlaybackRate(1);
-    return campReady();
-  }
-  yt.vid = vid;
-  if (yt.p) return;                                     // still loading; it picks up yt.vid when ready
-  if (yt.fake) { yt.p = fakePlayer(); yt.ready = true; return campReady(); }
-  clearTimeout(yt.failT);
-  yt.failT = setTimeout(function () { if (!yt.ready) ytFail(); }, 12000);
-  ytApi(function () {
-    yt.p = new YT.Player("yt", {
-      width: "100%", height: "100%", videoId: yt.vid,
-      playerVars: { playsinline: 1, controls: 0, rel: 0, disablekb: 1, iv_load_policy: 3, fs: 0 },
-      events: {
-        onReady: function () {
-          yt.ready = true; clearTimeout(yt.failT);
-          if (yt.p.getVideoData && yt.p.getVideoData().video_id !== yt.vid) yt.p.cueVideoById(yt.vid);
-          campReady();
-        },
-        onStateChange: function (e) { ytState(e.data); },
-        onError: function () { ytFail("this video won't play here. try the next level, or another network."); }
-      }
-    });
-  });
-}
-function ytTime() { return yt.p && yt.ready ? yt.p.getCurrentTime() || 0 : 0; }
-function ytPlay() { if (yt.p && yt.ready) yt.p.playVideo(); }
-function ytPause() { if (yt.p && yt.ready && yt.p.pauseVideo) yt.p.pauseVideo(); }
-// tests: a clock that behaves like the player
-function fakePlayer() {
-  var f = { t: 0, at: 0, on: false, rate: 1, paused: 0 };
-  f.getCurrentTime = function () { return f.on ? f.t + (performance.now() - f.at) / 1000 * f.rate : f.t; };
-  f.playVideo = function () { if (f.on) return; f.at = performance.now(); f.on = true; setTimeout(function () { ytState(1); }, 20); };
-  f.pauseVideo = function () { if (!f.on) return; f.t = f.getCurrentTime(); f.on = false; f.paused++; ytState(2); };
-  f.seekTo = function (s) { f.t = s; f.at = performance.now(); };
-  f.cueVideoById = function () { f.t = 0; f.on = false; };
-  f.setPlaybackRate = function (r) { f.t = f.getCurrentTime(); f.at = performance.now(); f.rate = r; };
-  return f;
-}
-// panic key (0): the music stops with everything else
-new MutationObserver(function () { if (document.documentElement.classList.contains("panic")) ytPause(); })
-  .observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-
-/* ---- a round ---- */
-function newRound(ch) {
-  var off = (ch.offset || 0) / 1000;
-  var notes = ch.notes.map(function (n) { return { t: n[0] / 1000 + off, lane: n[1], j: null }; })
-    .sort(function (a, b) { return a.t - b.t; });
-  return { notes: notes, i0: 0, score: 0, combo: 0, best: 0, hp: 100, n: { perfect: 0, great: 0, good: 0, miss: 0 }, fx: [], judge: null };
-}
-function songT() { return ytTime() - calib() / 1000; }
-
-function campReset() {
-  cs = null;
-  loadLive();
-  stage.classList.toggle("picking", !level);
-  tiles = [];
-  if (!level) {
-    phase = "pick";
-    ytPause();
-    buildLevels();
-    tuneEl.textContent = "ten NCS tracks. clear one to unlock the next";
-    big.textContent = "pick a level";
-    creditEl.textContent = "";
-    size();
-    return;
-  }
-  var L = LEVELS[level - 1], ch = chartFor(L);
-  if (ch) cs = newRound(ch);
-  phase = "load";
-  tuneEl.textContent = "level " + level + ": " + L.by + " - " + L.song + (ch ? ", " + ch.notes.length + " notes" : ", no notes yet");
-  credit(L);
-  size();
-  intoView();
-  big.textContent = "loading the song...";
-  ytLoad(L.vid);
-}
-// the video is cued: waiting for play
-function campReady() {
-  if (mode !== "camp" || !level || phase !== "load") return;
-  phase = "ready";
-  big.textContent = cs ? (matchMedia("(hover: none)").matches ? "tap play on the video to start" : "press space or click the board to start") :
-    "no notes for this song yet";
-}
-function campStart() {
-  if (phase !== "ready" || !cs) return;
-  ytPlay();
-}
-// what YouTube says it's doing. The round starts the moment the song does
-function ytState(s) {
-  if (mode !== "camp" || !level) return;
-  if (s === 1) {
-    if (phase === "ready" && cs && ytTime() < 2) { phase = "camp-run"; stage.classList.add("running"); big.textContent = "go!"; }
-  } else if (s === 0 && phase === "camp-run") finishRound();
-}
-
-function judge(nt, name, pts, color) {
-  var now = performance.now();
-  nt.j = name;
-  cs.n[name]++;
-  if (name === "miss") {
-    cs.combo = 0; cs.hp = Math.max(0, cs.hp - 7);
-  } else {
-    cs.combo++; cs.best = Math.max(cs.best, cs.combo);
-    cs.score += pts * Math.min(4, 1 + Math.floor(cs.combo / 10));
-    cs.hp = Math.min(100, cs.hp + (name === "perfect" ? 2 : 1));
-    cs.fx.push({ lane: nt.lane, t: now });
-  }
-  cs.judge = { text: name, color: color, t: now };
-}
-function campFrame() {
-  if (phase !== "camp-run" || !cs) return;
-  var T = songT(), ns = cs.notes;
-  while (cs.i0 < ns.length && (ns[cs.i0].j || ns[cs.i0].t + WIN[2][0] < T)) {
-    if (!ns[cs.i0].j) judge(ns[cs.i0], "miss", 0, "#ff4d6d");
-    cs.i0++;
-  }
-  if (cs.hp <= 0) return failRound();
-  if (cs.i0 >= ns.length && T > ns[ns.length - 1].t + 1) finishRound();
-}
-function campPress(col) {
-  lane[col] = performance.now();
-  if (phase === "ready") return campStart();
-  if (phase !== "camp-run" || !cs) return;
-  var T = songT(), ns = cs.notes, hitN = null;
-  for (var i = cs.i0; i < ns.length && ns[i].t <= T + WIN[2][0]; i++) {
-    var n = ns[i];
-    if (n.j || n.lane !== col || Math.abs(n.t - T) > WIN[2][0]) continue;
-    if (!hitN || Math.abs(n.t - T) < Math.abs(hitN.t - T)) hitN = n;
-  }
-  if (!hitN) { cs.combo = 0; return; }                   // a tap on nothing breaks the combo (no mashing)
-  var d = Math.abs(hitN.t - T);
-  for (var w = 0; w < WIN.length; w++) if (d <= WIN[w][0]) return judge(hitN, WIN[w][1], WIN[w][2], WIN[w][3]);
-}
-function grade(acc) { return acc >= 0.95 ? "S" : acc >= 0.9 ? "A" : acc >= 0.8 ? "B" : acc >= 0.7 ? "C" : "D"; }
-function accuracy() {
-  var n = cs.n, tot = n.perfect + n.great + n.good + n.miss;
-  return tot ? (n.perfect + n.great * 0.7 + n.good * 0.4) / tot : 0;
-}
-// out of health: the song stops dead, no sound
-function failRound() {
-  ytPause();
-  big.textContent = "out of health. " + Math.round(accuracy() * 100) + "% so far";
-  offerAgain(big.textContent);
-}
-function finishRound() {
-  if (phase !== "camp-run") return;
-  var acc = accuracy(), g = grade(acc), L = LEVELS[level - 1];
-  won = true;
-  if (level > cleared()) setCleared(level);
-  var best = store("sortafun-piano-best-" + L.vid);
-  if (!best || cs.score > best.score) store("sortafun-piano-best-" + L.vid, { score: cs.score, grade: g, acc: Math.round(acc * 100) });
-  big.textContent = "level " + level + " cleared! " + g + ", " + Math.round(acc * 100) + "%, " + cs.score + " points, best combo " + cs.best;
-  offerAgain(big.textContent);
-  pillEl.textContent = level < LEVELS.length ? "next level" : "play again";
-}
-function campAgain() {
-  if (won && level < LEVELS.length) level++;
-  reset();
-}
-
-// the campaign's level cards: cleared ones get a tick and their best grade, the next one glows, the rest are locked
-function buildLevels() {
-  var done = cleared();
-  grid.innerHTML = "";
-  LEVELS.forEach(function (L, i) {
-    var n = i + 1, b = document.createElement("button"), open = n <= done + 1;
-    var best = store("sortafun-piano-best-" + L.vid), has = !!chartFor(L);
-    b.type = "button";
-    b.className = "lv" + (n <= done ? " won" : n === done + 1 ? " next" : "");
-    b.disabled = !open;
-    b.innerHTML = "<b><span></span><i></i></b><span class=song data-noxlate></span><span class=by data-noxlate></span>";
-    b.querySelector("b span").textContent = zh() ? "第 " + n + " 关" : "level " + n;
-    b.querySelector("b i").textContent = !open ? "🔒" : best ? best.grade : n <= done ? "✔" : "▶";
-    b.querySelector(".song").textContent = L.song;
-    b.querySelector(".by").textContent = has ? L.by : L.by + " · no notes yet";
-    b.addEventListener("click", function () { if (!b.disabled) { level = n; reset(); } });
-    grid.appendChild(b);
-  });
-}
-document.getElementById("lv").addEventListener("click", function () {
-  if (phase !== "camp-run") { level = 0; reset(); }
-});
-// NCS asks for a credit with the track, artist and a link to their upload
-function credit(L) {
-  creditEl.innerHTML = "";
-  var a = document.createElement("a"), b = document.createElement("a");
-  a.href = "https://youtu.be/" + L.vid; a.target = "_blank"; a.rel = "noopener";
-  a.textContent = L.by + " - " + L.song + " [NCS Release]"; a.setAttribute("data-noxlate", "");
-  b.href = "https://ncs.io/"; b.target = "_blank"; b.rel = "noopener"; b.textContent = "NoCopyrightSounds";
-  creditEl.append("song: ", a, ". music provided by ", b, ".");
-}
-
-/* ---- drawing the campaign ---- */
-function drawCamp() {
-  var now = performance.now(), cw = W / 4, HY = Math.round(H * 0.86), NH = Math.max(16, Math.round(H * 0.045));
-  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-  for (var c = 0; c < 4; c++) {
-    var a = 1 - (now - lane[c]) / 220;
-    ctx.globalAlpha = 0.07 + Math.max(0, a) * 0.3;
-    ctx.fillStyle = COLORS[c]; ctx.fillRect(c * cw, 0, cw, H);
-  }
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = "rgba(255,255,255,.12)";
-  for (c = 1; c < 4; c++) ctx.fillRect(Math.round(c * cw), 0, 1, H);
-  // the line and the four pads
-  ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.fillRect(0, HY - 1, W, 2);
-  for (c = 0; c < 4; c++) {
-    ctx.lineWidth = 3; ctx.strokeStyle = COLORS[c];
-    rrect(ctx, c * cw + 6, HY - NH / 2 - 4, cw - 12, NH + 8, 10); ctx.stroke();
-  }
-  var T = phase === "camp-run" || phase === "over" || phase === "ready" ? songT() : 0;
-  // falling notes
-  if (cs) {
-    for (var i = Math.max(0, cs.i0 - 4); i < cs.notes.length; i++) {
-      var n = cs.notes[i];
-      var y = HY - (n.t - T) / APPROACH * HY;
-      if (y < -NH) break;
-      if (n.j || y > H + NH) continue;
-      var x = n.lane * cw + 8;
-      ctx.fillStyle = COLORS[n.lane];
-      rrect(ctx, x, y - NH / 2, cw - 16, NH, NH / 2); ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,.55)";
-      rrect(ctx, x + 6, y - NH / 2 + 3, cw - 28, Math.max(3, NH * 0.22), 3); ctx.fill();
-    }
-    // hits burst from the pad
-    cs.fx = cs.fx.filter(function (f) {
-      var k = (now - f.t) / 220;
-      if (k >= 1) return false;
-      ctx.globalAlpha = 1 - k; ctx.strokeStyle = COLORS[f.lane]; ctx.lineWidth = 4;
-      var g = k * cw * 0.25;
-      rrect(ctx, f.lane * cw + 6 - g, HY - NH / 2 - 4 - g, cw - 12 + 2 * g, NH + 8 + 2 * g, 12); ctx.stroke();
-      ctx.globalAlpha = 1;
-      return true;
-    });
-  }
-  if (cs) {
-    // health and how far through the song
-    var last = cs.notes.length ? cs.notes[cs.notes.length - 1].t : 1;
-    ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(0, 0, W, 6);
-    ctx.fillStyle = cs.hp > 50 ? "#7dffb0" : cs.hp > 25 ? "#ffd43b" : "#ff4d6d"; ctx.fillRect(0, 0, W * cs.hp / 100, 6);
-    ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.fillRect(0, 6, W * Math.max(0, Math.min(1, T / last)), 2);
-    // score, multiplier, combo
-    var mult = Math.min(4, 1 + Math.floor(cs.combo / 10));
-    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.lineJoin = "round";
-    ctx.font = "400 " + Math.round(W * 0.1) + "px Lilita One, Arial Black, sans-serif";
-    ctx.lineWidth = 6; ctx.strokeStyle = "#ff2d95"; ctx.strokeText(String(cs.score), W / 2, 16);
-    ctx.fillStyle = "#fff"; ctx.fillText(String(cs.score), W / 2, 16);
-    if (mult > 1) { ctx.font = "700 15px Verdana, sans-serif"; ctx.fillStyle = "#ffd43b"; ctx.fillText("x" + mult, W / 2, 16 + W * 0.11); }
-    if (cs.combo >= 5) {
-      ctx.font = "400 " + Math.round(W * 0.16) + "px Lilita One, Arial Black, sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,.22)"; ctx.textBaseline = "middle";
-      ctx.fillText(String(cs.combo), W / 2, H * 0.42);
-      ctx.font = "700 13px Verdana, sans-serif"; ctx.fillText(zh() ? "连击" : "COMBO", W / 2, H * 0.42 + W * 0.1);
-    }
-    // the last judgement, just above the line
-    if (cs.judge && now - cs.judge.t < 450) {
-      var k = (now - cs.judge.t) / 450;
-      ctx.globalAlpha = 1 - k * k;
-      ctx.font = "400 " + Math.round(W * (0.085 + 0.02 * (1 - k))) + "px Lilita One, Arial Black, sans-serif";
-      ctx.textBaseline = "middle"; ctx.lineWidth = 5; ctx.strokeStyle = "#04030c";
-      var word = zh() ? { perfect: "完美", great: "很好", good: "不错", miss: "失误" }[cs.judge.text] : cs.judge.text.toUpperCase();
-      ctx.strokeText(word, W / 2, HY - H * 0.12); ctx.fillStyle = cs.judge.color; ctx.fillText(word, W / 2, HY - H * 0.12);
-      ctx.globalAlpha = 1;
-    }
-  }
-  if (phase === "ready" || phase === "load") {
-    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = "400 " + Math.round(W * 0.07) + "px Lilita One, Arial Black, sans-serif";
-    ctx.fillText(phase === "load" ? "…" : cs ? "▲ " + (zh() ? "点视频开始" : "play the video") : (zh() ? "还没有音符" : "no notes yet"), W / 2, H * 0.4);
-  }
-}
-
-/* ------------------------------------------------------------------ *
  * full screen. The Fullscreen API where the browser has one (android,
  * desktop, ipad), and the board filling the window either way, which is
  * all an iPhone allows. Zooming and scrolling are off while it's up
@@ -1014,7 +606,7 @@ document.getElementById("fs").addEventListener("click", function () { full() ? l
   });
 });
 document.addEventListener("touchmove", function (e) {
-  if (full() && !(e.target.closest && e.target.closest(".levels"))) e.preventDefault();   // the level list can still scroll
+  if (full()) e.preventDefault();
 }, { passive: false });
 ["gesturestart", "gesturechange", "dblclick"].forEach(function (ev) {
   document.addEventListener(ev, function (e) { if (full()) e.preventDefault(); }, { passive: false });
@@ -1035,7 +627,6 @@ var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
 window.addEventListener("keydown", function (e) {
   if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   if (e.code in KEYS) { e.preventDefault(); if (!e.repeat) press(KEYS[e.code]); return; }
-  if ((e.code === "Space" || e.code === "Enter") && mode === "camp" && phase === "ready") { e.preventDefault(); campStart(); return; }
   if ((e.code === "Space" || e.code === "Enter") && phase === "over") {
     e.preventDefault();
     playAgain();
@@ -1047,7 +638,6 @@ window.addEventListener("keydown", function (e) {
 Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]"), function (b) {
   b.addEventListener("click", function () {
     mode = b.dataset.mode;
-    if (mode === "camp") level = 0;
     Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]"), function (o) { o.setAttribute("aria-pressed", String(o === b)); });
     reset();
   });
@@ -1056,11 +646,6 @@ window.addEventListener("resize", size);
 
 window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press,
   again: playAgain,
-  camp: { LEVELS: LEVELS, cleared: cleared, setCleared: setCleared, pick: function (n) { level = n; reset(); },
-    fake: function () { yt.fake = true; }, start: campStart, time: songT, player: function () { return yt.p; },
-    state: function () { return cs && { score: cs.score, combo: cs.combo, best: cs.best, hp: cs.hp, n: cs.n, notes: cs.notes.length, i0: cs.i0,
-      next: cs.notes.filter(function (n) { return !n.j; }).slice(0, 6).map(function (n) { return [n.t, n.lane]; }) }; },
-    live: applyLive },
   full: function (on) { on ? enterFull() : leaveFull(); },
   // test hook: an empty spot on the board (0..1) in a column that isn't the next tile's
   spot: function () {
@@ -1074,7 +659,7 @@ window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: pre
     }
   },
   gain: function () { var b = bus || lastBus; return b ? b.gain.value : null; },
-  state: function () { return { mode: mode, phase: phase, level: level, won: won, picking: stage.classList.contains("picking"), hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, next2: tiles[hits + 1] && tiles[hits + 1].col, nextY: tiles[hits] ? rowY(hits) / RH : null, prevY: hits ? rowY(hits - 1) / RH : null, next2Y: tiles[hits + 1] ? rowY(hits + 1) / RH : null, why: big.textContent, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
+  state: function () { return { mode: mode, phase: phase, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, next2: tiles[hits + 1] && tiles[hits + 1].col, nextY: tiles[hits] ? rowY(hits) / RH : null, prevY: hits ? rowY(hits - 1) / RH : null, next2Y: tiles[hits + 1] ? rowY(hits + 1) / RH : null, why: big.textContent, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
 
 size();
 reset();

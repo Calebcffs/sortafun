@@ -131,19 +131,65 @@ service cloud.firestore {
     match /admin_todos/{id} { allow read, write: if isAdmin(); }
     match /admin_state/{id} { allow read, write: if isAdmin(); }
 
-    // --- piano rush campaign notes: made in admin.html's recording studio ---
-    // piano_charts/<video id> = { notes: JSON string of [[ms, lane], ...] (Firestore
-    // can't hold nested arrays), offset, n, ts }: anyone reads (piano.html), only the
-    // admin publishes. piano_drafts/<video id> = { draft: JSON string, ts }: admin only.
-    match /piano_charts/{vid} {
+    // --- rhythm rush (rhythm.html): levels players tap in themselves, one board each ---
+    // rhythm_levels/<id> = { vid, title, author, notes: JSON string of [[ms, lane], ...]
+    // (Firestore can't hold nested arrays), offset, n, dur, plays, official?, day, ts }.
+    // Anyone reads and anyone shares a level (auto id, one of the ten NCS videos, so
+    // nobody can embed any other video). The only edit is plays +1. Official levels
+    // are the admin's: id "o-<video id>", made and changed in admin.html's studio.
+    // Only the admin deletes (moderation). Same "stops junk, not a determined
+    // forger" trade as the scores: the rules can't look inside the notes string.
+    match /rhythm_levels/{id} {
       allow read: if true;
-      allow create, update: if isAdmin()
-        && request.resource.data.keys().hasOnly(['notes', 'offset', 'n', 'ts'])
-        && request.resource.data.notes is string && request.resource.data.notes.size() <= 500000
-        && request.resource.data.offset is int && request.resource.data.n is int
-        && request.resource.data.ts == request.time;
+      allow create: if isValidLevel(id, request.resource.data)
+        && (request.resource.data.plays == 0 || isAdmin());
+      allow update: if isPlayBump(resource.data, request.resource.data)
+        || (isAdmin() && isValidLevel(id, request.resource.data));
       allow delete: if isAdmin();
+
+      // each level's board: { name, score, acc (0..10000), grade, combo, day, ts }
+      match /scores/{sid} {
+        allow read: if true;
+        allow update: if false;
+        allow delete: if isAdmin();
+        allow create: if exists(/databases/$(database)/documents/rhythm_levels/$(id))
+          && isValidRhythmScore(request.resource.data);
+      }
     }
+    function isValidLevel(id, d) {
+      return d.keys().hasOnly(['vid', 'title', 'author', 'notes', 'offset', 'n', 'dur', 'plays', 'official', 'day', 'ts'])
+        && d.keys().hasAll(['vid', 'title', 'author', 'notes', 'offset', 'n', 'dur', 'plays', 'day', 'ts'])
+        && d.vid in ['q1ULJ92aldE', 'TW9d8vYrVFQ', '3nQNiWdeH2Q', 'n4tK7LYFxI0', 'K4DyBUG242c',
+                     '__CRWE-L45k', 'yJg-Y5byMMw', 'J2X5mJ3HDYE', 'p7ZsBPK656s', 'jK2aIUmmdP4']
+        && (
+             (id.matches('[A-Za-z0-9]{20}') && !('official' in d)) ||
+             (isAdmin() && id == 'o-' + d.vid && d.official == true)
+           )
+        && d.title is string && d.title.size() >= 1 && d.title.size() <= 40
+        && d.author is string && d.author.size() >= 1 && d.author.size() <= 20
+        && d.notes is string && d.notes.size() <= 120000
+        && d.n is int && d.n >= 20 && d.n <= 6000
+        && d.offset is int && d.offset >= -2000 && d.offset <= 2000
+        && d.dur is int && d.dur >= 0 && d.dur <= 1200000
+        && d.plays is int && d.plays >= 0
+        && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.ts == request.time;
+    }
+    function isPlayBump(o, n) {
+      return n.diff(o).affectedKeys().hasOnly(['plays'])
+        && n.plays is int && n.plays == o.plays + 1;
+    }
+    function isValidRhythmScore(d) {
+      return d.keys().hasOnly(['name', 'score', 'acc', 'grade', 'combo', 'day', 'ts'])
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
+        && d.score is int && d.score >= 0 && d.score <= 1000000
+        && d.acc is int && d.acc >= 0 && d.acc <= 10000
+        && d.grade in ['D', 'C', 'B', 'A', 'S', 'SS', 'SSS']
+        && d.combo is int && d.combo >= 0 && d.combo <= 6000
+        && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.ts == request.time;
+    }
+    // the admin studio's drafts: piano_drafts/<video id> = { draft: JSON string, ts }
     match /piano_drafts/{vid} { allow read, write: if isAdmin(); }
     function isValidFeedback(d) {
       return d.keys().hasOnly(['game', 'rating', 'kind', 'msg', 'name', 'page', 'day', 'ts', 'ver'])

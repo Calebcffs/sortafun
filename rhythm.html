@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="en" data-nomusic>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>Rhythm Rush: Free Rhythm Game With Player-Made Levels | Sortafun</title>
+<meta name="description" content="Real NCS songs, notes falling to the line. Tap each one right on the beat: dead on scores the most. Get a grade from D to SSS and a timing graph, then make a level of your own and share it.">
+<meta name="sortafun:name" content="rhythm rush">
+<link rel="canonical" href="https://sortafun.org/rhythm.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sortafun">
+<meta property="og:title" content="Rhythm Rush: Free Rhythm Game With Player-Made Levels | Sortafun">
+<meta property="og:description" content="Real NCS songs, notes falling to the line. Tap each one right on the beat: dead on scores the most. Get a grade from D to SSS and a timing graph, then make a level of your own and share it.">
+<meta property="og:url" content="https://sortafun.org/rhythm.html">
+<meta property="og:image" content="https://sortafun.org/assets/og/rhythm.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Rhythm Rush on Sortafun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Rhythm Rush: Free Rhythm Game With Player-Made Levels | Sortafun">
+<meta name="twitter:description" content="Real NCS songs, notes falling to the line. Tap each one right on the beat: dead on scores the most. Get a grade from D to SSS and a timing graph, then make a level of your own and share it.">
+<meta name="twitter:image" content="https://sortafun.org/assets/og/rhythm.png">
+<meta name="theme-color" content="#ffd43b">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Rhythm Rush","url":"https://sortafun.org/rhythm.html","description":"Real NCS songs, notes falling to the line. Tap each one right on the beat: dead on scores the most. Get a grade from D to SSS and a timing graph, then make a level of your own and share it.","image":"https://sortafun.org/assets/og/rhythm.png","genre":["Music","Rhythm"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Rhythm Rush","item":"https://sortafun.org/rhythm.html"}]}</script>
+<!-- /seo -->
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=2cfb0408">
+<style>
+  .modes { display: flex; gap: 8px; justify-content: center; margin: 4px 0 12px; }
+  .modes button[aria-pressed="true"] { background: linear-gradient(#7af0a3, #1fb85a); color: #fff; text-shadow: 0 1px 0 var(--ink); }
+  [hidden] { display: none !important; }
+  .view { max-width: 420px; margin: 0 auto; text-align: left; }
+  .panel { border: 3px solid var(--ink); border-radius: 16px; background: #100e24; color: #fff; box-shadow: 0 5px 0 var(--ink); padding: 12px; }
+  .panel h2 { margin: 0 0 6px; font: 400 24px "Lilita One", "Arial Black", sans-serif; color: #ffe066; letter-spacing: .5px; text-align: left; overflow-wrap: anywhere; }
+  .muted { color: #c9c2f0; font-size: 13px; }
+  .back2 { margin: 0 0 10px; padding: 4px 12px; font-size: 13px; }
+
+  /* the level list */
+  .lbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; font-size: 13px; }
+  .lbar button { padding: 4px 12px; margin: 0; font-size: 13px; }
+  .lbar button[aria-pressed="true"] { background: linear-gradient(#ffe066, #ffb703); }
+  .lbar select { font: inherit; padding: 4px; border: 2px solid var(--ink); border-radius: 8px; max-width: 100%; }
+  .llist { max-height: 62vh; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; gap: 8px; padding: 2px 4px 6px 2px; }
+  .lvi {
+    display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%;
+    margin: 0; padding: 8px 10px; text-align: left; border-radius: 12px; border: 2px solid rgba(255,255,255,.22); box-shadow: none;
+    background: linear-gradient(#2b2160, #191242); color: #fff; font: 400 12px/1.3 var(--body); touch-action: manipulation;
+  }
+  .lvi:hover { background: linear-gradient(#372a7a, #221858); }
+  .lvi:active { transform: translateY(1px); box-shadow: none; }
+  .lvi.off { border-color: #ffd43b; }
+  .lvi .gr { width: 46px; height: 46px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.1); font: 400 18px "Lilita One", "Arial Black", sans-serif; color: #fff; }
+  .lvi .gr.none { color: rgba(255,255,255,.35); font-size: 22px; }
+  .lvi .t { display: block; font: 400 17px "Lilita One", "Arial Black", sans-serif; color: #ffe066; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .3px; }
+  .lvi .s { display: block; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lvi .m { display: block; color: #c9c2f0; overflow-wrap: anywhere; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font: 700 11px var(--body); color: var(--ink); white-space: nowrap; }
+  .d-easy { background: #7dffb0; } .d-normal { background: #3fd5ff; } .d-hard { background: #ffb347; } .d-expert { background: #ff4fb0; color: #fff; }
+  .offi { background: #ffd43b; }
+  .lmsg { min-height: 18px; font-size: 13px; color: #4a4760; text-align: center; }
+
+  /* one level: what it is, play, its board */
+  .meta { margin: 0 0 10px; font-size: 13px; color: #c9c2f0; line-height: 1.6; }
+  .meta b { color: #fff; }
+  .bigplay { display: block; width: 100%; margin: 6px 0 12px; padding: 12px; font: 400 24px "Lilita One", "Arial Black", sans-serif; }
+  .mini { list-style: none; margin: 0; padding: 0; counter-reset: r; font-size: 13px; }
+  .mini li { counter-increment: r; display: grid; grid-template-columns: 22px minmax(0, 1fr) 34px 54px 66px; gap: 6px; align-items: center; padding: 5px 4px; border-radius: 8px; }
+  .mini li:nth-child(odd) { background: rgba(255,255,255,.06); }
+  .mini li::before { content: counter(r); color: #8a83b8; text-align: right; }
+  .mini li.you { outline: 2px solid #ffd43b; }
+  .mini .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+  .mini .g { font: 400 15px "Lilita One", "Arial Black", sans-serif; text-align: center; }
+  .mini .a { color: #c9c2f0; text-align: right; }
+  .mini .p { color: #7dffb0; text-align: right; font-weight: 700; }
+  .minihead { margin: 4px 0 4px; font: 400 18px "Lilita One", "Arial Black", sans-serif; color: #fff; }
+  .minimsg { font-size: 12px; color: #c9c2f0; min-height: 16px; margin: 4px 0 0; }
+
+  /* the board */
+  .stage {
+    position: relative; margin: 0 auto; width: 100%; max-width: 380px;
+    border: 3px solid var(--ink); border-radius: 16px; overflow: hidden;
+    background: #100e24; box-shadow: 0 5px 0 var(--ink);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .stage, .stage * { -webkit-tap-highlight-color: transparent; }
+  #board { display: block; width: 100%; touch-action: none; cursor: pointer; }
+  /* YouTube's player sits above the board, at least 200 x 200, with nothing over it */
+  .ytbox { position: relative; height: 200px; background: #000; }
+  .ytbox iframe, #yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .ytmsg { position: absolute; inset: 0; margin: 0; display: none; align-items: center; justify-content: center; padding: 16px; background: #100e24; color: #fff; font-size: 14px; text-align: center; }
+  .ytmsg.on { display: flex; }
+  .corner {
+    position: absolute; top: 208px; z-index: 3; height: 34px; margin: 0; padding: 0 12px; border-radius: 999px;
+    background: rgba(255,255,255,.16); color: #fff; border: 2px solid rgba(255,255,255,.45);
+    box-shadow: none; font: 700 13px/1 var(--body); touch-action: manipulation; transition: opacity .2s;
+  }
+  .corner:hover { background: rgba(255,255,255,.3); }
+  .corner:active { transform: none; box-shadow: none; }
+  #fs { right: 8px; } #quit { left: 8px; }
+  .stage.running .corner { opacity: 0; pointer-events: none; }
+  .fs-out { display: none; } html.pfs .fs-out { display: inline; } html.pfs .fs-in { display: none; }
+  .credit { font-size: 11px; color: #6a6780; margin: 6px 0 0; text-align: center; }
+  .credit a { color: inherit; }
+  #big { font-size: 20px; min-height: 26px; margin: 12px 0 4px; text-align: center; }
+  .keys { font-size: 12px; color: #6a6780; margin: 2px 0 8px; text-align: center; }
+  .keys kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border: 2px solid var(--ink); border-radius: 5px; background: #fff; font: 700 12px var(--body); color: var(--ink); }
+  @media (hover: none) { .keys { display: none; } }
+  .lag { display: flex; gap: 6px; justify-content: center; align-items: center; font-size: 13px; color: #4a4760; }
+  .lag button { margin: 0; padding: 2px 10px; font-size: 13px; }
+  /* full screen: the Fullscreen API where there is one, and the board filling the window either way */
+  html.pfs, html.pfs body { overflow: hidden; overscroll-behavior: none; }
+  html.pfs .stage {
+    position: fixed; inset: 0; z-index: 2147483000; max-width: none; height: 100vh; height: 100dvh;
+    border: 0; border-radius: 0; box-shadow: none; touch-action: none;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; background: #04030c;
+  }
+  html.pfs #board { width: auto; }
+  html.pfs .ytbox { width: var(--bw, 100%); flex: none; }
+  html.pfs #fs { right: calc(50% - var(--bw, 100%) / 2 + 10px); }
+  html.pfs #quit { left: calc(50% - var(--bw, 100%) / 2 + 10px); }
+
+  /* the results */
+  .gradebox { display: flex; gap: 14px; align-items: center; margin: 4px 0 10px; }
+  .grade { flex: none; width: 96px; height: 96px; border-radius: 18px; display: grid; place-items: center; font: 400 48px/1 "Lilita One", "Arial Black", sans-serif; color: #fff; border: 3px solid #fff; text-shadow: 0 3px 0 rgba(0,0,0,.35); }
+  .grade.g-SSS { background: linear-gradient(135deg, #ff4fb0, #ffd43b, #3fd5ff); font-size: 36px; }
+  .grade.g-SS { background: linear-gradient(135deg, #ffd43b, #ff9f1c); font-size: 42px; }
+  .grade.g-S { background: linear-gradient(#ffe066, #f0a800); }
+  .grade.g-A { background: linear-gradient(#7dffb0, #1fb85a); }
+  .grade.g-B { background: linear-gradient(#3fd5ff, #1971c2); }
+  .grade.g-C { background: linear-gradient(#b197fc, #7048e8); }
+  .grade.g-D { background: linear-gradient(#ff8787, #c92a2a); }
+  .nums b { display: block; font: 400 28px "Lilita One", "Arial Black", sans-serif; color: #fff; letter-spacing: .5px; }
+  .nums span { display: block; font-size: 13px; color: #c9c2f0; }
+  .counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 10px; font-size: 13px; margin: 0 0 10px; }
+  .counts span b { float: right; color: #fff; }
+  .c-perfect { color: #7dffb0; } .c-great { color: #3fd5ff; } .c-good { color: #ffd43b; } .c-ok { color: #ffb347; } .c-miss { color: #ff4d6d; } .c-stray { color: #c9c2f0; }
+  #graph { display: block; width: 100%; height: 150px; background: #0b0920; border-radius: 10px; }
+  .lagtip { font-size: 13px; color: #c9c2f0; margin: 8px 0 0; min-height: 0; }
+  .lagtip button { margin: 4px 0 0; padding: 3px 10px; font-size: 13px; }
+  .sub2 { display: flex; gap: 6px; margin: 12px 0 8px; }
+  .sub2 input { flex: 1; min-width: 0; font: 14px var(--body); border: 3px solid var(--ink); border-radius: 9px; padding: 5px 8px; }
+  .sub2 button { margin: 0; padding: 4px 12px; }
+  .row2 { display: flex; gap: 8px; margin-top: 12px; }
+  .row2 button { flex: 1; margin: 0; }
+  #vMake .note { font-size: 13px; color: #4a4760; margin: 0 0 8px; }
+</style>
+<script src="sfx.js?v=5233b886"></script>
+<script src="china.js?v=24eaaa17"></script>
+<script src="feedback.js?v=a4a074e7"></script>
+<script src="panic-app.js?v=f332cce4"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-skill">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap">
+  <h1>rhythm rush</h1>
+  <p class="sub">notes fall to the line in time with the song. tap each one right on the beat: dead on scores the most, a bit off scores less, and a note you let past is a miss. every level is made by a player, and you can make one too.</p>
+
+  <div class="modes" role="group" aria-label="mode">
+    <button type="button" data-v="list" aria-pressed="true">play a level</button>
+    <button type="button" data-v="make" aria-pressed="false">make a level</button>
+  </div>
+
+  <!-- the levels -->
+  <section class="view" id="vList">
+    <div class="lbar">
+      <button type="button" data-sort="new" aria-pressed="true">newest</button>
+      <button type="button" data-sort="popular" aria-pressed="false">most played</button>
+      <select id="fsong" aria-label="song"><option value="">every song</option></select>
+    </div>
+    <div class="llist" id="llist"></div>
+    <p class="lmsg" id="lmsg"></p>
+  </section>
+
+  <!-- one level -->
+  <section class="view" id="vLevel" hidden>
+    <button type="button" class="back2" data-go="list">&larr; all levels</button>
+    <div class="panel">
+      <h2 id="dTitle" data-noxlate></h2>
+      <p class="meta" id="dMeta"></p>
+      <button type="button" class="bigplay" id="dPlay">&#x25B6; play</button>
+      <div class="minihead">top 10</div>
+      <ol class="mini" id="dBoard"></ol>
+      <p class="minimsg" id="dBoardMsg"></p>
+    </div>
+  </section>
+
+  <!-- playing -->
+  <section id="vPlay" hidden>
+    <div class="stage" id="stage" data-nosfx>
+      <div class="ytbox" id="ytbox"><div id="yt"></div><p class="ytmsg" id="ytmsg"></p></div>
+      <canvas id="board" width="380" height="520"></canvas>
+      <button type="button" class="corner" id="quit">&#x2715; quit</button>
+      <button type="button" class="corner" id="fs"><span class="fs-in">&#x26F6; full screen</span><span class="fs-out">&#x2715; exit</span></button>
+    </div>
+    <p class="credit" id="credit"></p>
+    <div id="big"></div>
+    <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four lanes, <kbd>space</kbd> to start</p>
+    <div class="lag">timing <button type="button" data-lag="-10">-10</button> <span id="lagv" data-noxlate>0 ms</span> <button type="button" data-lag="10">+10</button></div>
+  </section>
+
+  <!-- the results -->
+  <section class="view" id="vResult" hidden>
+    <div class="panel">
+      <h2 id="rTitle" data-noxlate></h2>
+      <div class="gradebox"><div class="grade" id="rGrade" data-noxlate></div>
+        <div class="nums"><b id="rScore" data-noxlate></b><span id="rAcc"></span><span id="rCombo"></span><span id="rBest"></span></div></div>
+      <div class="counts" id="rCounts"></div>
+      <canvas id="graph" width="380" height="150" aria-label="how early or late each tap was, across the song"></canvas>
+      <p class="lagtip" id="lagtip"></p>
+      <div class="sub2" id="rSub"><input id="rName" maxlength="20" placeholder="your name" autocomplete="off" spellcheck="false"><button type="button" id="rSend">submit</button></div>
+      <div class="minihead">top 10</div>
+      <ol class="mini" id="rBoard"></ol>
+      <p class="minimsg" id="rBoardMsg"></p>
+      <div class="row2"><button type="button" id="rAgain">play again</button><button type="button" data-go="list">all levels</button></div>
+    </div>
+  </section>
+
+  <!-- making a level -->
+  <section id="vMake" hidden>
+    <p class="note">pick one of the ten songs, tap the notes in along with it, play it back to check, then share it. it goes straight into the level list for everyone.</p>
+    <div id="studio"></div>
+  </section>
+
+  <!-- seo:about -->
+  <section class="seo-x about-game">
+    <h2>how to play rhythm rush</h2>
+    <p>pick a level and the song plays in the video above the board. notes fall down four lanes to the white line. tap a note's lane just as it reaches the line: on a phone tap the lane, on a keyboard use D F J K.</p>
+    <p>every tap is scored on how close it lands. within 25 milliseconds is perfect and worth the most, then great, good and ok are worth less and less. a note you let past is a miss, and a tap on an empty lane is a stray that breaks your combo.</p>
+    <p>at the end you get a grade from D to SSS, your accuracy, your best combo and a graph of how early or late every tap was. put your score on that level's top 10.</p>
+    <h3>questions</h3><dl>
+    <dt>who makes the levels?</dt><dd>players. open make a level, pick one of the ten songs, tap the notes in along with it, play it back to check and share it. it goes straight into the list for everyone.</dd>
+    <dt>my taps all feel late. what do i do?</dt><dd>bluetooth headphones and some speakers play the sound a little late. after a song, the results tell you how early or late you tapped on average, with a button that shifts the timing on your device to match.</dd>
+    <dt>where does the music come from?</dt><dd>the songs are NCS (NoCopyrightSounds) releases, played by YouTube's own player. nothing is downloaded.</dd>
+    </dl>
+  </section>
+  <!-- /seo:about -->
+  <!-- seo:more -->
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="maze.html">Cursor Maze</a></li><li><a href="reaction.html">Reaction Time Test</a></li><li><a href="aim.html">Aim Trainer</a></li><li><a href="stopbar.html">Stop the Bar</a></li><li><a href="piano.html">Piano Rush</a></li><li><a href="driving.html">Circuit Race</a></li><li><a href="sushi.html">Sushi Goes Round</a></li><li><a href="deeptime.html">Deep Time</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <!-- /seo:more -->
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=d56e2710"></script>
+<script src="piano-charts.js?v=5d58f9f4"></script>
+<script src="piano-studio.js?v=8818fba6"></script>
+<script>
+(function () {
+"use strict";
+
+/* ------------------------------------------------------------------ *
+ * Rhythm Rush. Real NCS (NoCopyrightSounds) tracks, played by YouTube's own
+ * embedded player above the board (nothing is downloaded or hosted here).
+ * Every level is a player's: they tap it in with the studio (piano-studio.js)
+ * and share it. Each tap is judged on how close it lands to its note:
+ *   25 ms or closer: full marks (perfect), then less and less out to 140 ms
+ *   (great, good, ok), a note let past is a miss, a tap on nothing is a stray.
+ * Taps make no sound at all: the song is the only sound.
+ * ------------------------------------------------------------------ */
+var SONGS = window.PIANO_LEVELS, SONG = {};
+SONGS.forEach(function (s) { SONG[s.vid] = s; });
+var DB = window.__rhythmStore || (window.SortafunLB && SortafunLB.rhythm) || null;
+var FAKE = !!window.__rhythmFake;                       // tests: a stand-in clock instead of YouTube
+
+var COLORS = ["#ff4fb0", "#3fd5ff", "#9dff57", "#ffd43b"];
+var APPROACH = 1.25;                                    // seconds from the top of the board to the line
+var HIT = 0.14, FULL = 0.025;                           // the window, and dead on
+var JUDGE = [[0.025, "perfect", "#7dffb0"], [0.06, "great", "#3fd5ff"], [0.1, "good", "#ffd43b"], [0.14, "ok", "#ffb347"]];
+var GHOST = 0.25;                                       // a stray tap costs a quarter of a note's accuracy
+var YTH = 200;
+
+var $ = function (id) { return document.getElementById(id); };
+var zh = function () { return document.documentElement.classList.contains("zh"); };
+var full = function () { return document.documentElement.classList.contains("pfs"); };
+function store(k, v) {
+  try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; }
+}
+function lag() { return +store("sortafun-rhythm-lag") || 0; }     // ms: this device's sound delay
+function bestOf(id) { return store("sortafun-rhythm-best-" + id); }
+
+/* ---- views ---- */
+var view = "list", studio = null;
+function show(v) {
+  if (view === "play" && v !== "play") { ytPause(); if (full()) leaveFull(); phase = "idle"; }
+  if (view === "make" && v !== "make" && studio) studio.hide();
+  view = v;
+  ["list", "level", "play", "result", "make"].forEach(function (k) { $("v" + k[0].toUpperCase() + k.slice(1)).hidden = k !== v; });
+  Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
+    b.setAttribute("aria-pressed", String(b.dataset.v === (v === "make" ? "make" : "list")));
+  });
+  if (v === "make") mountStudio();
+  if (v === "play") { size(); intoView(); }
+}
+Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
+  b.addEventListener("click", function () { if (b.dataset.v === "list") { show("list"); loadList(); } else show("make"); });
+});
+document.addEventListener("click", function (e) {
+  var g = e.target.closest && e.target.closest("[data-go]");
+  if (g) { show(g.dataset.go); if (g.dataset.go === "list") { renderList(); history.replaceState(null, "", location.pathname); } }
+});
+
+/* ---- the level list ---- */
+var levels = [], sort = "new", listed = false;
+SONGS.forEach(function (s) {
+  var o = document.createElement("option"); o.value = s.vid; o.textContent = s.by + " - " + s.song; o.setAttribute("data-noxlate", "");
+  $("fsong").appendChild(o);
+});
+$("fsong").addEventListener("change", renderList);
+Array.prototype.forEach.call(document.querySelectorAll("[data-sort]"), function (b) {
+  b.addEventListener("click", function () {
+    sort = b.dataset.sort;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-sort]"), function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+    renderList();
+  });
+});
+function diff(L) {
+  var nps = L.n / Math.max(1, (L.dur || 0) / 1000);
+  return nps < 1.5 ? "easy" : nps < 2.5 ? "normal" : nps < 3.6 ? "hard" : "expert";
+}
+var DIFF_ZH = { easy: "简单", normal: "普通", hard: "困难", expert: "专家" };
+function loadList() {
+  if (!DB) { $("lmsg").textContent = "levels are offline right now"; return Promise.resolve(); }
+  if (!listed) $("lmsg").textContent = "loading levels...";
+  return DB.list().then(function (rows) {
+    listed = true;
+    levels = rows.filter(function (r) { return SONG[r.vid] && r.n > 0; });
+    renderList();
+  }).catch(function (e) {
+    $("lmsg").textContent = "couldn't load the levels. check your connection and try again";
+    console.warn("[rhythm]", e);
+  });
+}
+function renderList() {
+  var f = $("fsong").value, box = $("llist");
+  var rows = levels.filter(function (r) { return !f || r.vid === f; });
+  rows.sort(function (a, b) {
+    return (b.official ? 1 : 0) - (a.official ? 1 : 0) ||
+      (sort === "popular" ? (b.plays || 0) - (a.plays || 0) : 0) || (b.ts || 0) - (a.ts || 0);
+  });
+  box.innerHTML = "";
+  rows.forEach(function (L) {
+    var S = SONG[L.vid], b = document.createElement("button"), best = bestOf(L.id), d = diff(L);
+    b.type = "button"; b.className = "lvi" + (L.official ? " off" : "");
+    b.innerHTML = '<span class="gr"></span><span><span class="t" data-noxlate></span><span class="s" data-noxlate></span><span class="m"></span></span><span><span class="chip"></span></span>';
+    var gr = b.querySelector(".gr");
+    if (best) gr.textContent = best.grade; else { gr.textContent = "▶"; gr.classList.add("none"); }
+    b.querySelector(".t").textContent = L.title;
+    b.querySelector(".s").textContent = S.by + " - " + S.song;
+    var m = b.querySelector(".m"), by = document.createElement("span");
+    by.textContent = L.author; by.setAttribute("data-noxlate", "");
+    m.append("by ", by, " · " + L.n + " notes · " + (L.plays || 0) + " plays");
+    var chip = b.querySelector(".chip");
+    chip.textContent = L.official ? "official" : (zh() ? DIFF_ZH[d] : d);
+    chip.className = "chip " + (L.official ? "offi" : "d-" + d);
+    b.addEventListener("click", function () { openLevel(L.id); });
+    box.appendChild(b);
+  });
+  $("lmsg").textContent = !listed ? $("lmsg").textContent : rows.length ? rows.length + " level" + (rows.length === 1 ? "" : "s") :
+    f ? "no levels for this song yet. make one!" : "no levels yet. make the first one!";
+}
+
+/* ---- one level ---- */
+var cur = null, chart = null, chartFor = null;
+// a level's notes, checked (the rules can't look inside the string)
+function parseNotes(s) {
+  var out = [];
+  try {
+    var a = JSON.parse(s);
+    if (!Array.isArray(a)) return [];
+    for (var i = 0; i < a.length && out.length < 6000; i++) {
+      var n = a[i];
+      if (!Array.isArray(n) || !isFinite(n[0]) || n[0] < 0 || n[0] > 1200000 || [0, 1, 2, 3].indexOf(n[1]) < 0) continue;
+      out.push([+n[0], n[1]]);
+    }
+  } catch (e) { return []; }
+  return out.sort(function (a, b) { return a[0] - b[0]; });
+}
+function getChart(id) {
+  if (chartFor === id && chart) return Promise.resolve(chart);
+  return DB.get(id).then(function (doc) {
+    chart = { offset: +doc.offset || 0, notes: parseNotes(doc.notes) };
+    chartFor = id;
+    // a level opened from a link, not from the list
+    if (!cur || cur.id !== id) cur = { id: id, vid: doc.vid, title: doc.title, author: doc.author, n: doc.n, dur: doc.dur, plays: doc.plays, official: doc.official };
+    return chart;
+  });
+}
+function openLevel(id) {
+  cur = levels.filter(function (L) { return L.id === id; })[0] || null;
+  chart = null; chartFor = null;
+  show("level");
+  history.replaceState(null, "", "?l=" + encodeURIComponent(id));
+  fillLevel();
+  $("dPlay").disabled = true;
+  getChart(id).then(function (c) {
+    fillLevel();
+    $("dPlay").disabled = !c.notes.length;
+    if (!c.notes.length) $("dBoardMsg").textContent = "this level has no notes it can play";
+  }).catch(function () { $("dMeta").textContent = "couldn't find that level. it may have been taken down."; });
+  board($("dBoard"), $("dBoardMsg"), id, null);
+}
+function fillLevel() {
+  if (!cur || !SONG[cur.vid]) { $("dTitle").textContent = "loading..."; $("dMeta").textContent = ""; return; }
+  var S = SONG[cur.vid], best = bestOf(cur.id), meta = $("dMeta");
+  $("dTitle").textContent = cur.title;
+  meta.innerHTML = "";
+  var song = document.createElement("b"); song.textContent = S.by + " - " + S.song; song.setAttribute("data-noxlate", "");
+  var by = document.createElement("b"); by.textContent = cur.author; by.setAttribute("data-noxlate", "");
+  meta.append(song, document.createElement("br"), "made by ", by, document.createElement("br"),
+    cur.n + " notes · " + diff(cur) + " · " + (cur.plays || 0) + " plays");
+  if (best) meta.append(document.createElement("br"), "your best: " + best.grade + ", " + (best.acc / 100).toFixed(2) + "%, " + best.score.toLocaleString("en-US"));
+}
+$("dPlay").addEventListener("click", function () { if (chart && chart.notes.length) startLevel(); });
+
+// a level's top 10 (mine: the row just sent, marked "you")
+function board(ol, msg, id, mine) {
+  ol.innerHTML = ""; msg.textContent = "loading...";
+  if (!DB) { msg.textContent = "leaderboard offline"; return; }
+  DB.top(id, 10).then(function (rows) {
+    if (chartFor !== id && cur && cur.id !== id) return;
+    ol.innerHTML = "";
+    msg.textContent = rows.length ? "" : "nobody yet. be the first.";
+    var marked = false;
+    rows.forEach(function (r) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="n" data-noxlate></span><span class="g" data-noxlate></span><span class="a" data-noxlate></span><span class="p" data-noxlate></span>';
+      li.querySelector(".n").textContent = r.name;
+      li.querySelector(".g").textContent = r.grade;
+      li.querySelector(".a").textContent = (r.acc / 100).toFixed(1) + "%";
+      li.querySelector(".p").textContent = Number(r.score).toLocaleString("en-US");
+      if (mine && !marked && r.name === mine.name && r.score === mine.score) { li.classList.add("you"); marked = true; }
+      ol.appendChild(li);
+    });
+  }).catch(function (e) { msg.textContent = "leaderboard offline"; console.warn("[rhythm]", e); });
+}
+
+/* ------------------------------------------------------------------ *
+ * the board: YouTube's player (or a stand-in clock in tests)
+ * ------------------------------------------------------------------ */
+var cv = $("board"), ctx = cv.getContext("2d"), stage = $("stage"), big = $("big");
+var ytmsg = $("ytmsg"), creditEl = $("credit");
+var W, H, DPR, phase = "idle", cs = null, lane = [0, 0, 0, 0], BG = null;
+var yt = { p: null, ready: false, vid: null, failT: 0 };
+
+function ytApi(cb) {
+  if (window.YT && YT.Player) return cb();
+  var prev = window.onYouTubeIframeAPIReady;            // china.js and the studio may be waiting on the same script
+  window.onYouTubeIframeAPIReady = function () { if (prev) { try { prev(); } catch (e) {} } cb(); };
+  if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+    var s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    s.onerror = function () { ytFail(); };
+    document.head.appendChild(s);
+  }
+}
+function ytFail(why) {
+  clearTimeout(yt.failT);
+  ytmsg.textContent = why || "YouTube didn't load. It may be blocked on this network (work and school wifi often block it).";
+  ytmsg.classList.add("on");
+  if (view === "play") big.textContent = "no video, no music. try another network";
+}
+function ytLoad(vid) {
+  ytmsg.classList.remove("on");
+  if (yt.p && yt.ready) {
+    if (yt.vid !== vid) { yt.vid = vid; yt.p.cueVideoById(vid); } else { yt.p.pauseVideo(); yt.p.seekTo(0, true); }
+    return ready();
+  }
+  yt.vid = vid;
+  if (yt.p) return;                                     // still loading; it picks up yt.vid when ready
+  if (FAKE) { yt.p = fakePlayer(); yt.ready = true; return ready(); }
+  clearTimeout(yt.failT);
+  yt.failT = setTimeout(function () { if (!yt.ready) ytFail(); }, 12000);
+  ytApi(function () {
+    yt.p = new YT.Player("yt", {
+      width: "100%", height: "100%", videoId: yt.vid,
+      playerVars: { playsinline: 1, controls: 0, rel: 0, disablekb: 1, iv_load_policy: 3, fs: 0 },
+      events: {
+        onReady: function () {
+          yt.ready = true; clearTimeout(yt.failT);
+          if (yt.p.getVideoData && yt.p.getVideoData().video_id !== yt.vid) yt.p.cueVideoById(yt.vid);
+          ready();
+        },
+        onStateChange: function (e) { ytState(e.data); },
+        onError: function () { ytFail("this video won't play here. try another network."); }
+      }
+    });
+  });
+}
+function ytTime() { return yt.p && yt.ready ? yt.p.getCurrentTime() || 0 : 0; }
+function ytPlay() { if (yt.p && yt.ready) yt.p.playVideo(); }
+function ytPause() { if (yt.p && yt.ready && yt.p.pauseVideo) yt.p.pauseVideo(); }
+function fakePlayer() {
+  var f = { t: 0, at: 0, on: false };
+  f.getCurrentTime = function () { return f.on ? f.t + (performance.now() - f.at) / 1000 : f.t; };
+  f.playVideo = function () { if (f.on) return; f.at = performance.now(); f.on = true; setTimeout(function () { ytState(1); }, 20); };
+  f.pauseVideo = function () { if (!f.on) return; f.t = f.getCurrentTime(); f.on = false; ytState(2); };
+  f.seekTo = function (s) { f.t = s; f.at = performance.now(); };
+  f.cueVideoById = function () { f.t = 0; f.on = false; };
+  f.end = function () { f.on = false; ytState(0); };
+  return f;
+}
+new MutationObserver(function () { if (document.documentElement.classList.contains("panic")) ytPause(); })
+  .observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+// the song's clock, smoothed: it runs on performance.now() and leans toward the
+// player's own time, so a player that reports its time in steps never jerks the notes
+var ck = { v: 0, at: 0 };
+function vidT() {
+  var raw = ytTime(), now = performance.now();
+  if (phase !== "run") { ck.v = raw; ck.at = now; return raw; }
+  var p = ck.v + (now - ck.at) / 1000, d = raw - p;
+  p = Math.abs(d) > 0.06 ? raw : p + d * 0.15;
+  ck.v = p; ck.at = now;
+  return p;
+}
+function songT() { return vidT() - lag() / 1000; }
+
+/* ---- a round ---- */
+function newRound(ch) {
+  var off = (ch.offset || 0) / 1000;
+  var notes = ch.notes.map(function (n) { return { t: n[0] / 1000 + off, lane: n[1], j: null, d: 0 }; });
+  return { notes: notes, i0: 0, sum: 0, combo: 0, best: 0, ghosts: 0, played: false,
+    n: { perfect: 0, great: 0, good: 0, ok: 0, miss: 0 }, fx: [], judge: null };
+}
+function startLevel() {
+  cs = newRound(chart);
+  phase = "load";
+  show("play");
+  $("lagv").textContent = (lag() > 0 ? "+" : "") + lag() + " ms";
+  credit(SONG[cur.vid]);
+  big.textContent = "loading the song...";
+  ytLoad(cur.vid);
+}
+function ready() {
+  if (view !== "play" || phase !== "load") return;
+  phase = "ready";
+  big.textContent = matchMedia("(hover: none)").matches ? "tap play on the video to start" : "press space or click the board to start";
+}
+function begin() { if (phase === "ready" && cs) ytPlay(); }
+// what YouTube says it's doing. The round starts the moment the song does
+function ytState(s) {
+  if (view !== "play") return;
+  if (s === 1 && phase === "ready" && cs && ytTime() < 2) {
+    phase = "run"; stage.classList.add("running"); big.textContent = "";
+    if (!cs.played && DB && cur) { cs.played = true; DB.played(cur.id).catch(function () {}); }
+  } else if (s === 0 && phase === "run") finish();
+}
+// how much a tap is worth: dead on is all of it, then less, to 0.3 at the edge
+function worth(ad) { return ad <= FULL ? 1 : 1 - 0.7 * (ad - FULL) / (HIT - FULL); }
+function judge(nt, d) {
+  var ad = Math.abs(d), now = performance.now();
+  nt.d = d;
+  if (d === null) {
+    nt.j = "miss"; cs.n.miss++; cs.combo = 0;
+    cs.judge = { text: "miss", color: "#ff4d6d", t: now };
+    return;
+  }
+  for (var w = 0; w < JUDGE.length; w++) if (ad <= JUDGE[w][0] + 1e-9) break;
+  var J = JUDGE[Math.min(w, JUDGE.length - 1)];
+  nt.j = J[1]; cs.n[J[1]]++;
+  cs.sum += worth(ad);
+  cs.combo++; cs.best = Math.max(cs.best, cs.combo);
+  cs.fx.push({ lane: nt.lane, t: now, c: J[2] });
+  cs.judge = { text: J[1], color: J[2], t: now, ms: Math.round(d * 1000) };
+}
+function accNow() {
+  var done = cs.n.perfect + cs.n.great + cs.n.good + cs.n.ok + cs.n.miss;
+  return done ? cs.sum / (done + GHOST * cs.ghosts) : 1;
+}
+function accuracy() { return cs.notes.length ? cs.sum / (cs.notes.length + GHOST * cs.ghosts) : 0; }
+function points(acc) { return Math.round(1000000 * (0.9 * acc + 0.1 * cs.best / Math.max(1, cs.notes.length))); }
+function grade(acc) {
+  return acc >= 0.98 ? "SSS" : acc >= 0.95 ? "SS" : acc >= 0.9 ? "S" : acc >= 0.8 ? "A" : acc >= 0.7 ? "B" : acc >= 0.6 ? "C" : "D";
+}
+function tick() {
+  if (phase !== "run" || !cs) return;
+  var T = songT(), ns = cs.notes;
+  while (cs.i0 < ns.length && (ns[cs.i0].j || ns[cs.i0].t + HIT < T)) {
+    if (!ns[cs.i0].j) judge(ns[cs.i0], null);
+    cs.i0++;
+  }
+  if (cs.i0 >= ns.length && T > ns[ns.length - 1].t + 1.2) finish();
+}
+function press(col) {
+  lane[col] = performance.now();
+  if (view !== "play") return;
+  if (phase === "ready") return begin();
+  if (phase !== "run" || !cs) return;
+  var T = songT(), ns = cs.notes, hitN = null;
+  for (var i = cs.i0; i < ns.length && ns[i].t <= T + HIT; i++) {
+    var n = ns[i];
+    if (n.j || n.lane !== col || Math.abs(n.t - T) > HIT) continue;
+    if (!hitN || Math.abs(n.t - T) < Math.abs(hitN.t - T)) hitN = n;
+  }
+  if (!hitN) { cs.ghosts++; cs.combo = 0; return; }       // a tap on nothing: no mashing
+  judge(hitN, T - hitN.t);
+}
+
+/* ---- the end: grade, numbers, the timing graph, the board ---- */
+var last = null;
+function finish() {
+  if (phase !== "run") return;
+  phase = "done";
+  stage.classList.remove("running");
+  ytPause();
+  if (full()) leaveFull();
+  var acc = accuracy(), g = grade(acc), pts = points(acc);
+  last = { id: cur.id, score: pts, acc: Math.round(acc * 10000), grade: g, combo: cs.best, sent: false };
+  var prev = bestOf(cur.id), isBest = !prev || pts > prev.score;
+  if (isBest) store("sortafun-rhythm-best-" + cur.id, { score: pts, grade: g, acc: last.acc });
+  if (window.SortafunSFX) SortafunSFX.result(acc >= 0.8 ? "win" : "done");
+  show("result");
+  $("rTitle").textContent = cur.title;
+  var gEl = $("rGrade"); gEl.textContent = g; gEl.className = "grade g-" + g;
+  $("rScore").textContent = pts.toLocaleString("en-US");
+  $("rAcc").textContent = (acc * 100).toFixed(2) + "% accuracy";
+  $("rCombo").textContent = "best combo " + cs.best + " of " + cs.notes.length;
+  $("rBest").textContent = isBest ? (prev ? "new personal best!" : "") : "your best: " + prev.score.toLocaleString("en-US");
+  var c = cs.n, box = $("rCounts");
+  box.innerHTML = "";
+  [["perfect", c.perfect], ["great", c.great], ["good", c.good], ["ok", c.ok], ["miss", c.miss], ["stray", cs.ghosts]].forEach(function (k) {
+    var s = document.createElement("span"), b = document.createElement("b");
+    s.className = "c-" + k[0]; s.textContent = k[0]; b.textContent = k[1]; b.setAttribute("data-noxlate", "");
+    s.appendChild(b); box.appendChild(s);
+  });
+  graph();
+  lagTip();
+  try { $("rName").value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
+  $("rSub").hidden = false; $("rSend").disabled = false; $("rSend").textContent = "submit " + pts.toLocaleString("en-US");
+  board($("rBoard"), $("rBoardMsg"), cur.id, null);
+}
+// every note across the song: up is late, down is early, the green band is dead on
+function graph() {
+  var g = $("graph"), w = g.clientWidth || 380, h = 150, dpr = Math.min(2, window.devicePixelRatio || 1);
+  g.width = Math.round(w * dpr); g.height = Math.round(h * dpr);
+  var c = g.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var ns = cs.notes, t0 = ns[0].t, t1 = Math.max(t0 + 1, ns[ns.length - 1].t), pad = 8, mid = h / 2 - 6, R = mid - pad;
+  var X = function (t) { return pad + (t - t0) / (t1 - t0) * (w - 2 * pad); };
+  var Y = function (d) { return mid - Math.max(-1, Math.min(1, d / HIT)) * R; };
+  c.fillStyle = "#0b0920"; c.fillRect(0, 0, w, h);
+  c.fillStyle = "rgba(255,212,59,.08)"; c.fillRect(0, Y(0.1), w, Y(-0.1) - Y(0.1));
+  c.fillStyle = "rgba(63,213,255,.12)"; c.fillRect(0, Y(0.06), w, Y(-0.06) - Y(0.06));
+  c.fillStyle = "rgba(125,255,176,.2)"; c.fillRect(0, Y(FULL), w, Y(-FULL) - Y(FULL));
+  c.fillStyle = "rgba(255,255,255,.4)"; c.fillRect(0, Math.round(mid), w, 1);
+  var col = { perfect: "#7dffb0", great: "#3fd5ff", good: "#ffd43b", ok: "#ffb347" }, sum = 0, n = 0;
+  ns.forEach(function (nt) {
+    if (nt.j === "miss") {
+      c.fillStyle = "#ff4d6d"; c.fillRect(X(nt.t) - 1, h - 10, 2, 8);
+    } else if (nt.j) {
+      c.fillStyle = col[nt.j]; c.beginPath(); c.arc(X(nt.t), Y(nt.d), 2.4, 0, 6.283); c.fill();
+      sum += nt.d; n++;
+    }
+  });
+  if (n) { c.fillStyle = "rgba(255,255,255,.75)"; c.fillRect(0, Math.round(Y(sum / n)), w, 1); }
+  c.fillStyle = "rgba(255,255,255,.55)"; c.font = "700 10px Verdana, sans-serif"; c.textBaseline = "top"; c.textAlign = "left";
+  c.fillText(zh() ? "晚" : "late", 4, 3);
+  c.textBaseline = "bottom"; c.fillText(zh() ? "早" : "early", 4, h - 13);
+  c.textAlign = "right"; c.fillStyle = "#ff4d6d"; c.fillText(zh() ? "失误" : "misses", w - 4, h - 11);
+}
+// tapping late (or early) on average, the same amount all song? that's the
+// speakers or headphones: offer to shift this device's timing by it
+function lagTip() {
+  var tip = $("lagtip"), hits = cs.notes.filter(function (n) { return n.j && n.j !== "miss"; });
+  tip.innerHTML = "";
+  if (hits.length < 10) return;
+  var m = Math.round(hits.reduce(function (a, n) { return a + n.d; }, 0) / hits.length * 1000);
+  if (Math.abs(m) < 15) { tip.textContent = "your timing is centred: " + (m > 0 ? "+" : "") + m + " ms on average."; return; }
+  tip.append("you tapped about " + Math.abs(m) + " ms " + (m > 0 ? "late" : "early") + " on average. if that's your speakers or headphones, shift the timing to match. ");
+  var b = document.createElement("button"); b.type = "button";
+  b.textContent = "shift timing " + (m > 0 ? "+" : "") + m + " ms";
+  b.addEventListener("click", function () {
+    var v = Math.max(-400, Math.min(400, lag() + m));
+    store("sortafun-rhythm-lag", v);
+    tip.textContent = "timing is now " + (v > 0 ? "+" : "") + v + " ms on this device. play again to try it.";
+  });
+  tip.appendChild(b);
+}
+$("rSend").addEventListener("click", function () {
+  var name = $("rName").value.trim(), b = $("rSend");
+  if (!name) { $("rBoardMsg").textContent = "type a name first"; $("rName").focus(); return; }
+  if (!last || last.sent || !DB) return;
+  b.disabled = true; b.textContent = "sending...";
+  try { localStorage.setItem("sortafun-name", name); } catch (e) {}
+  DB.score(last.id, { name: name, score: last.score, acc: last.acc, grade: last.grade, combo: last.combo }).then(function () {
+    last.sent = true;
+    $("rSub").hidden = true;
+    if (window.SortafunSFX) SortafunSFX.play("coin");
+    board($("rBoard"), $("rBoardMsg"), last.id, { name: name, score: last.score });
+  }).catch(function (e) {
+    b.disabled = false; b.textContent = "try again";
+    $("rBoardMsg").textContent = "couldn't save, check your connection and try again";
+    console.warn("[rhythm] score failed", e);
+  });
+});
+$("rName").addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") $("rSend").click(); });
+$("rAgain").addEventListener("click", function () { if (chart) startLevel(); });
+$("quit").addEventListener("click", function () { show("level"); fillLevel(); });
+Array.prototype.forEach.call(document.querySelectorAll("[data-lag]"), function (b) {
+  b.addEventListener("click", function () {
+    var v = Math.max(-400, Math.min(400, lag() + +b.dataset.lag));
+    store("sortafun-rhythm-lag", v);
+    $("lagv").textContent = (v > 0 ? "+" : "") + v + " ms";
+  });
+});
+// NCS asks for a credit with the track, artist and a link to their upload
+function credit(S) {
+  creditEl.innerHTML = "";
+  var a = document.createElement("a"), b = document.createElement("a");
+  a.href = "https://youtu.be/" + S.vid; a.target = "_blank"; a.rel = "noopener";
+  a.textContent = S.by + " - " + S.song + " [NCS Release]"; a.setAttribute("data-noxlate", "");
+  b.href = "https://ncs.io/"; b.target = "_blank"; b.rel = "noopener"; b.textContent = "NoCopyrightSounds";
+  creditEl.append("song: ", a, ". music provided by ", b, ".");
+}
+
+/* ---- drawing ---- */
+function rrect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+  c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
+  c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y);
+  c.closePath();
+}
+function size() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  if (full()) {
+    var vw = window.innerWidth, vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    H = Math.round(vh) - YTH;
+    W = Math.round(Math.min(vw, H * 0.75));
+    cv.style.width = W + "px";
+    stage.style.setProperty("--bw", W + "px");
+  } else {
+    cv.style.width = "";
+    W = cv.clientWidth || 380;
+    H = Math.round(Math.min(W * 1.35, Math.max(300, window.innerHeight * 0.6)));
+  }
+  cv.style.height = H + "px";
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  BG = ctx.createLinearGradient(0, 0, 0, H);
+  BG.addColorStop(0, "#0b0920"); BG.addColorStop(1, "#04030c");
+  draw();
+}
+function intoView() {
+  if (!full() && W && window.matchMedia && matchMedia("(pointer: coarse)").matches) {
+    var r = stage.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 8) window.scrollBy(0, Math.min(r.top - 4, r.bottom - window.innerHeight + 12));
+  }
+}
+function draw() {
+  if (!W || view !== "play") return;
+  var now = performance.now(), cw = W / 4, HY = Math.round(H * 0.86), NH = Math.max(16, Math.round(H * 0.045));
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  for (var c = 0; c < 4; c++) {
+    var a = 1 - (now - lane[c]) / 220;
+    ctx.globalAlpha = 0.07 + Math.max(0, a) * 0.3;
+    ctx.fillStyle = COLORS[c]; ctx.fillRect(c * cw, 0, cw, H);
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(255,255,255,.12)";
+  for (c = 1; c < 4; c++) ctx.fillRect(Math.round(c * cw), 0, 1, H);
+  ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.fillRect(0, HY - 1, W, 2);
+  for (c = 0; c < 4; c++) {
+    ctx.lineWidth = 3; ctx.strokeStyle = COLORS[c];
+    rrect(ctx, c * cw + 6, HY - NH / 2 - 4, cw - 12, NH + 8, 10); ctx.stroke();
+  }
+  var T = phase === "run" || phase === "ready" ? songT() : 0;
+  if (cs) {
+    for (var i = Math.max(0, cs.i0 - 4); i < cs.notes.length; i++) {
+      var n = cs.notes[i], y = HY - (n.t - T) / APPROACH * HY;
+      if (y < -NH) break;
+      if (n.j || y > H + NH) continue;
+      var x = n.lane * cw + 8;
+      ctx.fillStyle = COLORS[n.lane];
+      rrect(ctx, x, y - NH / 2, cw - 16, NH, NH / 2); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      rrect(ctx, x + 6, y - NH / 2 + 3, cw - 28, Math.max(3, NH * 0.22), 3); ctx.fill();
+    }
+    // a hit bursts from its pad, in its judgement's colour
+    cs.fx = cs.fx.filter(function (f) {
+      var k = (now - f.t) / 220;
+      if (k >= 1) return false;
+      ctx.globalAlpha = 1 - k; ctx.strokeStyle = f.c; ctx.lineWidth = 4;
+      var g = k * cw * 0.25;
+      rrect(ctx, f.lane * cw + 6 - g, HY - NH / 2 - 4 - g, cw - 12 + 2 * g, NH + 8 + 2 * g, 12); ctx.stroke();
+      ctx.globalAlpha = 1;
+      return true;
+    });
+    // how far through, the score so far, the accuracy so far
+    var lastT = cs.notes[cs.notes.length - 1].t;
+    ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(0, 0, W, 4);
+    ctx.fillStyle = "#ffd43b"; ctx.fillRect(0, 0, W * Math.max(0, Math.min(1, T / lastT)), 4);
+    var acc = accNow(), pts = Math.round(1000000 * (0.9 * cs.sum + 0.1 * cs.best) / cs.notes.length);
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.lineJoin = "round";
+    ctx.font = "400 " + Math.round(W * 0.09) + "px Lilita One, Arial Black, sans-serif";
+    ctx.lineWidth = 6; ctx.strokeStyle = "#ff2d95"; ctx.strokeText(pts.toLocaleString("en-US"), W / 2, 12);
+    ctx.fillStyle = "#fff"; ctx.fillText(pts.toLocaleString("en-US"), W / 2, 12);
+    ctx.font = "700 14px Verdana, sans-serif"; ctx.fillStyle = "#c9c2f0";
+    ctx.fillText((acc * 100).toFixed(2) + "%", W / 2, 14 + W * 0.1);
+    if (cs.combo >= 5) {
+      ctx.font = "400 " + Math.round(W * 0.16) + "px Lilita One, Arial Black, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,.22)"; ctx.textBaseline = "middle";
+      ctx.fillText(String(cs.combo), W / 2, H * 0.42);
+      ctx.font = "700 13px Verdana, sans-serif"; ctx.fillText(zh() ? "连击" : "COMBO", W / 2, H * 0.42 + W * 0.1);
+    }
+    // the last judgement just above the line, with how early (-) or late (+) it was
+    if (cs.judge && now - cs.judge.t < 450) {
+      var k = (now - cs.judge.t) / 450;
+      ctx.globalAlpha = 1 - k * k;
+      ctx.font = "400 " + Math.round(W * (0.085 + 0.02 * (1 - k))) + "px Lilita One, Arial Black, sans-serif";
+      ctx.textBaseline = "middle"; ctx.lineWidth = 5; ctx.strokeStyle = "#04030c";
+      var word = zh() ? { perfect: "完美", great: "很好", good: "不错", ok: "还行", miss: "失误" }[cs.judge.text] : cs.judge.text.toUpperCase();
+      ctx.strokeText(word, W / 2, HY - H * 0.13); ctx.fillStyle = cs.judge.color; ctx.fillText(word, W / 2, HY - H * 0.13);
+      if (cs.judge.ms != null && cs.judge.text !== "perfect") {
+        ctx.font = "700 12px Verdana, sans-serif"; ctx.fillStyle = "#fff";
+        ctx.fillText((cs.judge.ms > 0 ? "+" : "") + cs.judge.ms + " ms", W / 2, HY - H * 0.13 + W * 0.065);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (phase === "ready" || phase === "load") {
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "400 " + Math.round(W * 0.07) + "px Lilita One, Arial Black, sans-serif";
+    ctx.fillText(phase === "load" ? "..." : "▲ " + (zh() ? "点视频开始" : "play the video"), W / 2, H * 0.4);
+  }
+}
+function frame() {
+  tick();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ---- full screen (the board fills the window; zoom and scroll off while it's up) ---- */
+var root = document.documentElement;
+function enterFull() {
+  root.classList.add("pfs");
+  var req = root.requestFullscreen || root.webkitRequestFullscreen;
+  if (req) { try { var p = req.call(root); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+  size();
+}
+function leaveFull() {
+  root.classList.remove("pfs");
+  var fe = document.fullscreenElement || document.webkitFullscreenElement;
+  var ex = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fe && ex) { try { var p = ex.call(document); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+  size();
+}
+$("fs").addEventListener("click", function () { full() ? leaveFull() : enterFull(); });
+["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) {
+  document.addEventListener(ev, function () {
+    if (!(document.fullscreenElement || document.webkitFullscreenElement) && full()) { root.classList.remove("pfs"); size(); }
+  });
+});
+document.addEventListener("touchmove", function (e) { if (full()) e.preventDefault(); }, { passive: false });
+["gesturestart", "gesturechange", "dblclick"].forEach(function (ev) {
+  document.addEventListener(ev, function (e) { if (full()) e.preventDefault(); }, { passive: false });
+});
+if (window.visualViewport) visualViewport.addEventListener("resize", function () { if (full()) size(); });
+
+/* ---- input: several fingers at once, D F J K on a keyboard. Silent ---- */
+cv.addEventListener("pointerdown", function (e) {
+  e.preventDefault();
+  var r = cv.getBoundingClientRect();
+  press(Math.max(0, Math.min(3, Math.floor((e.clientX - r.left) / r.width * 4))));
+});
+cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
+window.addEventListener("keydown", function (e) {
+  if (view !== "play") return;                          // the studio has its own keys
+  if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.code in KEYS) { e.preventDefault(); if (!e.repeat) press(KEYS[e.code]); return; }
+  if ((e.code === "Space" || e.code === "Enter") && phase === "ready") { e.preventDefault(); begin(); return; }
+  if (e.code === "Escape" && full()) leaveFull();
+});
+window.addEventListener("resize", function () { if (view === "play") size(); });
+
+/* ---- making a level: the studio, with drafts kept on this device ---- */
+function mountStudio() {
+  if (studio || !window.PianoStudio) return;
+  var KEY = "sortafun-rhythm-drafts";
+  var local = {
+    load: function () { return { drafts: store(KEY) || {}, live: {} }; },
+    saveDraft: function (vid, d) { var all = store(KEY) || {}; all[vid] = d; store(KEY, all); },
+    publish: function (vid, ch, meta) {
+      if (!DB) return Promise.reject(new Error("offline"));
+      return DB.create({ vid: vid, title: meta.title, author: meta.author, notes: ch.notes, offset: ch.offset });
+    }
+  };
+  studio = PianoStudio.mount($("studio"), local, { public: true, fake: FAKE, onPublish: function (id) {
+    setTimeout(function () { loadList().then(function () { openLevel(id); }); }, 900);
+  } });
+}
+
+window.__rhythm = {
+  state: function () { return { view: view, phase: phase, levels: levels.length, cur: cur && cur.id, notes: cs && cs.notes.length, i0: cs && cs.i0,
+    n: cs && cs.n, ghosts: cs && cs.ghosts, sum: cs && cs.sum, best: cs && cs.best, last: last, lag: lag(),
+    next: cs ? cs.notes.filter(function (n) { return !n.j; }).slice(0, 8).map(function (n) { return [n.t, n.lane]; }) : [] }; },
+  press: press, begin: begin, open: openLevel, list: loadList, time: songT, player: function () { return yt.p; },
+  studio: function () { return studio; }, grade: grade, worth: worth, show: show
+};
+
+requestAnimationFrame(frame);
+var q = /[?&]l=([^&]+)/.exec(location.search);
+loadList().then(function () { if (q) openLevel(decodeURIComponent(q[1])); });
+})();
+</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

@@ -710,8 +710,8 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=2b834e0b"></script>
-<script src="feedback.js?v=e6a371e6"></script>
+<script src="china.js?v=24eaaa17"></script>
+<script src="feedback.js?v=a4a074e7"></script>
 <script src="panic-app.js?v=f332cce4"></script>
 </head>
 <body>
@@ -825,8 +825,9 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-16</span> <b>v0.16</b>: NEW: rhythm rush. real NCS songs, notes fall to the line and every tap is scored on how close it lands: dead on scores the most, a bit off scores less, and a note you let past is a miss. no tap sounds, just the song. every level ends with a grade from D to SSS, a timing graph and its own top 10. the levels are made by players: pick one of ten songs, tap your own in and share it. piano rush keeps endless and today's song.</li>
         <li><span class="when">10-16</span> <b>v0.15.1</b>: piano rush's campaign levels now go live the moment their notes are finished, no site update needed, so new songs open up as soon as they're tapped in.</li>
-        <li><span class="when">10-16</span> <b>v0.15</b>: piano rush's campaign now plays real NCS (NoCopyrightSounds) tracks through YouTube, tap tap revenge style: notes fall to a line and every tap is judged perfect, great or good. build a combo for up to 4x points, and miss too many and the song stops. the notes are being tapped in by hand, so levels open up as they're ready.</li>
+        <li><span class="when">10-16</span> <b>v0.15</b>: piano rush's campaign now plays real NCS (NoCopyrightSounds) tracks through YouTube, rhythm game style: notes fall to a line and every tap is judged perfect, great or good. build a combo for up to 4x points, and miss too many and the song stops. the notes are being tapped in by hand, so levels open up as they're ready.</li>
         <li><span class="when">10-16</span> <b>v0.14</b>: NEW in piano rush: campaign mode. ten levels of dance beats, each one faster and busier than the last, and each unlocks when you clear the one before. it's just for you, not on the scoreboard. there's a full screen button in the corner of the board now too.</li>
         <li><span class="when">10-16</span> <b>v0.13.2</b>: piano rush is much more forgiving: a second tap on the tile you just hit, a finger just over the line, or two fingers landing in the wrong order no longer end the song. a miss is completely silent now, and the tiles are brighter.</li>
         <li><span class="when">10-16</span> <b>v0.13.1</b>: piano rush got a new look, no more buzz when you miss, a big play again button right on the board, and a full screen button (no zooming while it's up).</li>
@@ -923,7 +924,7 @@
     <p><b>daily puzzles:</b> <a href="sudoku.html">Daily Sudoku</a> &middot; <a href="anagram.html">Word Hive</a> &middot; <a href="five.html">Five Letters</a> &middot; <a href="ladder.html">Word Ladder</a> &middot; <a href="sides.html">Four Sides</a> &middot; <a href="puzzle.html">Tile Slider</a></p>
     <p><b>word games:</b> <a href="grab.html">Word Grab</a> &middot; <a href="typing.html">Typing Test</a> &middot; <a href="crossword.html">Crossword</a></p>
     <p><b>puzzle:</b> <a href="mines.html">Minesweeper</a></p>
-    <p><b>skill and action:</b> <a href="maze.html">Cursor Maze</a> &middot; <a href="reaction.html">Reaction Time Test</a> &middot; <a href="aim.html">Aim Trainer</a> &middot; <a href="stopbar.html">Stop the Bar</a> &middot; <a href="piano.html">Piano Rush</a> &middot; <a href="driving.html">Circuit Race</a> &middot; <a href="sushi.html">Sushi Goes Round</a> &middot; <a href="deeptime.html">Deep Time</a></p>
+    <p><b>skill and action:</b> <a href="maze.html">Cursor Maze</a> &middot; <a href="reaction.html">Reaction Time Test</a> &middot; <a href="aim.html">Aim Trainer</a> &middot; <a href="stopbar.html">Stop the Bar</a> &middot; <a href="piano.html">Piano Rush</a> &middot; <a href="rhythm.html">Rhythm Rush</a> &middot; <a href="driving.html">Circuit Race</a> &middot; <a href="sushi.html">Sushi Goes Round</a> &middot; <a href="deeptime.html">Deep Time</a></p>
     <p><b>play with friends:</b> <a href="funstrike.html">Fun Strike</a> &middot; <a href="draw.html">Draw and Guess</a></p>
     <p><b>art:</b> <a href="flipbook.html">Animation Studio</a> &middot; <a href="anim-gallery.html">Animation Gallery</a></p>
     <p><b>hang out:</b> <a href="leaderboards.html">Leaderboards</a> &middot; <a href="forum.html">The Forum</a> &middot; <a href="guestbook.html">Guestbook</a> &middot; <a href="passport.html">Passport</a></p>
@@ -944,7 +945,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=7dc50db3"></script>
+<script src="leaderboard.js?v=d56e2710"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -960,6 +961,7 @@
 
 var GAMES = [
   { id: "sudoku",    name: "Daily Sudoku",   url: "sudoku.html",    cat: "puzzle", key: "sudoku",   badge: "daily", blurb: "three new sudoku every day: easy, hard and extreme. score on time and mistakes. every solve climbs today's board, live." },
+  { id: "rhythm",    name: "Rhythm Rush",    url: "rhythm.html",    cat: "skill",  badge: "new",   blurb: "real NCS songs. tap each note right on the beat for the most points, then make a level of your own and share it." },
   { id: "piano",     name: "Piano Rush",     url: "piano.html",     cat: "skill",  key: "piano",    badge: "new",   blurb: "tap the black tiles in order and play the tune. endless gets faster, and today's song is the same for everyone." },
   { id: "funstrike", name: "Fun Strike",     url: "funstrike.html", cat: "online", key: "funstrike", badge: "new",   blurb: "a Counter-Strike homage on a real map. team deathmatch and free for all, bots, kill cam, voice chat, servers that stay up, a leaderboard." },
   { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
@@ -1000,7 +1002,7 @@ var SOON = [
 ];
 
 // the Mobile chip: games that play well on a phone (a game keeps its own category too)
-var MOBILE = { piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1 };
+var MOBILE = { rhythm: 1, piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1 };
 
 var CAT_LABEL = { soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout" };
 var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY", wip: "WIP" };
@@ -1468,6 +1470,23 @@ var THUMB = {
       '<circle r="12"/><path d="M0-20v10M0 10v10M-20 0h10M10 0h10"/></g>' +
       '<polygon points="96,58 100,66 109,64 103,71 108,79 99,76 94,84 92,75 83,74 90,68 86,60 94,63" fill="#ffd43b" stroke="' + K + '" stroke-width="2" stroke-linejoin="round"/>' +
       outlined(24, 110, "+1", 18, "#ffd43b");
+  },
+  rhythm: function () {
+    // four coloured lanes, notes falling to the line, a PERFECT
+    var out = bg("#2b2160") + '<circle cx="150" cy="6" r="40" fill="#3b2d80"/>' +
+      '<rect x="34" y="6" width="92" height="108" rx="6" fill="#100e24"' + S + '/>';
+    ["#ff4fb0", "#3fd5ff", "#9dff57", "#ffd43b"].forEach(function (c, i) {
+      out += '<rect x="' + (36 + i * 22) + '" y="8" width="22" height="104" fill="' + c + '" opacity=".16"/>';
+    });
+    out += '<path d="M36 92h88" stroke="#fff" stroke-width="2.5"/>';
+    [[0, 82], [2, 56], [1, 34], [3, 14], [2, 22]].forEach(function (n) {
+      out += '<rect x="' + (38 + n[0] * 22) + '" y="' + n[1] + '" width="18" height="9" rx="4.5" fill="' + ["#ff4fb0", "#3fd5ff", "#9dff57", "#ffd43b"][n[0]] + '" stroke="#fff" stroke-width="1.5"/>';
+    });
+    out += '<rect x="34" y="6" width="92" height="108" rx="6" fill="none"' + S + '/>' +
+      outlined(80, 74, "PERFECT", 17, "#7dffb0") + outlined(146, 40, "S", 26, "#ffd43b") +
+      '<path d="M14 64v-20l12-3v20" fill="none" stroke="' + K + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<ellipse cx="11" cy="66" rx="5" ry="4" fill="' + K + '"/><ellipse cx="23" cy="63" rx="5" ry="4" fill="' + K + '"/>';
+    return out;
   },
   piano: function () {
     // four columns, black tiles climbing, a finger on the bottom one
