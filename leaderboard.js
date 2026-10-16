@@ -845,7 +845,7 @@
     if (opts.score != null && isFinite(opts.score)) {
       // end of a round: a little "done" jingle, unless the game played its own
       var S = window.SortafunSFX;
-      if (S && Date.now() - S.lastResultAt() > 2500) S.result("done");
+      if (S && !opts.quiet && Date.now() - S.lastResultAt() > 2500) S.result("done");
       // and the "rate this game" bubble gives a little wave (feedback.js)
       if (window.SortafunFB) window.SortafunFB.nudge();
       var form = el("div", "lb-submit");

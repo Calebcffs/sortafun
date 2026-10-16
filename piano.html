@@ -31,20 +31,59 @@
   .modes { display: flex; gap: 8px; justify-content: center; margin: 4px 0 10px; }
   .modes button[aria-pressed="true"] { background: linear-gradient(#7af0a3, #1fb85a); color: #fff; text-shadow: 0 1px 0 var(--ink); }
   #tune { font-size: 13px; color: #4a4760; min-height: 18px; margin: 0 0 6px; }
-  #board {
-    display: block; margin: 0 auto; width: 100%; max-width: 380px;
-    border: 3px solid var(--ink); border-radius: 12px; background: #fff;
-    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
-    cursor: pointer;
+  .stage {
+    position: relative; margin: 0 auto; width: 100%; max-width: 380px;
+    border: 3px solid var(--ink); border-radius: 16px; overflow: hidden;
+    background: #100e24; box-shadow: 0 5px 0 var(--ink);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
-  #big { font-size: 20px; min-height: 26px; margin: 8px 0 4px; }
+  #board { display: block; width: 100%; touch-action: none; cursor: pointer; }
+  /* play again: a big target over the bottom of the board, live half a second after the miss */
+  .again {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 30%;
+    display: none; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border: 0; border-radius: 0; margin: 0; padding: 0 12px; box-shadow: none;
+    background: linear-gradient(rgba(16,14,36,0), rgba(16,14,36,.86) 34%);
+    color: #fff; font: inherit; cursor: pointer; touch-action: manipulation;
+    opacity: 0; transition: opacity .25s;
+  }
+  .again.show { display: flex; }
+  .again.armed { opacity: 1; }
+  .again .pill {
+    display: inline-block; padding: 12px 26px; border-radius: 999px;
+    background: linear-gradient(#ffe066, #ffb703); color: var(--ink);
+    border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink);
+    font: 400 22px "Lilita One", "Arial Black", sans-serif; letter-spacing: .5px;
+  }
+  .again .res { font-size: 14px; opacity: .9; text-shadow: 0 1px 2px #000; }
+  .again:hover, .again:active { transform: none; background: linear-gradient(rgba(16,14,36,0), rgba(16,14,36,.9) 34%); }
+  .modes .fsbtn { background: linear-gradient(#b8a6ff, #7c5cff); color: #fff; text-shadow: 0 1px 0 var(--ink); }
+  .fsx { display: none; }
+  /* full screen: the real Fullscreen API where there is one, and on iPhone (which has none for pages)
+     the board fills the window, and pinch, double-tap zoom and scrolling are all switched off */
+  html.pfs, html.pfs body { overflow: hidden; overscroll-behavior: none; }
+  html.pfs .stage {
+    position: fixed; inset: 0; z-index: 2147483000; max-width: none; height: 100vh; height: 100dvh;
+    border: 0; border-radius: 0; box-shadow: none; touch-action: none;
+    display: flex; justify-content: center; align-items: center; background: #100e24;
+  }
+  html.pfs #board { width: auto; }
+  html.pfs .again, html.pfs .again:hover, html.pfs .again:active { left: 50%; right: auto; width: var(--bw, 100%); transform: translateX(-50%); }
+  html.pfs .fsx {
+    display: block; position: absolute; top: max(10px, env(safe-area-inset-top)); left: 10px; z-index: 2;
+    width: 40px; height: 40px; padding: 0; border-radius: 50%;
+    background: rgba(255,255,255,.14); color: #fff; border: 2px solid rgba(255,255,255,.35);
+    box-shadow: none; font: 700 18px/1 sans-serif; touch-action: manipulation;
+  }
+  html.pfs .stage.running .fsx { opacity: 0; pointer-events: none; }
+  #big { font-size: 20px; min-height: 26px; margin: 12px 0 4px; }
   .keys { font-size: 12px; color: #6a6780; margin: 2px 0 8px; }
   .keys kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border: 2px solid var(--ink); border-radius: 5px; background: #fff; font: 700 12px var(--body); color: var(--ink); }
   @media (hover: none) { .keys { display: none; } }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=c68df934"></script>
-<script src="feedback.js?v=470fc8f0"></script>
+<script src="china.js?v=6372930a"></script>
+<script src="feedback.js?v=36b237a2"></script>
 <script src="panic-app.js?v=f332cce4"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -57,15 +96,19 @@
   <div class="modes" role="group" aria-label="mode">
     <button type="button" data-mode="endless" aria-pressed="true">endless</button>
     <button type="button" data-mode="daily" aria-pressed="false">today's song</button>
+    <button type="button" class="fsbtn" id="fs">&#x26F6; full screen</button>
   </div>
   <p id="tune"></p>
 
-  <canvas id="board" width="380" height="600"></canvas>
+  <div class="stage" id="stage">
+    <canvas id="board" width="380" height="600"></canvas>
+    <button type="button" class="again" id="again"><span class="pill">play again</span><span class="res" id="res"></span></button>
+    <button type="button" class="fsx" id="fsx" aria-label="leave full screen">&#x2715;</button>
+  </div>
   <div id="big">tap the start tile</div>
-  <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns</p>
+  <p class="keys">on a keyboard: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> for the four columns, <kbd>space</kbd> to play again</p>
 
   <div class="status" id="status"></div>
-  <div><button id="restart">start over</button></div>
 
   <div id="lb"></div>
 
@@ -76,7 +119,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=21ba0b13"></script>
+<script src="leaderboard.js?v=7dc50db3"></script>
 <script src="share.js?v=e240f67e"></script>
 <script>
 (function () {
@@ -168,13 +211,15 @@ function note(m) {
     });
   } catch (e) {}
 }
-function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
 
 /* ------------------------------------------------------------------ *
  * the board
  * ------------------------------------------------------------------ */
 var cv = document.getElementById("board");
 var ctx = cv.getContext("2d");
+var stage = document.getElementById("stage");
+var again = document.getElementById("again");
+var resEl = document.getElementById("res");
 var big = document.getElementById("big");
 var statusEl = document.getElementById("status");
 var lbEl = document.getElementById("lb");
@@ -182,25 +227,36 @@ var tuneEl = document.getElementById("tune");
 
 var W, H, RH, DPR;                 // css size, row height (4 rows on screen)
 var mode = "endless";
-var tiles, hits, scroll, target, phase, speed, t0, lastT, raf, bad, order, songAt;
+var tiles, hits, scroll, target, phase, speed, t0, lastT, bad, order, armT;
+var hitAt = {}, lane = [0, 0, 0, 0];   // when each tile / column was last hit (for the flashes)
 
 var SG_DAY = Math.floor((Date.now() + 8 * 3600 * 1000) / 86400000);
 var DAILY = SONGS[SG_DAY % SONGS.length];
 var zh = function () { return document.documentElement.classList.contains("zh"); };
+var full = function () { return document.documentElement.classList.contains("pfs"); };
 
 function boardKey() { return mode === "daily" ? "pianoday" : "piano"; }
 
 function size() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
-  W = cv.clientWidth || 380;
-  H = Math.round(Math.min(W * 1.55, Math.max(320, window.innerHeight * 0.68)));
+  if (full()) {
+    var vw = window.innerWidth, vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    H = Math.round(vh);
+    W = Math.round(Math.min(vw, H * 0.62));      // a phone held upright uses the whole width
+    cv.style.width = W + "px";
+    stage.style.setProperty("--bw", W + "px");
+  } else {
+    cv.style.width = "";
+    W = cv.clientWidth || 380;
+    H = Math.round(Math.min(W * 1.55, Math.max(320, window.innerHeight * 0.68)));
+  }
   cv.style.height = H + "px";
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   var oldRH = RH;
   RH = H / 4;
-  if (phase === "run") scroll = scroll * RH / oldRH;
-  else if (tiles) scroll = target = hits * RH;
+  if (scroll && oldRH) scroll = scroll * RH / oldRH;
+  if (target && oldRH) target = target * RH / oldRH;
   draw();
 }
 
@@ -217,8 +273,8 @@ function more() {
 }
 
 function reset() {
-  cancelAnimationFrame(raf);
   hits = 0; scroll = 0; target = 0; bad = null; phase = "ready"; order = [];
+  hitAt = {}; lane = [0, 0, 0, 0];
   speed = 2.4;
   if (mode === "daily") {
     tiles = songTiles(DAILY);
@@ -228,13 +284,16 @@ function reset() {
     more();
     tuneEl.textContent = "a new tune after every song. it keeps getting faster";
   }
+  clearTimeout(armT);
+  again.classList.remove("show", "armed");
+  stage.classList.remove("running");
   big.textContent = "tap the start tile";
   statusEl.textContent = "";
   lbEl.innerHTML = "";
   draw();
   // phones: bring the whole board on screen (the start tile is at the bottom)
-  if (W && window.matchMedia && matchMedia("(pointer: coarse)").matches) {
-    var r = cv.getBoundingClientRect();
+  if (!full() && W && window.matchMedia && matchMedia("(pointer: coarse)").matches) {
+    var r = stage.getBoundingClientRect();
     if (r.bottom > window.innerHeight - 8) window.scrollBy(0, r.bottom - window.innerHeight + 12);
   }
 }
@@ -242,71 +301,122 @@ function reset() {
 // screen y of the top of tile i
 function rowY(i) { return H - RH * (i + 1) + scroll; }
 
+function rrect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+var BG = null, BGH = 0;
 function draw() {
   if (!W || !tiles) return;
-  ctx.clearRect(0, 0, W, H);
-  var cw = W / 4;
-  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
-  // column lines
-  ctx.strokeStyle = "#d9d6e8"; ctx.lineWidth = 2;
-  for (var c = 1; c < 4; c++) { ctx.beginPath(); ctx.moveTo(c * cw, 0); ctx.lineTo(c * cw, H); ctx.stroke(); }
+  var now = performance.now();
+  var cw = W / 4, pad = Math.max(3, cw * 0.05), rad = Math.min(14, cw * 0.12);
+  // the night-sky stage
+  if (!BG || BGH !== H) {
+    BG = ctx.createLinearGradient(0, 0, 0, H);
+    BG.addColorStop(0, "#1b1440"); BG.addColorStop(0.6, "#120f2c"); BG.addColorStop(1, "#0b0a1c");
+    BGH = H;
+  }
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  // a column lights up when it's hit, then fades
+  for (var c = 0; c < 4; c++) {
+    var a = 1 - (now - lane[c]) / 320;
+    if (a > 0) {
+      var lg = ctx.createLinearGradient(0, H, 0, 0);
+      lg.addColorStop(0, "rgba(255,92,190," + (0.32 * a).toFixed(3) + ")");
+      lg.addColorStop(1, "rgba(124,92,255,0)");
+      ctx.fillStyle = lg; ctx.fillRect(c * cw, 0, cw, H);
+    }
+  }
+  ctx.strokeStyle = "rgba(255,255,255,.07)"; ctx.lineWidth = 1;
+  for (c = 1; c < 4; c++) { ctx.beginPath(); ctx.moveTo(c * cw + 0.5, 0); ctx.lineTo(c * cw + 0.5, H); ctx.stroke(); }
   // tiles on screen
   var first = Math.max(0, Math.floor((scroll - RH) / RH));
   for (var i = first; i < tiles.length; i++) {
     var y = rowY(i);
     if (y > H) continue;
     if (y + RH < 0) break;
-    var t = tiles[i];
-    var x = t.col * cw;
+    var x = tiles[i].col * cw;
     if (i < hits) {
-      ctx.fillStyle = "rgba(29,27,46,.14)";
-      ctx.fillRect(x + 2, y + 2, cw - 4, RH - 4);
-    } else {
-      var grd = ctx.createLinearGradient(0, y, 0, y + RH);
-      grd.addColorStop(0, "#3a3752"); grd.addColorStop(1, "#14121f");
-      ctx.fillStyle = grd;
-      ctx.fillRect(x + 2, y + 2, cw - 4, RH - 4);
-      if (i === 0 && phase === "ready") {
-        ctx.fillStyle = "#ffd43b";
-        ctx.font = "700 " + Math.round(cw * 0.2) + "px Lilita One, Arial Black, sans-serif";
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(zh() ? "开始" : "START", x + cw / 2, y + RH / 2);
+      // a hit tile pops and fades out
+      var k = Math.min(1, (now - (hitAt[i] || 0)) / 260);
+      if (k < 1) {
+        var g = (1 - k) * pad * 1.6;
+        ctx.globalAlpha = 0.85 * (1 - k);
+        ctx.fillStyle = "#ffd6f0";
+        rrect(x + pad - g, y + pad - g, cw - 2 * pad + 2 * g, RH - 2 * pad + 2 * g, rad);
+        ctx.fill();
+        ctx.globalAlpha = 1;
       }
+      ctx.fillStyle = "rgba(255,255,255,.05)";
+      rrect(x + pad, y + pad, cw - 2 * pad, RH - 2 * pad, rad); ctx.fill();
+      continue;
+    }
+    var start = i === 0 && phase === "ready";
+    // soft glow, then the tile, then a shine along the top
+    ctx.fillStyle = start ? "rgba(255,212,59,.18)" : "rgba(160,92,255,.16)";
+    rrect(x + 1, y + 1, cw - 2, RH - 2, rad + 2); ctx.fill();
+    var grd = ctx.createLinearGradient(0, y, 0, y + RH);
+    if (start) { grd.addColorStop(0, "#ffe066"); grd.addColorStop(1, "#ff9f1c"); }
+    else { grd.addColorStop(0, "#8a5cff"); grd.addColorStop(1, "#ff3d9a"); }
+    ctx.fillStyle = grd;
+    rrect(x + pad, y + pad, cw - 2 * pad, RH - 2 * pad, rad); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.28)";
+    rrect(x + pad + 4, y + pad + 4, cw - 2 * pad - 8, Math.max(3, RH * 0.05), 3); ctx.fill();
+    if (start) {
+      ctx.fillStyle = "#1d1b2e";
+      ctx.font = "400 " + Math.round(cw * 0.22) + "px Lilita One, Arial Black, sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(zh() ? "开始" : "START", x + cw / 2, y + RH / 2);
     }
   }
-  // the miss: a red square where you tapped, or the tile that got away
+  // the miss: a red tile where you tapped, or the tile that got away
   if (bad) {
-    ctx.fillStyle = "rgba(255,46,99,.85)";
-    ctx.fillRect(bad.col * cw + 2, rowY(bad.row) + 2, cw - 4, RH - 4);
+    var by = rowY(bad.row), bx = bad.col * cw;
+    var blink = 0.75 + 0.25 * Math.sin(now / 90);
+    ctx.fillStyle = "rgba(255,46,99," + blink.toFixed(3) + ")";
+    rrect(bx + pad, by + pad, cw - 2 * pad, RH - 2 * pad, rad); ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(3, cw * 0.05); ctx.lineCap = "round";
+    var m = Math.min(cw, RH) * 0.16, cx = bx + cw / 2, cy = by + RH / 2;
+    ctx.beginPath(); ctx.moveTo(cx - m, cy - m); ctx.lineTo(cx + m, cy + m); ctx.moveTo(cx + m, cy - m); ctx.lineTo(cx - m, cy + m); ctx.stroke();
+  }
+  // today's song: how far through it you are
+  if (mode === "daily") {
+    ctx.fillStyle = "rgba(255,255,255,.1)"; ctx.fillRect(0, 0, W, 5);
+    ctx.fillStyle = "#ffd43b"; ctx.fillRect(0, 0, W * hits / tiles.length, 5);
   }
   // score / clock
   var label = mode === "daily"
-    ? (phase === "ready" ? "0.00" : ((phase === "over" ? endMs : performance.now() - t0) / 1000).toFixed(2))
+    ? (phase === "ready" ? "0.00" : ((phase === "over" ? endMs : now - t0) / 1000).toFixed(2))
     : String(hits);
-  ctx.font = "400 " + Math.round(W * 0.13) + "px Lilita One, Arial Black, sans-serif";
+  ctx.font = "400 " + Math.round(W * 0.14) + "px Lilita One, Arial Black, sans-serif";
   ctx.textAlign = "center"; ctx.textBaseline = "top";
-  ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.strokeText(label, W / 2, 10);
-  ctx.fillStyle = "#ff2e63"; ctx.fillText(label, W / 2, 10);
+  var ty = full() ? Math.max(14, H * 0.03) : 12;
+  ctx.shadowColor = "rgba(255,61,154,.9)"; ctx.shadowBlur = 16;
+  ctx.fillStyle = "#fff"; ctx.fillText(label, W / 2, ty);
+  ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
 }
 
 var endMs = 0;
 function frame(now) {
-  var dt = Math.min(0.05, (now - lastT) / 1000);
+  var dt = Math.min(0.05, (now - (lastT || now)) / 1000);
   lastT = now;
   if (phase === "run") {
     scroll += speed * RH * dt;
     // the lowest black tile slid off the bottom
     if (rowY(hits) >= H) {
       bad = { row: hits, col: tiles[hits].col };
-      // wind back so you can see the one that got away
-      scroll = (hits - 1) * RH + RH * 0.5;
-      return over("one got away");
+      over("one got away");
     }
   } else if (phase === "daily-run") {
     scroll += (target - scroll) * Math.min(1, dt * 22);
   }
   draw();
-  raf = requestAnimationFrame(frame);
+  requestAnimationFrame(frame);
 }
 
 function press(col) {
@@ -314,10 +424,10 @@ function press(col) {
   var t = tiles[hits];
   if (phase === "ready") {
     if (col !== t.col) return;           // only the start tile starts it
-    t0 = performance.now(); lastT = t0;
+    t0 = performance.now();
     phase = mode === "daily" ? "daily-run" : "run";
+    stage.classList.add("running");
     big.textContent = mode === "daily" ? "go go go" : "keep up";
-    raf = requestAnimationFrame(frame);
   }
   // endless: no tapping ahead into tiles that haven't scrolled on yet
   if (mode === "endless" && rowY(hits) < -RH * 0.4) return;
@@ -326,6 +436,7 @@ function press(col) {
     return over("wrong key");
   }
   note(t.midi);
+  hitAt[hits] = lane[col] = performance.now();
   hits++;
   if (mode === "daily") {
     target = hits * RH;
@@ -336,37 +447,79 @@ function press(col) {
   }
 }
 
-function over(why) {
-  cancelAnimationFrame(raf);
+// the play-again button covers the bottom of the board. It only goes live after
+// half a second, so the next frantic tap after a miss doesn't skip the score
+function offerAgain(res) {
   phase = "over";
+  stage.classList.remove("running");
+  resEl.textContent = res;
+  again.classList.add("show");
+  clearTimeout(armT);
+  armT = setTimeout(function () { again.classList.add("armed"); }, 500);
+}
+again.addEventListener("click", function () { if (again.classList.contains("armed")) reset(); });
+
+function over(why) {
   endMs = performance.now() - t0;
-  sfx("bad");
-  draw();
+  // park the miss on the second row up, so it shows above the play-again button
+  scroll = (bad.row - 1) * RH;
   lbEl.innerHTML = "";
   if (mode === "daily") {
-    if (window.SortafunSFX) SortafunSFX.result("lose");
     big.textContent = why + ". " + hits + " of " + tiles.length + " notes";
     statusEl.textContent = "finish the whole song to get on today's board.";
+    offerAgain(big.textContent);
     return;
   }
-  if (window.SortafunSFX) SortafunSFX.result(hits >= 50 ? "win" : "lose");
+  if (hits >= 50 && window.SortafunSFX) SortafunSFX.result("win");
   big.textContent = why + ". " + hits + " tile" + (hits === 1 ? "" : "s");
-  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "piano", { score: hits });
+  offerAgain(big.textContent);
+  if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "piano", { score: hits, quiet: true });  // no sound on a miss
   else lbEl.textContent = "leaderboard offline";
 }
 
 function done() {
-  cancelAnimationFrame(raf);
-  phase = "over";
   endMs = Math.round(performance.now() - t0);
   scroll = target;
-  draw();
   if (window.SortafunSFX) SortafunSFX.result("win");
   big.textContent = "the whole song in " + (endMs / 1000).toFixed(2) + " s";
+  offerAgain(big.textContent);
   lbEl.innerHTML = "";
   if (window.SortafunLB) SortafunLB.mountPanel(lbEl, "pianoday", { score: endMs });
   else lbEl.textContent = "leaderboard offline";
 }
+
+/* ------------------------------------------------------------------ *
+ * full screen. The Fullscreen API where the browser has one (android,
+ * desktop, ipad), and the board filling the window either way, which is
+ * all an iPhone allows. Zooming and scrolling are off while it's up
+ * ------------------------------------------------------------------ */
+var root = document.documentElement;
+function enterFull() {
+  root.classList.add("pfs");
+  var req = root.requestFullscreen || root.webkitRequestFullscreen;
+  if (req) { try { var p = req.call(root); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+  size();
+}
+function leaveFull() {
+  root.classList.remove("pfs");
+  var fe = document.fullscreenElement || document.webkitFullscreenElement;
+  var ex = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fe && ex) { try { var p = ex.call(document); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+  size();
+}
+document.getElementById("fs").addEventListener("click", enterFull);
+document.getElementById("fsx").addEventListener("click", leaveFull);
+["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) {
+  document.addEventListener(ev, function () {
+    // esc (or the system back gesture) left the real full screen: leave ours too
+    if (!(document.fullscreenElement || document.webkitFullscreenElement) && full()) { root.classList.remove("pfs"); size(); }
+  });
+});
+document.addEventListener("touchmove", function (e) { if (full()) e.preventDefault(); }, { passive: false });
+["gesturestart", "gesturechange", "dblclick"].forEach(function (ev) {
+  document.addEventListener(ev, function (e) { if (full()) e.preventDefault(); }, { passive: false });
+});
+if (window.visualViewport) visualViewport.addEventListener("resize", function () { if (full()) size(); });
 
 /* ------------------------------------------------------------------ *
  * input: a tap anywhere in a column counts (fingers aren't precise),
@@ -381,23 +534,29 @@ cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 var KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
 window.addEventListener("keydown", function (e) {
   if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-  if (e.code in KEYS) { e.preventDefault(); if (!e.repeat) press(KEYS[e.code]); }
+  if (e.code in KEYS) { e.preventDefault(); if (!e.repeat) press(KEYS[e.code]); return; }
+  if ((e.code === "Space" || e.code === "Enter") && phase === "over") {
+    e.preventDefault();
+    if (again.classList.contains("armed")) reset();
+    return;
+  }
+  if (e.code === "Escape" && full()) leaveFull();
 });
 
-Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
+Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]"), function (b) {
   b.addEventListener("click", function () {
     mode = b.dataset.mode;
-    Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+    Array.prototype.forEach.call(document.querySelectorAll(".modes button[data-mode]"), function (o) { o.setAttribute("aria-pressed", String(o === b)); });
     reset();
   });
 });
-document.getElementById("restart").addEventListener("click", reset);
 window.addEventListener("resize", size);
 
-window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press, state: function () { return { mode: mode, phase: phase, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, bad: bad }; } };
+window.__piano = { key: boardKey, SONGS: SONGS, songTiles: songTiles, press: press, again: function () { if (again.classList.contains("armed")) reset(); }, full: function (on) { on ? enterFull() : leaveFull(); }, state: function () { return { mode: mode, phase: phase, hits: hits, tiles: tiles.length, next: tiles[hits] && tiles[hits].col, bad: bad, armed: again.classList.contains("armed"), full: full(), W: W, H: H }; } };
 
 size();
 reset();
+requestAnimationFrame(frame);
 })();
 </script>
 <script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
