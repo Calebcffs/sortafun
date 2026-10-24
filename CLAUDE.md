@@ -739,6 +739,37 @@ rendering is slow; judge speed by the logic tick (~1-2.5ms), not frames.
 Always run `tools/stamp.py` before testing a change or the browser keeps the
 old module.
 
+### Sorta Casino (`casino.html` + `casino/`, 2026-10-25, not public yet)
+
+**Hidden from day one (Caleb: "without publishing it publically yet"):** no homepage GAMES row / THUMB /
+What's New line, not on leaderboards.html, `retired: true` in leaderboard.js, seo.py `index: False`
+(noindex, out of the sitemap). It works by URL. To launch: add those, set `retired` off, rerun seo.py + stamp.py.
+
+Play money only, said on the page: $10,000 every Singapore day (localStorage `sortafun-casino-<day>`),
+the day's score is equity = cash + open positions' value. Board key `casino` is a live row (live-row.js)
+made on the first bet and pushed at most every 8s; firestore.rules lets casino rows go DOWN
+(`isLiveUpdate`) and up to 1e12 (`isValidScore`), and liveSet's rename keeps the row's score as-is for
+casino. CASH OUT locks the day (each game's `cashOut`, then no bets). Never add anything that looks like
+buying, depositing or a prize.
+
+`casino/PLAN.md` is the contract every game follows (read it before touching a game): `core.js` (wallet,
+day, board row, lobby, shared bet box, `window.__casino`), `games/index.js` (the file list; each game
+loads on its own so a broken one just drops out), one module per game with its maths in a DOM-free
+`*-math.js` / `*-rules.js` beside it. Results are settled the moment the stake is taken (`api.pay` with
+`reveal` so the header doesn't spoil the animation); crypto rng only. stamp.py MODULE_DIRS maps
+casino.html to `casino` + `casino/games`.
+
+Games and their RTP (simulated or exact): Lucky Sevens slots 96.0%, Blackjack 99.5% basic strategy
+(6 decks, S17, 3:2, split once, insurance), Roulette 97.3% (european), Moonshot crash 99%, Gem Mines 99%,
+Plinko 98.7-99% (8-16 rows x 3 risks), Double or Nothing coin 98%. Live ones (`feeds.js`):
+**S&P 5000** trader, long/short at 1x-5000x on the real S&P 500 (CNBC quote JSON + ts-api 1D chart,
+open/closed from an NYSE hours + holiday table because CNBC's status field lies) and BTC / ETH (Binance
+websocket + klines, data-api.binance.vision fallback), liquidation checked against every trade's
+high/low, 0.001% spread. **Sortamarket**: real Polymarket yes/no markets (gamma-api, CLOB sparkline),
+buy at bestAsk, valued/sold at bestBid, resolution pays 1/0, grim topics filtered by keyword list in
+predict.js. Positions live in the game's save and are valued in `boot` so they count from the lobby.
+Test hooks `window.__trader` / `__predict` / `__feeds`.
+
 ### Noclip (`noclip.html` + `noclip/`, 2026-10-25, v0.17)
 
 **Hidden 2026-10-25 (v0.17.1, Caleb's ask, right after it went live):** off the homepage (GAMES row and

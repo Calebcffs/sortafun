@@ -160,6 +160,7 @@ PAGES = {
     "birdie.html": dict(keep="birdie is now city sandbox &middot; SORTAFUN.ORG", name="birdie", kind="page", index=False),
     "city.html": dict(keep="city sandbox &middot; SORTAFUN.ORG", name="city sandbox", kind="page", index=False),          # archived 2026-10-06
     "clarissa.html": dict(keep="clarissa leaving sfsg simulator &middot; SORTAFUN.ORG", name="the farewell card", kind="page", index=False),  # unlisted on purpose
+    "casino.html": dict(keep="sorta casino &middot; SORTAFUN.ORG", name="sorta casino", kind="page", index=False),  # hidden while it's built, URL only
     "noclip.html": dict(keep="noclip &middot; SORTAFUN.ORG", name="noclip", kind="page", index=False),  # hidden 2026-10-25, URL only
     "deeptime2.html": dict(keep="deep time part 2 &middot; SORTAFUN.ORG", name="deep time part 2", kind="page", index=False),  # archived 2026-10-06
     "gallery.html": dict(keep="art gallery &middot; SORTAFUN.ORG", name="art gallery", kind="page", index=False),          # easter egg

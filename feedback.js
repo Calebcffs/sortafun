@@ -41,6 +41,7 @@
     { id: "site",      name: "the whole site" },
     { id: "city",      name: "City Sandbox",         file: "city.html",         game: true },
     { id: "draw",      name: "Draw and Guess",       file: "draw.html",         game: true },
+    { id: "casino",    name: "Sorta Casino",         file: "casino.html",       game: true },
     { id: "noclip",    name: "Noclip",               file: "noclip.html",       game: true },
     { id: "deeptime",  name: "Deep Time",            file: "deeptime.html",     game: true },
     { id: "deeptime2", name: "Deep Time: Part 2",    file: "deeptime2.html",    game: true },

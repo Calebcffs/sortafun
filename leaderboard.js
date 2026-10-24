@@ -59,6 +59,8 @@
       var p = Math.ceil(v / 10000), s = p * 10000 - v;
       return p + "/8, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
     } },
+    // sorta casino: the day's balance in play dollars (a live row that can go down). hidden while it's built
+    casino:    { label: "sorta casino", unit: "$", better: "high", retired: true, format: function (v) { return "$" + Number(v).toLocaleString("en-US"); } },
     // noclip: levels escaped * 10000 - seconds, like deep time. hidden 2026-10-25 (Caleb): URL only, not on the leaderboards page / passport
     noclip:    { label: "noclip", unit: "levels", better: "high", retired: true, format: function (v) {
       if (v <= 0) return "0/3";
@@ -258,7 +260,7 @@
       // elsewhere) keeps the row's higher score, or the rules would refuse it as a drop
       var prep = o.mode !== "rename" ? Promise.resolve() : fs.getDoc(row).then(function (snap) {
         var cur = snap.exists() ? snap.data() : null;
-        if (cur && cur.score > doc.score) { doc.score = doc.rankValue = cur.score; if (cur.bee) doc.bee = true; }
+        if (cur && cur.score > doc.score && game !== "casino") { doc.score = doc.rankValue = cur.score; if (cur.bee) doc.bee = true; }
       });
       return prep.then(function () { return liveWrite(fs, row, key, doc, o); }).then(function () {
         try {

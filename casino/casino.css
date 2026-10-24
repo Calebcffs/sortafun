@@ -1,0 +1,118 @@
+/* casino/casino.css - the floor (felt, gold, chips) inside the site's white window.
+   Games style their own insides under .g-<id>; the shared bits (bet box, buttons,
+   result banners) are the .cz-* classes here. */
+.czwrap { max-width: 1100px; }
+[hidden] { display: none !important; }
+.cz {
+  --felt: #0f5132; --felt2: #0b3d26; --felt3: #08291a; --gold: #f4c542; --gold2: #b8860b;
+  --cream: #fff6dc; --red: #e0353b; --win: #3ddc84; --lose: #ff5a5f; --czink: #1d1b2e;
+}
+.cz-floor {
+  position: relative; border: 3px solid var(--ink); border-radius: 14px; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 0%, #17734a 0%, var(--felt) 45%, var(--felt3) 100%);
+  color: var(--cream); padding: 14px; min-height: 420px;
+  box-shadow: inset 0 0 0 4px #7a4f1d, inset 0 0 0 7px var(--gold2), inset 0 0 60px rgba(0,0,0,.45);
+}
+.cz-floor::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .07;
+  background-image: radial-gradient(#fff 1px, transparent 1.3px); background-size: 6px 6px; }
+
+/* header */
+.cz-top { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  background: rgba(0,0,0,.28); border: 2px solid rgba(244,197,66,.5); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+.cz-bal { font-family: var(--chunky); font-size: clamp(30px, 5.5vw, 46px); line-height: 1; color: var(--gold);
+  text-shadow: 0 3px 0 #6b4a00, 0 0 18px rgba(244,197,66,.35); transition: color .25s, transform .25s; }
+.cz-bal.up { color: #8dffb8; transform: scale(1.04); }
+.cz-bal.down { color: #ff9a9a; }
+.cz-sub { font-size: 13px; opacity: .9; margin-top: 4px; }
+.cz-sub .pos { color: #8dffb8; } .cz-sub .neg { color: #ffb0b0; }
+.cz-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.cz-clock { font-size: 13px; opacity: .85; font-variant-numeric: tabular-nums; }
+.cz-bank { font-family: var(--chunky); font-size: 18px; letter-spacing: 1px; padding: 8px 16px; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(#ffe27a, var(--gold) 55%, #d9a514); color: #3a2600; border: 3px solid var(--czink); box-shadow: 0 4px 0 var(--czink); }
+.cz-bank:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--czink); }
+.cz-bank:disabled { filter: grayscale(.6); opacity: .7; cursor: default; }
+.cz-note { display: none; position: relative; text-align: center; font-weight: bold; padding: 8px; margin-bottom: 10px; border-radius: 10px; }
+.cz-banked .cz-note.banked { display: block; background: rgba(244,197,66,.2); border: 2px solid var(--gold); }
+.cz-busted .cz-note.busted { display: block; background: rgba(224,53,59,.25); border: 2px solid var(--red); }
+
+/* lobby */
+.cz-games { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.cz-card { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden;
+  background: #fffaf0; color: var(--czink); border: 3px solid var(--czink); box-shadow: 0 5px 0 var(--czink); transition: transform .12s; }
+.cz-card:hover, .cz-card:focus-visible { transform: translateY(-3px) rotate(-.5deg); }
+.cz-card:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--czink); }
+.cz-art { aspect-ratio: 16 / 10; background: var(--felt2); border-bottom: 3px solid var(--czink); }
+.cz-art svg { display: block; width: 100%; height: 100%; }
+.cz-name { font-family: var(--chunky); font-size: 19px; padding: 7px 10px 0; }
+.cz-blurb { font-size: 12px; padding: 2px 10px 10px; opacity: .8; line-height: 1.35; }
+
+/* a game's panel */
+.cz-panel { position: relative; }
+.cz-panelbar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.cz-panelbar h2 { margin: 0; font-family: var(--chunky); font-weight: 400; font-size: 26px; color: var(--gold); text-shadow: 0 2px 0 #6b4a00; }
+.cz-back { font-family: var(--chunky); font-size: 15px; padding: 6px 12px; border-radius: 8px; cursor: pointer; background: rgba(0,0,0,.35); color: var(--cream); border: 2px solid rgba(255,246,220,.5); }
+.cz-back:hover { background: rgba(0,0,0,.55); }
+.cz-body { position: relative; min-height: 300px; }
+
+/* shared controls: the bet box */
+.cz-controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; justify-content: center; margin-top: 12px; }
+.cz-bet label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .8; margin-bottom: 3px; }
+.cz-betrow { display: flex; align-items: stretch; background: rgba(0,0,0,.35); border: 2px solid rgba(244,197,66,.6); border-radius: 10px; overflow: hidden; }
+.cz-dollar { padding: 0 2px 0 10px; display: flex; align-items: center; color: var(--gold); font-weight: bold; }
+.cz-betrow input { width: 110px; background: transparent; border: 0; color: var(--cream); font: bold 18px Verdana, sans-serif; padding: 8px 6px; outline: none; }
+.cz-betrow button { background: rgba(255,255,255,.08); color: var(--cream); border: 0; border-left: 1px solid rgba(244,197,66,.35); padding: 0 11px; font: bold 14px Verdana, sans-serif; cursor: pointer; }
+.cz-betrow button:hover:not(:disabled) { background: rgba(244,197,66,.25); }
+.cz-chips { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.cz-chip { font: bold 11px Verdana, sans-serif; padding: 4px 8px; border-radius: 999px; cursor: pointer; color: #fff; border: 2px dashed rgba(255,255,255,.7); background: #c23b3b; }
+.cz-chip:nth-child(2) { background: #2b6cd4; } .cz-chip:nth-child(3) { background: #1f8a4c; } .cz-chip:nth-child(4) { background: #222; }
+
+/* buttons a game can use */
+.cz-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.cz-go { font-family: var(--chunky); font-size: 20px; letter-spacing: 1px; padding: 10px 22px; border-radius: 12px; cursor: pointer; color: #082b18;
+  background: linear-gradient(#a6ffc9, var(--win) 60%, #1fa85c); border: 3px solid var(--czink); box-shadow: 0 5px 0 var(--czink); min-width: 110px; }
+.cz-go.alt { color: #3a0000; background: linear-gradient(#ffb3b3, var(--lose) 60%, #c22f34); }
+.cz-go.gold { color: #3a2600; background: linear-gradient(#ffe27a, var(--gold) 55%, #d9a514); }
+.cz-go.dark { color: var(--cream); background: linear-gradient(#4a4a5a, #2a2a36); }
+.cz-go:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--czink); }
+.cz-go:disabled { filter: grayscale(.7); opacity: .55; cursor: default; }
+.cz-seg { display: inline-flex; border: 2px solid rgba(244,197,66,.6); border-radius: 10px; overflow: hidden; }
+.cz-seg button { background: rgba(0,0,0,.3); color: var(--cream); border: 0; padding: 8px 12px; font: bold 13px Verdana, sans-serif; cursor: pointer; }
+.cz-seg button.on { background: var(--gold); color: #3a2600; }
+.cz-banner { text-align: center; font-family: var(--chunky); font-size: clamp(22px, 4vw, 34px); min-height: 1.3em; }
+.cz-banner.win { color: var(--win); text-shadow: 0 0 14px rgba(61,220,132,.5); }
+.cz-banner.lose { color: var(--lose); }
+.cz-muted { font-size: 12px; opacity: .75; text-align: center; }
+
+/* toasts */
+.cz-toasts { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 30; pointer-events: none; width: max-content; max-width: 90%; }
+.cz-toast { background: rgba(20,20,30,.92); color: #fff; padding: 8px 14px; border-radius: 10px; border: 2px solid var(--gold); font-size: 14px; text-align: center; transition: opacity .4s, transform .4s; }
+.cz-toast.bad { border-color: var(--lose); } .cz-toast.good { border-color: var(--win); }
+.cz-toast.out { opacity: 0; transform: translateY(-8px); }
+
+/* below the floor */
+.cz-lower { display: grid; grid-template-columns: 1fr 1.3fr; gap: 14px; margin-top: 14px; }
+.cz-ledger h3 { font-family: var(--chunky); font-weight: 400; margin: 0 0 6px; }
+.cz-ledger ul { list-style: none; margin: 0; padding: 0; font-size: 12.5px; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; }
+.cz-ledger li { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; padding: 5px 9px; border-top: 1px solid #eee; }
+.cz-ledger li:first-child { border-top: 0; }
+.cz-ledger li .g { font-weight: bold; } .cz-ledger li .l { opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cz-ledger li.pos b { color: #138a47; } .cz-ledger li.neg b { color: #c22f34; }
+.cz-ledger li.none { display: block; opacity: .6; }
+.cz-live { margin-bottom: 8px; }
+
+/* the reference coin */
+.coin-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 0 6px; }
+.coin-face { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--chunky); font-size: 54px; color: #7a5600;
+  background: radial-gradient(circle at 35% 30%, #fff1a8, var(--gold) 55%, var(--gold2)); border: 4px solid var(--czink); box-shadow: inset 0 0 0 8px rgba(184,134,11,.5), 0 6px 0 var(--czink); }
+.coin-face.spin { animation: coinspin .9s cubic-bezier(.2,.7,.3,1); }
+@keyframes coinspin { 0% { transform: rotateX(0) translateY(0); } 50% { transform: rotateX(900deg) translateY(-60px); } 100% { transform: rotateX(1800deg) translateY(0); } }
+.coin-msg { font-family: var(--chunky); font-size: 24px; }
+
+@media (max-width: 640px) {
+  .cz-floor { padding: 10px; }
+  .cz-games { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .cz-name { font-size: 16px; } .cz-blurb { display: none; }
+  .cz-lower { grid-template-columns: 1fr; }
+  .cz-betrow input { width: 86px; }
+  .cz-top { padding: 8px 10px; }
+}

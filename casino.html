@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" data-nomusic>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>sorta casino &middot; SORTAFUN.ORG</title>
+<meta name="sortafun:name" content="sorta casino">
+<meta name="robots" content="noindex">
+<!-- /seo -->
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=2cfb0408">
+<link rel="stylesheet" href="casino/casino.css?v=90dae7e8">
+<script src="sfx.js?v=5233b886"></script>
+<script src="china.js?v=9e07ea97"></script>
+<script src="feedback.js?v=8c51ff58"></script>
+<script src="panic-app.js?v=ff82991a"></script>
+<script src="chat.js?v=49067dc4"></script>
+<script type="importmap">
+{ "imports": {
+  "./casino/core.js": "./casino/core.js?v=22f5978d",
+  "./casino/feeds.js": "./casino/feeds.js?v=ccfdad66",
+  "./casino/games/blackjack-rules.js": "./casino/games/blackjack-rules.js?v=28c23186",
+  "./casino/games/blackjack.js": "./casino/games/blackjack.js?v=8fce5397",
+  "./casino/games/coin.js": "./casino/games/coin.js?v=5b23eb5a",
+  "./casino/games/crash-math.js": "./casino/games/crash-math.js?v=a45033db",
+  "./casino/games/crash.js": "./casino/games/crash.js?v=be32e18d",
+  "./casino/games/index.js": "./casino/games/index.js?v=90de267e",
+  "./casino/games/mines-math.js": "./casino/games/mines-math.js?v=863ceb6c",
+  "./casino/games/mines.js": "./casino/games/mines.js?v=1e56b974",
+  "./casino/games/plinko-math.js": "./casino/games/plinko-math.js?v=9df3fee0",
+  "./casino/games/plinko.js": "./casino/games/plinko.js?v=a787b7a5",
+  "./casino/games/predict.js": "./casino/games/predict.js?v=cdee25af",
+  "./casino/games/roulette-rules.js": "./casino/games/roulette-rules.js?v=f59993c7",
+  "./casino/games/roulette.js": "./casino/games/roulette.js?v=7ecd206b",
+  "./casino/games/slots-math.js": "./casino/games/slots-math.js?v=aa0e0266",
+  "./casino/games/slots.js": "./casino/games/slots.js?v=7f4ccf04",
+  "./casino/games/trader.js": "./casino/games/trader.js?v=074e44f2"
+} }
+</script>
+</head>
+<body class="k-skill cz">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap czwrap">
+  <h1>sorta casino</h1>
+  <p class="sub">$10,000 of play money every day. bet it on whatever you like. whatever it's worth at midnight (singapore time) is your score on today's board.
+    <b>it's not real money and never will be:</b> nothing to buy, nothing to win, no way to pay in or cash it anywhere.</p>
+
+  <div class="cz-floor">
+    <div class="cz-top">
+      <div class="cz-money">
+        <div class="cz-bal" id="cz-bal">$10,000</div>
+        <div class="cz-sub"><span id="cz-cash">cash</span> &middot; <span id="cz-pl">+$0 today</span></div>
+      </div>
+      <div class="cz-right">
+        <div class="cz-clock" id="cz-clock">day ends in</div>
+        <button class="cz-bank" id="cz-bank" type="button">CASH OUT</button>
+      </div>
+    </div>
+    <div class="cz-note banked">you've cashed out for today. your score is locked in. new money at midnight.</div>
+    <div class="cz-note busted">you're out of money for today. come back after midnight for another $10,000.</div>
+
+    <div id="cz-lobby">
+      <div class="cz-games" id="cz-games"></div>
+    </div>
+    <div id="cz-panel" class="cz-panel" hidden>
+      <div class="cz-panelbar"><button class="cz-back" id="cz-back" type="button">&larr; floor</button><h2 id="cz-title"></h2></div>
+      <div id="cz-body" class="cz-body"></div>
+    </div>
+    <div id="cz-toasts" class="cz-toasts" aria-live="polite"></div>
+  </div>
+
+  <div class="cz-lower">
+    <div class="cz-ledger"><h3>today</h3><ul id="cz-log"></ul></div>
+    <div class="cz-board"><div id="cz-live" class="cz-live" hidden></div><div id="lb"></div></div>
+  </div>
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=3e9da013"></script>
+<script src="share.js?v=e240f67e"></script>
+<script src="live-row.js?v=bf0b3166"></script>
+<script type="module" src="casino/core.js?v=22f5978d"></script>
+<script>/* today's board is live: it follows everyone's balance until midnight */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "casino", { live: true, mine: function () { return window.__casino && window.__casinoRow ? window.__casinoRow() : null; },
+  liveNote: "live: everyone's balance right now. it freezes at midnight.", liveEmpty: "nobody's bet yet today." });</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; play money only &middot; no downloads, no sign-up</footer>
+</body>
+</html>
