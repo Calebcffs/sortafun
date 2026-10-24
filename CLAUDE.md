@@ -739,6 +739,63 @@ rendering is slow; judge speed by the logic tick (~1-2.5ms), not frames.
 Always run `tools/stamp.py` before testing a change or the browser keeps the
 old module.
 
+### Noclip (`noclip.html` + `noclip/`, 2026-10-25, v0.17)
+
+Caleb asked for "a backrooms inspired 3d horror game". Found-footage camcorder tape (1996, a building
+inspector leaned on a wall that wasn't there), three levels, one entity that hunts by sound. Everything is
+procedural and synthesised: no downloaded models, textures or sounds. three 0.160 via importmap; it reuses
+Deep Time's VHS pass (`import { Tape } from "../deeptime/tape.js"`, so stamp.py `MODULE_DIRS` maps
+noclip.html to both `noclip` and `deeptime`). Leaderboard key `noclip` = levels escaped x 10000 - seconds
+(like deep time), only full runs from PLAY TAPE submit; LEVEL 1 / LEVEL 2 on the title (unlocked by
+reaching them, localStorage `noclip-reached`) and "try level again" are practice and never submit.
+
+Files: `world.js` (the map + chunk builder), `entity.js` (the model + AI, `TUNE` per level), `audio.js`
+(all WebAudio: hum / car park air / steam room tones, the exit radio's muzak rendered into a buffer once,
+footsteps per surface, its footsteps + breath + growl, heartbeat, static, clunk, ding, door, scream, tear;
+every method is a no-op until `init()` on the first click), `main.js` (levels, props, input, touch,
+fullscreen, OSD, cards, ending, end card).
+
+- **The map is a hash, not stored.** Square cells (`C` m), walls only on cell edges: `edge("E"|"S", i, j)`
+  (0 open, 1 wall, 2 doorway with a 1.1m gap), `solid(i, j)`, `lit(i, j)`, `pillar(a, b)` (at corners),
+  from the level seed + value-noise regions (lobby: open halls / rooms / tight maze). The only stored bits
+  are `W.open` / `W.forced` / `W.clear` / `W.litOn` sets: `carve(a, b, R)` cuts a guaranteed wandering path
+  (start -> exit, start -> each breaker) and `forceWall` makes the wall a door / breaker / lift hangs on.
+- **Chunks** (`K` x `K` cells) are built near the camera by `stream()` (budget per frame) as merged meshes
+  with **lighting baked into vertex colours**: ambient + every lit panel within 2 cells (3 in the pipes),
+  blocked by walls through a cell-to-cell sight cache (walls sit on cell edges, so a point sees what its
+  cell centre sees). Materials are Lambert with `AmbientLight(PI)` so the result is map x vertex colour;
+  the torch (SpotLight on the camera, levels 1-2) adds on top. The flicker scales the ambient + panel
+  colour globally. Breakers relight their 5x5 bay with `rebuildAround()`. Quad winding is (i0, i1, i2):
+  the first version had it backwards (floors invisible, walls showing their back faces).
+- `blocked(ax, az, bx, bz)` is a DDA over cell edges (doorway gaps count, pillars don't), used for sight,
+  the entity's straight-line-or-A* choice and the bake. `collide(p, r)` pushes a circle out of the wall
+  AABBs near it. `path()` is A* over cells.
+- **Levels** (`LEVELS` in world.js, built in `setupLevel()`): 0 the yellow rooms (C 3m): EXIT door 34-44
+  cells away, a radio playing muzak behind it (gets louder within 70m), chalk arrows on side walls along the
+  carved path, 3 notes, 3 almond waters. 1 the car park (C 4m, dark, pillars on even corners): 3 breakers
+  12-18 cells out at ~120 degrees apart, each throw is a noise heard 55m away; then the lift by where you
+  came in (`G.power`). Torch battery drains in 240s, batteries along the paths. 2 the pipes (C 2.2m, red,
+  maze-dense walls): green hanging signs at every turn and every ~4 cells point along the path (separate
+  left/right/up textures, never mirror the plane: it flips the text); the entity starts in "hunt" (always
+  paths to you). Exit -> white -> back in level 0 with the hum, end card "NOCLIP".
+- **The entity** (`entity.js`): states off / roam / listen / chase / search / leave / hunt. Wakes after
+  `TUNE.wake` s (level 0 also once you're 15m from the start) out of your sight. Hears `hear(x, z, r)`:
+  your steps run 22m, walk 7.5m (x1.3 on level 1), sneak (C) 0; through walls x0.65. Sight range is worked
+  out in main.js: under a lit panel `sight`, in the dark `darkSight`, torch pointed its way `sight`, torch
+  pointed away half. Chase speed is `chase` for 4s then x0.86 (you sprint 5.4 for 7s); losing sight for
+  `lose` s -> search the last seen spot -> **leave** (walks 45m off for 18-34s and only turns round for
+  loud noise) -> roam. Gets unstuck from pillars by sidestepping. Caught within `reach`: `caught()` turns
+  you to it and `tickCaught` puts its head 1.3 -> 0.34m in front of the lens (positioned from the head's
+  world position, because the stoop leans the head forward of the root).
+- Balance was set with a headless bot (in the session scratchpad, `bot.mjs`): A* to the goal, flee to the
+  furthest unseen nearby cell while chased, torch off near it, sneak while it searches. Peaceful: 4/4 full
+  clears (~4 min). Hunted: ~3/8 full clears, deaths almost all in level 1, level 2 cleared every time it
+  was reached. A human can also hear it coming (HRTF footsteps), the bot can't. Untested by ear.
+- Testing: `window.noclip` (`G`, `step(dt)`, `keys`, `WD`, `ent`, `TUNE`, `props`, `startRun(level,
+  practice)`, `tryUse`, `caught`, `levelCard`, `tape`, `renderer`). Set `noclip.noPause = true`, stub
+  `noclip.tape.render = () => {}` for logic runs, grab frames with `renderer.domElement.toDataURL()` right
+  after a `step()`. Swiftshader runs it at a few fps, so step time by hand rather than waiting.
+
 ### Deep Time (`deeptime.html` + `deeptime/`)
 
 **Rework, 2026-09-29 (v0.2), overrides the Watcher / Queen rules further

@@ -43,6 +43,7 @@
     "profile.html": ["Profile", "word"],
     "city.html": ["City Sandbox", "ppt"],
     "draw.html": ["Draw and Guess", "ppt"],
+    "noclip.html": ["Noclip", "ppt"],
     "deeptime.html": ["Deep Time", "ppt"],
     "funstrike.html": ["Fun Strike", "ppt"],
     "taka.html": ["Taka-san Dinner", "ppt"],

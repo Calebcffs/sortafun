@@ -32,7 +32,7 @@
 
   // the site version. every update that ships bumps it: +0.0.1 for fixes and
   // small things, +0.1 for a big one (a new game, a new system)
-  var VERSION = "0.16.1";
+  var VERSION = "0.17";
   window.SORTAFUN_VERSION = VERSION;
 
   // every page, keyed by id. game: true = a thing you play (gets the star strip
@@ -41,6 +41,7 @@
     { id: "site",      name: "the whole site" },
     { id: "city",      name: "City Sandbox",         file: "city.html",         game: true },
     { id: "draw",      name: "Draw and Guess",       file: "draw.html",         game: true },
+    { id: "noclip",    name: "Noclip",               file: "noclip.html",       game: true },
     { id: "deeptime",  name: "Deep Time",            file: "deeptime.html",     game: true },
     { id: "deeptime2", name: "Deep Time: Part 2",    file: "deeptime2.html",    game: true },
     { id: "taka",      name: "Taka-san Dinner",      file: "taka.html",         game: true },

@@ -59,6 +59,12 @@
       var p = Math.ceil(v / 10000), s = p * 10000 - v;
       return p + "/8, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
     } },
+    // noclip: levels escaped * 10000 - seconds, like deep time
+    noclip:    { label: "noclip", unit: "levels", better: "high", format: function (v) {
+      if (v <= 0) return "0/3";
+      var p = Math.ceil(v / 10000), s = p * 10000 - v;
+      return p + "/3, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    } },
     sushi:     { label: "sushi goes round",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
     // a Fun Strike match: kills x10 + headshots x5 + assists x3, sent when a match ends
     funstrike: { label: "fun strike", unit: "pts", better: "high" },
