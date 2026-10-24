@@ -741,6 +741,12 @@ old module.
 
 ### Noclip (`noclip.html` + `noclip/`, 2026-10-25, v0.17)
 
+**Hidden 2026-10-25 (v0.17.1, Caleb's ask, right after it went live):** off the homepage (GAMES row and
+What's New line removed; the `noclip` THUMB is kept for when it comes back), off the leaderboards page,
+`retired: true` in leaderboard.js (no passport count), seo.py `index: False` with no list group (noindex,
+out of the sitemap and every link strip). The page still works by URL with its own board; the rules keep
+the key. To bring it back: undo those five things and rerun seo.py + stamp.py.
+
 Caleb asked for "a backrooms inspired 3d horror game". Found-footage camcorder tape (1996, a building
 inspector leaned on a wall that wasn't there), three levels, one entity that hunts by sound. Everything is
 procedural and synthesised: no downloaded models, textures or sounds. three 0.160 via importmap; it reuses

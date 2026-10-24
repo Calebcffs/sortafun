@@ -120,9 +120,6 @@ PAGES = {
     "sushi.html": dict(name="sushi goes round", kind="game", og="sushi", list="skill", genre=["Time management", "Cooking"],
         title="Sushi Goes Round: Free Sushi Restaurant Game",
         desc="Run a conveyor belt sushi bar. Roll what each customer asks for, send it round the belt, and phone for more salmon before it runs out. 15 day career, endless and a daily rush."),
-    "noclip.html": dict(name="noclip", kind="game", og="noclip", list="skill", genre=["Horror"],
-        title="Noclip: Free Backrooms Horror Game in Your Browser",
-        desc="A camcorder tape from 1996. You fell out of the world into endless humming yellow rooms. Find the way out through three levels while something hunts you by sound. Headphones on."),
     "deeptime.html": dict(name="deep time", kind="game", og="deeptime", list="skill", genre=["Horror"],
         title="Deep Time: Free Browser Horror Game With Dinosaurs",
         desc="A camcorder tape from a Montana forest, 1987. Find the 8 parts of the time machine in the dark before the thing that came through finds you. Found footage horror. Headphones on."),
@@ -163,6 +160,7 @@ PAGES = {
     "birdie.html": dict(keep="birdie is now city sandbox &middot; SORTAFUN.ORG", name="birdie", kind="page", index=False),
     "city.html": dict(keep="city sandbox &middot; SORTAFUN.ORG", name="city sandbox", kind="page", index=False),          # archived 2026-10-06
     "clarissa.html": dict(keep="clarissa leaving sfsg simulator &middot; SORTAFUN.ORG", name="the farewell card", kind="page", index=False),  # unlisted on purpose
+    "noclip.html": dict(keep="noclip &middot; SORTAFUN.ORG", name="noclip", kind="page", index=False),  # hidden 2026-10-25, URL only
     "deeptime2.html": dict(keep="deep time part 2 &middot; SORTAFUN.ORG", name="deep time part 2", kind="page", index=False),  # archived 2026-10-06
     "gallery.html": dict(keep="art gallery &middot; SORTAFUN.ORG", name="art gallery", kind="page", index=False),          # easter egg
     "profile.html": dict(keep="profile &middot; SORTAFUN.ORG", name="profile", kind="page", index=False),             # thin, one per name
@@ -176,7 +174,7 @@ LABEL = {
     "sides.html": "Four Sides", "puzzle.html": "Tile Slider", "grab.html": "Word Grab", "typing.html": "Typing Test",
     "crossword.html": "Crossword", "mines.html": "Minesweeper", "maze.html": "Cursor Maze", "reaction.html": "Reaction Time Test",
     "aim.html": "Aim Trainer", "stopbar.html": "Stop the Bar", "piano.html": "Piano Rush", "rhythm.html": "Rhythm Rush", "driving.html": "Circuit Race", "sushi.html": "Sushi Goes Round",
-    "noclip.html": "Noclip", "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "flipbook.html": "Animation Studio",
+    "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "flipbook.html": "Animation Studio",
     "anim-gallery.html": "Animation Gallery", "leaderboards.html": "Leaderboards", "forum.html": "The Forum",
     "guestbook.html": "Guestbook", "passport.html": "Passport",
 }

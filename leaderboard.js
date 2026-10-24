@@ -59,8 +59,8 @@
       var p = Math.ceil(v / 10000), s = p * 10000 - v;
       return p + "/8, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
     } },
-    // noclip: levels escaped * 10000 - seconds, like deep time
-    noclip:    { label: "noclip", unit: "levels", better: "high", format: function (v) {
+    // noclip: levels escaped * 10000 - seconds, like deep time. hidden 2026-10-25 (Caleb): URL only, not on the leaderboards page / passport
+    noclip:    { label: "noclip", unit: "levels", better: "high", retired: true, format: function (v) {
       if (v <= 0) return "0/3";
       var p = Math.ceil(v / 10000), s = p * 10000 - v;
       return p + "/3, " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
