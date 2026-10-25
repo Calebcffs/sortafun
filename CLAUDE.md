@@ -1829,6 +1829,22 @@ Sending sets passport stamp `-feedback` ("alpha tester").
 The homepage also has an `.alphabar` under the ticker ("give feedback" opens
 the form) and a How It Works line that links to it.
 
+### Apps (`#apps` panel, `APPS` array, 2026-10-25, v0.18)
+
+Not games: handy tools, each a self-contained offline PWA in its own folder,
+listed in the homepage `APPS` array (cat `app`, tile says OPEN, colour `--app`)
+with a `THUMB` each. They do NOT use game.css / the homebar / chat.js /
+panic-app.js / feedback.js: they have their own look, service worker and
+manifest, and a small sortafun.org link at the bottom instead.
+
+- **Pluck** (`pluck/`): guitar reference tones for tuning by ear. The source of
+  truth is the separate repo `Calebcffs/pluck` (`~/Documents/Projects/pluck`);
+  `pluck/` here is a copy. Change it there, bump `VERSION` in its `sw.js`, then
+  `rsync -a --delete --exclude .git --exclude README.md ~/Documents/Projects/pluck/ pluck/`.
+- `tools/stamp.py` and `tools/seo.py` only look at root `*.html`, so app
+  folders are left alone (no ?v= stamps, no sitemap row). The app's service
+  worker precaches with `?v=VERSION` itself to get past Cloudflare.
+
 ### The meta pages
 
 `guestbook.html` (Firestore `guestbook`, append-only, own 2003 navy/Times

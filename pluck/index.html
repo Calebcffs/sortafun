@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pluck</title>
+  <meta name="description" content="Offline reference tones for tuning a guitar by ear.">
+  <meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#eee9e2" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pluck">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/dm-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <h1>Pluck</h1>
+      <span class="select-wrap">
+        <select id="tuning" aria-label="Tuning"></select>
+      </span>
+    </header>
+
+    <main id="strings" class="strings" aria-label="Strings"></main>
+
+    <button id="strum" class="strum" type="button">Strum</button>
+
+    <div class="loopbar">
+      <button id="loop-mode" class="loop-mode" type="button" aria-pressed="true" title="Loop (L)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+        <span>Loop</span>
+      </button>
+      <div class="interval" role="group" aria-label="Loop interval">
+        <button type="button" class="seg" data-interval="1.5" aria-pressed="false">1.5s</button>
+        <button type="button" class="seg" data-interval="2.5" aria-pressed="true">2.5s</button>
+        <button type="button" class="seg" data-interval="4" aria-pressed="false">4s</button>
+      </div>
+      <button id="stop" class="btn stop" type="button" hidden>Stop</button>
+    </div>
+
+    <p class="hint">Keys 1–6 play strings · S to strum</p>
+    <p class="hint">L turns looping on or off · Esc stops</p>
+
+    <section class="card mine" aria-labelledby="mine-title">
+      <div class="mine-head">
+        <h2 id="mine-title" class="card-label">My tunings</h2>
+        <button id="edit" class="btn small" type="button" aria-pressed="false">Edit</button>
+        <button id="save" class="btn small accent" type="button" disabled>Save current</button>
+      </div>
+
+      <form id="save-form" class="save-row" hidden>
+        <input id="save-name" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-label="Name this tuning">
+        <button class="btn accent" type="submit">Save</button>
+        <button class="btn" type="button" id="save-cancel">Cancel</button>
+      </form>
+
+      <ul id="saved-list" class="saved-list"></ul>
+      <p id="saved-empty" class="empty">Nothing saved yet. Set the strings how you like, then hit Save current.</p>
+
+      <div class="manage-actions">
+        <button id="export" class="btn small" type="button">Export</button>
+        <button id="import" class="btn small" type="button">Import</button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
+        <span id="manage-status" class="status" role="status"></span>
+      </div>
+    </section>
+
+    <p class="home-link"><a href="https://sortafun.org/">sortafun.org</a></p>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

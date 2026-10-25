@@ -84,7 +84,7 @@
   // ---------------------------------------------------------------
   // the files: every sortafun page, dressed as a document
   // ---------------------------------------------------------------
-  var TYPE = { word: "word", puzzle: "excel", skill: "ppt", online: "loop", art: "onenote", hang: "pdf", base: "pdf" };
+  var TYPE = { word: "word", puzzle: "excel", skill: "ppt", online: "loop", art: "onenote", app: "pdf", hang: "pdf", base: "pdf" };
   var PEOPLE = ["Daniel Tan", "Priya Nair", "Marcus Lee", "Wei Ling Ong", "Sarah Koh", "Jonathan Lim", "Aisha Rahman", "Kenji Sato"];
   var PLACES = ["My Files", "Operations", "Finance", "My Files", "Sales Team", "Projects", "My Files", "HR Shared"];
   var OPENED = ["4m ago", "17m ago", "24m ago", "27m ago", "37m ago", "1h ago", "2h ago", "Yesterday at 5:56 PM",
@@ -94,7 +94,7 @@
 
   function files() {
     var all = [];
-    [window.GAMES, window.ART, window.HANGOUT].forEach(function (list) {
+    [window.GAMES, window.APPS, window.ART, window.HANGOUT].forEach(function (list) {
       (list || []).forEach(function (g) { if (g.url) all.push(g); });
     });
     return all.map(function (g, i) {
