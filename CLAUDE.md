@@ -1734,8 +1734,8 @@ scale = 14916.862 km on the world map, the region's bbox diagonal on the others 
 - **Imagery is Google's keyless street view embed** (`maps.google.com/maps?layer=c&panoid=..&output=svembed`),
   not the paid Maps API: no key, no bill, but unofficial, so Google could break it. If it breaks, the switch is
   `panoSrc()` (one function) to the Maps JavaScript API with Caleb's own key. The embed draws an address card
-  in a fixed 154x66 box top left (it gives the answer away): `.cov` sits over it (our HUD chip, opaque, catches
-  clicks), `.blk` makes the bottom link strip unclickable ("Report a problem" opens Google Maps at the spot),
+  top left (it gives the answer away), 66px tall and as wide as the address (153-257px seen, no max width), so
+  `.cov` is an opaque full-width HUD bar 76px tall over it (v0.19.1; the first 172px box let long ones peek out), `.blk` makes the bottom link strip unclickable ("Report a problem" opens Google Maps at the spot),
   `.nmpz` covers everything for no move/pan/zoom. The road arrows can show a street name; left alone.
 - **Places** (`globe/locs.js`, `[lat, lng, pano id, country]`, **append-only**: rooms and the daily refer to
   places by index; swap a dead pano in place, never delete or reorder) come from `tools/globe/gen.mjs`: a

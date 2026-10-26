@@ -69,17 +69,18 @@
   .stage { position: relative; height: min(72vh, 640px); min-height: 380px; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; background: #1d1b2e; }
   #sv { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #1d1b2e; }
   .nmpz { position: absolute; inset: 0; z-index: 2; cursor: not-allowed; }
-  /* covers the embed's address card (it would give the answer away) */
+  /* covers the embed's address card (it would give the answer away). the card grows with the
+     address (seen 153 to 257px wide, 66px tall), so the bar runs the full width */
   .cov {
-    position: absolute; left: 0; top: 0; z-index: 4; width: 172px; height: 78px; box-sizing: border-box;
-    background: var(--ink); color: #fff; border-bottom-right-radius: 14px; padding: 9px 12px;
+    position: absolute; left: 0; right: 0; top: 0; z-index: 4; height: 76px; box-sizing: border-box;
+    background: var(--ink); color: #fff; padding: 9px 14px;
     display: flex; flex-direction: column; justify-content: center; gap: 2px; font-size: 12px;
   }
   .cov b { font-family: var(--chunky); font-weight: 400; font-size: 20px; color: var(--sun, #ffd43b); letter-spacing: .5px; }
   .cov small { color: #c8c6d8; }
   .blk { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; z-index: 3; }
   .clock {
-    position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 4;
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 5;
     min-width: 54px; height: 40px; padding: 0 10px; box-sizing: border-box; border-radius: 999px; border: 3px solid var(--ink);
     display: grid; place-items: center; font-family: var(--chunky); font-size: 19px; background: #fff;
   }
@@ -180,7 +181,7 @@
 </style>
 <script src="sfx.js?v=5233b886"></script>
 <script src="china.js?v=f73530b2"></script>
-<script src="feedback.js?v=e279be8d"></script>
+<script src="feedback.js?v=711fb66f"></script>
 <script src="panic-app.js?v=56ca46e5"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
