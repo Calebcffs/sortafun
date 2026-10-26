@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>Globe Guesser: Free Street View Geography Game | Sortafun</title>
+<meta name="description" content="You get dropped somewhere on earth in street view. Look around, then pin the map where you think you are. Solo, a daily challenge, or a room with friends: party or duels. Free, no sign-up.">
+<meta name="sortafun:name" content="globe guesser">
+<link rel="canonical" href="https://sortafun.org/globe.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sortafun">
+<meta property="og:title" content="Globe Guesser: Free Street View Geography Game | Sortafun">
+<meta property="og:description" content="You get dropped somewhere on earth in street view. Look around, then pin the map where you think you are. Solo, a daily challenge, or a room with friends: party or duels. Free, no sign-up.">
+<meta property="og:url" content="https://sortafun.org/globe.html">
+<meta property="og:image" content="https://sortafun.org/assets/og/globe.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Globe Guesser on Sortafun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Globe Guesser: Free Street View Geography Game | Sortafun">
+<meta name="twitter:description" content="You get dropped somewhere on earth in street view. Look around, then pin the map where you think you are. Solo, a daily challenge, or a room with friends: party or duels. Free, no sign-up.">
+<meta name="twitter:image" content="https://sortafun.org/assets/og/globe.png">
+<meta name="theme-color" content="#ffd43b">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Globe Guesser","url":"https://sortafun.org/globe.html","description":"You get dropped somewhere on earth in street view. Look around, then pin the map where you think you are. Solo, a daily challenge, or a room with friends: party or duels. Free, no sign-up.","image":"https://sortafun.org/assets/og/globe.png","genre":["Geography","Party"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Globe Guesser","item":"https://sortafun.org/globe.html"}]}</script>
+<!-- /seo -->
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=2cfb0408">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  .wrap.gg { max-width: 1180px; }
+  [hidden] { display: none !important; }
+  .leaflet-container img { max-width: none !important; }
+  .leaflet-container { font-family: var(--body); background: #aad3df; }
+
+  /* ---------- the menu ---------- */
+  .namebox { max-width: 360px; margin: 4px auto 14px; text-align: left; }
+  .namebox label, .mode label { font-family: var(--chunky); font-size: 15px; display: block; margin-bottom: 4px; }
+  .namebox input { width: 100%; font-size: 16px; }
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: left; }
+  .mode { min-width: 0; box-sizing: border-box; border: 3px solid var(--ink); border-radius: 14px; padding: 12px 14px 14px; background: var(--soft, #f4f6fb); display: flex; flex-direction: column; gap: 8px; }
+  .mode h2 { margin: 0; font-family: var(--chunky); font-weight: 400; font-size: 22px; }
+  .mode p { margin: 0; font-size: 13px; color: var(--muted); }
+  .mode .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .mode select { width: 100%; min-width: 0; box-sizing: border-box; }
+  .mode .opts > div { min-width: 0; }
+  .mode .big-go, .joinrow { box-sizing: border-box; }
+  .mode .grow { flex: 1; }
+  .m-solo { background: #e7f6ff; } .m-daily { background: #fff6d6; } .m-room { background: #dcf8f3; }
+  .big-go {
+    font-family: var(--chunky); font-weight: 400; font-size: 21px; color: #fff; width: 100%;
+    background: linear-gradient(#5cf08e, #18a84b); border: 3px solid var(--ink); border-radius: 999px;
+    padding: 8px 16px 7px; box-shadow: 0 4px 0 var(--ink); text-shadow: 0 2px 0 rgba(0,0,0,.3); cursor: pointer;
+  }
+  .big-go:hover { background: linear-gradient(#ffe36e, #ffb300); color: var(--ink); text-shadow: none; }
+  .big-go:disabled { opacity: .5; cursor: default; }
+  .or { text-align: center; color: var(--muted); font-size: 12px; }
+  .joinrow { display: flex; gap: 8px; }
+  .joinrow input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 4px; font-weight: 700; text-align: center; }
+  .note { font-size: 12px; color: var(--muted); min-height: 16px; text-align: center; }
+  .note.err { color: #d6204e; font-weight: 700; }
+  @media (max-width: 820px) { .modes { grid-template-columns: 1fr; } }
+
+  /* ---------- playing ---------- */
+  .playgrid { display: grid; grid-template-columns: 1fr; gap: 10px; text-align: left; }
+  .playgrid.room { grid-template-columns: 1fr 250px; }
+  @media (max-width: 900px) { .playgrid.room { grid-template-columns: 1fr; } }
+  .stage { position: relative; height: min(72vh, 640px); min-height: 380px; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; background: #1d1b2e; }
+  #sv { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #1d1b2e; }
+  .nmpz { position: absolute; inset: 0; z-index: 2; cursor: not-allowed; }
+  /* covers the embed's address card (it would give the answer away) */
+  .cov {
+    position: absolute; left: 0; top: 0; z-index: 4; width: 172px; height: 78px; box-sizing: border-box;
+    background: var(--ink); color: #fff; border-bottom-right-radius: 14px; padding: 9px 12px;
+    display: flex; flex-direction: column; justify-content: center; gap: 2px; font-size: 12px;
+  }
+  .cov b { font-family: var(--chunky); font-weight: 400; font-size: 20px; color: var(--sun, #ffd43b); letter-spacing: .5px; }
+  .cov small { color: #c8c6d8; }
+  .blk { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; z-index: 3; }
+  .clock {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 4;
+    min-width: 54px; height: 40px; padding: 0 10px; box-sizing: border-box; border-radius: 999px; border: 3px solid var(--ink);
+    display: grid; place-items: center; font-family: var(--chunky); font-size: 19px; background: #fff;
+  }
+  .clock.low { background: #ffd6de; color: #d6204e; animation: gg-pulse .5s ease-in-out infinite alternate; }
+  @keyframes gg-pulse { to { transform: translateX(-50%) scale(1.08); } }
+  .tools { position: absolute; left: 10px; bottom: 34px; z-index: 4; display: flex; flex-direction: column; gap: 6px; }
+  .tb { font-size: 12px; padding: 5px 9px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; cursor: pointer; font-weight: 700; }
+  .tb:hover { background: var(--sun, #ffd43b); }
+  .tb.dim { opacity: .75; font-weight: 400; }
+
+  .gmap {
+    position: absolute; right: 12px; bottom: 32px; z-index: 5; width: 300px; height: 230px;
+    display: flex; flex-direction: column; gap: 6px; opacity: .8;
+    transition: width .18s ease, height .18s ease, opacity .18s;
+  }
+  .gmap:hover, .gmap.big { width: min(62%, 640px); height: min(70%, 470px); opacity: 1; }
+  .gm { flex: 1; border: 3px solid var(--ink); border-radius: 10px; overflow: hidden; }
+  .gbtns { display: flex; gap: 6px; }
+  .guess {
+    flex: 1; font-family: var(--chunky); font-weight: 400; font-size: 18px; color: #fff; cursor: pointer;
+    background: linear-gradient(#5cf08e, #18a84b); border: 3px solid var(--ink); border-radius: 999px; padding: 5px 10px 4px;
+    box-shadow: 0 3px 0 var(--ink); text-shadow: 0 2px 0 rgba(0,0,0,.3);
+  }
+  .guess:disabled { background: #6f6c80; cursor: default; text-shadow: none; }
+  .gmap .pinbig { flex: none; }
+  .mapbtn, .gmap .mapx { display: none; }
+  @media (max-width: 700px) {
+    .stage { height: 70vh; min-height: 420px; }
+    .gmap { display: none; }
+    .gmap.open { display: flex; inset: 0; width: auto; height: auto; bottom: 0; opacity: 1; background: var(--ink); padding: 6px; box-sizing: border-box; }
+    .gmap .pinbig { display: none; }
+    .gmap .mapx { display: block; flex: none; background: #fff; }
+    .mapbtn {
+      display: block; position: absolute; right: 12px; bottom: 34px; z-index: 5;
+      font-family: var(--chunky); font-size: 19px; padding: 8px 18px 7px; border: 3px solid var(--ink); border-radius: 999px;
+      background: linear-gradient(#ffe36e, #ffb300); box-shadow: 0 3px 0 var(--ink); cursor: pointer;
+    }
+    .gmap.open + .mapbtn { display: none; }
+  }
+
+  /* waiting / lobby / results cards over the stage */
+  .over { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(29,27,46,.72); padding: 12px; box-sizing: border-box; overflow: auto; }
+  .card { background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 14px 18px; max-width: 520px; width: 100%; text-align: center; box-shadow: 0 6px 0 var(--ink); }
+  .card h2 { margin: 0 0 6px; font-family: var(--chunky); font-weight: 400; font-size: 26px; }
+  .card p { margin: 6px 0; font-size: 14px; }
+  .card .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left; margin: 10px 0; }
+  .card .row label { font-size: 12px; font-weight: 700; display: block; margin-bottom: 2px; }
+  .card .row select { width: 100%; }
+  .card .muted { color: var(--muted); font-size: 12px; }
+  .res { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; background: #fff; }
+  .rm { flex: 1; min-height: 160px; }
+  .rescard { flex: none; border-top: 3px solid var(--ink); padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; justify-content: center; text-align: center; background: #fffbe8; }
+  .rescard .big { font-family: var(--chunky); font-size: 30px; line-height: 1; }
+  .rescard .big small { display: block; font-family: var(--body); font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .rescard .bar { width: min(340px, 80vw); height: 14px; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: #fff; }
+  .rescard .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffb300, #1fb85a); }
+  .rescard .wide { flex-basis: 100%; }
+  .rescard table { font-size: 13px; margin: 0 auto; }
+  .rescard td, .rescard th { padding: 3px 9px; }
+  .rescard .go { font-family: var(--chunky); font-size: 19px; padding: 7px 20px 6px; border: 3px solid var(--ink); border-radius: 999px; background: linear-gradient(#5cf08e, #18a84b); color: #fff; box-shadow: 0 3px 0 var(--ink); cursor: pointer; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
+  .rescard .go.alt { background: #fff; color: var(--ink); text-shadow: none; }
+  .final .rescard { max-height: 52%; overflow: auto; }
+
+  .pin-ans { background: none; border: 0; }
+  .pin-ans div { width: 30px; height: 30px; margin: -2px 0 0 -2px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #1fb85a; border: 3px solid var(--ink); }
+  .pin-ans span { position: absolute; left: 6px; top: 3px; font-size: 15px; }
+  .pin-g { background: none; border: 0; }
+  .pin-g div { width: 24px; height: 24px; border-radius: 50%; border: 3px solid var(--ink); color: #fff; font: 700 12px/18px var(--body); text-align: center; box-sizing: border-box; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
+
+  /* ---------- the room side ---------- */
+  .side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .roominfo { font-size: 13px; background: var(--soft, #f4f6fb); border: 3px solid var(--ink); border-radius: 12px; padding: 7px 10px; }
+  .roominfo b { font-family: var(--chunky); font-weight: 400; font-size: 20px; letter-spacing: 2px; }
+  .people { list-style: none; margin: 0; padding: 0; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; background: #fff; }
+  .people li { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-bottom: 1px solid #e1e5f0; font-size: 13px; }
+  .people li:last-child { border-bottom: 0; }
+  .people li.me { background: #fffbe0; }
+  .people li.done { background: #dcf8e5; }
+  .people li.out { opacity: .5; }
+  .people .av { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; font-family: var(--chunky); font-size: 13px; color: #fff; }
+  .people .who { flex: 1; min-width: 0; }
+  .people .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .people .who small { color: var(--muted); font-size: 11px; }
+  .people .hp { height: 7px; border: 1.5px solid var(--ink); border-radius: 99px; overflow: hidden; margin-top: 2px; background: #fff; }
+  .people .hp i { display: block; height: 100%; background: #1fb85a; }
+  .people .tag { flex: none; font-size: 14px; }
+  .chat { border: 3px solid var(--ink); border-radius: 12px; background: #fff; display: flex; flex-direction: column; min-height: 180px; max-height: 300px; }
+  .log { flex: 1; overflow-y: auto; padding: 6px 9px; font-size: 13px; }
+  .log div { margin: 2px 0; word-wrap: break-word; }
+  .log .sys { color: var(--muted); font-style: italic; }
+  .say { display: flex; gap: 6px; padding: 6px; border-top: 2px solid #e1e5f0; }
+  .say input { flex: 1; min-width: 0; }
+
+  /* full screen: the stage fills the window (iPhone has no fullscreen API for pages) */
+  html.gfs, html.gfs body { overflow: hidden; }
+  html.gfs .stage { position: fixed; inset: 0; z-index: 2147483000; height: 100dvh; border: 0; border-radius: 0; }
+  .lbwrap { margin-top: 14px; }
+</style>
+<script src="sfx.js?v=5233b886"></script>
+<script src="china.js?v=f73530b2"></script>
+<script src="feedback.js?v=e279be8d"></script>
+<script src="panic-app.js?v=56ca46e5"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-online">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap gg">
+  <h1>globe guesser</h1>
+  <p class="sub" id="how">you get dropped somewhere on earth in street view. look around, walk down the road, read the signs, then put a pin on the map where you think you are. the closer you are, the more points, up to 5000 a round. play alone, take today's challenge, or make a room for up to 8 friends.</p>
+
+  <!-- the way in -->
+  <div id="menu">
+    <div class="namebox"><label for="nm">your name</label><input id="nm" maxlength="16" autocomplete="off" spellcheck="false" placeholder="what should we call you?"></div>
+    <div class="modes">
+      <section class="mode m-solo">
+        <h2>solo</h2>
+        <p>pick a map, a time limit and how many places. the world map, 5 rounds, walking allowed, goes on the board.</p>
+        <div class="opts grow">
+          <div><label for="s-map">map</label><select id="s-map"></select></div>
+          <div><label for="s-time">time a round</label><select id="s-time"><option value="0">no limit</option><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option></select></div>
+          <div><label for="s-mv">moving</label><select id="s-mv"><option value="0">walk around</option><option value="1">no move, pan or zoom</option></select></div>
+          <div><label for="s-rds">rounds</label><select id="s-rds"><option>3</option><option selected>5</option><option>7</option><option>10</option></select></div>
+        </div>
+        <button class="big-go" id="go-solo">play &#9654;</button>
+      </section>
+      <section class="mode m-daily">
+        <h2>daily challenge</h2>
+        <p class="grow">the same 5 places for everyone today, 2 minutes a round, one go. see how you stack up on today's board. new places at midnight, Singapore time.</p>
+        <button class="big-go" id="go-daily">play today's &#9654;</button>
+        <div class="note" id="dailynote"></div>
+      </section>
+      <section class="mode m-room">
+        <h2>play with friends</h2>
+        <p class="grow">make a room and send the link. <b>party</b>: everyone gets the same places, most points wins. <b>duels</b>: everyone starts on 6000 health, a worse guess than the best costs you the difference. 2 to 8 players.</p>
+        <button class="big-go" id="make">make a room &#9654;</button>
+        <div class="or" id="ortext">or join a friend's room</div>
+        <div class="joinrow"><input id="jc" maxlength="4" autocomplete="off" spellcheck="false" placeholder="CODE" aria-label="room code"><button id="join">join</button></div>
+      </section>
+    </div>
+    <div class="note" id="menunote"></div>
+  </div>
+
+  <!-- playing -->
+  <div id="play" hidden>
+    <div class="playgrid" id="pgrid">
+      <div class="stagecol">
+        <div class="stage" id="stage">
+          <iframe id="sv" title="street view" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <div class="nmpz" id="nmpz" hidden title="no moving, panning or zooming in this game"></div>
+          <div class="blk"></div>
+          <div class="cov" id="cov"><small id="covtop">round 1 / 5</small><b id="covmid">0</b><small id="covbot">points</small></div>
+          <div class="clock" id="clock" hidden>&nbsp;</div>
+          <div class="tools">
+            <button class="tb" id="home" title="back to where you started">&#8634; back to start</button>
+            <button class="tb dim" id="skip" title="the picture won't load? get another place">no picture? skip</button>
+            <button class="tb dim" id="fsb">full screen</button>
+          </div>
+          <div class="gmap" id="gmap">
+            <div class="gm" id="gm"></div>
+            <div class="gbtns"><button class="tb pinbig" id="pinbig" title="keep the map big">&#8689;</button><button class="tb mapx" id="mapx">&#10005; picture</button><button class="guess" id="guess" disabled>place your pin on the map</button></div>
+          </div>
+          <button class="mapbtn" id="mapbtn">map</button>
+          <div class="res" id="res" hidden><div class="rm" id="rm"></div><div class="rescard" id="rescard"></div></div>
+          <div class="over" id="over" hidden><div class="card" id="card"></div></div>
+        </div>
+      </div>
+      <aside class="side" id="side" hidden>
+        <div class="roominfo">room <b id="codefoot"></b><br><a href="#" id="copy">copy invite link</a> &middot; <a href="#" id="leave">leave</a></div>
+        <ul class="people" id="people" aria-label="players"></ul>
+        <div class="chat">
+          <div class="log" id="log" aria-live="polite"></div>
+          <form class="say" id="say" autocomplete="off"><input id="msg" maxlength="100" placeholder="say something..." aria-label="chat"><button>send</button></form>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="lbwrap" id="lbwrap"><div id="lb"></div></div>
+  <p class="note">street view pictures and map data from Google, map &copy; OpenStreetMap contributors.</p>
+  <!-- seo:about -->
+  <section class="seo-x about-game">
+    <h2>how to play globe guesser</h2>
+    <p>you start somewhere on earth, standing in a street view picture. drag to look around and click the arrows on the road to walk. look for clues: which side people drive on, the language on the signs, the plants, the road lines, the number plates.</p>
+    <p>when you think you know, open the map in the corner, click where you think you are and press guess (or space). the closer your pin, the more points: up to 5000 a round, falling off fast the further away you are.</p>
+    <p>solo plays 5 places on the map you pick, with or without a time limit. the daily challenge is the same 5 places for everyone each day, 2 minutes a round, one go, with today's leaderboard.</p>
+    <h3>questions</h3><dl>
+    <dt>can i play with friends?</dt><dd>yes. make a room and send the link, up to 8 players. party mode: everyone gets the same places and the most points wins. duels: everyone starts on 6000 health and each round the best guess is safe while everyone else loses the gap in points, with the damage going up as the rounds go on.</dd>
+    <dt>what does no move, pan or zoom mean?</dt><dd>a harder setting: the picture is frozen. you can't walk, turn or zoom, so all you have is the first view.</dd>
+    <dt>where do the pictures come from?</dt><dd>Google street view, shown through Google's own embedded viewer. every place is a spot on a public road that Google's car has driven.</dd>
+    </dl>
+  </section>
+  <!-- /seo:about -->
+  <!-- seo:more -->
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="funstrike.html">Fun Strike</a></li><li><a href="draw.html">Draw and Guess</a></li><li><a href="sudoku.html">Daily Sudoku</a></li><li><a href="anagram.html">Word Hive</a></li><li><a href="five.html">Five Letters</a></li><li><a href="ladder.html">Word Ladder</a></li><li><a href="sides.html">Four Sides</a></li><li><a href="puzzle.html">Tile Slider</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <!-- /seo:more -->
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=a995c8d7"></script>
+<script src="share.js?v=e240f67e"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="globe/locs.js?v=8aafa279"></script>
+<script type="module">
+/* globe guesser. street view from Google's keyless embed (one pano id per
+ * place, all checked to be Google's own car pictures when globe/locs.js was
+ * built), guesses on a Leaflet map. Solo and daily run locally; rooms on the
+ * Firebase Realtime Database, the same way draw.html does it.
+ *
+ * globe/rooms/<CODE>/
+ *   meta     { st: lobby|play|reveal|over, g: game no, n: round (1..),
+ *              rds: rounds (party), ts: seconds a round (0 = no limit),
+ *              mv: 0 walk | 1 no move/pan/zoom, md: c party | d duels,
+ *              mp: map id, locs: "12,804,..." indexes into GLOBE_LOCS,
+ *              ord: "uid,uid" who started (duels), dl: round deadline or
+ *              reveal end (server ms, 0 = none), c, t }
+ *   players/<uid> { n: name, c: colour, j: joined }   (onDisconnect removes it)
+ *   guesses/<g>/<n>/<uid> { a: lat, o: lng, t: server time }   (write once)
+ *   chat/<id> { u, n, m, t }
+ *
+ * The host (present player with the earliest j) moves the game on, every
+ * meta change a transaction guarded on round + state. Scores and duel health
+ * are never stored: every client works them out from the guesses. During a
+ * round nobody's pin is drawn but your own. GLOBE_LOCS is public, so a
+ * determined cheat can look the answer up; it's a party game.
+ */
+const LOCS = window.GLOBE_LOCS || [];      // [lat, lng, pano id, country]
+const NAMES = window.GLOBE_NAMES || {};
+const DAILY_N = Math.min(LOCS.length, window.GLOBE_DAILY_N || LOCS.length); // daily picks from a fixed prefix (the list only ever grows)
+const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+const ROOT = "globe/rooms/";
+const MAX_PLAYERS = 8, REVEAL_MS = 12000, DUEL_HP = 6000, DUEL_AFTER_FIRST = 15000, DUEL_LOCS = 25;
+const AV = ["#ff7a1a", "#8a4dff", "#1fb85a", "#ff3d8b", "#1d8fe8", "#e03131", "#12a8a0", "#b8860b", "#6741d9", "#f76707", "#2b8a3e", "#c2255c", "#1971c2", "#5c940d", "#862e9c", "#495057"];
+const WORLD_DIAG = 14916.862; // km, the scale the world map's scoring uses
+
+const MAPS = [
+  ["world", "the world", null],
+  ["europe", "europe", "FR ES IT GB DE PL SE NO FI RO UA PT IE NL BE CH AT CZ SK HU HR SI RS BG GR DK IS EE LV LT AL MK ME LU AD MT FO"],
+  ["americas", "the americas", "US CA MX BR AR CL CO PE EC BO UY PY GT CR PA DO PR CW GL"],
+  ["asia", "asia", "JP IN ID TH PH MY TW KR HK SG VN KH LA BD LK BT AE IL JO QA OM KZ KG MN TR NP PK LB"],
+  ["africa", "africa", "ZA KE NG SN GH UG RW TZ BW LS SZ NA MG TN EG NE ML CI ET"],
+  ["oceania", "australia + nz", "AU NZ"],
+  ["us", "united states", "US"], ["brazil", "brazil", "BR"], ["russia", "russia", "RU"], ["canada", "canada", "CA"],
+  ["japan", "japan", "JP"], ["france", "france", "FR"], ["uk", "uk + ireland", "GB IE"], ["india", "india", "IN"],
+];
+const POOLS = {}, SCALES = {};
+for (const [id, , cc] of MAPS) {
+  const set = cc ? new Set(cc.split(" ")) : null;
+  const pool = [];
+  LOCS.forEach((l, i) => { if (!set || set.has(l[3])) pool.push(i); });
+  POOLS[id] = pool;
+  if (!set) { SCALES[id] = WORLD_DIAG; continue; }
+  let a = 90, b = -90, c = 180, d = -180;
+  for (const i of pool) { const l = LOCS[i]; a = Math.min(a, l[0]); b = Math.max(b, l[0]); c = Math.min(c, l[1]); d = Math.max(d, l[1]); }
+  SCALES[id] = Math.max(300, km(a, c, b, d));
+}
+const mapOk = (id) => (POOLS[id] || []).length >= 30;
+const mapName = (id) => (MAPS.find((m) => m[0] === id) || MAPS[0])[1];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sfx = (n) => { if (window.SortafunSFX) SortafunSFX.play(n); };
+const cleanName = (s) => String(s || "").replace(/[^\x20-\x7e]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
+const fmt = (n) => Math.round(n).toLocaleString("en-US");
+
+function km(la1, lo1, la2, lo2) {
+  const r = Math.PI / 180, dla = (la2 - la1) * r, dlo = (lo2 - lo1) * r;
+  const h = Math.sin(dla / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dlo / 2) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+// 5000 for a dead-on guess, falling off exponentially; a smaller map uses a smaller scale
+function points(dKm, mp) {
+  if (dKm < 0.025) return 5000;
+  return Math.round(5000 * Math.exp(-10 * dKm / (SCALES[mp] || WORLD_DIAG)));
+}
+function fmtDist(d) {
+  if (d < 1) return Math.round(d * 1000) + " m";
+  if (d < 100) return d.toFixed(1) + " km";
+  return fmt(d) + " km";
+}
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function pickN(pool, k, rnd, avoid) {
+  const out = [], seen = new Set(avoid || []);
+  for (let tries = 0; out.length < k && tries < k * 50; tries++) {
+    const i = pool[Math.floor(rnd() * pool.length)];
+    if (seen.has(i)) continue;
+    seen.add(i); out.push(i);
+  }
+  return out;
+}
+const heading = (i) => Math.round((i * 137.508) % 360);
+const panoSrc = (i) => "https://maps.google.com/maps?layer=c&panoid=" + encodeURIComponent(LOCS[i][2]) + "&cbp=12," + heading(i) + ",0,0,0&output=svembed";
+const country = (i) => NAMES[LOCS[i][3]] || "";
+
+/* ------------------------------------------------------------------ *
+ * the menu
+ * ------------------------------------------------------------------ */
+const nm = $("nm");
+try { nm.value = localStorage.getItem("sortafun-name") || ""; } catch (e) {}
+function myName(noteEl) {
+  const n = cleanName(nm.value);
+  if (!n) { menuMsg("type a name first", true, noteEl); nm.focus(); return null; }
+  try { localStorage.setItem("sortafun-name", n); } catch (e) {}
+  return n;
+}
+function menuMsg(t, err, el) { el = el || $("menunote"); el.textContent = t; el.classList.toggle("err", !!err); }
+for (const [id, name] of MAPS) if (mapOk(id)) $("s-map").insertAdjacentHTML("beforeend", '<option value="' + id + '">' + esc(name) + "</option>");
+try { const o = JSON.parse(localStorage.getItem("sortafun-globe-solo") || "{}"); for (const k in o) if ($(k) && [...$(k).options].some((x) => x.value === String(o[k]))) $(k).value = o[k]; } catch (e) {}
+const hashCode = () => (location.hash.replace("#", "").toUpperCase().match(/^[A-Z]{4}$/) || [])[0];
+if (hashCode()) { $("jc").value = hashCode(); $("make").hidden = true; $("ortext").textContent = "you've been invited to room " + hashCode(); }
+
+/* ------------------------------------------------------------------ *
+ * the two maps: the little guess map and the results map
+ * ------------------------------------------------------------------ */
+const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+function newMap(el) {
+  const m = L.map(el, { worldCopyJump: true, minZoom: 1, zoomSnap: 0.5, attributionControl: true });
+  L.tileLayer(TILES, { attribution: ATTR, maxZoom: 19 }).addTo(m);
+  m.setView([20, 0], 1);
+  return m;
+}
+let GM = null, RM = null, pin = null, resLayer = null;
+let canGuess = false, onGuess = null;
+function gmap() {
+  if (GM) return GM;
+  GM = newMap($("gm"));
+  GM.on("click", (e) => {
+    if (!canGuess) return;
+    const ll = e.latlng.wrap();
+    if (!pin) pin = L.marker(ll, { icon: gIcon(myColour(), "") }).addTo(GM); else pin.setLatLng(ll);
+    $("guess").disabled = false; $("guess").textContent = "guess";
+    sfx("tick");
+  });
+  $("gmap").addEventListener("transitionend", () => GM.invalidateSize());
+  return GM;
+}
+function rmap() { if (!RM) { RM = newMap($("rm")); resLayer = L.layerGroup().addTo(RM); } return RM; }
+const ansIcon = () => L.divIcon({ className: "pin-ans", html: "<div></div><span>&#9873;</span>", iconSize: [30, 30], iconAnchor: [4, 30] });
+function gIcon(col, letter) { return L.divIcon({ className: "pin-g", html: '<div style="background:' + col + '">' + esc(letter) + "</div>", iconSize: [24, 24], iconAnchor: [12, 12] }); }
+let myColour = () => "#ff3d8b";
+
+function resetGuessMap() {
+  const m = gmap();
+  if (pin) { m.removeLayer(pin); pin = null; }
+  $("guess").disabled = true; $("guess").textContent = "place your pin on the map";
+  m.setView([20, 0], 1);
+  setTimeout(() => m.invalidateSize(), 50);
+}
+function setGuessable(on, label) {
+  canGuess = on;
+  if (!on) { $("guess").disabled = true; if (label) $("guess").textContent = label; }
+}
+function doGuess() {
+  if (!canGuess || !pin || !onGuess) return;
+  const ll = pin.getLatLng();
+  setGuessable(false, "guessed");
+  $("gmap").classList.remove("open");
+  onGuess(ll.lat, ll.lng);
+}
+$("guess").addEventListener("click", doGuess);
+$("pinbig").addEventListener("click", () => { $("gmap").classList.toggle("big"); setTimeout(() => GM && GM.invalidateSize(), 220); });
+$("mapx").addEventListener("click", () => $("gmap").classList.remove("open"));
+$("mapbtn").addEventListener("click", () => { $("gmap").classList.add("open"); setTimeout(() => GM && GM.invalidateSize(), 30); });
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "Space" || $("play").hidden) return;
+  const a = document.activeElement;
+  if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")) return;
+  if (canGuess && pin) { e.preventDefault(); doGuess(); }
+  else if (!$("res").hidden) { const b = $("rescard").querySelector(".go"); if (b) { e.preventDefault(); b.click(); } }
+});
+// a tap on the phone map outside the map itself closes it
+$("gmap").addEventListener("click", (e) => { if (e.target === $("gmap")) $("gmap").classList.remove("open"); });
+
+/* ------------------------------------------------------------------ *
+ * the stage: one place at a time
+ * ------------------------------------------------------------------ */
+let curLoc = -1, curMv = 0;
+function showPlace(i, mv) {
+  curLoc = i; curMv = mv;
+  const sv = $("sv");
+  sv.src = panoSrc(i);
+  $("nmpz").hidden = !mv;
+  $("home").hidden = !!mv;
+  $("res").hidden = true; $("over").hidden = true;
+  resetGuessMap();
+}
+$("home").addEventListener("click", () => {
+  if (curLoc < 0) return;
+  const sv = $("sv"); sv.src = "about:blank";
+  setTimeout(() => { sv.src = panoSrc(curLoc); }, 40);
+});
+function hud(top, mid, bot) { $("covtop").textContent = top; $("covmid").textContent = mid; $("covbot").textContent = bot; }
+let clockFn = null;
+setInterval(() => {
+  const c = $("clock"), left = clockFn ? clockFn() : null;
+  if (left == null || !isFinite(left)) { c.hidden = true; return; }
+  c.hidden = false;
+  const s = Math.max(0, Math.ceil(left / 1000));
+  c.textContent = s >= 60 ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : String(s);
+  c.classList.toggle("low", s <= 10);
+}, 200);
+
+// full screen: the API where there is one, a fixed stage everywhere (iPhone)
+$("fsb").addEventListener("click", () => {
+  const on = !document.documentElement.classList.contains("gfs");
+  document.documentElement.classList.toggle("gfs", on);
+  if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  $("fsb").textContent = on ? "exit full screen" : "full screen";
+  setTimeout(() => { GM && GM.invalidateSize(); RM && RM.invalidateSize(); }, 120);
+});
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && document.documentElement.classList.contains("gfs")) $("fsb").click();
+});
+
+// the results map: the answer flag, everyone's pins, dashed lines between
+function drawResults(rounds) {
+  $("res").hidden = false;
+  const m = rmap();
+  resLayer.clearLayers();
+  const pts = [];
+  rounds.forEach((r, k) => {
+    const l = LOCS[r.loc], ans = [l[0], l[1]];
+    pts.push(ans);
+    L.marker(ans, { icon: ansIcon(), zIndexOffset: 500, title: rounds.length > 1 ? "round " + (k + 1) : "" }).addTo(resLayer);
+    for (const g of r.guesses) {
+      if (g.lat == null) continue;
+      let lng = g.lng; // draw the short way round
+      while (lng - ans[1] > 180) lng -= 360;
+      while (ans[1] - lng > 180) lng += 360;
+      const p = [g.lat, lng];
+      pts.push(p);
+      L.polyline([ans, p], { color: "#1d1b2e", weight: 2.5, dashArray: "6 6", opacity: .8 }).addTo(resLayer);
+      L.marker(p, { icon: gIcon(g.col, (g.name || "?")[0].toUpperCase()), title: g.name }).addTo(resLayer);
+    }
+  });
+  requestAnimationFrame(() => {
+    m.invalidateSize();
+    if (pts.length === 1) m.setView(pts[0], 5);
+    else m.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 14 });
+  });
+}
+function resCard(html) { $("rescard").innerHTML = html; }
+
+/* ------------------------------------------------------------------ *
+ * solo + daily
+ * ------------------------------------------------------------------ */
+let mode = null;    // "solo" | "daily" | "room"
+let S = null;       // the local game
+const DAY = () => (window.SortafunLB ? SortafunLB.dayStr() : new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10));
+const dailyKey = () => "sortafun-globe-day-" + DAY();
+function dailyLocs() {
+  const d = DAY(), seed = +d.replace(/-/g, "") * 7919 + 4243;
+  return pickN([...Array(DAILY_N).keys()], 5, mulberry32(seed));
+}
+function dailySave() { try { localStorage.setItem(dailyKey(), JSON.stringify({ idx: S.idx, res: S.res, done: S.done, posted: !!S.posted })); } catch (e) {} }
+function dailyLoad() { try { return JSON.parse(localStorage.getItem(dailyKey()) || "null"); } catch (e) { return null; } }
+function refreshDailyNote() {
+  const s = dailyLoad();
+  if (s && s.done) { $("dailynote").textContent = "you scored " + fmt(s.res.reduce((a, r) => a + r.pts, 0)) + " today. new places at midnight."; $("go-daily").innerHTML = "see today's results"; }
+  else if (s && s.res.length) { $("dailynote").textContent = "you're on round " + (s.res.length + 1) + " of 5"; $("go-daily").innerHTML = "carry on &#9654;"; }
+}
+refreshDailyNote();
+
+function startLocal(kind) {
+  if (!LOCS.length) { menuMsg("the places didn't load. try reloading", true); return; }
+  if (!myName()) return;
+  mode = kind;
+  if (kind === "solo") {
+    const o = { "s-map": $("s-map").value, "s-time": $("s-time").value, "s-mv": $("s-mv").value, "s-rds": $("s-rds").value };
+    try { localStorage.setItem("sortafun-globe-solo", JSON.stringify(o)); } catch (e) {}
+    const mp = mapOk(o["s-map"]) ? o["s-map"] : "world";
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem("sortafun-globe-seen") || "[]"); } catch (e) {}
+    const pool = POOLS[mp], rds = +o["s-rds"];
+    const idx = pickN(pool, rds, Math.random, recent.length < pool.length - rds * 2 ? recent : []);
+    try { localStorage.setItem("sortafun-globe-seen", JSON.stringify(recent.concat(idx).slice(-600))); } catch (e) {}
+    S = { kind, mp, ts: +o["s-time"], mv: +o["s-mv"], rds, idx, res: [], done: false };
+  } else {
+    const sv = dailyLoad();
+    S = { kind, mp: "world", ts: 120, mv: 0, rds: 5, idx: dailyLocs(), res: (sv && sv.res) || [], done: !!(sv && sv.done), posted: !!(sv && sv.posted) };
+  }
+  myColour = () => "#ff3d8b";
+  enterPlay(false);
+  if (S.done) { showLocalFinal(); return; }
+  localRound();
+}
+$("go-solo").addEventListener("click", () => startLocal("solo"));
+$("go-daily").addEventListener("click", () => startLocal("daily"));
+
+function enterPlay(room) {
+  $("menu").hidden = true; $("how").hidden = true; $("play").hidden = false;
+  $("pgrid").classList.toggle("room", room); $("side").hidden = !room;
+  $("lb").innerHTML = ""; $("lbwrap").hidden = room;
+  gmap(); setTimeout(() => GM.invalidateSize(), 50);
+  sfx("whoosh");
+}
+function localTotal() { return S.res.reduce((a, r) => a + r.pts, 0); }
+function localRound() {
+  const n = S.res.length; // rounds done
+  const i = S.idx[n];
+  showPlace(i, S.mv);
+  hud("round " + (n + 1) + " / " + S.rds, fmt(localTotal()), S.kind === "daily" ? "today's challenge" : "points, " + mapName(S.mp));
+  $("skip").hidden = S.kind === "daily";
+  const end = S.ts ? performance.now() + S.ts * 1000 : 0;
+  clockFn = end ? () => end - performance.now() : null;
+  if (S.kind === "daily") { // a round you started counts even if you reload: it's saved as 0 until you guess
+    S.res.push({ loc: i, lat: null, lng: null, d: null, pts: 0 }); dailySave(); S.res.pop();
+  }
+  setGuessable(true);
+  let timer = end ? setTimeout(() => { if (canGuess) { setGuessable(false, "time's up"); finish(pin ? pin.getLatLng() : null); } }, S.ts * 1000 + 50) : null;
+  onGuess = (lat, lng) => finish({ lat, lng });
+  function finish(ll) {
+    clearTimeout(timer); clockFn = null; onGuess = null;
+    const l = LOCS[i];
+    let r = { loc: i, lat: null, lng: null, d: null, pts: 0 };
+    if (ll) { const lng = ((ll.lng + 540) % 360) - 180, d = km(l[0], l[1], ll.lat, lng); r = { loc: i, lat: ll.lat, lng, d, pts: points(d, S.mp) }; }
+    S.res.push(r);
+    if (S.res.length >= S.rds) S.done = true;
+    if (S.kind === "daily") dailySave();
+    sfx(r.pts >= 4000 ? "great" : r.pts >= 1500 ? "coin" : "pop");
+    showLocalReveal(r);
+  }
+}
+$("skip").addEventListener("click", () => {
+  if (mode === "room") { roomSkip(); return; }
+  if (!S || S.kind !== "solo" || !canGuess) return;
+  const n = S.res.length, nu = pickN(POOLS[S.mp], 1, Math.random, S.idx)[0];
+  if (nu == null) return;
+  S.idx[n] = nu; localRound();
+});
+function showLocalReveal(r) {
+  drawResults([{ loc: r.loc, guesses: [{ lat: r.lat, lng: r.lng, col: "#ff3d8b", name: cleanName(nm.value) || "you" }] }]);
+  const last = S.res.length >= S.rds, where = country(r.loc);
+  hud("round " + S.res.length + " / " + S.rds, fmt(localTotal()), "points so far");
+  resCard(
+    '<div class="big">' + fmt(r.pts) + "<small>points</small></div>" +
+    '<div><div class="bar"><i style="width:' + (r.pts / 50) + '%"></i></div><p class="muted">' +
+    (r.d == null ? "no guess, out of time" : "your guess was " + fmtDist(r.d) + " away") + (where ? ". it was in <b>" + esc(where) + "</b>" : "") + "</p></div>" +
+    '<button class="go">' + (last ? "see the summary" : "next round") + "</button>");
+  $("rescard").querySelector(".go").addEventListener("click", () => (last ? showLocalFinal() : localRound()));
+}
+function showLocalFinal() {
+  clockFn = null;
+  const total = localTotal();
+  drawResults(S.res.map((r) => ({ loc: r.loc, guesses: [{ lat: r.lat, lng: r.lng, col: "#ff3d8b", name: "you" }] })));
+  hud("game over", fmt(total), "out of " + fmt(5000 * S.rds));
+  let rows = "";
+  S.res.forEach((r, k) => { rows += "<tr><td>" + (k + 1) + "</td><td>" + esc(country(r.loc)) + "</td><td>" + (r.d == null ? "-" : fmtDist(r.d)) + "</td><td><b>" + fmt(r.pts) + "</b></td></tr>"; });
+  const board = S.kind === "daily" || (S.mp === "world" && S.rds === 5 && S.mv === 0);
+  resCard(
+    '<div class="big">' + fmt(total) + "<small>out of " + fmt(5000 * S.rds) + "</small></div>" +
+    "<table><tr><th>#</th><th>where</th><th>off by</th><th>points</th></tr>" + rows + "</table>" +
+    '<div class="wide">' + (S.kind === "daily" ? '<button class="go alt" data-a="menu">back</button>' : '<button class="go" data-a="again">play again</button> <button class="go alt" data-a="menu">change settings</button>') + "</div>" +
+    (board ? "" : '<p class="muted wide">only the world map, 5 rounds, walking allowed, goes on the board.</p>'));
+  $("res").classList.add("final");
+  $("rescard").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    $("res").classList.remove("final");
+    if (b.dataset.a === "again") startLocal("solo"); else backToMenu();
+  }));
+  if (board && window.SortafunLB) {
+    const key = S.kind === "daily" ? "globeday" : "globe";
+    if (!S.posted) { S.posted = true; if (S.kind === "daily") dailySave(); SortafunLB.mountPanel($("lb"), key, { score: total }); }
+  }
+  if (S.kind === "daily") refreshDailyNote();
+  sfx("whoosh");
+}
+function backToMenu() {
+  mode = null; S = null; clockFn = null; onGuess = null; canGuess = false;
+  $("sv").src = "about:blank"; curLoc = -1;
+  $("play").hidden = true; $("menu").hidden = false; $("how").hidden = false;
+  $("res").classList.remove("final"); $("lb").innerHTML = ""; $("lbwrap").hidden = false;
+  refreshDailyNote();
+}
+
+/* ------------------------------------------------------------------ *
+ * rooms: connecting (own named app, per-tab sign-in, like draw)
+ * ------------------------------------------------------------------ */
+let F = null;
+function connect() {
+  if (F) return F;
+  const cfg = window.SORTAFUN_FIREBASE;
+  if (!cfg || !cfg.databaseURL) return Promise.reject(new Error("offline"));
+  F = Promise.all([import(SDK + "firebase-app.js"), import(SDK + "firebase-auth.js"), import(SDK + "firebase-database.js")])
+    .then(async ([A, U, D]) => {
+      const app = A.getApps().find((a) => a.name === "globe") || A.initializeApp(cfg, "globe");
+      let auth;
+      try { auth = U.initializeAuth(app, { persistence: U.browserSessionPersistence }); } catch (e) { auth = U.getAuth(app); }
+      const cred = await U.signInAnonymously(auth);
+      const db = D.getDatabase(app, cfg.databaseURL);
+      let off = 0;
+      D.onValue(D.ref(db, ".info/serverTimeOffset"), (s) => { off = s.val() || 0; });
+      return { D, db, uid: cred.user.uid, now: () => Date.now() + off, ref: (p) => D.ref(db, p) };
+    });
+  F.catch(() => { F = null; });
+  return F;
+}
+
+let C = null, code = null, R = () => null;
+let meta = null, players = {}, guesses = {};
+let shownKey = "", leaving = false, tickTimer = null;
+const present = () => Object.keys(players).sort((a, b) => (players[a].j - players[b].j) || (a < b ? -1 : 1));
+const hostUid = () => present()[0];
+const amHost = () => C && hostUid() === C.uid;
+const nameOf = (u) => (players[u] && players[u].n) || "someone";
+const colOf = (u) => AV[(players[u] && players[u].c) || 0];
+const locsOf = () => (meta && meta.locs ? meta.locs.split(",").map(Number) : []);
+const roundG = (n) => (guesses[meta.g] && guesses[meta.g][n]) || {};
+const mult = (n) => (n <= 2 ? 1 : 1 + (n - 2) * 0.5);
+
+$("make").addEventListener("click", async () => {
+  const n = myName(); if (!n) return;
+  $("make").disabled = true; menuMsg("making a room...");
+  try {
+    C = await connect();
+    const LT = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    for (let tries = 0; tries < 8; tries++) {
+      const c = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => LT[b % LT.length]).join("");
+      const t = Math.floor(C.now() - 3000);
+      const res = await C.D.runTransaction(C.ref(ROOT + c + "/meta"), (cur) => {
+        if (cur) return;
+        return { st: "lobby", g: 0, n: 0, rds: 5, ts: 120, mv: 0, md: "c", mp: "world", locs: "", ord: "", dl: 0, c: t, t };
+      });
+      if (res.committed) { await enter(c, n); $("make").disabled = false; return; }
+    }
+    menuMsg("couldn't find a free room code, try again", true);
+  } catch (e) { console.warn(e); menuMsg("couldn't reach the server. playing with friends needs a connection", true); }
+  $("make").disabled = false;
+});
+async function joinClick() {
+  const n = myName(); if (!n) return;
+  const c = $("jc").value.toUpperCase().replace(/[^A-Z]/g, "");
+  if (!/^[A-Z]{4}$/.test(c)) { menuMsg("room codes are 4 letters", true); $("jc").focus(); return; }
+  $("join").disabled = true; menuMsg("knocking...");
+  try { C = await connect(); await enter(c, n); menuMsg(""); }
+  catch (e) { console.warn(e); menuMsg(e.message === "nope" ? "no room with that code" : e.message === "full" ? "that room is full (8 max)" : "couldn't reach the server", true); }
+  $("join").disabled = false;
+}
+$("join").addEventListener("click", joinClick);
+$("jc").addEventListener("keydown", (e) => { if (e.key === "Enter") joinClick(); });
+nm.addEventListener("keydown", (e) => { if (e.key === "Enter" && hashCode()) joinClick(); });
+
+async function enter(c, n) {
+  const { D } = C;
+  const m = await D.get(C.ref(ROOT + c + "/meta"));
+  if (!m.exists()) throw new Error("nope");
+  const ps = (await D.get(C.ref(ROOT + c + "/players"))).val() || {};
+  if (!ps[C.uid] && Object.keys(ps).length >= MAX_PLAYERS) throw new Error("full");
+  code = c; mode = "room";
+  R = (p) => C.ref(ROOT + code + (p ? "/" + p : ""));
+  const me = R("players/" + C.uid);
+  await D.onDisconnect(me).remove();
+  let col = 0; for (const ch of C.uid) col = (col * 31 + ch.charCodeAt(0)) % AV.length;
+  await D.set(me, { n, c: col, j: Math.floor(C.now() - 2000) });
+  myColour = () => colOf(C.uid);
+  history.replaceState(null, "", "#" + code);
+  $("codefoot").textContent = code;
+  enterPlay(true);
+  $("sv").src = "about:blank";
+  sysLine("you joined room " + code + ". send your friends the invite link.");
+  D.onValue(R("meta"), (s) => { meta = s.val(); render(); });
+  D.onValue(R("players"), (s) => {
+    const before = players; players = s.val() || {};
+    for (const u in players) if (!before[u] && Object.keys(before).length && u !== C.uid) { sysLine(players[u].n + " joined"); sfx("pop"); }
+    for (const u in before) if (!players[u]) sysLine(before[u].n + " left");
+    if (!players[C.uid] && code && !leaving) D.set(R("players/" + C.uid), { n: before[C.uid] ? before[C.uid].n : n, c: col, j: Math.floor(C.now() - 2000) }).catch(() => {});
+    render();
+  });
+  D.onValue(R("guesses"), (s) => { guesses = s.val() || {}; render(); });
+  D.onChildAdded(D.query(R("chat"), D.limitToLast(50)), (s) => chatIn(s.val()));
+  tickTimer = setInterval(tick, 300);
+}
+$("leave").addEventListener("click", async (e) => {
+  e.preventDefault(); leaving = true;
+  if (C && code) { try { await C.D.remove(R("players/" + C.uid)); } catch (er) {} }
+  location.hash = ""; location.reload();
+});
+$("copy").addEventListener("click", (e) => {
+  e.preventDefault();
+  const url = location.origin + location.pathname + "#" + code;
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => sysLine("invite link copied: " + url), () => sysLine("invite link: " + url));
+});
+window.addEventListener("beforeunload", () => { leaving = true; if (C && code) C.D.remove(R("players/" + C.uid)); });
+
+/* ------------------------------------------------------------------ *
+ * the scores, worked out the same way on every screen
+ * ------------------------------------------------------------------ */
+function roundResult(n) {
+  const g = roundG(n), i = locsOf()[n - 1], l = LOCS[i], out = {};
+  for (const u in g) {
+    const lng = ((g[u].o + 540) % 360) - 180, d = km(l[0], l[1], g[u].a, lng);
+    out[u] = { lat: g[u].a, lng, d, pts: points(d, meta.mp), t: g[u].t };
+  }
+  return out;
+}
+// rounds counted: everything before n, and n itself once it's revealed
+function doneRounds() { return !meta || meta.st === "lobby" ? 0 : meta.st === "play" ? meta.n - 1 : meta.n; }
+function totals() {
+  const tot = {};
+  for (let n = 1; n <= doneRounds(); n++) { const r = roundResult(n); for (const u in r) tot[u] = (tot[u] || 0) + r[u].pts; }
+  return tot;
+}
+function duel(upTo) { // health after each round, from the starting line-up
+  const ord = meta.ord ? meta.ord.split(",") : [], hp = {}, hist = [];
+  ord.forEach((u) => { hp[u] = DUEL_HP; });
+  for (let n = 1; n <= upTo; n++) {
+    const alive = ord.filter((u) => hp[u] > 0), r = roundResult(n);
+    let best = 0; alive.forEach((u) => { best = Math.max(best, r[u] ? r[u].pts : 0); });
+    const dmg = {};
+    alive.forEach((u) => { dmg[u] = Math.round((best - (r[u] ? r[u].pts : 0)) * mult(n)); hp[u] = Math.max(0, hp[u] - dmg[u]); });
+    hist.push(dmg);
+  }
+  return { ord, hp, hist };
+}
+function inGame(u) {
+  if (!meta || meta.st === "lobby") return false;
+  if (meta.md !== "d") return true;
+  const D = duel(meta.n - 1);
+  return D.ord.indexOf(u) !== -1 && D.hp[u] > 0;
+}
+function needers() { return present().filter(inGame); }
+function firstGuessT(n) { let f = Infinity; const g = roundG(n); for (const u in g) if (typeof g[u].t === "number") f = Math.min(f, g[u].t); return f; }
+function roundDl() {
+  let dl = meta.dl || Infinity;
+  if (meta.md === "d") { const f = firstGuessT(meta.n); if (isFinite(f)) dl = Math.min(dl, f + DUEL_AFTER_FIRST); }
+  return dl;
+}
+function gameOverAfter(n) {
+  if (meta.md === "d") {
+    const D = duel(n), alive = D.ord.filter((u) => D.hp[u] > 0 && players[u]);
+    return alive.length <= 1 || n >= locsOf().length;
+  }
+  return n >= meta.rds;
+}
+
+/* ------------------------------------------------------------------ *
+ * the host moves things on
+ * ------------------------------------------------------------------ */
+function step(expectN, expectSt, change) {
+  return C.D.runTransaction(R("meta"), (cur) => {
+    if (!cur || cur.n !== expectN || cur.st !== expectSt) return;
+    const next = change(cur);
+    if (!next) return;
+    return Object.assign({}, cur, next, { t: Math.floor(C.now() - 2000) });
+  }).catch((e) => console.warn("[globe] step", e));
+}
+let hostBusy = false;
+async function tick() {
+  if (!meta || !C || !amHost() || hostBusy) return;
+  hostBusy = true;
+  try {
+    const now = C.now(), st = meta.st, n = meta.n;
+    if (st === "play") {
+      const need = needers(), g = roundG(n);
+      const all = need.length > 0 && need.every((u) => g[u]);
+      if (all || now > roundDl() + 1000 || need.length === 0) await step(n, "play", () => ({ st: "reveal", dl: Math.floor(now + REVEAL_MS) }));
+    } else if (st === "reveal" && now > meta.dl) await nextRound();
+  } finally { hostBusy = false; }
+}
+function nextRound() {
+  const n = meta.n;
+  if (gameOverAfter(n)) return step(n, "reveal", () => ({ st: "over", dl: 0 }));
+  return step(n, "reveal", (cur) => ({ st: "play", n: cur.n + 1, dl: cur.ts ? Math.floor(C.now() + cur.ts * 1000 + 1500) : 0 }));
+}
+async function startGame() {
+  const ps = present();
+  if (meta.md === "d" && ps.length < 2) { sysLine("duels need at least 2 players"); return; }
+  const mp = mapOk(meta.mp) ? meta.mp : "world";
+  const locs = pickN(POOLS[mp], meta.md === "d" ? DUEL_LOCS : meta.rds, Math.random);
+  try { await C.D.remove(R("guesses")); } catch (e) { console.warn(e); }
+  await step(meta.n, meta.st, (cur) => ({ st: "play", g: cur.g + 1, n: 1, mp, locs: locs.join(","), ord: ps.join(","), dl: cur.ts ? Math.floor(C.now() + cur.ts * 1000 + 1500) : 0 }));
+}
+function roomSkip() { // host only: this place won't load, swap it
+  if (!amHost() || !meta || meta.st !== "play") return;
+  const ls = locsOf(), n = meta.n, nu = pickN(POOLS[meta.mp] || POOLS.world, 1, Math.random, ls)[0];
+  if (nu == null) return;
+  ls[n - 1] = nu;
+  C.D.remove(R("guesses/" + meta.g + "/" + n)).catch(() => {});
+  step(n, "play", (cur) => ({ locs: ls.join(","), dl: cur.ts ? Math.floor(C.now() + cur.ts * 1000 + 1500) : 0 }));
+  sysLine("the host skipped this place");
+}
+async function sendGuess(lat, lng) {
+  try {
+    await C.D.set(R("guesses/" + meta.g + "/" + meta.n + "/" + C.uid), { a: +lat.toFixed(6), o: +(((lng + 540) % 360) - 180).toFixed(6), t: C.D.serverTimestamp() });
+    sfx("pop");
+  } catch (e) { console.warn(e); sysLine("that guess didn't send. try again"); setGuessable(true); }
+}
+
+/* ------------------------------------------------------------------ *
+ * drawing the room
+ * ------------------------------------------------------------------ */
+function render() {
+  if (mode !== "room" || !meta || !C) return;
+  renderPeople();
+  const st = meta.st, key = meta.g + ":" + meta.n + ":" + st + ":" + meta.locs;
+  const isNew = key !== shownKey;
+  shownKey = key;
+  $("skip").hidden = !(amHost() && st === "play");
+  if (st === "lobby") { if (isNew) { $("sv").src = "about:blank"; curLoc = -1; clockFn = null; $("res").hidden = true; } lobbyCard(); return; }
+  if (st === "play") {
+    $("over").hidden = true;
+    const i = locsOf()[meta.n - 1];
+    if (isNew) {
+      showPlace(i, meta.mv);
+      onGuess = (lat, lng) => sendGuess(lat, lng);
+      sfx("whoosh");
+    }
+    const mine = roundG(meta.n)[C.uid], playing = inGame(C.uid);
+    if (mine) setGuessable(false, "guessed. waiting for the others");
+    else if (!playing) setGuessable(false, meta.md === "d" ? "you're out. watching" : "watching");
+    else if (!canGuess && isNew) setGuessable(true);
+    else if (!canGuess && !pin) setGuessable(true);
+    clockFn = () => { const d = roundDl(); return isFinite(d) ? d - C.now() : null; };
+    const tot = totals();
+    if (meta.md === "d") { const D = duel(meta.n - 1); hud("round " + meta.n + " (x" + mult(meta.n) + ")", D.hp[C.uid] != null ? fmt(D.hp[C.uid]) : "-", "health, duels"); }
+    else hud("round " + meta.n + " / " + meta.rds, fmt(tot[C.uid] || 0), "points, " + mapName(meta.mp));
+    return;
+  }
+  if (st === "reveal") {
+    canGuess = false; onGuess = null;
+    clockFn = () => meta.dl - C.now();
+    if (isNew || !$("res").hidden) revealCard(isNew);
+    return;
+  }
+  if (st === "over") { clockFn = null; canGuess = false; if (isNew) sfx("whoosh"); overCard(); }
+}
+function renderPeople() {
+  const ps = present(), tot = totals(), st = meta.st, duelOn = meta.md === "d" && st !== "lobby";
+  const D = duelOn ? duel(doneRounds()) : null, g = st === "play" ? roundG(meta.n) : {};
+  let order = ps.slice();
+  if (st !== "lobby") order.sort((a, b) => duelOn ? ((D.hp[b] ?? -1) - (D.hp[a] ?? -1)) : ((tot[b] || 0) - (tot[a] || 0)));
+  $("people").innerHTML = order.map((u) => {
+    const p = players[u], me = u === C.uid, out = duelOn && !(D.hp[u] > 0);
+    let sub = u === hostUid() ? "host" : "";
+    if (st !== "lobby") sub = duelOn ? (D.hp[u] != null ? fmt(D.hp[u]) + " health" : "watching") : fmt(tot[u] || 0) + " points";
+    const hpbar = duelOn && D.hp[u] != null ? '<div class="hp"><i style="width:' + (D.hp[u] / DUEL_HP * 100) + '%"></i></div>' : "";
+    const tag = st === "play" ? (g[u] ? "&#9989;" : inGame(u) ? "&#129300;" : "") : u === hostUid() ? "&#128081;" : "";
+    return '<li class="' + (me ? "me " : "") + (g[u] ? "done " : "") + (out ? "out" : "") + '"><span class="av" style="background:' + AV[p.c || 0] + '">' + esc((p.n || "?")[0].toUpperCase()) + '</span><span class="who"><b>' + esc(p.n) + (me ? " (you)" : "") + "</b><small>" + sub + "</small>" + hpbar + '</span><span class="tag">' + tag + "</span></li>";
+  }).join("");
+}
+function lobbyCard() {
+  $("res").hidden = true; $("over").hidden = false;
+  const host = amHost(), ps = present();
+  const sel = (id, opts, val) => '<select id="' + id + '"' + (host ? "" : " disabled") + ">" + opts.map(([v, t]) => '<option value="' + v + '"' + (String(v) === String(val) ? " selected" : "") + ">" + t + "</option>").join("") + "</select>";
+  const maps = MAPS.filter((m) => mapOk(m[0])).map((m) => [m[0], m[1]]);
+  const html = "<h2>room " + code + "</h2>" +
+    "<p>" + ps.length + " player" + (ps.length === 1 ? "" : "s") + " here. " + (host ? "you're the host: pick the settings and start when everyone's in." : "waiting for " + esc(nameOf(hostUid())) + " (the host) to start.") + "</p>" +
+    '<div class="row">' +
+      "<div><label>game</label>" + sel("r-md", [["c", "party (most points)"], ["d", "duels (6000 health)"]], meta.md) + "</div>" +
+      "<div><label>map</label>" + sel("r-mp", maps, meta.mp) + "</div>" +
+      "<div><label>time a round</label>" + sel("r-ts", [[0, "no limit"], [30, "30 s"], [60, "1 min"], [90, "90 s"], [120, "2 min"], [180, "3 min"], [300, "5 min"]], meta.ts) + "</div>" +
+      (meta.md === "d" ? "<div><label>rounds</label><select disabled><option>until one is left</option></select></div>" : "<div><label>rounds</label>" + sel("r-rds", [[3, 3], [5, 5], [7, 7], [10, 10]], meta.rds) + "</div>") +
+      "<div><label>moving</label>" + sel("r-mv", [[0, "walk around"], [1, "no move, pan or zoom"]], meta.mv) + "</div>" +
+    "</div>" +
+    (meta.md === "d" ? '<p class="muted">duels: each round the best guess is safe and everyone else loses the gap in points as health. the damage goes up from round 3. once someone guesses, the rest have 15 seconds.</p>' : "") +
+    (host ? '<button class="big-go" id="r-go">start &#9654;</button>' : "") +
+    '<p class="muted">invite link: <a href="#" id="r-copy">' + esc(location.origin + location.pathname + "#" + code) + "</a></p>";
+  const card = $("card");
+  // don't rebuild under someone using a dropdown
+  if (card.contains(document.activeElement) && document.activeElement.tagName === "SELECT" && card.dataset.k === code) return;
+  card.innerHTML = html; card.dataset.k = code;
+  $("r-copy").addEventListener("click", (e) => { e.preventDefault(); $("copy").click(); });
+  if (!host) return;
+  const set = (id, f) => $(id) && $(id).addEventListener("change", (e) => step(meta.n, "lobby", () => f(e.target.value)));
+  set("r-md", (v) => ({ md: v }));
+  set("r-mp", (v) => ({ mp: v }));
+  set("r-ts", (v) => ({ ts: +v }));
+  set("r-rds", (v) => ({ rds: +v }));
+  set("r-mv", (v) => ({ mv: +v }));
+  $("r-go").addEventListener("click", startGame);
+}
+function revealCard(isNew) {
+  const n = meta.n, i = locsOf()[n - 1], r = roundResult(n);
+  const ps = Object.keys(r).concat(present().filter((u) => !r[u] && inGameAt(u, n)));
+  const rows = ps.map((u) => ({ u, name: nameOf(u), col: colOf(u), ...(r[u] || { lat: null, lng: null, d: null, pts: 0 }) })).sort((a, b) => b.pts - a.pts);
+  if (isNew) {
+    drawResults([{ loc: i, guesses: rows }]);
+    const me = r[C.uid];
+    sfx(me && me.pts >= 4000 ? "great" : "coin");
+  }
+  const D = meta.md === "d" ? duel(n) : null;
+  const last = gameOverAfter(n);
+  let tb = "<table><tr><th></th><th>player</th><th>off by</th><th>points</th>" + (D ? "<th>damage</th><th>health</th>" : "") + "</tr>";
+  rows.forEach((x, k) => {
+    tb += "<tr><td>" + (k + 1) + '</td><td><b style="color:' + x.col + '">' + esc(x.name) + "</b></td><td>" + (x.d == null ? "no guess" : fmtDist(x.d)) + "</td><td><b>" + fmt(x.pts) + "</b></td>" +
+      (D ? "<td>" + (D.hist[n - 1][x.u] ? "-" + fmt(D.hist[n - 1][x.u]) : "0") + "</td><td>" + fmt(D.hp[x.u] || 0) + "</td>" : "") + "</tr>";
+  });
+  tb += "</table>";
+  const where = country(i);
+  resCard('<div class="wide"><b>round ' + n + "</b>" + (where ? ": it was in <b>" + esc(where) + "</b>" : "") + (D ? " &middot; damage x" + mult(n) : "") + "</div>" + tb +
+    (amHost() ? '<div class="wide"><button class="go">' + (last ? "see who won" : "next round") + "</button></div>" : '<p class="muted wide">' + (last ? "results" : "next round") + " in a moment...</p>"));
+  const b = $("rescard").querySelector(".go");
+  if (b) b.addEventListener("click", () => { b.disabled = true; nextRound(); });
+  if (D) hud("round " + n, D.hp[C.uid] != null ? fmt(D.hp[C.uid]) : "-", "health, duels");
+  else hud("round " + n + " / " + meta.rds, fmt(totals()[C.uid] || 0), "points");
+}
+function inGameAt(u, n) { if (meta.md !== "d") return true; const D = duel(n - 1); return D.ord.indexOf(u) !== -1 && D.hp[u] > 0; }
+function overCard() {
+  const ls = locsOf().slice(0, meta.n), tot = totals(), duelOn = meta.md === "d";
+  const D = duelOn ? duel(meta.n) : null;
+  const rounds = ls.map((i, k) => { const r = roundResult(k + 1); return { loc: i, guesses: Object.keys(r).map((u) => ({ ...r[u], name: nameOf(u), col: colOf(u) })) }; });
+  const key = "over:" + meta.g;
+  if ($("res").dataset.k !== key) { $("res").dataset.k = key; drawResults(rounds); }
+  $("res").classList.add("final");
+  const who = new Set(Object.keys(tot).concat(duelOn ? D.ord : []));
+  const rows = [...who].map((u) => ({ u, name: nameOf(u), col: colOf(u), pts: tot[u] || 0, hp: D ? D.hp[u] || 0 : 0 }))
+    .sort((a, b) => duelOn ? (b.hp - a.hp) || (b.pts - a.pts) : b.pts - a.pts);
+  const win = rows[0];
+  let tb = "<table><tr><th></th><th>player</th>" + (duelOn ? "<th>health</th>" : "") + "<th>points</th></tr>";
+  rows.forEach((x, k) => { tb += "<tr><td>" + (["&#129351;", "&#129352;", "&#129353;"][k] || (k + 1)) + '</td><td><b style="color:' + x.col + '">' + esc(x.name) + "</b></td>" + (duelOn ? "<td>" + fmt(x.hp) + "</td>" : "") + "<td>" + fmt(x.pts) + "</td></tr>"; });
+  tb += "</table>";
+  hud("game over", win ? win.name.slice(0, 12) : "-", "wins!");
+  resCard('<div class="big">' + (win ? esc(win.name) + " wins!" : "game over") + "<small>" + (duelOn ? "duels, last one standing" : meta.n + " rounds, " + esc(mapName(meta.mp))) + "</small></div>" + tb +
+    (amHost() ? '<div class="wide"><button class="go" data-a="again">play again</button> <button class="go alt" data-a="lobby">change settings</button></div>' : '<p class="muted wide">the host can start another game.</p>'));
+  $("rescard").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    $("res").classList.remove("final"); $("res").dataset.k = "";
+    if (b.dataset.a === "again") startGame(); else step(meta.n, "over", () => ({ st: "lobby", dl: 0 }));
+  }));
+}
+
+/* ------------------------------------------------------------------ *
+ * chat
+ * ------------------------------------------------------------------ */
+const log = $("log");
+function line(html, cls) {
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  d.innerHTML = html;
+  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  log.appendChild(d);
+  while (log.children.length > 120) log.firstChild.remove();
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+function sysLine(t) { line(esc(t), "sys"); }
+function chatIn(m) { if (!m) return; line("<b>" + esc(m.n) + ":</b> " + esc(m.m)); if (C && m.u !== C.uid) sfx("tick"); }
+$("say").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const input = $("msg"), text = input.value.trim().slice(0, 100);
+  if (!text || !C || !code) return;
+  input.value = "";
+  C.D.push(R("chat"), { u: C.uid, n: nameOf(C.uid), m: text, t: C.D.serverTimestamp() }).catch((er) => console.warn("[globe] chat", er));
+});
+
+// the board under the game: today's challenge while that's on, else solo
+if (window.SortafunLB) SortafunLB.keepBoard($("lb"), () => (mode === "daily" ? "globeday" : "globe"));
+
+// test hook (the multi-browser check drives the game through this)
+window.__globe = {
+  state: () => ({ mode, meta, players, guesses, uid: C && C.uid, code, host: C && hostUid(), totals: meta && C ? totals() : null, S, curLoc, canGuess }),
+  guessAt: (lat, lng) => { gmap(); const ll = L.latLng(lat, lng); if (!pin) pin = L.marker(ll, { icon: gIcon(myColour(), "") }).addTo(GM); else pin.setLatLng(ll); $("guess").disabled = false; doGuess(); },
+  startGame, points, km, LOCS, POOLS, SCALES, dailyLocs,
+};
+</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

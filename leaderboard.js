@@ -73,6 +73,9 @@
     // piano rush: endless = tiles before a miss; today's song = ms for the whole tune
     piano:     { label: "piano rush",     unit: "tiles", better: "high" },
     pianoday:  { label: "piano rush, today's song", unit: "ms", better: "low", format: function (v) { return (v / 1000).toFixed(2) + " s"; } },
+    // globe guesser: solo world map, 5 rounds (max 25000); today's challenge, the same 5 places for everyone
+    globe:     { label: "globe guesser", unit: "pts", better: "high" },
+    globeday:  { label: "globe guesser, today's challenge", unit: "pts", better: "high" },
     sushirush: { label: "sushi lunch rush",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
     // part 2: samples * 10000 - seconds, the same idea
     // archived 2026-10-06: off the homepage/leaderboards/passport, deeptime2.html still works by URL

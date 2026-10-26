@@ -714,9 +714,9 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=9e07ea97"></script>
-<script src="feedback.js?v=732b03cd"></script>
-<script src="panic-app.js?v=ff82991a"></script>
+<script src="china.js?v=f73530b2"></script>
+<script src="feedback.js?v=e279be8d"></script>
+<script src="panic-app.js?v=56ca46e5"></script>
 </head>
 <body>
 <div class="site">
@@ -791,7 +791,7 @@
   <section class="panel" id="games">
     <div class="panel-head h-games">
       <h2>Games</h2>
-      <p>twenty games, two of them online with friends. your best today lands on the leaderboards.</p>
+      <p>twenty-one games, three of them online with friends. your best today lands on the leaderboards.</p>
       <div class="chips" id="chips">
         <button class="chip" data-cat="all" aria-pressed="true">All</button>
         <button class="chip" data-cat="word" aria-pressed="false"><i class="c-word"></i>Words</button>
@@ -837,6 +837,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-26</span> <b>v0.19</b>: NEW: <b>globe guesser</b>. you get dropped somewhere on earth in street view. look around, walk down the road, read the signs, then pin the map where you think you are. play solo, take the daily challenge (the same 5 places for everyone), or make a room for up to 8 friends: party or duels.</li>
         <li><span class="when">10-25</span> <b>v0.18</b>: NEW: apps, a new section for things that aren't games. the first one is pluck: tap a guitar string and it keeps ringing while you tune by ear. 25 tunings built in, save your own, works offline once you add it to your home screen.</li>
         <li><span class="when">10-16</span> <b>v0.16.1</b>: rhythm rush's official levels always stay in the list, however many new ones players share.</li>
         <li><span class="when">10-16</span> <b>v0.16</b>: NEW: rhythm rush. real NCS songs, notes fall to the line and every tap is scored on how close it lands: dead on scores the most, a bit off scores less, and a note you let past is a miss. no tap sounds, just the song. every level ends with a grade from D to SSS, a timing graph and its own top 10. the levels are made by players: pick one of ten songs, tap your own in and share it. piano rush keeps endless and today's song.</li>
@@ -939,7 +940,7 @@
     <p><b>word games:</b> <a href="grab.html">Word Grab</a> &middot; <a href="typing.html">Typing Test</a> &middot; <a href="crossword.html">Crossword</a></p>
     <p><b>puzzle:</b> <a href="mines.html">Minesweeper</a></p>
     <p><b>skill and action:</b> <a href="maze.html">Cursor Maze</a> &middot; <a href="reaction.html">Reaction Time Test</a> &middot; <a href="aim.html">Aim Trainer</a> &middot; <a href="stopbar.html">Stop the Bar</a> &middot; <a href="piano.html">Piano Rush</a> &middot; <a href="rhythm.html">Rhythm Rush</a> &middot; <a href="driving.html">Circuit Race</a> &middot; <a href="sushi.html">Sushi Goes Round</a> &middot; <a href="deeptime.html">Deep Time</a></p>
-    <p><b>play with friends:</b> <a href="funstrike.html">Fun Strike</a> &middot; <a href="draw.html">Draw and Guess</a></p>
+    <p><b>play with friends:</b> <a href="funstrike.html">Fun Strike</a> &middot; <a href="draw.html">Draw and Guess</a> &middot; <a href="globe.html">Globe Guesser</a></p>
     <p><b>art:</b> <a href="flipbook.html">Animation Studio</a> &middot; <a href="anim-gallery.html">Animation Gallery</a></p>
     <p><b>hang out:</b> <a href="leaderboards.html">Leaderboards</a> &middot; <a href="forum.html">The Forum</a> &middot; <a href="guestbook.html">Guestbook</a> &middot; <a href="passport.html">Passport</a></p>
   </nav>
@@ -959,7 +960,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=3e9da013"></script>
+<script src="leaderboard.js?v=a995c8d7"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -980,6 +981,7 @@ var GAMES = [
   { id: "funstrike", name: "Fun Strike",     url: "funstrike.html", cat: "online", key: "funstrike", badge: "new",   blurb: "a Counter-Strike homage on a real map. team deathmatch and free for all, bots, kill cam, voice chat, servers that stay up, a leaderboard." },
   { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
+  { id: "globe",     name: "Globe Guesser",  url: "globe.html",     cat: "online", key: "globe",    badge: "new",   blurb: "dropped somewhere on earth in street view. look around, then pin the map. solo, a daily challenge, or a room with friends: party or duels." },
   { id: "deeptime",  name: "Deep Time",      url: "deeptime.html",  cat: "skill",  key: "deeptime", badge: "new",   blurb: "a camcorder tape from a forest in 1987. find the 8 parts of the time machine. something came through. headphones on." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
@@ -1021,7 +1023,7 @@ var SOON = [
 ];
 
 // the Mobile chip: games that play well on a phone (a game keeps its own category too)
-var MOBILE = { rhythm: 1, piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1 };
+var MOBILE = { rhythm: 1, piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1, globe: 1 };
 
 var CAT_LABEL = { app: "app", soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout" };
 var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY", wip: "WIP" };
@@ -1295,6 +1297,20 @@ var THUMB = {
     g += '<circle cx="14" cy="12" r="4" fill="#ff3b30" stroke="' + K + '" stroke-width="1.5"/>' + outlined(38, 16, "REC", 11, "#f2f2e8");
     g += outlined(124, 112, "2/5", 11, "#f2f2e8");
     return g;
+  },
+  globe: function () {
+    return bg("#7fd4ff") +
+      // a road running off to the horizon
+      '<path d="M0 84 L160 84 L160 120 L0 120 Z" fill="#9bd67a"/>' +
+      '<path d="M50 120 L76 84 L84 84 L110 120 Z" fill="#8a879c"' + S + '/>' +
+      '<path d="M80 89 L80 94 M80 100 L80 107 M80 113 L80 120" stroke="#fff" stroke-width="2.5"/>' +
+      // the globe
+      '<circle cx="118" cy="44" r="30" fill="#4dabf7"' + S + '/>' +
+      '<path d="M100 30 q8 -6 14 0 q4 8 -4 12 q-8 2 -10 -12 Z M122 50 q10 -4 14 4 q-2 12 -10 12 q-8 -6 -4 -16 Z M124 22 q8 0 10 6 q-6 4 -10 -6 Z" fill="#1fb85a" stroke="' + K + '" stroke-width="2"/>' +
+      // the pin
+      '<path d="M40 66 C28 48 24 42 24 32 A16 16 0 1 1 56 32 C56 42 52 48 40 66 Z" fill="#ff3d8b"' + S + '/>' +
+      '<circle cx="40" cy="32" r="6" fill="#fff"' + S + '/>' +
+      outlined(122, 108, "5000", 18, "#ffd43b");
   },
   draw: function () {
     var bubble = function (x, y, w, t, fill, col) {

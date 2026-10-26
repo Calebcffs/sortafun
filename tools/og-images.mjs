@@ -25,7 +25,7 @@ const CARDS = {
   aim: ["Aim Trainer", "30 seconds. count the hits"], stopbar: ["Stop the Bar", "hit the green"], piano: ["Piano Rush", "tap the black tiles"], rhythm: ["Rhythm Rush", "tap it right on the beat"],
   race: ["Circuit Race", "3D racing in your browser"], sushi: ["Sushi Goes Round", "run the conveyor belt"],
   deeptime: ["Deep Time", "headphones on. lights off."], noclip: ["Noclip", "it hears you walking"], casino: ["Sorta Casino", "play money, real odds"], funstrike: ["Fun Strike", "free browser shooter"],
-  draw: ["Draw and Guess", "play with friends"], studio: ["Animation Studio", "make a flipbook"],
+  draw: ["Draw and Guess", "play with friends"], globe: ["Globe Guesser", "where in the world are you?"], studio: ["Animation Studio", "make a flipbook"],
   gallery: ["Animation Gallery", "flipbooks by players"], boards: ["Leaderboards", "today's top scores"],
   forum: ["The Forum", "arguing since 2003"], guest: ["Guestbook", "sign it!"], passport: ["Passport", "collect the stamps"],
   home: ["Sortafun", "daily puzzles, word games and more"],

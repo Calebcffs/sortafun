@@ -43,6 +43,7 @@
     "profile.html": ["Profile", "word"],
     "city.html": ["City Sandbox", "ppt"],
     "draw.html": ["Draw and Guess", "ppt"],
+    "globe.html": ["Globe Guesser", "ppt"],
     "casino.html": ["Sorta Casino", "excel"],
     "noclip.html": ["Noclip", "ppt"],
     "deeptime.html": ["Deep Time", "ppt"],

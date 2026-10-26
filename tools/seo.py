@@ -131,6 +131,9 @@ PAGES = {
     "draw.html": dict(name="draw and guess", kind="game", og="draw", list="online", genre=["Party", "Drawing"],
         title="Draw and Guess: Free Online Drawing Game for Friends",
         desc="One of you draws, the rest guess in the chat. Make a private room and send your friends the link. 2 to 8 players, free, no sign-up."),
+    "globe.html": dict(name="globe guesser", kind="game", og="globe", list="online", daily=True, genre=["Geography", "Party"],
+        title="Globe Guesser: Free Street View Geography Game",
+        desc="You get dropped somewhere on earth in street view. Look around, then pin the map where you think you are. Solo, a daily challenge, or a room with friends: party or duels. Free, no sign-up."),
 
     # --- art
     "flipbook.html": dict(name="animation studio", kind="game", og="studio", list="art", genre=["Art"],
@@ -175,7 +178,7 @@ LABEL = {
     "sides.html": "Four Sides", "puzzle.html": "Tile Slider", "grab.html": "Word Grab", "typing.html": "Typing Test",
     "crossword.html": "Crossword", "mines.html": "Minesweeper", "maze.html": "Cursor Maze", "reaction.html": "Reaction Time Test",
     "aim.html": "Aim Trainer", "stopbar.html": "Stop the Bar", "piano.html": "Piano Rush", "rhythm.html": "Rhythm Rush", "driving.html": "Circuit Race", "sushi.html": "Sushi Goes Round",
-    "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "flipbook.html": "Animation Studio",
+    "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "globe.html": "Globe Guesser", "flipbook.html": "Animation Studio",
     "anim-gallery.html": "Animation Gallery", "leaderboards.html": "Leaderboards", "forum.html": "The Forum",
     "guestbook.html": "Guestbook", "passport.html": "Passport",
 }
@@ -187,6 +190,13 @@ GROUPS = [("daily", "daily puzzles"), ("word", "word games"), ("puzzle", "puzzle
 # game code, keep them true when a game changes.
 # ---------------------------------------------------------------------------
 ABOUT = {
+    "globe.html": dict(h="how to play globe guesser", p=[
+        "you start somewhere on earth, standing in a street view picture. drag to look around and click the arrows on the road to walk. look for clues: which side people drive on, the language on the signs, the plants, the road lines, the number plates.",
+        "when you think you know, open the map in the corner, click where you think you are and press guess (or space). the closer your pin, the more points: up to 5000 a round, falling off fast the further away you are.",
+        "solo plays 5 places on the map you pick, with or without a time limit. the daily challenge is the same 5 places for everyone each day, 2 minutes a round, one go, with today's leaderboard."],
+        faq=[("can i play with friends?", "yes. make a room and send the link, up to 8 players. party mode: everyone gets the same places and the most points wins. duels: everyone starts on 6000 health and each round the best guess is safe while everyone else loses the gap in points, with the damage going up as the rounds go on."),
+             ("what does no move, pan or zoom mean?", "a harder setting: the picture is frozen. you can't walk, turn or zoom, so all you have is the first view."),
+             ("where do the pictures come from?", "Google street view, shown through Google's own embedded viewer. every place is a spot on a public road that Google's car has driven.")]),
     "rhythm.html": dict(h="how to play rhythm rush", p=[
         "pick a level and the song plays in the video above the board. notes fall down four lanes to the white line. tap a note's lane just as it reaches the line: on a phone tap the lane, on a keyboard use D F J K.",
         "every tap is scored on how close it lands. within 25 milliseconds is perfect and worth the most, then great, good and ok are worth less and less. a note you let past is a miss, and a tap on an empty lane is a stray that breaks your combo.",

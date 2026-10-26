@@ -120,7 +120,7 @@ Game keys: `typing`, `typing1000`, `driving` (retired), `puzzle`, `circuit`,
 2026-09-28 with the basement), `hive`,
 `five`, `sides`, `grab`, `deeptime`, `taka` (archived 2026-10-06), `deeptime2`,
 `sudoku` (daily total, a live row like the hive's), `piano` (piano rush endless,
-tiles), `pianoday` (piano rush today's song, ms, low), `noclip` (levels escaped x 10000 - seconds) and `casino` (the day's play-money balance, a live row that
+tiles), `pianoday` (piano rush today's song, ms, low), `globe` / `globeday` (globe guesser solo world map / today's challenge, points, high), `noclip` (levels escaped x 10000 - seconds) and `casino` (the day's play-money balance, a live row that
 may go down, capped at 1e12). The enum
 lives in `firestore.rules`
 (`isValidScore` + `isLowGame`) and in `leaderboard.js` (`GAMES`) — keep them in

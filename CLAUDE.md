@@ -1720,6 +1720,45 @@ The homepage has an **Online** filter chip (`cat: "online"`, colour
 `--online` / `body.k-online` in `game.css`); Fun Strike and Draw and Guess
 are in it (City Sandbox was, until it was archived 2026-10-06).
 
+### Globe Guesser (`globe.html` + `globe/locs.js` + `tools/globe/`, 2026-10-26, v0.19)
+
+Caleb asked for "a fully-featured, multiplayer clone" of the street view geography game, renamed (keep the
+real game's name out of all text: SEO rule). Homepage tile `globe` (cat online, mobile chip). Modes: **solo**
+(map, time limit, rounds, walk or no move/pan/zoom; only world + 5 rounds + walking submits to board `globe`),
+**daily challenge** (5 places from `mulberry32` of the SG day over `LOCS.slice(0, GLOBE_DAILY_N)`, 2 min a round,
+one go, progress in localStorage `sortafun-globe-day-<day>`: a round you started counts as 0 if you reload; board
+`globeday`), **rooms** (party: most points; duels: 6000 health, best guess safe, others lose the gap x
+`mult(n)` = 1, 1, 1.5, 2, ...; once anyone guesses the rest get 15 s). Score = 5000 x e^(-10 d / scale),
+scale = 14916.862 km on the world map, the region's bbox diagonal on the others (`SCALES`).
+
+- **Imagery is Google's keyless street view embed** (`maps.google.com/maps?layer=c&panoid=..&output=svembed`),
+  not the paid Maps API: no key, no bill, but unofficial, so Google could break it. If it breaks, the switch is
+  `panoSrc()` (one function) to the Maps JavaScript API with Caleb's own key. The embed draws an address card
+  in a fixed 154x66 box top left (it gives the answer away): `.cov` sits over it (our HUD chip, opaque, catches
+  clicks), `.blk` makes the bottom link strip unclickable ("Report a problem" opens Google Maps at the spot),
+  `.nmpz` covers everything for no move/pan/zoom. The road arrows can show a street name; left alone.
+- **Places** (`globe/locs.js`, `[lat, lng, pano id, country]`, **append-only**: rooms and the daily refer to
+  places by index; swap a dead pano in place, never delete or reorder) come from `tools/globe/gen.mjs`: a
+  random GeoNames town (cities1000.txt, weighted by country `W`) + up to 4 km offset -> OSRM demo server
+  `nearest` (keep to 1 request/s, it's a shared free server) -> loads the keyless embed for that point in
+  headless Chrome (`frame.html` served on :8765, `--disable-site-isolation-trials` so the iframe's context
+  is reachable) and reads the "View on Google Maps" link: pano id, exact coords, `!2e0` = Google's own car
+  (user photospheres are `!2e10`, rejected). ~1 good place a second with 4 tabs. Then
+  `node tools/globe/build-locs.mjs <locs.jsonl> <countryInfo.txt>`. The country is the sampled town's, so a
+  place within a few km of a border can be labelled with the neighbour.
+- Guess + results maps are Leaflet 1.9.4 (cdnjs) on **OpenStreetMap's own tiles** (CARTO's free basemaps
+  started demanding a key: tiles say "API KEY REQUIRED"). game.css's img rules are reset inside
+  `.leaflet-container`.
+- **Rooms** copy Draw and Guess: RTDB `globe/rooms/<CODE>/` (shape in the page's module comment, rules in
+  `database.rules.json`), own named app "globe" with per-tab anonymous sign-in, host = earliest `j`, every meta
+  change a transaction guarded on `n` + `st`, **scores and health never stored**: everyone works them out
+  from `guesses/<g>/<n>/<uid>` (write-once). The host can skip a place that won't load (swaps that index in
+  `locs`, deletes that round's guesses). Rooms are never purged automatically (small).
+- Tests (session scratchpad, CDP against live RTDB, names `test-? (ignore)`): `roomtest.mjs` (3 browsers,
+  party, real map clicks, totals agree), `dueltest.mjs`, `solotest.mjs`, `dailytest.mjs`, `phonetest.mjs`;
+  `rtdbclean.mjs list|del` removes test rooms with the admin key. Test hook `window.__globe` (`state()`,
+  `guessAt(lat, lng)`, `dailyLocs()`).
+
 ### Search engines + link previews (`tools/seo.py`, v0.11, 2026-10-06)
 
 Caleb's ask: as many visits as possible. **`python tools/seo.py`, then `tools/stamp.py`.** One table

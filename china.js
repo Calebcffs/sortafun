@@ -236,6 +236,14 @@
     "body camera footage from the storm drains under harlan, montana, october 2026. dogs have been going missing. so did the sewer crew that went down to look. collect five samples and find out what's living down there.": "2026年10月，蒙大拿哈兰地下雨水管道的执法记录仪录像。狗不断失踪，下去查看的下水道工人也失踪了。收集五个样本，查明下面住着什么。",
     "turn your phone sideways": "请把手机横过来", "volume": "音量", "brightness": "亮度", "picture": "画面", "look": "视角", "resume": "继续", "eject": "弹出", "signal lost": "信号丢失",
     "draw and guess": "你画我猜", "one person draws, everyone else guesses in the chat. guess fast for more points, and the artist scores when you get it. 2 to 8 players: make a room and send your friends the link.": "一个人画，其他人在聊天里猜。猜得越快得分越多，你猜对了画的人也得分。2到8名玩家：开个房间，把链接发给朋友。",
+    "globe guesser": "环球猜猜看", "solo": "单人", "daily challenge": "每日挑战", "play with friends": "和朋友一起玩", "map": "地图",
+    "time a round": "每轮时间", "moving": "移动", "rounds": "轮数", "no limit": "不限时", "walk around": "可以走动", "no move, pan or zoom": "不能走动、转动或缩放",
+    "no picture? skip": "没有画面？换一个", "guess": "猜", "place your pin on the map": "在地图上放下你的图钉", "next round": "下一轮", "see the summary": "查看总结",
+    "change settings": "更改设置", "today's challenge": "今日挑战", "the world": "全世界", "europe": "欧洲", "the americas": "美洲", "asia": "亚洲", "africa": "非洲",
+    "australia + nz": "澳大利亚和新西兰", "united states": "美国", "brazil": "巴西", "russia": "俄罗斯", "canada": "加拿大", "japan": "日本", "france": "法国",
+    "uk + ireland": "英国和爱尔兰", "india": "印度", "party (most points)": "派对（得分最多）", "duels (6000 health)": "对决（6000生命值）", "see who won": "看看谁赢了",
+    "guessed. waiting for the others": "已猜。等其他人", "time's up": "时间到", "watching": "观战中", "you're out. watching": "你出局了。观战中",
+    "you get dropped somewhere on earth in street view. look around, walk down the road, read the signs, then put a pin on the map where you think you are. the closer you are, the more points, up to 5000 a round. play alone, take today's challenge, or make a room for up to 8 friends.": "你会被随机丢到地球上某个地方的街景里。四处看看，沿着路走走，读读路牌，然后在地图上把图钉放在你觉得的位置。越近得分越高，每轮最多5000分。可以单人玩、挑战今日题目，或者开个房间和最多8个朋友一起玩。",
     "make a room": "创建房间", "or join a friend's room": "或加入朋友的房间", "join": "加入", "lobby": "大厅", "pen": "画笔", "fill": "填充", "eraser": "橡皮", "undo": "撤销", "send": "发送",
     "room": "房间", "copy invite link": "复制邀请链接", "leave room": "离开房间",
     "circuit race": "赛道竞速", "drive to the start/finish line to begin, collect every glowing checkpoint gem in order, then cross the line again to set a lap time, and keep going, every lap after that starts right away. feel free to leave the road, nothing stops you, grass is just a little slower. steer, gas / brake, shift to boost, ctrl to drift.": "开到起终点线开始，按顺序收集每个发光的检查点宝石，再次越过终点线记录单圈时间，然后继续，之后每一圈立刻开始。可以随便离开道路，没人拦你，草地只是稍慢一点。转向，油门/刹车，Shift加速，Ctrl漂移。",
@@ -423,6 +431,7 @@
     "sushi goes round, lunch rush - most yen": "回转寿司，午餐高峰：社会信用最高",
     ": new: sushi goes round. you run a conveyor belt sushi bar. roll what each customer asks for, send it round the belt, phone the supplier before the salmon runs out, and pour sake on anyone about to storm off. career mode, endless service and a daily lunch rush with its own leaderboards.": "：新游戏：回转寿司。你来经营一家回转寿司店。按每位顾客点的菜卷寿司，送上传送带，三文鱼用完之前打电话向供应商订货，谁快要气走就给谁倒杯清酒。有生涯模式、无尽营业和每日午餐高峰，各有自己的社会信用榜。",
     "twenty games, two of them online with friends. your best today lands on the leaderboards.": "二十个游戏，其中两个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
+    "twenty-one games, three of them online with friends. your best today lands on the leaderboards.": "二十一个游戏，其中三个可以和朋友联机。你今天的最佳成绩会进入社会信用榜。",
   });
 
   // every scoreboard says social credits, so every "score" (分数) in the lines above is too
