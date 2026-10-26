@@ -1724,7 +1724,7 @@ are in it (City Sandbox was, until it was archived 2026-10-06).
 
 Caleb asked for "a fully-featured, multiplayer clone" of the street view geography game, renamed (keep the
 real game's name out of all text: SEO rule). Homepage tile `globe` (cat online, mobile chip). Modes: **solo**
-(map, time limit, rounds, walk or no move/pan/zoom; only world + 5 rounds + walking submits to board `globe`),
+(map, time limit, rounds, walk or no move/pan/zoom; only world + 5 rounds + walking + nothing skipped submits to board `globe`; one module-level `roundTimer`),
 **daily challenge** (5 places from `mulberry32` of the SG day over `LOCS.slice(0, GLOBE_DAILY_N)`, 2 min a round,
 one go, progress in localStorage `sortafun-globe-day-<day>`: a round you started counts as 0 if you reload; board
 `globeday`), **rooms** (party: most points; duels: 6000 health, best guess safe, others lose the gap x
@@ -1752,7 +1752,7 @@ scale = 14916.862 km on the world map, the region's bbox diagonal on the others 
 - **Rooms** copy Draw and Guess: RTDB `globe/rooms/<CODE>/` (shape in the page's module comment, rules in
   `database.rules.json`), own named app "globe" with per-tab anonymous sign-in, host = earliest `j`, every meta
   change a transaction guarded on `n` + `st`, **scores and health never stored**: everyone works them out
-  from `guesses/<g>/<n>/<uid>` (write-once). The host can skip a place that won't load (swaps that index in
+  from `guesses/<g>/<n>/<uid>` (write-once). The host can end a round early (`#endr`, for an idle player in a no-limit room) or skip a place that won't load (swaps that index in
   `locs`, deletes that round's guesses). Rooms are never purged automatically (small).
 - Tests (session scratchpad, CDP against live RTDB, names `test-? (ignore)`): `roomtest.mjs` (3 browsers,
   party, real map clicks, totals agree), `dueltest.mjs`, `solotest.mjs`, `dailytest.mjs`, `phonetest.mjs`;

@@ -238,7 +238,7 @@
     "draw and guess": "你画我猜", "one person draws, everyone else guesses in the chat. guess fast for more points, and the artist scores when you get it. 2 to 8 players: make a room and send your friends the link.": "一个人画，其他人在聊天里猜。猜得越快得分越多，你猜对了画的人也得分。2到8名玩家：开个房间，把链接发给朋友。",
     "globe guesser": "环球猜猜看", "solo": "单人", "daily challenge": "每日挑战", "play with friends": "和朋友一起玩", "map": "地图",
     "time a round": "每轮时间", "moving": "移动", "rounds": "轮数", "no limit": "不限时", "walk around": "可以走动", "no move, pan or zoom": "不能走动、转动或缩放",
-    "no picture? skip": "没有画面？换一个", "guess": "猜", "place your pin on the map": "在地图上放下你的图钉", "next round": "下一轮", "see the summary": "查看总结",
+    "no picture? skip": "没有画面？换一个", "end the round": "结束本轮", "guess": "猜", "place your pin on the map": "在地图上放下你的图钉", "next round": "下一轮", "see the summary": "查看总结",
     "change settings": "更改设置", "today's challenge": "今日挑战", "the world": "全世界", "europe": "欧洲", "the americas": "美洲", "asia": "亚洲", "africa": "非洲",
     "australia + nz": "澳大利亚和新西兰", "united states": "美国", "brazil": "巴西", "russia": "俄罗斯", "canada": "加拿大", "japan": "日本", "france": "法国",
     "uk + ireland": "英国和爱尔兰", "india": "印度", "party (most points)": "派对（得分最多）", "duels (6000 health)": "对决（6000生命值）", "see who won": "看看谁赢了",

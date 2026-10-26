@@ -180,8 +180,8 @@
   .lbwrap { margin-top: 14px; }
 </style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=f73530b2"></script>
-<script src="feedback.js?v=711fb66f"></script>
+<script src="china.js?v=c7758ff9"></script>
+<script src="feedback.js?v=1e93ee6f"></script>
 <script src="panic-app.js?v=56ca46e5"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -236,6 +236,7 @@
           <div class="tools">
             <button class="tb" id="home" title="back to where you started">&#8634; back to start</button>
             <button class="tb dim" id="skip" title="the picture won't load? get another place">no picture? skip</button>
+            <button class="tb" id="endr" hidden title="stop waiting and show the answer">end the round</button>
             <button class="tb dim" id="fsb">full screen</button>
           </div>
           <div class="gmap" id="gmap">
@@ -578,6 +579,7 @@ function enterPlay(room) {
   gmap(); setTimeout(() => GM.invalidateSize(), 50);
   sfx("whoosh");
 }
+let roundTimer = null; // the solo round clock (one at a time: skip starts a new round)
 function localTotal() { return S.res.reduce((a, r) => a + r.pts, 0); }
 function localRound() {
   const n = S.res.length; // rounds done
@@ -591,10 +593,11 @@ function localRound() {
     S.res.push({ loc: i, lat: null, lng: null, d: null, pts: 0 }); dailySave(); S.res.pop();
   }
   setGuessable(true);
-  let timer = end ? setTimeout(() => { if (canGuess) { setGuessable(false, "time's up"); finish(pin ? pin.getLatLng() : null); } }, S.ts * 1000 + 50) : null;
+  clearTimeout(roundTimer);
+  roundTimer = end ? setTimeout(() => { if (canGuess) { setGuessable(false, "time's up"); finish(pin ? pin.getLatLng() : null); } }, S.ts * 1000 + 50) : null;
   onGuess = (lat, lng) => finish({ lat, lng });
   function finish(ll) {
-    clearTimeout(timer); clockFn = null; onGuess = null;
+    clearTimeout(roundTimer); clockFn = null; onGuess = null;
     const l = LOCS[i];
     let r = { loc: i, lat: null, lng: null, d: null, pts: 0 };
     if (ll) { const lng = ((ll.lng + 540) % 360) - 180, d = km(l[0], l[1], ll.lat, lng); r = { loc: i, lat: ll.lat, lng, d, pts: points(d, S.mp) }; }
@@ -610,7 +613,7 @@ $("skip").addEventListener("click", () => {
   if (!S || S.kind !== "solo" || !canGuess) return;
   const n = S.res.length, nu = pickN(POOLS[S.mp], 1, Math.random, S.idx)[0];
   if (nu == null) return;
-  S.idx[n] = nu; localRound();
+  S.idx[n] = nu; S.skipped = true; localRound();
 });
 function showLocalReveal(r) {
   drawResults([{ loc: r.loc, guesses: [{ lat: r.lat, lng: r.lng, col: "#ff3d8b", name: cleanName(nm.value) || "you" }] }]);
@@ -630,12 +633,12 @@ function showLocalFinal() {
   hud("game over", fmt(total), "out of " + fmt(5000 * S.rds));
   let rows = "";
   S.res.forEach((r, k) => { rows += "<tr><td>" + (k + 1) + "</td><td>" + esc(country(r.loc)) + "</td><td>" + (r.d == null ? "-" : fmtDist(r.d)) + "</td><td><b>" + fmt(r.pts) + "</b></td></tr>"; });
-  const board = S.kind === "daily" || (S.mp === "world" && S.rds === 5 && S.mv === 0);
+  const board = S.kind === "daily" || (S.mp === "world" && S.rds === 5 && S.mv === 0 && !S.skipped);
   resCard(
     '<div class="big">' + fmt(total) + "<small>out of " + fmt(5000 * S.rds) + "</small></div>" +
     "<table><tr><th>#</th><th>where</th><th>off by</th><th>points</th></tr>" + rows + "</table>" +
     '<div class="wide">' + (S.kind === "daily" ? '<button class="go alt" data-a="menu">back</button>' : '<button class="go" data-a="again">play again</button> <button class="go alt" data-a="menu">change settings</button>') + "</div>" +
-    (board ? "" : '<p class="muted wide">only the world map, 5 rounds, walking allowed, goes on the board.</p>'));
+    (board ? "" : '<p class="muted wide">' + (S.skipped ? "a game with a skipped place doesn't go on the board." : "only the world map, 5 rounds, walking allowed, goes on the board.") + '</p>'));
   $("res").classList.add("final");
   $("rescard").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     $("res").classList.remove("final");
@@ -649,6 +652,7 @@ function showLocalFinal() {
   sfx("whoosh");
 }
 function backToMenu() {
+  clearTimeout(roundTimer);
   mode = null; S = null; clockFn = null; onGuess = null; canGuess = false;
   $("sv").src = "about:blank"; curLoc = -1;
   $("play").hidden = true; $("menu").hidden = false; $("how").hidden = false;
@@ -853,6 +857,10 @@ async function startGame() {
   try { await C.D.remove(R("guesses")); } catch (e) { console.warn(e); }
   await step(meta.n, meta.st, (cur) => ({ st: "play", g: cur.g + 1, n: 1, mp, locs: locs.join(","), ord: ps.join(","), dl: cur.ts ? Math.floor(C.now() + cur.ts * 1000 + 1500) : 0 }));
 }
+$("endr").addEventListener("click", () => {
+  if (!amHost() || !meta || meta.st !== "play") return;
+  step(meta.n, "play", () => ({ st: "reveal", dl: Math.floor(C.now() + REVEAL_MS) }));
+});
 function roomSkip() { // host only: this place won't load, swap it
   if (!amHost() || !meta || meta.st !== "play") return;
   const ls = locsOf(), n = meta.n, nu = pickN(POOLS[meta.mp] || POOLS.world, 1, Math.random, ls)[0];
@@ -879,6 +887,7 @@ function render() {
   const isNew = key !== shownKey;
   shownKey = key;
   $("skip").hidden = !(amHost() && st === "play");
+  $("endr").hidden = !(amHost() && st === "play");
   if (st === "lobby") { if (isNew) { $("sv").src = "about:blank"; curLoc = -1; clockFn = null; $("res").hidden = true; } lobbyCard(); return; }
   if (st === "play") {
     $("over").hidden = true;
