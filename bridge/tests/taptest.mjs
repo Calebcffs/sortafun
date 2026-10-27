@@ -1,0 +1,122 @@
+import { launch, sleep } from "./cdp.mjs";
+const S = process.argv[2], URL = "http://127.0.0.1:8642/bridge.html";
+const c = await launch(9334, S + "/prof2");
+let ok = true;
+const check = (name, cond, extra) => { console.log((cond ? "PASS " : "FAIL ") + name + (extra ? "  " + extra : "")); if (!cond) ok = false; };
+const pt = async (x, y) => c.ev(`(() => { document.getElementById("cv").scrollIntoView({block:"center"}); return __bridge.toScreen(${x}, ${y}); })()`);
+const members = async () => c.ev(`__bridge.state().design.members.map(m => m.a + ">" + m.b + ":" + m.type + (m.r ? "+" : ""))`);
+const rectOf = (sel) => c.ev(`(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+const key = async (k, code, vk, mod = 0) => {
+  await c.send("Input.dispatchKeyEvent", { type: "keyDown", key: k, code, windowsVirtualKeyCode: vk, modifiers: mod });
+  await c.send("Input.dispatchKeyEvent", { type: "keyUp", key: k, code, windowsVirtualKeyCode: vk, modifiers: mod });
+};
+const click = async (p, button = "left") => {
+  await c.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: p.x, y: p.y });
+  await c.send("Input.dispatchMouseEvent", { type: "mousePressed", x: p.x, y: p.y, button, buttons: button === "left" ? 1 : 2, clickCount: 1 });
+  await c.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: p.x, y: p.y, button, buttons: 0, clickCount: 1 });
+  await sleep(60);
+};
+
+// ---- mouse (desktop) ----
+await c.nav(URL);
+await c.ev(`localStorage.removeItem("sortafun-bridge-v1"); location.reload(); 1`); await sleep(1200);
+await click(await rectOf('.lcard[data-id="1"]'));
+check("card click opens level 1", (await c.ev(`__bridge.state().level`)) === 1 && (await c.ev(`__bridge.state().screen`)) === "game");
+await click(await pt(0, 0)); await click(await pt(2, 1));
+let m = await members();
+check("mouse: tap anchor (0,0) then (2,1) makes a beam", m.length === 1 && m[0] === "0,0>2,1:beam", JSON.stringify(m));
+check("chaining: start moved to 2,1", JSON.stringify(await c.ev(`__bridge.state().start`)) === '{"x":2,"y":1}');
+await click(await pt(4, 1));
+m = await members();
+check("mouse: chained tap to (4,1)", m.length === 2 && m[1] === "2,1>4,1:beam", JSON.stringify(m));
+await click(await pt(4, 1));
+check("tap same point lets go", (await c.ev(`__bridge.state().start`)) === null);
+await click(await pt(0, 0)); await click(await pt(5, 3));
+check("too long (5.8 m beam) refused", (await members()).length === 2, await c.ev(`document.getElementById("toast").textContent`));
+await key("Escape", "Escape", 27);
+check("esc lets go", (await c.ev(`__bridge.state().start`)) === null);
+const a = await pt(4, 1), b = await pt(6, 0);
+await c.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: a.x, y: a.y });
+await c.send("Input.dispatchMouseEvent", { type: "mousePressed", x: a.x, y: a.y, button: "left", buttons: 1, clickCount: 1 });
+for (let i = 1; i <= 6; i++) await c.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: a.x + (b.x - a.x) * i / 6, y: a.y + (b.y - a.y) * i / 6, buttons: 1 });
+await c.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: b.x, y: b.y, button: "left", buttons: 0, clickCount: 1 });
+await sleep(60);
+m = await members();
+check("mouse drag 4,1 -> 6,0", m.length === 3 && m[2] === "4,1>6,0:beam", JSON.stringify(m));
+await click(await rectOf('[data-tool="reinforce"]'));
+await click(await pt(1, 0.5));
+m = await members();
+check("reinforce toggles member 0", m[0] === "0,0>2,1:beam+", JSON.stringify(m));
+await key("z", "KeyZ", 90, 2);
+m = await members();
+check("ctrl+z undoes the reinforce", m[0] === "0,0>2,1:beam", JSON.stringify(m));
+await click(await rectOf('[data-tool="delete"]'));
+await click(await pt(2, 1));
+m = await members();
+check("delete node 2,1 removes its members", m.length === 1 && m[0] === "4,1>6,0:beam", JSON.stringify(m));
+const s0 = await c.ev(`__bridge.state().cam.s`);
+const mid = await pt(3, 0);
+await c.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: mid.x, y: mid.y, deltaX: 0, deltaY: -300 });
+await sleep(80);
+const s1 = await c.ev(`__bridge.state().cam.s`);
+check("wheel zooms in", s1 > s0 * 1.2, s0.toFixed(1) + " -> " + s1.toFixed(1));
+const cx0 = await c.ev(`__bridge.state().cam.cx`);
+await c.send("Input.dispatchMouseEvent", { type: "mousePressed", x: mid.x, y: mid.y, button: "right", buttons: 2, clickCount: 1 });
+await c.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: mid.x + 80, y: mid.y, buttons: 2 });
+await c.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: mid.x + 80, y: mid.y, button: "right", buttons: 0, clickCount: 1 });
+await sleep(60);
+const cx1 = await c.ev(`__bridge.state().cam.cx`);
+check("right drag pans", Math.abs(cx1 - cx0 - 80) < 1, (cx1 - cx0).toFixed(1));
+check("design autosaved", (await c.ev(`JSON.parse(localStorage.getItem("sortafun-bridge-v1")).levels["1"].design.members.length`)) === 1);
+// test is blocked by errors: make an over-budget design
+const blocked = await c.ev(`(() => { const L = TrussLevels[0]; const d = JSON.parse(JSON.stringify(L.ref)); d.members.forEach(m => m.r = true); d.members.forEach(m => m.r = true); return 1; })()`);
+// pass flow with the ref design, clicking the real Test button
+await c.ev(`__bridge.setDesign(TrussLevels[0].ref); 1`);
+await click(await rectOf("#bTest"));
+check("test button starts a test", (await c.ev(`__bridge.state().mode`)) === "test");
+await c.ev(`(() => { for (let i = 0; i < 3000 && !__bridge.state().result; i++) __bridge.step(1); return 1; })()`);
+const st = await c.ev(`(() => { const s = __bridge.state(); return { r: s.result && s.result.pass, ov: s.overlay, save: s.save.levels["1"] }; })()`);
+check("level 1 ref passes, overlay shows, stars saved", st.r === true && st.ov && st.save.stars >= 1, JSON.stringify({ stars: st.save.stars, best: st.save.best }));
+await c.ev(`document.getElementById("stage").scrollIntoView({block:"center"}); 1`);
+await c.shot(S + "/shots/6-result-l1.png");
+await click(await rectOf('#ov button[data-a="edit"]'));
+check("keep building returns to build with the design", (await c.ev(`__bridge.state().mode`)) === "build" && (await members()).length === TrussLevelsLen(await c.ev(`TrussLevels[0].ref.members.length`)));
+function TrussLevelsLen(n) { return n; }
+await click(await rectOf("#bLevels"));
+check("level 2 unlocked on select screen", (await c.ev(`document.querySelector('.lcard[data-id="2"]').disabled`)) === false);
+await c.shot(S + "/shots/7-select-after-pass.png");
+
+// ---- touch (phone width) ----
+await c.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+await c.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+await c.ev(`localStorage.removeItem("sortafun-bridge-v1"); location.reload(); 1`); await sleep(1500);
+await c.ev(`__bridge.load(1); 1`); await sleep(100);
+const tapT = async (p) => {
+  await c.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: p.x, y: p.y, id: 1 }] });
+  await sleep(40);
+  await c.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await sleep(80);
+};
+const p1 = await pt(6, 0), p2 = await pt(4, 1);
+await tapT(p1); await tapT(p2);
+m = await members();
+check("touch: tap anchor (6,0) then (4,1) makes a beam", m.length === 1 && m[0] === "6,0>4,1:beam", JSON.stringify(m) + " at " + JSON.stringify([p1, p2].map(p => [Math.round(p.x), Math.round(p.y)])));
+await tapT(await pt(2, 1));
+m = await members();
+check("touch: chained tap to (2,1)", m.length === 2 && m[1] === "4,1>2,1:beam", JSON.stringify(m));
+const sA = await c.ev(`__bridge.state().cam.s`), cen = await pt(3, 0);
+await c.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: cen.x - 40, y: cen.y, id: 1 }] });
+await c.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: cen.x - 40, y: cen.y, id: 1 }, { x: cen.x + 40, y: cen.y, id: 2 }] });
+for (let i = 1; i <= 5; i++) { await c.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: cen.x - 40 - i * 12, y: cen.y, id: 1 }, { x: cen.x + 40 + i * 12, y: cen.y, id: 2 }] }); await sleep(20); }
+await c.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await sleep(100);
+const sB = await c.ev(`__bridge.state().cam.s`);
+check("pinch zooms", sB > sA * 1.4, sA.toFixed(1) + " -> " + sB.toFixed(1));
+check("pinch made no members", (await members()).length === 2, JSON.stringify(await members()));
+const vw = await c.ev(`({ sw: document.documentElement.scrollWidth, iw: innerWidth })`);
+check("no horizontal scroll at 390", vw.sw <= vw.iw, JSON.stringify(vw));
+const small = await c.ev(`[...document.querySelectorAll(".tools button")].filter(b => b.offsetParent).map(b => Math.round(b.getBoundingClientRect().height)).filter(h => h < 40)`);
+check("toolbar buttons >= 40px tall", small.length === 0, JSON.stringify(small));
+console.log(c.logs.filter((l) => !l.includes("[chat]")).join("\n"));
+console.log(ok ? "ALL PASS" : "SOME FAILED");
+c.close(); process.exit(0);

@@ -770,6 +770,13 @@ buy at bestAsk, valued/sold at bestBid, resolution pays 1/0, grim topics filtere
 predict.js. Positions live in the game's save and are valued in `boot` so they count from the lobby.
 Test hooks `window.__trader` / `__predict` / `__feeds`.
 
+### Truss Me (`bridge.html` + `bridge/`, 2026-10-27, not public yet)
+
+Bridge-building physics puzzle, **hidden while it's built** (seo.py `index: False`, no homepage tile, no
+leaderboard, no version bump yet). Paused after step 2 of 3 at Caleb's ask. **Read `bridge/HANDOFF.md`**
+(status, Caleb's design answers, what's left, launch checklist) and `bridge/SPEC.md` (the contract) before
+touching it. Engine checks: `node tools/bridge-sim.mjs --checks`.
+
 ### Noclip (`noclip.html` + `noclip/`, 2026-10-25, v0.17)
 
 **Hidden 2026-10-25 (v0.17.1, Caleb's ask, right after it went live):** off the homepage (GAMES row and

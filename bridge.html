@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>truss me &middot; SORTAFUN.ORG</title>
+<meta name="sortafun:name" content="truss me">
+<meta name="robots" content="noindex">
+<!-- /seo -->
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=2cfb0408">
+<style>
+  .wrap.tm { max-width: 1000px; }
+  .tm [hidden] { display: none !important; }
+
+  /* ---------- level select ---------- */
+  .tm-lead { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; text-align: left; }
+  .lcard {
+    position: relative; display: flex; flex-direction: column; gap: 4px;
+    min-height: 132px; padding: 10px 12px 10px; margin: 0;
+    background: linear-gradient(#fff, #eef2ff); border: 3px solid var(--ink); border-radius: 14px;
+    box-shadow: 0 4px 0 var(--ink); text-align: left; font-weight: 400; cursor: pointer;
+  }
+  .lcard:hover { background: linear-gradient(#fffbe0, #ffe9a0); transform: translateY(-2px); }
+  .lcard .num {
+    position: absolute; top: -3px; right: -3px; width: 38px; height: 38px; display: grid; place-items: center;
+    font: 400 20px var(--chunky); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.3);
+    background: linear-gradient(var(--accent2), var(--accent)); border: 3px solid var(--ink); border-radius: 0 12px 0 12px;
+  }
+  .lcard .nm { font: 400 19px/1.1 var(--chunky); padding-right: 40px; letter-spacing: .3px; }
+  .lcard .th { display: block; width: 100%; height: 46px; border: 2px solid var(--ink); border-radius: 8px; margin: 2px 0; }
+  .lcard.locked .th { opacity: .4; }
+  .lcard .ht { font-size: 11.5px; line-height: 1.35; color: var(--muted); flex: 1; }
+  .lcard .ft { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; font-weight: 700; }
+  .lcard.locked { background: repeating-linear-gradient(135deg, #eceef5 0 10px, #e2e5ee 10px 20px); cursor: default; box-shadow: 0 4px 0 #8a879c; border-color: #8a879c; color: #8a879c; }
+  .lcard.locked:hover { transform: none; }
+  .lcard.locked .num { background: #a9a6b8; border-color: #8a879c; }
+  .lcard.done { background: linear-gradient(#f2fff4, #d8f7df); }
+  .stars { display: inline-flex; gap: 2px; vertical-align: middle; }
+  .stars svg { width: 18px; height: 18px; }
+  .stars svg path { fill: #e3e1ea; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+  .stars svg.on path { fill: #ffd43b; }
+  .tm-total { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+
+  /* ---------- game ---------- */
+  .tm-head { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; text-align: left; }
+  .tm-head .tm-back { flex: none; min-height: 40px; }
+  .tm-title { flex: 1; min-width: 0; }
+  .tm-title b { display: block; font: 400 21px/1.1 var(--chunky); letter-spacing: .3px; }
+  .tm-title span { display: block; font-size: 12px; color: var(--muted); }
+  .tm-hud { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: 20px 0 8px; font-size: 13px; text-align: left; }
+  .budget { flex: 1 1 260px; display: flex; align-items: center; gap: 8px; }
+  .bar { position: relative; flex: 1; height: 18px; border: 3px solid var(--ink); border-radius: 999px; background: #fff; overflow: visible; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 999px; background: linear-gradient(#7af0a3, #1fb85a); transition: width .15s; }
+  .bar.warn .fill { background: linear-gradient(#ffd38a, #ff9a3c); }
+  .bar.red .fill { background: linear-gradient(#ff9a8f, #e8443a); }
+  .bar .tick { position: absolute; top: -7px; bottom: -7px; width: 3px; margin-left: -1.5px; background: var(--ink); border-radius: 2px; }
+  .bar .tick b { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font: 700 10px var(--body); white-space: nowrap; color: var(--ink); }
+  .money { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .money.red { color: #d32f2f; }
+  .tm-hud .pill { padding: 3px 10px; border: 2px solid var(--ink); border-radius: 999px; background: var(--soft); font-weight: 700; white-space: nowrap; }
+
+  .stage {
+    position: relative; margin: 0 auto; border: 3px solid var(--ink); border-radius: 14px; overflow: hidden;
+    background: #b9e3ff; box-shadow: 0 5px 0 var(--ink);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .stage, .stage * { -webkit-tap-highlight-color: transparent; }
+  #cv { display: block; width: 100%; border: 0; border-radius: 0; background: none; touch-action: none; cursor: crosshair; }
+  #cv.pan { cursor: grab; }
+  .toast {
+    position: absolute; left: 50%; top: 10px; transform: translateX(-50%); max-width: 90%;
+    padding: 6px 14px; border: 3px solid var(--ink); border-radius: 999px; background: #fff3c4;
+    font-size: 13px; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .toast.show { opacity: 1; }
+  .corner {
+    position: absolute; right: 8px; bottom: 8px; z-index: 2; min-width: 44px; height: 40px; margin: 0; padding: 0 12px;
+    border-radius: 999px; font-size: 13px;
+  }
+  .runinfo {
+    position: absolute; left: 8px; top: 8px; z-index: 2; padding: 4px 10px; border: 2px solid var(--ink); border-radius: 999px;
+    background: rgba(255,255,255,.88); font-size: 12px; font-weight: 700; pointer-events: none;
+  }
+  .ov {
+    position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center;
+    background: rgba(29,27,46,.38); padding: 12px;
+  }
+  .ov .box {
+    width: min(360px, 100%); padding: 0 16px 16px; background: #fff; border: 3px solid var(--ink); border-radius: 16px;
+    box-shadow: 0 6px 0 var(--ink); overflow: hidden; animation: pop .28s ease-out;
+  }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .ov h2 { margin: 0 -16px 10px; padding: 9px 12px 8px; font: 400 26px var(--chunky); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.3); border-bottom: 3px solid var(--ink); }
+  .ov.win h2 { background: linear-gradient(#56d98a, #1fb85a); }
+  .ov.lose h2 { background: linear-gradient(#ff8a7a, #e8443a); }
+  .ov .bigstars svg { width: 46px; height: 46px; }
+  .ov .bigstars svg.on { animation: starpop .45s ease-out both; }
+  .ov .bigstars svg:nth-child(2) { animation-delay: .15s; } .ov .bigstars svg:nth-child(3) { animation-delay: .3s; }
+  @keyframes starpop { 0% { transform: scale(.2) rotate(-40deg); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+  .ov p { margin: 6px 0; font-size: 13px; }
+  .ov .btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+  .ov .btns button { min-height: 42px; }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin: 10px 0 0; }
+  .grp { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tools button { min-height: 44px; padding: 4px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; }
+  .tools button[aria-pressed="true"] { background: linear-gradient(#d9c4ff, #b27bff); box-shadow: 0 3px 0 var(--ink), inset 0 0 0 2px #fff; }
+  .tools button .lk { font-size: 10px; font-weight: 700; color: #6a6780; }
+  .sw { display: inline-block; width: 22px; height: 8px; border: 2px solid var(--ink); border-radius: 3px; }
+  .sw.road { height: 10px; background: #43404f; }
+  .sw.beam { background: #dd8a3a; }
+  .sw.cable { height: 2px; border-width: 1px; background: #2b2838; }
+  .sw.reinforce { background: #9a5f26; box-shadow: inset 0 2px 0 #ffc27a; height: 11px; }
+  .sw.delete { border: 0; width: auto; height: auto; font-weight: 900; color: #e8443a; font-size: 16px; line-height: 1; }
+  #bTest { min-width: 96px; font: 400 19px var(--chunky); letter-spacing: .5px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.3); background: linear-gradient(#56d98a, #1fb85a); }
+  #bTest.stop { background: linear-gradient(#ff8a7a, #e8443a); }
+  #bClear.sure { background: linear-gradient(#ff9a8f, #e8443a); color: #fff; }
+  #bSpeed { display: none; }
+  .testing #bSpeed { display: inline-flex; }
+  .testing .grp.mats button, .testing #bUndo, .testing #bClear { opacity: .45; pointer-events: none; }
+  .keys { margin: 8px 0 0; font-size: 12px; color: #6a6780; }
+  .keys kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 2px solid var(--ink); border-radius: 5px; background: #fff; font: 700 11px var(--body); color: var(--ink); }
+  @media (hover: none) { .keys { display: none; } }
+  .tm .sub { margin-top: 14px; text-align: left; max-width: none; }
+
+  @media (max-width: 680px) {
+    .stage { margin: 0 -12px; border-left: 0; border-right: 0; border-radius: 0; box-shadow: none; border-bottom-width: 3px; }
+    .tools { gap: 6px; }
+    .grp { width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .grp.acts { grid-template-columns: 1fr 1fr 2fr; }
+    .testing .grp.acts { grid-template-columns: 1fr 1fr 1fr 1.6fr; }
+    .tools button { padding: 3px 4px; font-size: 12px; flex-direction: column; gap: 3px; min-height: 48px; }
+    .tm-title b { font-size: 18px; }
+    .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .lcard { min-height: 124px; padding: 8px 9px; }
+    .lcard .nm { font-size: 16px; }
+    .lcard .th { display: block; width: 100%; height: 46px; border: 2px solid var(--ink); border-radius: 8px; margin: 2px 0; }
+  .lcard.locked .th { opacity: .4; }
+  .lcard .ht { font-size: 11px; }
+    .stars svg { width: 15px; height: 15px; }
+  }
+</style>
+<script src="sfx.js?v=5233b886"></script>
+<script src="china.js?v=c7758ff9"></script>
+<script src="feedback.js?v=1e93ee6f"></script>
+<script src="panic-app.js?v=56ca46e5"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-puzzle">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap tm">
+  <h1>truss me</h1>
+
+  <div id="select">
+    <p class="tm-lead">build a bridge, send the traffic over, try not to drop anyone in the river. pick a level.</p>
+    <div class="cards" id="cards"></div>
+    <p class="tm-total" id="total"></p>
+  </div>
+
+  <div id="game" hidden>
+    <div class="tm-head">
+      <button type="button" class="tm-back" id="bLevels">&larr; levels</button>
+      <div class="tm-title"><b id="lvName"></b><span id="lvHint"></span></div>
+    </div>
+    <div class="tm-hud">
+      <div class="budget">
+        <div class="bar" id="bar"><div class="fill" id="fill"></div><i class="tick" id="t3"><b>3 stars</b></i><i class="tick" id="t2"><b>2</b></i></div>
+        <span class="money" id="money"></span>
+      </div>
+      <span class="pill" id="memCount"></span>
+      <span class="pill" id="traffic"></span>
+    </div>
+    <div class="stage" id="stage" data-nosfx>
+      <canvas id="cv" width="600" height="360"></canvas>
+      <div class="runinfo" id="runinfo" hidden></div>
+      <div class="toast" id="toast"></div>
+      <button type="button" class="corner" id="bFit" title="reset the view">fit</button>
+      <div class="ov" id="ov" hidden></div>
+    </div>
+    <div class="tools" id="tools">
+      <div class="grp mats">
+        <button type="button" data-tool="road"><span class="sw road"></span><span>road</span></button>
+        <button type="button" data-tool="beam"><span class="sw beam"></span><span>beam</span></button>
+        <button type="button" data-tool="cable"><span class="sw cable"></span><span>cable</span></button>
+        <button type="button" data-tool="reinforce"><span class="sw reinforce"></span><span>reinforce</span></button>
+        <button type="button" data-tool="delete"><span class="sw delete">X</span><span>delete</span></button>
+      </div>
+      <div class="grp acts">
+        <button type="button" id="bUndo">undo</button>
+        <button type="button" id="bClear">clear</button>
+        <button type="button" id="bSpeed">x1</button>
+        <button type="button" id="bTest">test</button>
+      </div>
+    </div>
+    <p class="keys"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> materials, <kbd>R</kbd> reinforce, <kbd>X</kbd> delete, <kbd>ctrl</kbd>+<kbd>Z</kbd> undo, <kbd>T</kbd> test, <kbd>esc</kbd> let go. wheel zooms, right drag (or space drag) pans.</p>
+  </div>
+
+  <p class="sub"><b>how to play:</b> pick road, beam or cable, then tap a joint or an anchor (the yellow squares) and tap a grid dot to build a member there. you can also drag from a joint. vehicles only drive on road, and road can't span far on its own, so hold it up with triangles of beams. reinforce doubles a member's strength (and cost). hit test: members go green, yellow, red as they strain and snap at red. get every vehicle across to pass, spend less for more stars. two fingers pinch and pan on a phone.</p>
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+
+<script src="bridge/engine.js?v=ef14e891"></script>
+<script src="bridge/levels.js?v=462e36f6"></script>
+<script src="bridge/render.js?v=7b99abad"></script>
+<script>
+(function () {
+"use strict";
+
+var E = window.TrussEngine, LEVELS = (window.TrussLevels || []).slice().sort(function (a, b) { return a.id - b.id; });
+var SAVE_KEY = "sortafun-bridge-v1";
+var $ = function (id) { return document.getElementById(id); };
+var cv = $("cv"), stage = $("stage"), toastEl = $("toast"), ovEl = $("ov");
+var R = TrussRender.create(cv);
+var STAR_PATH = "M12 2.2l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.7z";
+
+function sfx(n) { try { if (window.SortafunSFX) SortafunSFX.play(n); } catch (e) {} }
+function sfxResult(n) { try { if (window.SortafunSFX) SortafunSFX.result(n); } catch (e) {} }
+function key(x, y) { return x + "," + y; }
+function parseKey(k) { var p = String(k).split(","); return { x: +p[0], y: +p[1] }; }
+function money(n) { return "$" + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function starsSvg(n, cls) {
+  var s = "";
+  for (var i = 0; i < 3; i++) s += '<svg viewBox="0 0 24 24" class="' + (i < n ? "on" : "") + '"><path d="' + STAR_PATH + '"/></svg>';
+  return '<span class="stars ' + (cls || "") + '">' + s + "</span>";
+}
+
+// ---------- saving ----------
+var save = { levels: {} };
+try {
+  var raw = localStorage.getItem(SAVE_KEY);
+  if (raw) { var sv = JSON.parse(raw); if (sv && typeof sv.levels === "object" && sv.levels) save = sv; }
+} catch (e) {}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+function rec(id) { return save.levels[String(id)] || null; }
+function recW(id) { var k = String(id); if (!save.levels[k]) save.levels[k] = { stars: 0, best: null, design: null }; return save.levels[k]; }
+function unlocked(i) { return i === 0 || ((rec(LEVELS[i - 1].id) || {}).stars || 0) > 0; }
+
+// ---------- level rules (same as the engine's cost() checks) ----------
+var level = null, anchorSet = {};
+function isAnchor(k) { return !!anchorSet[k]; }
+function legal(x, y) {
+  if (isAnchor(key(x, y))) return true;
+  var L = level;
+  if (x !== Math.round(x) || y !== Math.round(y)) return false;
+  if (x < -2 || x > L.gap + 2 || y < L.floorY + 1 || y > L.ceilY) return false;
+  var r = L.rock;
+  if (r && x > r.x0 && x < r.x1 && y < r.top) return false;
+  if (x < 0 && y < (L.leftY || 0)) return false;
+  if (x > L.gap && y < (L.rightY || 0)) return false;
+  return true;
+}
+function matUnlockLevel(t) {
+  for (var i = 0; i < LEVELS.length; i++) if ((LEVELS[i].materials || []).indexOf(t) >= 0) return LEVELS[i].id;
+  return null;
+}
+
+// a saved design may come from an older levels.js: keep only what still fits
+function sanitize(d) {
+  var out = { nodes: [], members: [] };
+  if (!d || !Array.isArray(d.nodes) || !Array.isArray(d.members)) return out;
+  var have = {}, k, i;
+  for (k in anchorSet) have[k] = 1;
+  for (i = 0; i < d.nodes.length; i++) {
+    var n = d.nodes[i];
+    if (!n || typeof n.x !== "number" || typeof n.y !== "number") continue;
+    k = key(n.x, n.y);
+    if (have[k] || !legal(n.x, n.y)) continue;
+    have[k] = 1; out.nodes.push({ x: n.x, y: n.y });
+  }
+  var pairs = {};
+  for (i = 0; i < d.members.length; i++) {
+    var m = d.members[i];
+    if (!m || !E.MATERIALS[m.type] || !have[m.a] || !have[m.b] || m.a === m.b) continue;
+    var pk = m.a < m.b ? m.a + "|" + m.b : m.b + "|" + m.a;
+    if (pairs[pk]) continue;
+    pairs[pk] = 1;
+    out.members.push({ a: String(m.a), b: String(m.b), type: m.type, r: !!m.r });
+  }
+  return prune(out);
+}
+function prune(d) {
+  var used = {};
+  d.members.forEach(function (m) { used[m.a] = 1; used[m.b] = 1; });
+  d.nodes = d.nodes.filter(function (n) { return used[key(n.x, n.y)]; });
+  return d;
+}
+function copyDesign(d) { return { nodes: d.nodes.map(function (n) { return { x: n.x, y: n.y }; }), members: d.members.map(function (m) { return { a: m.a, b: m.b, type: m.type, r: !!m.r }; }) }; }
+
+// ---------- game state ----------
+var screen = "select";
+var design = { nodes: [], members: [] };
+var undoStack = [];
+var tool = "beam";
+var start = null;          // {x,y} grid point a member starts from
+var hover = null;          // {x,y,bad}
+var hlMember = null;
+var mode = "build";
+var sim = null, preTest = null, brk = {}, lastBroken = 0, lastSnap = 0, result = null, resultShown = false;
+var acc = 0, lastFrame = 0, speed = 1, wallT = 0;
+var camMoved = false;
+
+function existsPoint(k) {
+  if (anchorSet[k]) return true;
+  for (var i = 0; i < design.nodes.length; i++) if (key(design.nodes[i].x, design.nodes[i].y) === k) return true;
+  return false;
+}
+function costNow() { return E.cost(level, design); }
+
+// ---------- level select ----------
+function showSelect() {
+  if (mode === "test") stopTest();
+  screen = "select";
+  $("game").hidden = true; $("select").hidden = false;
+  var html = "", tot = 0;
+  LEVELS.forEach(function (L, i) {
+    var r = rec(L.id) || {}, open = unlocked(i), st = r.stars || 0;
+    tot += st;
+    html += '<button type="button" class="lcard' + (open ? "" : " locked") + (st ? " done" : "") + '" data-id="' + L.id + '"' + (open ? "" : " disabled") + ">" +
+      '<span class="num">' + L.id + "</span>" +
+      '<span class="nm">' + esc(L.name) + "</span>" + thumb(L) +
+      '<span class="ht">' + (open ? esc(L.hint || "") : "pass level " + LEVELS[i - 1].id + " to open this one") + "</span>" +
+      '<span class="ft">' + starsSvg(st) + "<span>" + (r.best != null ? "best " + money(r.best) : open ? "gap " + L.gap + " m" : "locked") + "</span></span>" +
+      "</button>";
+  });
+  $("cards").innerHTML = html;
+  $("total").textContent = tot + " of " + LEVELS.length * 3 + " stars";
+}
+// a little side view of the level for its card
+function thumb(L) {
+  var lY = L.leftY || 0, rY = L.rightY || 0, hi = Math.max(lY, rY), lo = Math.min(lY, rY), i;
+  L.anchors.forEach(function (a) { hi = Math.max(hi, a.y); lo = Math.min(lo, a.y); });
+  if (L.rock) lo = Math.min(lo, L.rock.top);
+  hi += 2.5; lo = Math.max(L.floorY, lo - 3);
+  var x0 = -4, W = L.gap + 8, H = hi - (lo - 1.5);
+  function X(x) { return (x - x0).toFixed(2); }
+  function Y(y) { return (hi - y).toFixed(2); }
+  var bot = Y(lo - 1.5), out = '<svg class="th" viewBox="0 0 ' + W.toFixed(2) + " " + H.toFixed(2) + '" preserveAspectRatio="xMidYMin slice" aria-hidden="true">';
+  out += '<rect width="100%" height="100%" fill="#c4e8ff"/>';
+  out += '<rect x="' + X(0) + '" y="' + Y(lo - 0.3) + '" width="' + L.gap + '" height="2" fill="#3ea3d4"/>';
+  out += '<polygon fill="#d39b62" points="0,' + Y(lY) + " " + X(0) + "," + Y(lY) + " " + X(0) + "," + bot + " 0," + bot + '"/>';
+  out += '<polygon fill="#d39b62" points="' + X(L.gap) + "," + Y(rY) + " " + W + "," + Y(rY) + " " + W + "," + bot + " " + X(L.gap) + "," + bot + '"/>';
+  out += '<rect x="0" y="' + Y(lY) + '" width="' + X(0) + '" height="0.6" fill="#5cb845"/><rect x="' + X(L.gap) + '" y="' + Y(rY) + '" width="4" height="0.6" fill="#5cb845"/>';
+  if (L.rock) out += '<rect x="' + X(L.rock.x0) + '" y="' + Y(L.rock.top) + '" width="' + (L.rock.x1 - L.rock.x0) + '" height="' + (L.rock.top - lo + 2) + '" fill="#a39d97"/>';
+  for (i = 0; i < L.anchors.length; i++) out += '<rect x="' + (L.anchors[i].x - x0 - 0.35) + '" y="' + (hi - L.anchors[i].y - 0.35) + '" width="0.7" height="0.7" fill="#ffd43b" stroke="#1d1b2e" stroke-width="0.18"/>';
+  return out + "</svg>";
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+$("cards").addEventListener("click", function (e) {
+  var b = e.target.closest(".lcard");
+  if (!b || b.disabled) return;
+  openLevel(+b.getAttribute("data-id"));
+});
+
+// ---------- opening a level ----------
+function openLevel(id) {
+  var L = null;
+  for (var i = 0; i < LEVELS.length; i++) if (LEVELS[i].id === id) L = LEVELS[i];
+  if (!L) return false;
+  if (mode === "test") stopTest(true);
+  level = L;
+  anchorSet = {};
+  L.anchors.forEach(function (a) { anchorSet[key(a.x, a.y)] = 1; });
+  design = sanitize((rec(id) || {}).design);
+  undoStack = []; start = null; hover = null; hlMember = null; result = null;
+  var mats = L.materials || ["beam"];
+  if (mats.indexOf(tool) < 0 && tool !== "reinforce" && tool !== "delete") tool = mats.indexOf("beam") >= 0 ? "beam" : mats[0];
+  screen = "game";
+  $("select").hidden = true; $("game").hidden = false;
+  $("lvName").textContent = "level " + L.id + ": " + L.name;
+  $("lvHint").textContent = L.hint || "";
+  var tr = (L.vehicles || []).map(function (v) { return v.type; });
+  $("traffic").textContent = "traffic: " + (tr.length ? tr.join(", ") : "none");
+  ovEl.hidden = true;
+  layout(true);
+  R.setLevel(L);
+  camMoved = false;
+  updateTools(); updateHud(); draw();
+  return true;
+}
+
+// ---------- layout ----------
+function layout(force) {
+  if (screen !== "game") return;
+  var w = stage.clientWidth;
+  if (!w) return;
+  var h;
+  if (w >= 700) h = Math.round(w * 0.6);
+  else h = Math.round(Math.max(330, Math.min(w * 1.12, (window.innerHeight || 700) * 0.64)));
+  cv.style.height = h + "px";
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  R.resize(w, h, dpr);
+  if (!camMoved && level) R.fit();
+}
+window.addEventListener("resize", function () { layout(); draw(); });
+
+// ---------- HUD ----------
+function updateHud() {
+  if (!level) return;
+  var c = costNow(), b = level.budget || 1;
+  var f = Math.min(1, c.cost / b);
+  $("fill").style.width = (f * 100) + "%";
+  $("bar").className = "bar" + (f > 0.92 ? " red" : f > 0.8 ? " warn" : "");
+  $("money").textContent = money(c.cost) + " / " + money(b);
+  $("money").className = "money" + (c.cost > b ? " red" : "");
+  var t3 = $("t3"), t2 = $("t2");
+  t3.style.left = Math.min(100, level.stars.three / b * 100) + "%";
+  t2.style.left = Math.min(100, level.stars.two / b * 100) + "%";
+  t3.title = "3 stars at " + money(level.stars.three) + " or less";
+  t2.title = "2 stars at " + money(level.stars.two) + " or less";
+  $("memCount").textContent = "members " + c.members + " / " + level.maxMembers;
+}
+function updateTools() {
+  var mats = level ? level.materials || [] : [];
+  [].forEach.call(document.querySelectorAll("[data-tool]"), function (b) {
+    var t = b.getAttribute("data-tool");
+    var isMat = t === "road" || t === "beam" || t === "cable";
+    var locked = isMat && mats.indexOf(t) < 0;
+    b.disabled = locked;
+    var lk = b.querySelector(".lk");
+    if (locked) {
+      var at = matUnlockLevel(t);
+      if (!lk) { lk = document.createElement("span"); lk.className = "lk"; b.appendChild(lk); }
+      lk.textContent = at ? "lvl " + at : "locked";
+      b.title = t + " unlocks " + (at ? "on level " + at : "later");
+    } else { if (lk) lk.remove(); b.title = ""; }
+    b.setAttribute("aria-pressed", t === tool ? "true" : "false");
+  });
+  $("tools").classList.toggle("testing", mode === "test");
+  $("bTest").textContent = mode === "test" ? "stop" : "test";
+  $("bTest").classList.toggle("stop", mode === "test");
+  $("bSpeed").textContent = "x" + speed;
+  cv.classList.toggle("pan", mode === "test");
+}
+function setTool(t) {
+  if (mode === "test") return;
+  if ((t === "road" || t === "beam" || t === "cable") && (level.materials || []).indexOf(t) < 0) {
+    var at = matUnlockLevel(t);
+    toast(t + " is locked" + (at ? " until level " + at : ""));
+    return;
+  }
+  tool = t;
+  if (t === "reinforce" || t === "delete") start = null;
+  updateTools(); draw();
+}
+[].forEach.call(document.querySelectorAll("[data-tool]"), function (b) {
+  b.addEventListener("click", function () { setTool(b.getAttribute("data-tool")); });
+});
+
+var toastTimer = null;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2200);
+}
+
+// ---------- editing ----------
+function pushUndo() { undoStack.push(JSON.stringify(design)); if (undoStack.length > 300) undoStack.shift(); }
+function changed() {
+  var r = recW(level.id);
+  r.design = copyDesign(design);
+  persist();
+  updateHud(); draw();
+}
+function undo() {
+  if (mode !== "build" || !undoStack.length) return;
+  design = JSON.parse(undoStack.pop());
+  start = null;
+  changed();
+}
+function friendly(err, type) {
+  var mat = E.MATERIALS[type] || {};
+  switch (err.code) {
+    case "too_long": return (type || "member") + " can only be " + mat.maxLen + " m long";
+    case "over_budget": return "that would go over budget";
+    case "over_members": return "that's the most members this level allows (" + level.maxMembers + ")";
+    case "locked": return (type || "that") + " is locked on this level";
+    case "duplicate": return "those two are already joined";
+    case "in_rock": case "out_of_bounds": case "off_grid": return "can't build there";
+    default: return err.msg || "can't build that";
+  }
+}
+// try to add a member p -> q. returns {ok} or {ok:false, code, msg}
+function addMember(p, q, type) {
+  var ka = key(p.x, p.y), kb = key(q.x, q.y);
+  if (ka === kb) return { ok: false, code: "same", msg: "" };
+  if (!legal(q.x, q.y)) return { ok: false, code: "in_rock", msg: "can't build there" };
+  var cand = copyDesign(design), newNode = -1;
+  if (!existsPoint(kb)) { newNode = cand.nodes.length; cand.nodes.push({ x: q.x, y: q.y }); }
+  var idx = cand.members.length;
+  cand.members.push({ a: ka, b: kb, type: type, r: false });
+  var before = costNow(), after = E.cost(level, cand);
+  var err = null;
+  for (var i = 0; i < after.errors.length && !err; i++) {
+    var e = after.errors[i];
+    if (e.member === idx || (newNode >= 0 && e.node === newNode)) err = e;
+  }
+  if (!err && after.cost > level.budget && after.cost > before.cost) err = { code: "over_budget" };
+  if (!err && after.members > level.maxMembers) err = { code: "over_members" };
+  if (err) return { ok: false, code: err.code, msg: friendly(err, type) };
+  pushUndo();
+  design = cand;
+  sfx("tock");
+  changed();
+  return { ok: true };
+}
+function memberNear(wx, wy) {
+  var best = -1, bd = Math.max(0.3, 16 / R.s);
+  for (var i = 0; i < design.members.length; i++) {
+    var m = design.members[i], a = parseKey(m.a), b = parseKey(m.b);
+    var dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
+    var t = Math.max(0, Math.min(1, ((wx - a.x) * dx + (wy - a.y) * dy) / L2));
+    var px = a.x + dx * t - wx, py = a.y + dy * t - wy, d = Math.sqrt(px * px + py * py);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+function toggleReinforce(i) {
+  var cand = copyDesign(design);
+  cand.members[i].r = !cand.members[i].r;
+  var c = E.cost(level, cand);
+  if (cand.members[i].r && c.cost > level.budget) { toast("not enough budget to reinforce that"); return; }
+  pushUndo(); design = cand; sfx("tock"); changed();
+}
+function deleteMember(i) {
+  pushUndo();
+  design.members.splice(i, 1);
+  design = prune(design);
+  changed();
+}
+function deleteNode(k) {
+  pushUndo();
+  design.members = design.members.filter(function (m) { return m.a !== k && m.b !== k; });
+  design.nodes = design.nodes.filter(function (n) { return key(n.x, n.y) !== k; });
+  design = prune(design);
+  changed();
+}
+
+// a tap on grid point pt (raw = unsnapped world point)
+function tap(pt, raw) {
+  if (mode !== "build" || !ovEl.hidden) return;
+  var k = key(pt.x, pt.y);
+  if (tool === "reinforce") {
+    var mi = memberNear(raw.x, raw.y);
+    if (mi >= 0) toggleReinforce(mi); else toast("tap a member to reinforce it");
+    return;
+  }
+  if (tool === "delete") {
+    var dn = Math.sqrt((raw.x - pt.x) * (raw.x - pt.x) + (raw.y - pt.y) * (raw.y - pt.y));
+    if (!isAnchor(k) && existsPoint(k) && dn < 0.42) { deleteNode(k); return; }
+    var di = memberNear(raw.x, raw.y);
+    if (di >= 0) deleteMember(di);
+    else if (isAnchor(k)) toast("anchors stay put");
+    return;
+  }
+  if (!start) {
+    if (existsPoint(k)) start = pt;
+    else toast("start on a joint or an anchor (yellow square)");
+    draw();
+    return;
+  }
+  if (start.x === pt.x && start.y === pt.y) { start = null; draw(); return; }
+  var res = addMember(start, pt, tool);
+  if (res.ok) { start = pt; return; }
+  if (res.code === "too_long" && existsPoint(k)) { start = pt; toast(res.msg + ", starting from here"); draw(); return; }
+  if (res.code === "duplicate" && existsPoint(k)) { start = pt; draw(); return; }
+  toast(res.msg);
+}
+
+$("bUndo").addEventListener("click", undo);
+var clearArmed = null;
+$("bClear").addEventListener("click", function () {
+  if (mode !== "build") return;
+  var b = $("bClear");
+  if (!clearArmed) {
+    if (!design.members.length) return;
+    b.textContent = "sure?"; b.classList.add("sure");
+    clearArmed = setTimeout(function () { clearArmed = null; b.textContent = "clear"; b.classList.remove("sure"); }, 3000);
+    return;
+  }
+  clearTimeout(clearArmed); clearArmed = null; b.textContent = "clear"; b.classList.remove("sure");
+  pushUndo(); design = { nodes: [], members: [] }; start = null; changed();
+});
+$("bFit").addEventListener("click", function () { camMoved = false; R.fit(); draw(); });
+$("bLevels").addEventListener("click", showSelect);
+$("bSpeed").addEventListener("click", function () { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; updateTools(); });
+
+// ---------- testing ----------
+function startTest() {
+  if (mode === "test") return { ok: false, errors: [] };
+  var c = costNow();
+  if (c.errors.length) { toast(friendly(c.errors[0], (design.members[c.errors[0].member] || {}).type)); return { ok: false, errors: c.errors }; }
+  if (!design.members.length) { toast("build something first"); return { ok: false, errors: [] }; }
+  preTest = copyDesign(design);
+  sim = E.create(level, preTest);
+  mode = "test"; brk = {}; lastBroken = 0; result = null; resultShown = false; acc = 0; lastFrame = 0;
+  start = null; hover = null; hlMember = null;
+  $("runinfo").hidden = false;
+  sfx("go");
+  updateTools(); draw();
+  return { ok: true, errors: [] };
+}
+function stopTest(quiet) {
+  if (mode !== "test") return;
+  mode = "build"; sim = null; result = null;
+  design = copyDesign(preTest);
+  ovEl.hidden = true;
+  $("runinfo").hidden = true;
+  updateTools(); updateHud();
+  if (!quiet) draw();
+}
+$("bTest").addEventListener("click", function () { if (mode === "test") stopTest(); else startTest(); });
+
+function simStep(n) {
+  for (var i = 0; i < n && sim; i++) {
+    sim.step();
+    var st = sim.state(), nb = 0;
+    for (var j = 0; j < st.members.length; j++) if (st.members[j].broken) { nb++; if (brk[j] == null) brk[j] = st.t; }
+    if (nb > lastBroken) { var now = Date.now(); if (now - lastSnap > 160) { sfx("boom"); lastSnap = now; } lastBroken = nb; }
+    if (!result && sim.result()) { result = sim.result(); onResult(); }
+  }
+}
+function onResult() {
+  if (resultShown) return;
+  resultShown = true;
+  var r = result, c = E.cost(level, preTest).cost, html;
+  if (r.pass) {
+    var stars = c <= level.stars.three ? 3 : c <= level.stars.two ? 2 : 1;
+    var s = recW(level.id), first = !s.stars;
+    var newBest = s.best == null || c < s.best;
+    s.stars = Math.max(s.stars || 0, stars);
+    if (newBest) s.best = c;
+    s.design = copyDesign(preTest);
+    persist();
+    var idx = LEVELS.indexOf(level), next = LEVELS[idx + 1];
+    var tip = stars < 3 ? "<p>" + (stars < 2 ? "2 stars at " + money(level.stars.two) + ", " : "") + "3 stars at " + money(level.stars.three) + " or less</p>" : "<p>as cheap as it gets. nice.</p>";
+    html = '<div class="box"><h2>it held!</h2><div class="bigstars">' + starsSvg(stars) + "</div>" +
+      "<p><b>" + money(c) + "</b> spent" + (newBest && !first ? ", a new best" : "") + (r.maxStress ? ", worst strain " + Math.round(r.maxStress * 100) + "%" : "") + "</p>" + tip +
+      (first && next ? "<p>level " + next.id + " is open now</p>" : "") +
+      '<div class="btns">' + (next ? '<button type="button" data-a="next">next level</button>' : "") +
+      '<button type="button" data-a="edit">keep building</button><button type="button" data-a="levels">levels</button></div></div>';
+    ovEl.className = "ov win";
+    sfxResult("win");
+  } else {
+    var why = r.reason === "vehicle fell" ? "a vehicle fell in" : r.reason === "timeout" ? "the traffic didn't make it across in time" : r.reason;
+    html = '<div class="box"><h2>it broke</h2><p>' + esc(why) + (r.broken ? ", " + r.broken + " member" + (r.broken > 1 ? "s" : "") + " snapped" : "") + ".</p>" +
+      "<p>look for what went red, add a triangle or reinforce it.</p>" +
+      '<div class="btns"><button type="button" data-a="edit">try again</button><button type="button" data-a="levels">levels</button></div></div>';
+    ovEl.className = "ov lose";
+    sfxResult("lose");
+  }
+  ovEl.innerHTML = html;
+  ovEl.hidden = false;
+}
+ovEl.addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) return;
+  var a = b.getAttribute("data-a");
+  if (a === "edit") stopTest();
+  else if (a === "levels") showSelect();
+  else if (a === "next") { var i = LEVELS.indexOf(level); stopTest(true); openLevel(LEVELS[i + 1].id); }
+});
+
+// ---------- the view handed to the renderer ----------
+var MATCOL = { road: "#43404f", beam: "#dd8a3a", cable: "#2b2838" };
+function view() {
+  if (mode === "test" && sim) {
+    var st = sim.state();
+    var info = [];
+    st.vehicles.forEach(function (v) { info.push(v.type + (v.done ? " across" : v.fell ? " fell" : v.started ? "" : " waiting")); });
+    $("runinfo").textContent = "t " + st.t.toFixed(1) + " s  |  " + info.join(", ");
+    return { mode: "test", nodes: st.nodes, members: st.members, vehicles: st.vehicles, brk: brk, t: st.t, ui: {} };
+  }
+  var nodes = [], idx = {}, i;
+  level.anchors.forEach(function (a) { var k = key(a.x, a.y); if (idx[k] != null) return; idx[k] = nodes.length; nodes.push({ x: a.x, y: a.y, fixed: true, key: k }); });
+  design.nodes.forEach(function (n) { var k = key(n.x, n.y); if (idx[k] != null) return; idx[k] = nodes.length; nodes.push({ x: n.x, y: n.y, fixed: false, key: k }); });
+  var members = [];
+  for (i = 0; i < design.members.length; i++) {
+    var m = design.members[i];
+    if (idx[m.a] == null || idx[m.b] == null) continue;
+    members.push({ a: idx[m.a], b: idx[m.b], type: m.type, r: m.r, stress: 0, broken: false });
+  }
+  var ui = { grid: true, legal: legal, start: start, hover: hover, maxLen: (E.MATERIALS[tool] || {}).maxLen || 0, matCol: MATCOL[tool], accent: "#8a4dff" };
+  if (start && hover && (tool in MATCOL)) {
+    var dx = hover.x - start.x, dy = hover.y - start.y, L = Math.sqrt(dx * dx + dy * dy);
+    ui.rubber = { x: hover.x, y: hover.y, ok: L > 0 && L <= ui.maxLen + 1e-9 && legal(hover.x, hover.y), cost: Math.round(L * E.MATERIALS[tool].cost) };
+  }
+  if (hlMember != null && (tool === "delete" || tool === "reinforce")) { ui.hlMember = hlMember; ui.hlColor = tool === "delete" ? "rgba(255,70,60,0.55)" : "rgba(255,212,59,0.8)"; }
+  if (tool === "delete" && hover) { var hk = key(hover.x, hover.y); if (!isAnchor(hk) && idx[hk] != null && hover.near) ui.hlNode = idx[hk]; }
+  return { mode: "build", nodes: nodes, members: members, vehicles: [], t: wallT, ui: ui };
+}
+function draw() { if (screen === "game" && level) R.draw(view()); }
+
+// ---------- the loop ----------
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (screen !== "game") return;
+  wallT = now / 1000;
+  if (mode === "test" && sim && !resultShown) {
+    var dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : E.DT;
+    acc += dt * speed;
+    var n = 0, cap = 4 * speed;
+    while (acc >= E.DT && n < cap) { simStep(1); acc -= E.DT; n++; }
+    if (n >= cap) acc = 0;
+  }
+  lastFrame = now;
+  draw();
+}
+requestAnimationFrame(frame);
+
+// ---------- input: pointer events only (mouse, pen and touch all come through here) ----------
+var pointers = {}, gesture = null, spaceDown = false, overCanvas = false;
+function local(e) { var r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function snapAt(p) { var w = R.toWorld(p.x, p.y); return { x: Math.round(w.x), y: Math.round(w.y), wx: w.x, wy: w.y }; }
+function setHover(p) {
+  if (!p) { hover = null; return; }
+  var s = snapAt(p);
+  var dn = Math.sqrt((s.wx - s.x) * (s.wx - s.x) + (s.wy - s.y) * (s.wy - s.y));
+  hover = { x: s.x, y: s.y, bad: !legal(s.x, s.y), near: dn < 0.42 };
+  hlMember = (tool === "delete" || tool === "reinforce") && !(tool === "delete" && hover.near && existsPoint(key(s.x, s.y)) && !isAnchor(key(s.x, s.y))) ? memberNear(s.wx, s.wy) : null;
+  if (hlMember != null && hlMember < 0) hlMember = null;
+}
+function pinchStart() {
+  var ids = Object.keys(pointers);
+  var a = pointers[ids[0]], b = pointers[ids[1]];
+  gesture = { kind: "pinch", ids: [ids[0], ids[1]], d0: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), s0: R.s, cx0: R.cx, cy0: R.cy, m0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+  hover = null;
+}
+cv.addEventListener("pointerdown", function (e) {
+  if (screen !== "game") return;
+  var p = local(e);
+  pointers[e.pointerId] = p;
+  try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+  var count = Object.keys(pointers).length;
+  if (count >= 2) { if (count === 2) pinchStart(); e.preventDefault(); return; }
+  if (e.pointerType === "mouse" && (e.button === 1 || e.button === 2 || (e.button === 0 && spaceDown))) {
+    gesture = { kind: "pan", id: e.pointerId, last: p }; e.preventDefault(); return;
+  }
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  if (mode !== "build" || !ovEl.hidden) { gesture = { kind: "pan", id: e.pointerId, last: p }; return; }
+  var s = snapAt(p);
+  gesture = { kind: "build", id: e.pointerId, down: { x: s.x, y: s.y }, raw: { x: s.wx, y: s.wy }, px: p, moved: false };
+  setHover(p);
+  draw();
+  e.preventDefault();
+});
+cv.addEventListener("pointermove", function (e) {
+  if (screen !== "game") return;
+  var p = local(e);
+  if (pointers[e.pointerId]) pointers[e.pointerId] = p;
+  if (gesture && gesture.kind === "pinch") {
+    var a = pointers[gesture.ids[0]], b = pointers[gesture.ids[1]];
+    if (!a || !b) return;
+    var d = Math.hypot(a.x - b.x, a.y - b.y), m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    var s = Math.max(6, Math.min(110, gesture.s0 * d / gesture.d0));
+    var wx = (gesture.m0.x - gesture.cx0) / gesture.s0, wy = (gesture.cy0 - gesture.m0.y) / gesture.s0;
+    R.s = s; R.cx = m.x - wx * s; R.cy = m.y + wy * s; R.dirty = true; camMoved = true;
+    return;
+  }
+  if (gesture && gesture.kind === "pan" && gesture.id === e.pointerId) {
+    R.pan(p.x - gesture.last.x, p.y - gesture.last.y); gesture.last = p; camMoved = true;
+    return;
+  }
+  if (gesture && gesture.kind === "build" && gesture.id === e.pointerId) {
+    if (Math.hypot(p.x - gesture.px.x, p.y - gesture.px.y) > 8) gesture.moved = true;
+    setHover(p);
+    return;
+  }
+  if (e.pointerType === "mouse" && mode === "build") setHover(p);
+});
+function endPointer(e, cancel) {
+  var p = local(e), g = gesture;
+  delete pointers[e.pointerId];
+  if (!g) return;
+  if (g.kind === "pinch") {
+    if (Object.keys(pointers).length === 0) gesture = null;
+    else gesture = { kind: "dead" };
+    return;
+  }
+  if (g.kind === "dead") { if (!Object.keys(pointers).length) gesture = null; return; }
+  if (g.id !== e.pointerId) return;
+  gesture = null;
+  if (g.kind !== "build" || cancel) { if (e.pointerType !== "mouse") hover = null; return; }
+  var up = snapAt(p);
+  var isMat = tool === "road" || tool === "beam" || tool === "cable";
+  if (g.moved && isMat && !(up.x === g.down.x && up.y === g.down.y) && existsPoint(key(g.down.x, g.down.y))) {
+    // drag from a joint: one member, then let go
+    var res = addMember(g.down, { x: up.x, y: up.y }, tool);
+    if (!res.ok && res.msg) toast(res.msg);
+    start = null;
+  } else {
+    tap(g.down, g.raw);
+  }
+  if (e.pointerType !== "mouse") { hover = null; hlMember = null; }
+  draw();
+}
+cv.addEventListener("pointerup", function (e) { endPointer(e, false); });
+cv.addEventListener("pointercancel", function (e) { endPointer(e, true); });
+cv.addEventListener("pointerenter", function () { overCanvas = true; });
+cv.addEventListener("pointerleave", function (e) { overCanvas = false; if (e.pointerType === "mouse" && !gesture) { hover = null; hlMember = null; } });
+cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+cv.addEventListener("wheel", function (e) {
+  if (screen !== "game") return;
+  e.preventDefault();
+  var p = local(e), dy = e.deltaY * (e.deltaMode === 1 ? 30 : 1);
+  R.zoomAt(p.x, p.y, Math.exp(-dy * 0.0015));
+  camMoved = true;
+  if (mode === "build") setHover(p);
+}, { passive: false });
+
+window.addEventListener("keydown", function (e) {
+  if (screen !== "game") return;
+  var t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  if (e.key === " " && overCanvas) { spaceDown = true; cv.classList.add("pan"); e.preventDefault(); return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) { undo(); e.preventDefault(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  var k = e.key.toLowerCase();
+  if (k === "1") setTool("road");
+  else if (k === "2") setTool("beam");
+  else if (k === "3") setTool("cable");
+  else if (k === "4" || k === "r") setTool("reinforce");
+  else if (k === "5" || k === "x" || k === "delete") setTool("delete");
+  else if (k === "t") { if (mode === "test") stopTest(); else startTest(); }
+  else if (k === "escape") { if (mode === "test") stopTest(); else { start = null; draw(); } }
+  else if (k === "f") { camMoved = false; R.fit(); draw(); }
+});
+window.addEventListener("keyup", function (e) {
+  if (e.key === " ") { spaceDown = false; cv.classList.toggle("pan", mode === "test"); }
+});
+
+// ---------- test hook ----------
+window.__bridge = {
+  state: function () {
+    var c = level ? costNow() : null;
+    return {
+      screen: screen, level: level ? level.id : null, mode: mode, tool: tool, start: start,
+      design: copyDesign(design), cost: c ? c.cost : 0, errors: c ? c.errors : [],
+      sim: sim ? sim.state() : null, result: result, overlay: !ovEl.hidden,
+      cam: { s: R.s, cx: R.cx, cy: R.cy, W: R.W, H: R.H }, save: JSON.parse(JSON.stringify(save))
+    };
+  },
+  load: function (id) { return openLevel(+id); },
+  setDesign: function (d) {
+    if (mode === "test") stopTest(true);
+    pushUndo();
+    design = sanitize(d); start = null;
+    changed();
+    return E.cost(level, design);
+  },
+  test: function () { return startTest(); },
+  stop: function () { stopTest(); },
+  step: function (n) { simStep(n || 1); draw(); return sim ? sim.state() : null; },
+  render: function () { layout(); draw(); },
+  tool: function (t) { setTool(t); },
+  select: function () { showSelect(); },
+  toScreen: function (x, y) { var r = cv.getBoundingClientRect(), p = R.P(x, y, 0); return { x: r.left + p[0], y: r.top + p[1] }; },
+  levels: function () { return LEVELS.map(function (L) { return L.id; }); }
+};
+
+showSelect();
+})();
+</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>
