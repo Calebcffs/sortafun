@@ -18,7 +18,7 @@
  * - Gravity ramps from 0 to 9.81 over GRAVITY_RAMP seconds (smoothstep) at t = 0 so the bridge
  *   settles under its own weight without a dynamic overshoot. Vehicles are always full weight.
  * - Member force = k * (length - L0) (tension positive). Stress ratio (signed):
- *     tension:      force / strengthT          strengthT = strength (x2 reinforced)
+ *     tension:      force / strengthT          strengthT = strength (x1.5 reinforced)
  *     compression:  force / strengthC          strengthC = strength * min(1, (BUCKLE_L / L0)^2)
  *   so a long beam reaches -1 exactly when it buckles. Cables: compression strength 0, and a cable
  *   shorter than its rest length applies no force at all (slack), stress 0.
@@ -84,11 +84,11 @@
 
   // cost: $ per metre; maxLen: m; strength: N; EA: N (axial stiffness); mass: kg per metre
   var MATERIALS = {
-    road:  { cost: 100, maxLen: 2,  strength: 160000, EA: 1.6e7, mass: 100, tensionOnly: false },
+    road:  { cost: 100, maxLen: 2.3, strength: 160000, EA: 1.6e7, mass: 100, tensionOnly: false },
     beam:  { cost: 60,  maxLen: 4,  strength: 160000, EA: 1.6e7, mass: 40,  tensionOnly: false },
     cable: { cost: 30,  maxLen: 12, strength: 220000, EA: 1.4e7, mass: 8,   tensionOnly: true }
   };
-  var REINFORCE = { cost: 2, strength: 2, stiffness: 1.5, mass: 1.5 };
+  var REINFORCE = { cost: 2, strength: 1.5, stiffness: 1.5, mass: 1.5 };
 
   // mass: kg; length: axle spacing m; speed: m/s
   var VEHICLES = {

@@ -2,10 +2,10 @@ import { launch, sleep } from "./cdp.mjs";
 import { writeFileSync } from "node:fs";
 const S = process.argv[2], URL = "http://127.0.0.1:8642/bridge.html";
 const c = await launch(9335, S + "/prof3");
-// inject a test level with a rock, uneven roads and high cable anchors (agent 3 writes the real ones)
+// inject a probe level (id 99) with a rock, uneven roads and high cable anchors all at once (renderer coverage)
 await c.send("Page.addScriptToEvaluateOnNewDocument", { source: `
   Object.defineProperty(window, "TrussLevels", { configurable: true, get() { return this.__tl; }, set(v) {
-    v.push({ id: 7, name: "test rock", hint: "probe level", gap: 20, leftY: 0, rightY: 2, floorY: -10, ceilY: 8,
+    v.push({ id: 99, name: "test rock", hint: "probe level", gap: 20, leftY: 0, rightY: 2, floorY: -10, ceilY: 8,
       anchors: [{x:0,y:0},{x:0,y:-3},{x:-1,y:5},{x:20,y:2},{x:20,y:-2},{x:21,y:7},{x:8,y:-5},{x:12,y:-5},{x:10,y:-5}],
       rock: {x0:8,x1:12,top:-5}, materials:["road","beam","cable"], budget: 20000, maxMembers: 80,
       vehicles:[{type:"van",delay:0},{type:"heavy",delay:2}], stars:{two:15000,three:12000},
@@ -23,7 +23,7 @@ await c.nav(URL);
 await c.ev(`localStorage.removeItem("sortafun-bridge-v1"); location.reload(); 1`); await sleep(1500);
 const clipOf = async (sel) => c.ev(`(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height }; })()`);
 const shot = async (file, sel) => { const clip = await clipOf(sel); const r = await c.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { ...clip, scale: 1 } }); writeFileSync(file, Buffer.from(r.data, "base64")); console.log("shot", file); };
-console.log(JSON.stringify(await c.ev(`(() => { __bridge.load(7); const r = __bridge.setDesign(TrussLevels[2].ref); __bridge.render(); return r; })()`)));
+console.log(JSON.stringify(await c.ev(`(() => { __bridge.load(99); const r = __bridge.setDesign(TrussLevels.find(l => l.id === 99).ref); __bridge.render(); return r; })()`)));
 await shot(S + "/shots/8-rock-build.png", "#stage");
 await c.ev(`__bridge.test(); 1`);
 const r = await c.ev(`(() => { let st; for (let i = 0; i < 2400; i++) { st = __bridge.step(1); if (st.vehicles[1].x > 9) break; } __bridge.render(); return { t: st.t, broken: st.members.filter(m => m.broken).length, v: st.vehicles.map(v => [v.type, v.x.toFixed(1), v.fell]) }; })()`);

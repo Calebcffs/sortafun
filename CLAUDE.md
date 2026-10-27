@@ -773,9 +773,10 @@ Test hooks `window.__trader` / `__predict` / `__feeds`.
 ### Truss Me (`bridge.html` + `bridge/`, 2026-10-27, not public yet)
 
 Bridge-building physics puzzle, **hidden while it's built** (seo.py `index: False`, no homepage tile, no
-leaderboard, no version bump yet). Paused after step 2 of 3 at Caleb's ask. **Read `bridge/HANDOFF.md`**
+leaderboard, no version bump yet). Engine, UI and all 10 levels are done; only the launch (step 4) is left. **Read `bridge/HANDOFF.md`**
 (status, Caleb's design answers, what's left, launch checklist) and `bridge/SPEC.md` (the contract) before
-touching it. Engine checks: `node tools/bridge-sim.mjs --checks`.
+touching it. Engine checks: `node tools/bridge-sim.mjs --checks`; levels: `node tools/bridge-sim.mjs`
+(refs pass, star lines, flat decks fail); level refs are searched by `tools/bridge/opt.cjs`, not hand made.
 
 ### Noclip (`noclip.html` + `noclip/`, 2026-10-25, v0.17)
 

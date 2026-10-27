@@ -1,7 +1,8 @@
-# Truss Me: handoff (paused 2026-10-27)
+# Truss Me: handoff (steps 1-3 done 2026-10-27, launch not started)
 
 Hidden, URL only: https://sortafun.org/bridge.html (noindex, not in the sitemap, no homepage tile).
-Caleb paused the build after agent 2 of 3. This file is how to pick it up. Read `bridge/SPEC.md` first:
+Caleb paused the build after agent 2 of 3; step 3 (levels) was then done inline by the coordinator, no agent.
+This file is how to pick it up. Read `bridge/SPEC.md` first:
 it is the contract every agent built against (data shapes, engine API, physics model, UI).
 
 ## Caleb's answers (2026-10-27, don't re-ask)
@@ -18,7 +19,7 @@ it is the contract every agent built against (data shapes, engine API, physics m
 |---|---|---|
 | 1. `bridge/engine.js` + `tools/bridge-sim.mjs` | agent 1 | **done, verified** (`node tools/bridge-sim.mjs --checks` = ALL CHECKS OK) |
 | 2. `bridge.html` + `bridge/render.js` (iso scene, build UI, level select, saves, touch) | agent 2 | **about 95% done**: stopped during its last polish pass. 24/24 tap/mouse tests pass (`bridge/tests/taptest.mjs`). |
-| 3. 10 levels in `bridge/levels.js` + balancing | agent 3 | **not started** (only 2 sample levels exist) |
+| 3. 10 levels in `bridge/levels.js` + balancing | coordinator, inline | **done, verified** (`node tools/bridge-sim.mjs` = ALL LEVELS OK, taptest ALL PASS, every level screenshotted) |
 | 4. Launch on the site | coordinator | **not started** |
 
 ### What works right now
@@ -29,26 +30,45 @@ it is the contract every agent built against (data shapes, engine API, physics m
 - Engine: XPBD, 40 substeps per 1/60 s frame, deterministic, ~0.06 ms per step. A Warren truss holds a truck,
   a flat deck fails under one, reinforcement saves an overloaded truss, cables go slack, long beams buckle.
 
-### Known gaps in step 2 (check these first)
+### Known gaps (check these before launch)
 1. The 2.5D look is shallow: the camera is nearly side-on, so it reads more like 2D with depth than
    isometric. Consider a steeper z-axis angle (more top-down tilt of the deck) if Caleb wants "more iso".
-2. Agent 2's last edit (camera fit for levels with a rock / low anchors: `lo` in the fit maths) WAS applied,
-   but its screenshots were not re-checked afterwards. Re-run the screenshots (below) on a rock level.
+2. (fixed) camera fit on rock / uneven / cable levels: checked on all 10 real levels with levelshots.mjs.
 3. Never looked at on a real iPhone.
 
 ## How to continue
 
-### Step 3: levels (one agent, or do it inline)
-Prompt the agent with: "Read bridge/SPEC.md (Levels section) and bridge/HANDOFF.md, then write all 10 levels".
-Acceptance (all checked with the harness, not by eye):
-1. 10 levels in `bridge/levels.js`, ramp as in SPEC.md: 1-2 car only, 3-4 truck, 5 uneven road heights,
-   6 cables unlocked + high cliff anchors, 7-8 rock in the middle (`rock` + its anchors), 9 long + heavy + tight
-   budget, 10 rock + heavy + tight member count.
-2. Every level has a `ref` design that PASSES with max stress < 0.9: `node tools/bridge-sim.mjs`.
-3. A flat road-only deck FAILS on levels 3-10: `node tools/bridge-sim.mjs --flat`.
-4. Stars from the ref cost: three = ceil(ref x 1.1 / 10) x 10, two ~ 1.35x ref, budget ~ 1.8-2x ref.
-5. If MATERIALS / VEHICLES change in engine.js, rerun `node tools/bridge-sim.mjs --checks`.
-6. Screenshot every level in build mode to confirm the camera fits (gap up to ~30 m, rock levels).
+### Step 3: levels (done)
+| # | name | gap | what's new | vehicles | ref $ | 3 stars / 2 stars / budget | max members |
+|---|---|---|---|---|---|---|---|
+| 1 | first crossing | 6 | lay road (a bare deck holds a car) | car | 600 | 660 / 810 / 1100 | 10 |
+| 2 | truck day | 12 | first triangles | car, truck | 2564 | 2830 / 3460 / 4900 | 30 |
+| 3 | deeper | 14 | longer | van, truck | 3864 | 4260 / 5220 / 7300 | 40 |
+| 4 | convoy | 16 | two trucks on at once | truck x2 | 4452 | 4900 / 6010 / 8500 | 50 |
+| 5 | uphill | 14 | far road 3 m higher | van, truck | 3441 | 3790 / 4650 / 6500 | 35 |
+| 6 | hang in there | 20 | cables + tall posts | car, truck | 3865 | 4260 / 5220 / 7300 | 25 |
+| 7 | stepping stone | 20 | rock (cables locked so the rock matters) | car, truck | 4837 | 5330 / 6530 / 9200 | 60 |
+| 8 | deep footing | 24 | deep rock, 4 m piers | van, truck x2 | 7180 | 7900 / 9690 / 13600 | 75 |
+| 9 | the long haul | 26 | heavy, budget 1.45x | heavy | 6733 | 7410 / 9090 / 9750 | 85 |
+| 10 | the big one | 30 | rock + heavy, ref + 3 members | truck, heavy | 7768 | 8550 / 10490 / 14800 | 64 |
+
+- Refs come from a cost search, not by hand: `tools/bridge/` (header of `opt.cjs`). Each seed truss is reinforced
+  until it passes, then members are dropped / beams swapped for cables / reinforcement removed while it still passes
+  with max stress < 0.9. So three stars = matching a well-optimised design (a plain Warren truss is about 2 stars).
+  Change a level in `tools/bridge/defs.cjs` (+ hint in `build.cjs`), `node opt.cjs <id>`, `node build.cjs`, then
+  `node tools/bridge-sim.mjs`.
+- **Engine retunes made for the levels** (`--checks` still ALL OK):
+  1. road `maxLen` 2 -> **2.3 m**: on a 1 m grid a 2 m road could only be flat or 45 deg (too steep to drive),
+     so uneven roads were impossible; 2.3 lets the 2-across 1-up piece (26.6 deg) through and nothing else.
+  2. `REINFORCE.strength` 2 -> **1.5** (cost still 2x): at 2x a fully reinforced flat road was the cheapest answer
+     on levels 2-4, so trusses were pointless. The how-to-play text on bridge.html says 1.5x now.
+- `node tools/bridge-sim.mjs` now fails (exit 1) unless every ref is legal (no cost errors), passes with max < 0.9,
+  the star lines follow the ref, a flat deck fails from level 3 (sloped flat deck on uneven levels), and a fully
+  reinforced flat deck never earns two stars.
+- Findings worth knowing: cables beat beams for any member in tension (bottom chords of a truss under the road),
+  which is why 7-8 lock them. L1 is deliberately passable with a bare road (the lesson is laying road).
+- Screenshots: `bridge/tests/levelshots.mjs <scratch>` (every level, build + mid-test, camera-fit check).
+  All 10 fit at 952x571. `shots2.mjs` now injects its probe level as id 99.
 
 ### Step 4: launch (coordinator, follow the noclip/casino pattern in CLAUDE.md)
 1. `tools/seo.py`: change the `bridge.html` row from the hidden one to a real game row
@@ -76,4 +96,4 @@ Acceptance (all checked with the harness, not by eye):
   fall (for the animation). Gravity ramps in over 1 s.
 
 ## Token spend so far
-Agent 1 about 185k tokens. Agent 2 was stopped mid-run (roughly 200-300k). Step 3 estimate: 150-300k.
+Agent 1 about 185k tokens. Agent 2 was stopped mid-run (roughly 200-300k). Step 3 was done inline (no agent).

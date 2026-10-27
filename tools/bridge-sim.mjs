@@ -35,14 +35,16 @@ function report(level, design, label) {
 }
 
 function flatDeck(level) {
-  // road members along y=0 from x=0 to x=gap, 2 m each (last one shorter if the gap is odd)
-  const nodes = [], members = [];
-  let x = 0;
+  // road members from (0, leftY) to (gap, rightY), 2 m across each (last one shorter if the gap is odd);
+  // on uneven levels each segment climbs or drops 1 m until it reaches rightY (2 across 1 up = 26.6 deg)
+  const nodes = [], members = [], y1 = level.rightY || 0;
+  let x = 0, y = level.leftY || 0;
   while (x < level.gap) {
     const nx = Math.min(x + 2, level.gap);
-    if (nx < level.gap) nodes.push({ x: nx, y: 0 });
-    members.push({ a: `${x},0`, b: `${nx},0`, type: "road", r: false });
-    x = nx;
+    const ny = nx - x === 2 ? y + Math.sign(y1 - y) : y;
+    if (nx < level.gap) nodes.push({ x: nx, y: ny });
+    members.push({ a: `${x},${y}`, b: `${nx},${nx < level.gap ? ny : y1}`, type: "road", r: false });
+    x = nx; y = ny;
   }
   return { nodes, members };
 }
@@ -260,5 +262,31 @@ else if (args[0] === "--flat") {
   if (!lvl) { console.error("no level " + args[0]); process.exit(1); }
   report(lvl, JSON.parse(readFileSync(args[1], "utf8")), "file");
 } else {
-  for (const lvl of LEVELS) report(lvl, lvl.ref, "ref");
+  // acceptance for levels.js: every ref is legal and passes with margin, star lines follow the ref cost,
+  // and a flat road-only deck fails from level 3 on. Exit code 1 if anything is off.
+  let bad = 0;
+  const fail = (msg) => { console.log("      BAD " + msg); bad++; };
+  for (const lvl of LEVELS) {
+    const r = report(lvl, lvl.ref, "ref"), c = E.cost(lvl, lvl.ref);
+    if (c.errors.length) fail("ref has errors");
+    if (!r.pass) fail("ref does not pass");
+    if (r.maxStress >= 0.9) fail("ref max stress " + f2(r.maxStress) + " >= 0.9");
+    const three = Math.ceil((c.cost * 1.1) / 10) * 10;
+    if (lvl.stars.three !== three) fail(`stars.three ${lvl.stars.three}, expected ${three}`);
+    if (!(lvl.stars.two > lvl.stars.three && lvl.stars.two < lvl.budget)) fail("stars.two must sit between three and budget");
+    console.log(`      stars $${lvl.stars.three} / $${lvl.stars.two} (${(lvl.stars.two / c.cost).toFixed(2)}x)  budget $${lvl.budget} (${(lvl.budget / c.cost).toFixed(2)}x)  members ${c.members}/${lvl.maxMembers}`);
+    if (lvl.id >= 3) {
+      const fd = flatDeck(lvl), fr = E.run(lvl, fd), fe = E.cost(lvl, fd).errors.filter((e) => e.code !== "over_budget" && e.code !== "locked");
+      console.log(`      flat: ${fr.pass ? "PASS" : "fail"} (${fr.reason}, broken ${fr.broken})${fe.length ? " errors: " + fe.map((e) => e.msg).join("; ") : ""}`);
+      if (fe.length) fail("flat deck is not a valid design here, so the check means nothing");
+      else if (fr.pass) fail("a flat road-only deck passes");
+      // a fully reinforced flat deck may pass, but never for fewer than two stars' worth
+      const rd = { nodes: fd.nodes, members: fd.members.map((m) => ({ ...m, r: true })) };
+      const rr = E.run(lvl, rd), rc = E.cost(lvl, rd).cost;
+      console.log(`      reinforced flat: ${rr.pass ? "PASS" : "fail"} $${rc}`);
+      if (rr.pass && rc <= lvl.stars.two) fail("a reinforced flat deck earns two stars or more");
+    }
+  }
+  console.log(bad ? `\n${bad} PROBLEM(S)` : "\nALL LEVELS OK");
+  process.exitCode = bad ? 1 : 0;
 }

@@ -8,7 +8,7 @@ Original physics puzzle in the bridge-builder genre. Each level is a gap between
 The player places beams between anchor points and joints on a grid to build a truss, then presses Test. Vehicles drive
 across (car, then truck, then heavier trucks on later levels). Members glow green -> yellow -> red with stress and snap
 when overloaded. Pass = every vehicle reaches the far road. There is a material budget (hard cap) and a maximum member
-count. Members can be reinforced (costs 2x, 2x strength). Later levels add a rock in the middle at the bottom, which gives
+count. Members can be reinforced (costs 2x, 1.5x strength). Later levels add a rock in the middle at the bottom, which gives
 extra anchor points. 10 levels, 3 stars each.
 
 Name: **Truss Me**. Page: `bridge.html`. Do NOT name, reference, or copy any existing commercial bridge game (no titles,
@@ -73,10 +73,10 @@ Member endpoints `a`/`b` are point references written as `"x,y"` strings (e.g. `
 ### Materials (the engine owns this table; agent 3 may retune numbers)
 | type | cost per metre | max length | strength | notes |
 |---|---|---|---|---|
-| road | 100 | 2 m (any direction, but vehicles can't climb > ~30 deg) | medium | vehicles ride on road members only |
+| road | 100 | 2.3 m (so a 2-across 1-up slope fits the grid; vehicles can't climb > ~30 deg) | medium | vehicles ride on road members only |
 | beam | 60 | 4 m (diagonals ok, length measured euclidean) | medium | tension + compression; long beams buckle earlier in compression |
 | cable | 30 | 12 m | high in tension | tension only, zero compression strength (goes slack) |
-| reinforced (`r:true`) | 2x cost | same | 2x strength, ~1.5x stiffness | any type |
+| reinforced (`r:true`) | 2x cost | same | 1.5x strength, ~1.5x stiffness (1.5x, not 2x, so a reinforced flat deck never beats a truss) | any type |
 
 Member length must be > 0 and <= max length. Members cannot duplicate (same two endpoints).
 
