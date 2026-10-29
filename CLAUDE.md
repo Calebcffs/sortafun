@@ -1767,6 +1767,20 @@ scale = 14916.862 km on the world map, the region's bbox diagonal on the others 
   `rtdbclean.mjs list|del` removes test rooms with the admin key. Test hook `window.__globe` (`state()`,
   `guessAt(lat, lng)`, `dailyLocs()`).
 
+### Chess (`chess.html` + `chess/`, 2026-10-29, v0.20)
+
+Vs computer (our own engine, 50 levels, ~600 to ~2000, guessed not measured), play a friend (RTDB
+`chess/rooms/<CODE>`, 4-letter code, optional clock, rematch, draw offers, spectators) and pass and play.
+**Read `chess/SPEC.md` first**: the API, the engine's level table, both builders' handoff notes, data shape,
+rules, clock rule and known gaps are all there. `chess/rules.js` is the only place chess rules live (net.js and
+the page never reimplement them). Board key `chess` = highest level beaten with no takeback (1-50; firestore.rules
+caps it). Online games never post scores. Admin page renders the engine notes from `chess/engine.js`'s constants.
+Tests: `node tools/chess/perft.mjs` (147, CPW perft numbers), `node tools/chess/selfplay.mjs` (level ladder);
+the room tests (`nettest.mjs` 3 browsers, `rulestest.mjs` emulator, `phone.mjs`) were scratch scripts, see SPEC.md.
+Known: `leaderboard.js` / `chat.js` use `getApps().length ? getApp() : initializeApp`, which throws when a named
+app was made first; chess/net.js works around it by creating the default app first (globe/draw have the same
+latent problem).
+
 ### Search engines + link previews (`tools/seo.py`, v0.11, 2026-10-06)
 
 Caleb's ask: as many visits as possible. **`python tools/seo.py`, then `tools/stamp.py`.** One table
