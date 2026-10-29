@@ -87,9 +87,10 @@ service cloud.firestore {
                       'mines', 'fermi', 'minute', 'callit', 'watch', 'hive',
                       'five', 'sides', 'grab', 'birdie', 'city', 'deeptime',
                       'taka', 'deeptime2', 'sushi', 'sushirush', 'funstrike',
-                      'sudoku', 'piano', 'pianoday', 'noclip', 'casino', 'globe', 'globeday']
+                      'sudoku', 'piano', 'pianoday', 'noclip', 'casino', 'globe', 'globeday', 'chess']
         && d.name is string && d.name.size() >= 1 && d.name.size() <= 20
         && d.score is int && d.score >= 0 && (d.score <= 1000000 || (d.game == 'casino' && d.score <= 1000000000000))
+        && (d.game != 'chess' || (d.score >= 1 && d.score <= 50))
         && d.rankValue is int
         && (
              (isLowGame(d.game) && d.rankValue == 0 - d.score) ||
