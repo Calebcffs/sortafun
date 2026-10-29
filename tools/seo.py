@@ -131,6 +131,9 @@ PAGES = {
     "draw.html": dict(name="draw and guess", kind="game", og="draw", list="online", genre=["Party", "Drawing"],
         title="Draw and Guess: Free Online Drawing Game for Friends",
         desc="One of you draws, the rest guess in the chat. Make a private room and send your friends the link. 2 to 8 players, free, no sign-up."),
+    "chess.html": dict(name="chess", kind="game", og="chess", list="online", genre=["Board", "Strategy"],
+        title="Chess: Play the Computer at 50 Levels or a Friend Online",
+        desc="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up."),
     "globe.html": dict(name="globe guesser", kind="game", og="globe", list="online", daily=True, genre=["Geography", "Party"],
         title="Globe Guesser: Free Street View Geography Game",
         desc="You get dropped somewhere on earth in street view. Look around, then pin the map where you think you are. Solo, a daily challenge, or a room with friends: party or duels. Free, no sign-up."),
@@ -179,7 +182,7 @@ LABEL = {
     "sides.html": "Four Sides", "puzzle.html": "Tile Slider", "grab.html": "Word Grab", "typing.html": "Typing Test",
     "crossword.html": "Crossword", "mines.html": "Minesweeper", "maze.html": "Cursor Maze", "reaction.html": "Reaction Time Test",
     "aim.html": "Aim Trainer", "stopbar.html": "Stop the Bar", "piano.html": "Piano Rush", "rhythm.html": "Rhythm Rush", "driving.html": "Circuit Race", "sushi.html": "Sushi Goes Round",
-    "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "globe.html": "Globe Guesser", "flipbook.html": "Animation Studio",
+    "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "globe.html": "Globe Guesser", "chess.html": "Chess", "flipbook.html": "Animation Studio",
     "anim-gallery.html": "Animation Gallery", "leaderboards.html": "Leaderboards", "forum.html": "The Forum",
     "guestbook.html": "Guestbook", "passport.html": "Passport",
 }
@@ -191,6 +194,12 @@ GROUPS = [("daily", "daily puzzles"), ("word", "word games"), ("puzzle", "puzzle
 # game code, keep them true when a game changes.
 # ---------------------------------------------------------------------------
 ABOUT = {
+    "chess.html": dict(h="how to play chess", p=[
+        "pick a mode: play the computer, play a friend online, or pass and play on one device. click or drag a piece and the dots show where it can go. all the normal rules are in: castling, en passant, promotion, draws by stalemate, repetition, the 50 move rule and not enough pieces.",
+        "against the computer, slide the level from 1 to 50. level 1 plays like a beginner of about 600 rating and makes the mistakes a beginner makes; level 50 plays like a strong club player of about 2000. the ratings in between go up evenly, about 29 a level. they are estimates, not measured ratings.",
+        "beat a level and your best goes on the leaderboard. a game where you took a move back doesn't count."],
+        faq=[("how do i play a friend?", "open play a friend, pick your colour and a clock (or no clock) and make a room. you get a 4-letter code and a link: send either to your friend. once they join, white moves first. you can offer a draw, resign, and ask for a rematch with the colours swapped."),
+             ("what engine is it?", "our own, written for this site in plain javascript. it searches ahead with alpha-beta and judges positions on material, where each piece stands, pawn structure, mobility and king safety. on the low levels it is held back on purpose: it looks less far ahead and sometimes picks a worse move.")]),
     "globe.html": dict(h="how to play globe guesser", p=[
         "you start somewhere on earth, standing in a street view picture. drag to look around and click the arrows on the road to walk. look for clues: which side people drive on, the language on the signs, the plants, the road lines, the number plates.",
         "when you think you know, open the map in the corner, click where you think you are and press guess (or space). the closer your pin, the more points: up to 5000 a round, falling off fast the further away you are.",

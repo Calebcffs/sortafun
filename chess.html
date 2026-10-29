@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>Chess: Play the Computer at 50 Levels or a Friend Online | Sortafun</title>
+<meta name="description" content="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.">
+<meta name="sortafun:name" content="chess">
+<link rel="canonical" href="https://sortafun.org/chess.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sortafun">
+<meta property="og:title" content="Chess: Play the Computer at 50 Levels or a Friend Online | Sortafun">
+<meta property="og:description" content="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.">
+<meta property="og:url" content="https://sortafun.org/chess.html">
+<meta property="og:image" content="https://sortafun.org/assets/og/chess.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Chess on Sortafun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Chess: Play the Computer at 50 Levels or a Friend Online | Sortafun">
+<meta name="twitter:description" content="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.">
+<meta name="twitter:image" content="https://sortafun.org/assets/og/chess.png">
+<meta name="theme-color" content="#ffd43b">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Chess","url":"https://sortafun.org/chess.html","description":"Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.","image":"https://sortafun.org/assets/og/chess.png","genre":["Board","Strategy"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Chess","item":"https://sortafun.org/chess.html"}]}</script>
+<!-- /seo -->
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=2cfb0408">
+<style>
+  .wrap.ch { max-width: 1120px; }
+  [hidden] { display: none !important; }
+
+  /* mode tabs */
+  .modetabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 0 0 14px; }
+  .modetabs button { font-family: var(--chunky); font-weight: 400; font-size: 17px; padding: 6px 16px 5px; border-radius: 999px; }
+  .modetabs button.on { background: linear-gradient(#ffe36e, #ffc21a); }
+
+  .chgrid { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 20px; align-items: start; text-align: left; }
+  .boardcol { width: min(100%, 660px, calc(100vh - 290px)); min-width: 340px; justify-self: center; }
+
+  /* player bars above and below the board */
+  .pbar { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 2px; font-size: 14px; }
+  .pbar .who { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
+  .pbar .dotc { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ink); flex: none; }
+  .pbar .dotc.w { background: #fff; } .pbar .dotc.b { background: #333; }
+  .pbar .caps { display: flex; align-items: center; flex-wrap: wrap; min-width: 0; }
+  .pbar .caps span { width: 20px; height: 20px; margin-right: -6px; display: inline-block; }
+  .pbar .caps span.gap { margin-left: 8px; }
+  .pbar .caps svg { width: 100%; height: 100%; display: block; }
+  .pbar .diff { font-size: 13px; color: var(--muted); margin-left: 10px; }
+  .pbar .think { margin-left: auto; font-size: 13px; font-weight: 700; color: #1565c0; white-space: nowrap; }
+  .pbar .think::after { content: ""; display: inline-block; width: 1.4em; text-align: left; animation: dots 1.2s steps(4) infinite; }
+  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+  .pbar.turn .who { text-decoration: underline; text-decoration-thickness: 3px; text-decoration-color: var(--sun); text-underline-offset: 4px; }
+
+  /* the board */
+  .board { position: relative; width: 100%; aspect-ratio: 1 / 1; border: 3px solid var(--ink); border-radius: 6px; overflow: hidden;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; background: #b58863; }
+  .sqs { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
+  .sq { position: relative; }
+  .sq.l { background-color: #f0d9b5; } .sq.d { background-color: #b58863; }
+  .sq.last.l { background-color: #f4e57b; } .sq.last.d { background-color: #d6b852; }
+  .sq.sel.l { background-color: #9fd17a; } .sq.sel.d { background-color: #79ad55; }
+  .sq.chk { background-image: radial-gradient(circle, rgba(255, 40, 30, .95) 0%, rgba(230, 30, 30, .55) 40%, rgba(230, 30, 30, 0) 72%); }
+  .sq.dot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 28%; height: 28%; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(29, 27, 46, .26); }
+  .sq.cap::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, transparent 0 62%, rgba(29, 27, 46, .26) 63% 100%); }
+  .sq.hov { box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .75); }
+  .sq .cr, .sq .cf { position: absolute; font: 700 11px var(--body); line-height: 1; pointer-events: none; }
+  .sq .cr { left: 3px; top: 3px; } .sq .cf { right: 3px; bottom: 3px; }
+  .sq.l .cr, .sq.l .cf { color: #b58863; } .sq.d .cr, .sq.d .cf { color: #f0d9b5; }
+  .pcs { position: absolute; inset: 0; pointer-events: none; }
+  .pc { position: absolute; left: 0; top: 0; width: 12.5%; height: 12.5%; transition: transform .17s ease-out, opacity .17s; will-change: transform; }
+  .pc svg { width: 100%; height: 100%; display: block; }
+  .pc.drag { transition: none; z-index: 5; }
+  .pc.drag svg { transform: scale(1.12); filter: drop-shadow(0 4px 3px rgba(0, 0, 0, .35)); }
+  .pc.gone { opacity: 0; }
+  .board.can .sq { cursor: pointer; }
+
+  /* promotion picker */
+  .promo { position: absolute; inset: 0; background: rgba(29, 27, 46, .35); z-index: 8; }
+  .promo .col { position: absolute; width: 12.5%; height: 50%; display: flex; flex-direction: column; }
+  .promo .col.up { flex-direction: column-reverse; }
+  .promo button { all: unset; flex: 1; background: #fff; border: 2px solid var(--ink); border-radius: 50%; margin: 2px; cursor: pointer; box-sizing: border-box; }
+  .promo button:hover { background: #ffe36e; }
+  .promo button svg { width: 100%; height: 100%; display: block; }
+
+  /* result card over the board */
+  .over { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(29, 27, 46, .38); z-index: 9; padding: 12px; box-sizing: border-box; }
+  .over .card { background: #fff; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 5px 0 var(--ink); padding: 14px 18px 16px; text-align: center; max-width: 300px; }
+  .over h2 { margin: 0 0 4px; font-size: 28px; }
+  .over p { margin: 4px 0; font-size: 14px; }
+  .over .small { font-size: 12px; color: var(--muted); }
+  .over .btns { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+
+  /* side panel */
+  .side { border: 3px solid var(--ink); border-radius: 14px; background: var(--soft); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .side h2 { margin: 0; font-size: 20px; }
+  .side label.t { font-family: var(--chunky); font-size: 15px; display: block; margin-bottom: 2px; }
+  .lvl { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .lvl b { font-family: var(--chunky); font-weight: 400; font-size: 22px; }
+  .lvl small { color: var(--muted); font-size: 12px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); margin: 4px 0 0; }
+  .seg { display: flex; border: 3px solid var(--ink); border-radius: 10px; overflow: hidden; }
+  .seg button { all: unset; flex: 1; text-align: center; padding: 6px 4px; font-weight: 700; font-size: 13px; cursor: pointer; background: #fff; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .seg button + button { border-left: 3px solid var(--ink); }
+  .seg button.on { background: linear-gradient(#ffe36e, #ffc21a); }
+  .seg button svg { width: 22px; height: 22px; }
+  .big-go { font-family: var(--chunky); font-weight: 400; font-size: 20px; color: #fff; width: 100%;
+    background: linear-gradient(#5cf08e, #18a84b); border: 3px solid var(--ink); border-radius: 999px;
+    padding: 7px 16px 6px; box-shadow: 0 4px 0 var(--ink); text-shadow: 0 2px 0 rgba(0, 0, 0, .3); cursor: pointer; }
+  .big-go:hover { background: linear-gradient(#ffe36e, #ffb300); color: var(--ink); text-shadow: none; }
+  .note2 { font-size: 12px; color: var(--muted); margin: 0; }
+  .acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .acts button { padding: 6px 4px; font-size: 13px; }
+  .acts button.warn { background: linear-gradient(#ffd6d6, #ff9c9c); }
+  #status { font-weight: 700; font-size: 15px; min-height: 20px; margin: 0; }
+  .moves { margin: 0; padding: 0; list-style: none; max-height: 250px; overflow-y: auto; background: #fff; border: 2px solid #c5cbe0; border-radius: 10px; font-size: 14px; }
+  .moves li { display: grid; grid-template-columns: 34px 1fr 1fr; padding: 2px 6px; }
+  .moves li:nth-child(even) { background: #f4f6fb; }
+  .moves .n { color: var(--muted); }
+  .moves .cur { background: #ffe36e; border-radius: 4px; padding: 0 3px; margin-left: -3px; }
+  .moves li.none { display: block; color: var(--muted); padding: 6px 8px; }
+  .soon { background: #fff; border: 2px dashed #c5cbe0; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+  .chk-row { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .lbwrap { margin-top: 18px; }
+
+  /* play a friend */
+  .pbar .clk { margin-left: auto; flex: none; font: 700 18px/1 Consolas, "Courier New", monospace; background: #fff; color: var(--ink);
+    border: 2px solid var(--ink); border-radius: 8px; padding: 4px 8px 3px; min-width: 58px; text-align: right; }
+  .pbar .clk.run { background: linear-gradient(#ffe36e, #ffc21a); }
+  .pbar .clk.low { background: #ff5a4f; color: #fff; }
+  .pbar .clk.low.run { animation: lowblink 1s steps(2) infinite; }
+  @keyframes lowblink { 50% { background: #c62828; } }
+  .ftxt { width: 100%; box-sizing: border-box; font-size: 15px; padding: 6px 8px; border: 3px solid var(--ink); border-radius: 10px; background: #fff; }
+  #fCode { text-transform: uppercase; letter-spacing: 3px; font-weight: 700; }
+  .fjoin { display: flex; gap: 6px; align-items: stretch; }
+  .fjoin .ftxt { flex: 1; min-width: 0; }
+  .fjoin button { flex: none; padding: 6px 12px; font-size: 14px; }
+  #fTime button { font-size: 12px; padding: 7px 2px; }
+  .fhead { font-family: var(--chunky); font-size: 18px; margin: 0 0 8px; }
+  .fhead b { font-weight: 400; letter-spacing: 3px; background: #fff; border: 2px solid var(--ink); border-radius: 8px; padding: 1px 8px 0; }
+  .fhead .ftc { font-family: var(--body); font-size: 13px; color: var(--muted); margin-left: 4px; }
+  #fLink { font-size: 13px; }
+  .finfo { font-size: 13px; margin: 8px 0 0; min-height: 1em; }
+  .finfo:empty { display: none; }
+  .fdraw { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; padding: 8px 10px; background: #fff7c2; border: 2px solid var(--ink); border-radius: 10px; font-size: 14px; font-weight: 700; }
+  .fdraw .fdb { display: flex; gap: 6px; margin-left: auto; }
+  .fdraw button { padding: 4px 10px; font-size: 13px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .facts button { flex: 1 1 auto; padding: 6px 8px; font-size: 13px; }
+  .facts button:empty { display: none; }
+  #fRematch.hot { background: linear-gradient(#5cf08e, #18a84b); color: #fff; }
+  #fLeave { color: var(--muted); }
+  #fRoom > .note2 { margin-top: 10px; }
+  #pan-friend.lobby:not([hidden]) ~ .acts, #pan-friend.lobby:not([hidden]) ~ .moves { display: none; }
+  #fLobby > .note2:last-child { margin-top: 8px; }
+  #fWatch:empty { display: none; }
+  .credit { font-size: 12px; color: var(--muted); margin: 14px 0 0; }
+
+  @media (max-width: 880px) {
+    .chgrid { grid-template-columns: 1fr; }
+    .boardcol { width: min(100%, 560px); }
+  }
+  @media (max-width: 680px) {
+    .boardcol { width: auto; min-width: 0; margin: 0 -12px; justify-self: stretch; }
+    .board { border-radius: 4px; }
+    .pbar { padding-left: 8px; padding-right: 8px; }
+    .moves { max-height: 160px; }
+  }
+</style>
+<script src="sfx.js?v=5233b886"></script>
+<script src="china.js?v=c859d851"></script>
+<script src="feedback.js?v=19f93896"></script>
+<script src="panic-app.js?v=f0e47fde"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-online">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap ch">
+  <h1>chess</h1>
+  <p class="sub">standard chess, every rule. play the computer on 50 levels, a friend online (make a room, send the link), or pass one device back and forth. click a piece then a square, or drag it. beat a level to put it on the board.</p>
+
+  <div class="modetabs" id="tabs">
+    <button data-mode="cpu" class="on">vs computer</button>
+    <button data-mode="friend">play a friend</button>
+    <button data-mode="local">pass and play</button>
+  </div>
+
+  <div class="chgrid">
+    <div class="boardcol">
+      <div class="pbar" id="barTop"><span class="dotc"></span><span class="who"></span><span class="caps"></span><span class="think" hidden>thinking</span><span class="clk" hidden></span></div>
+      <div class="board" id="board">
+        <div class="sqs" id="sqs"></div>
+        <div class="pcs" id="pcs"></div>
+        <div class="promo" id="promo" hidden></div>
+        <div class="over" id="over" hidden><div class="card" id="card"></div></div>
+      </div>
+      <div class="pbar" id="barBot"><span class="dotc"></span><span class="who"></span><span class="caps"></span><span class="think" hidden>thinking</span><span class="clk" hidden></span></div>
+    </div>
+
+    <aside class="side" id="side">
+      <!-- vs computer -->
+      <div id="pan-cpu">
+        <div class="lvl"><label class="t" for="level">level</label><span><b id="lvlTxt">level 5 (~743)</b></span></div>
+        <input type="range" id="level" min="1" max="50" value="5" aria-label="computer level">
+        <p class="note2" id="lvlNote">ratings are approx, a rough guess. your best win: none yet</p>
+        <label class="t" style="margin-top:10px">you play</label>
+        <div class="seg" id="colour">
+          <button data-c="w" class="on" title="white"></button>
+          <button data-c="r" title="random">random</button>
+          <button data-c="b" title="black"></button>
+        </div>
+      </div>
+      <!-- play a friend (online rooms: chess/net.js) -->
+      <div id="pan-friend" hidden>
+        <h2>play a friend</h2>
+        <div id="fLobby">
+          <label class="t" for="fName">your name</label>
+          <input id="fName" class="ftxt" maxlength="16" autocomplete="off" spellcheck="false" placeholder="1 to 16 letters">
+          <label class="t" style="margin-top:10px">you play</label>
+          <div class="seg" id="fColour">
+            <button data-c="w" class="on" title="white">white</button>
+            <button data-c="r" title="random">random</button>
+            <button data-c="b" title="black">black</button>
+          </div>
+          <label class="t" style="margin-top:10px">clock</label>
+          <div class="seg" id="fTime">
+            <button data-tc="0" class="on" title="no clock">none</button>
+            <button data-tc="1" title="3 minutes, +2 seconds a move">3+2</button>
+            <button data-tc="2" title="5 minutes, +3 seconds a move">5+3</button>
+            <button data-tc="3" title="10 minutes, no increment">10+0</button>
+            <button data-tc="4" title="15 minutes, +10 seconds a move">15+10</button>
+          </div>
+          <button class="big-go" id="fMake" style="margin-top:12px">make a room &#9654;</button>
+          <label class="t" style="margin-top:12px" for="fCode">got a code?</label>
+          <div class="fjoin"><input id="fCode" class="ftxt" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD"><button id="fJoin">join</button></div>
+          <p class="note2" id="fMsg" aria-live="polite"></p>
+          <p class="note2">online games don't go on the leaderboard.</p>
+        </div>
+        <div id="fRoom" hidden>
+          <div class="fhead">room <b id="fCodeTxt"></b> <span class="ftc" id="fTcTxt"></span></div>
+          <div class="fjoin"><input id="fLink" class="ftxt" readonly aria-label="invite link"><button id="fCopy">copy</button><button id="fShare" hidden>share</button></div>
+          <p class="finfo" id="fInfo" aria-live="polite"></p>
+          <div class="fdraw" id="fDraw" hidden><span id="fDrawTxt"></span><span class="fdb"><button id="fAccept">accept</button><button id="fDecline">no thanks</button></span></div>
+          <div class="facts">
+            <button id="fOffer">offer a draw</button>
+            <button id="fRematch" hidden>rematch</button>
+            <button id="fClaim" hidden>claim the win</button>
+          </div>
+          <p class="note2"><span id="fWatch"></span> <a href="#" id="fLeave">leave room</a></p>
+        </div>
+      </div>
+      <!-- pass and play -->
+      <div id="pan-local" hidden>
+        <h2>pass and play</h2>
+        <p class="note2">two people, one device. take turns moving.</p>
+        <label class="chk-row"><input type="checkbox" id="autoFlip"> turn the board round after each move</label>
+      </div>
+
+      <button class="big-go" id="newGame">new game &#9654;</button>
+      <p id="status" aria-live="polite"></p>
+      <div class="acts">
+        <button id="takeback" title="take your last move back">takeback</button>
+        <button id="resign" title="give up this game">resign</button>
+        <button id="flip" title="turn the board round">flip</button>
+      </div>
+      <ol class="moves" id="moves" aria-label="moves"></ol>
+    </aside>
+  </div>
+
+  <div class="lbwrap"><div id="lb"></div></div>
+  <p class="credit">pieces by Colin M.L. Burnett, CC BY-SA 3.0. the computer is our own engine, levels and ratings are approx.</p>
+  <!-- seo:about -->
+  <section class="seo-x about-game">
+    <h2>how to play chess</h2>
+    <p>pick a mode: play the computer, play a friend online, or pass and play on one device. click or drag a piece and the dots show where it can go. all the normal rules are in: castling, en passant, promotion, draws by stalemate, repetition, the 50 move rule and not enough pieces.</p>
+    <p>against the computer, slide the level from 1 to 50. level 1 plays like a beginner of about 600 rating and makes the mistakes a beginner makes; level 50 plays like a strong club player of about 2000. the ratings in between go up evenly, about 29 a level. they are estimates, not measured ratings.</p>
+    <p>beat a level and your best goes on the leaderboard. a game where you took a move back doesn't count.</p>
+    <h3>questions</h3><dl>
+    <dt>how do i play a friend?</dt><dd>open play a friend, pick your colour and a clock (or no clock) and make a room. you get a 4-letter code and a link: send either to your friend. once they join, white moves first. you can offer a draw, resign, and ask for a rematch with the colours swapped.</dd>
+    <dt>what engine is it?</dt><dd>our own, written for this site in plain javascript. it searches ahead with alpha-beta and judges positions on material, where each piece stands, pawn structure, mobility and king safety. on the low levels it is held back on purpose: it looks less far ahead and sometimes picks a worse move.</dd>
+    </dl>
+  </section>
+  <!-- /seo:about -->
+  <!-- seo:more -->
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="funstrike.html">Fun Strike</a></li><li><a href="draw.html">Draw and Guess</a></li><li><a href="globe.html">Globe Guesser</a></li><li><a href="sudoku.html">Daily Sudoku</a></li><li><a href="anagram.html">Word Hive</a></li><li><a href="five.html">Five Letters</a></li><li><a href="ladder.html">Word Ladder</a></li><li><a href="sides.html">Four Sides</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <!-- /seo:more -->
+  <a class="back" href="index.html">&larr; back up the pipe</a>
+</div>
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=e978a479"></script>
+<script src="share.js?v=e240f67e"></script>
+<script src="chess/rules.js?v=8f649586"></script>
+<script src="chess/engine.js?v=db0e241b"></script>
+<script src="chess/pieces.js?v=8070f923"></script>
+<script>
+/* chess.html: board view + game controller + vs computer / pass and play.
+ *
+ * Layers:
+ *  - board view (render a position, click / drag input, promotion picker, highlights)
+ *  - game controller (SortafunChess): who plays each colour ("human" | "engine" | "remote"),
+ *    the move list, legality via ChessRules, game over, takeback, engine requests to the worker
+ *  - the page (mode tabs, side panel, result card, leaderboard)
+ * See chess/SPEC.md "Agent 1 handoff" for the controller API.
+ */
+(function () {
+"use strict";
+var R = window.ChessRules, E = window.ChessEngine, PC = window.ChessPieces;
+var $ = function (id) { return document.getElementById(id); };
+function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
+function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function sqi(name) { return (name.charCodeAt(0) - 97) + (name.charCodeAt(1) - 49) * 8; } // "e4" -> 0..63
+function sqn(i) { return "abcdefgh"[i & 7] + ((i >> 3) + 1); }
+function eloOf(L) { return E.LEVELS[L - 1].elo; }
+function levelLabel(L) { return "level " + L + " (~" + eloOf(L) + ")"; }
+
+// =====================================================================
+// board view
+// =====================================================================
+var boardEl = $("board"), sqsEl = $("sqs"), pcsEl = $("pcs"), promoEl = $("promo");
+var V = {
+  orient: "w", pos: null, legal: [], selected: -1, last: null, canMove: function () { return false; },
+  onMove: null, pieces: [], sqEls: [], drag: null, promoting: null,
+};
+for (var i0 = 0; i0 < 64; i0++) { var d0 = document.createElement("div"); d0.className = "sq"; sqsEl.appendChild(d0); V.sqEls.push(d0); }
+
+function xyOf(sq) { // display column / row of a square
+  var f = sq & 7, r = sq >> 3;
+  return V.orient === "w" ? [f, 7 - r] : [7 - f, r];
+}
+function sqAtXY(x, y) { return V.orient === "w" ? (7 - y) * 8 + x : y * 8 + (7 - x); }
+function squareAt(cx, cy) {
+  var b = boardEl.getBoundingClientRect();
+  var x = Math.floor((cx - b.left - boardEl.clientLeft) / (boardEl.clientWidth / 8)), y = Math.floor((cy - b.top - boardEl.clientTop) / (boardEl.clientHeight / 8));
+  if (x < 0 || x > 7 || y < 0 || y > 7) return -1;
+  return sqAtXY(x, y);
+}
+
+function layoutSquares() {
+  for (var d = 0; d < 64; d++) {
+    var x = d & 7, y = d >> 3, sq = sqAtXY(x, y), el = V.sqEls[d];
+    el.dataset.sq = sq;
+    var light = ((sq & 7) + (sq >> 3)) % 2 === 1;
+    el.className = "sq " + (light ? "l" : "d");
+    var html = "";
+    if (x === 0) html += '<span class="cr">' + ((sq >> 3) + 1) + "</span>";
+    if (y === 7) html += '<span class="cf">' + "abcdefgh"[sq & 7] + "</span>";
+    el.innerHTML = html;
+  }
+}
+function sqEl(sq) { var xy = xyOf(sq); return V.sqEls[xy[1] * 8 + xy[0]]; }
+
+function placePiece(p, sq) {
+  var xy = xyOf(sq);
+  p.el.style.transform = "translate(" + (xy[0] * 100) + "%," + (xy[1] * 100) + "%)";
+  p.sq = sq;
+}
+
+// draw a position. Pieces are matched to the old ones so moves (and takebacks) slide.
+function viewSet(pos, opts) {
+  opts = opts || {};
+  V.pos = pos;
+  V.legal = pos ? R.legalMoves(pos, { san: false }) : [];
+  var want = pos ? pos.board : [];
+  var old = V.pieces, used = [], next = [], i, j;
+  var keep = new Array(64);
+  for (j = 0; j < old.length; j++) if (want[old[j].sq] === old[j].code && !keep[old[j].sq]) { keep[old[j].sq] = old[j]; used[j] = true; }
+  for (i = 0; i < 64; i++) {
+    var code = want[i];
+    if (!code) continue;
+    if (keep[i]) { next.push(keep[i]); continue; }
+    var best = -1, bd = 99;
+    for (j = 0; j < old.length; j++) {
+      if (used[j] || old[j].code !== code) continue;
+      var dd = Math.abs((old[j].sq & 7) - (i & 7)) + Math.abs((old[j].sq >> 3) - (i >> 3));
+      if (old[j].sq === opts.from) dd = -1;
+      if (dd < bd) { bd = dd; best = j; }
+    }
+    var p;
+    if (best >= 0) { p = old[best]; used[best] = true; }
+    else {
+      var el = document.createElement("div");
+      el.className = "pc";
+      el.innerHTML = PC[code];
+      pcsEl.appendChild(el);
+      p = { el: el, code: code, sq: -1 };
+      el.style.transition = "none";
+      placePiece(p, i);
+      void el.offsetWidth;
+      el.style.transition = "";
+    }
+    if (opts.instant || opts.dropped === i) { p.el.style.transition = "none"; placePiece(p, i); void p.el.offsetWidth; p.el.style.transition = ""; }
+    else placePiece(p, i);
+    p.el.classList.remove("drag");
+    next.push(p);
+  }
+  for (j = 0; j < old.length; j++) if (!used[j] && next.indexOf(old[j]) < 0) {
+    (function (el) { el.classList.add("gone"); setTimeout(function () { el.remove(); }, 200); })(old[j].el);
+  }
+  V.pieces = next;
+  V.last = opts.last || null;
+  V.selected = -1;
+  paintMarks();
+}
+function pieceOn(sq) { for (var i = 0; i < V.pieces.length; i++) if (V.pieces[i].sq === sq) return V.pieces[i]; return null; }
+
+function paintMarks() {
+  var targets = {};
+  if (V.selected >= 0) V.legal.forEach(function (m) { if (sqi(m.from) === V.selected) targets[sqi(m.to)] = m.captured ? "cap" : "dot"; });
+  var chk = -1;
+  if (V.pos && V.pos.check) for (var k = 0; k < 64; k++) if (V.pos.board[k] === V.pos.turn + "K") chk = k;
+  for (var d = 0; d < 64; d++) {
+    var el = V.sqEls[d], sq = +el.dataset.sq, c = el.classList;
+    c.toggle("last", !!V.last && (sq === V.last[0] || sq === V.last[1]));
+    c.toggle("sel", sq === V.selected);
+    c.toggle("dot", targets[sq] === "dot");
+    c.toggle("cap", targets[sq] === "cap");
+    c.toggle("chk", sq === chk);
+    c.remove("hov");
+  }
+  boardEl.classList.toggle("can", !!(V.pos && V.canMove(V.pos.turn)));
+}
+
+function viewOrient(c) { V.orient = c; layoutSquares(); V.pieces.forEach(function (p) { p.el.style.transition = "none"; placePiece(p, p.sq); void p.el.offsetWidth; p.el.style.transition = ""; }); paintMarks(); closePromo(); }
+
+function movable(sq) {
+  var code = V.pos && V.pos.board[sq];
+  return !!code && code[0] === V.pos.turn && V.canMove(V.pos.turn) && !V.promoting;
+}
+function isTarget(from, to) { return V.legal.some(function (m) { return sqi(m.from) === from && sqi(m.to) === to; }); }
+function select(sq) { V.selected = sq; paintMarks(); }
+
+function tryMove(from, to, dropped) {
+  var ms = V.legal.filter(function (m) { return sqi(m.from) === from && sqi(m.to) === to; });
+  if (!ms.length) return false;
+  if (ms.length > 1 || ms[0].promo) { openPromo(from, to, dropped); return true; }
+  V.selected = -1;
+  if (V.onMove) V.onMove(ms[0].uci, { from: from, dropped: dropped ? to : -1 });
+  return true;
+}
+
+function openPromo(from, to, dropped) {
+  var colour = V.pos.turn, xy = xyOf(to), up = xy[1] !== 0;
+  V.promoting = { from: from, to: to, dropped: dropped };
+  if (dropped) { var p = pieceOn(from); if (p) { p.el.classList.remove("drag"); p.el.style.transition = "none"; placePiece(p, to); p.sq = from; } }
+  var col = document.createElement("div");
+  col.className = "col" + (up ? " up" : "");
+  col.style.left = (xy[0] * 12.5) + "%";
+  col.style.top = up ? "50%" : "0";
+  ["q", "n", "r", "b"].forEach(function (t) {
+    var b = document.createElement("button");
+    b.innerHTML = PC[colour + t.toUpperCase()];
+    b.title = { q: "queen", n: "knight", r: "rook", b: "bishop" }[t];
+    b.dataset.p = t;
+    col.appendChild(b);
+  });
+  promoEl.innerHTML = "";
+  promoEl.appendChild(col);
+  promoEl.hidden = false;
+}
+function closePromo() {
+  if (!V.promoting) return;
+  var pr = V.promoting;
+  V.promoting = null;
+  promoEl.hidden = true;
+  promoEl.innerHTML = "";
+  var p = pieceOn(pr.from);
+  if (p) { p.el.style.transition = ""; placePiece(p, pr.from); }
+}
+promoEl.addEventListener("pointerdown", function (e) {
+  e.stopPropagation(); e.preventDefault();
+  var b = e.target.closest("button"), pr = V.promoting;
+  if (!pr) return;
+  if (!b) { closePromo(); V.selected = -1; paintMarks(); return; }
+  var uci = sqn(pr.from) + sqn(pr.to) + b.dataset.p;
+  V.promoting = null; promoEl.hidden = true; promoEl.innerHTML = "";
+  V.selected = -1;
+  if (V.onMove) V.onMove(uci, { from: pr.from, dropped: pr.dropped ? pr.to : -1 });
+});
+
+boardEl.addEventListener("pointerdown", function (e) {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  if (V.promoting || !V.pos) return;
+  var sq = squareAt(e.clientX, e.clientY);
+  if (sq < 0) return;
+  e.preventDefault();
+  if (V.selected >= 0 && V.selected !== sq && isTarget(V.selected, sq)) { tryMove(V.selected, sq, false); return; }
+  if (movable(sq)) {
+    var wasSel = V.selected === sq;
+    select(sq);
+    var p = pieceOn(sq);
+    V.drag = { sq: sq, x: e.clientX, y: e.clientY, moved: false, wasSel: wasSel, p: p, id: e.pointerId };
+    try { boardEl.setPointerCapture(e.pointerId); } catch (er) {}
+  } else if (V.selected >= 0) { V.selected = -1; paintMarks(); }
+});
+boardEl.addEventListener("pointermove", function (e) {
+  var d = V.drag;
+  if (!d || e.pointerId !== d.id) return;
+  if (!d.moved && Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 5) return;
+  d.moved = true;
+  var b = boardEl.getBoundingClientRect(), size = boardEl.clientWidth / 8;
+  if (d.p) {
+    d.p.el.classList.add("drag");
+    d.p.el.style.transform = "translate(" + (e.clientX - b.left - boardEl.clientLeft - size / 2) + "px," + (e.clientY - b.top - boardEl.clientTop - size / 2) + "px)";
+  }
+  var over = squareAt(e.clientX, e.clientY);
+  V.sqEls.forEach(function (el) { el.classList.toggle("hov", +el.dataset.sq === over && isTarget(d.sq, over)); });
+});
+function endDrag(e, cancel) {
+  var d = V.drag;
+  if (!d || e.pointerId !== d.id) return;
+  V.drag = null;
+  var sq = cancel ? -1 : squareAt(e.clientX, e.clientY);
+  if (d.moved) {
+    if (sq >= 0 && sq !== d.sq && isTarget(d.sq, sq) && tryMove(d.sq, sq, true)) return;
+    if (d.p) { d.p.el.classList.remove("drag"); placePiece(d.p, d.sq); }
+    paintMarks();
+  } else if (d.wasSel) { V.selected = -1; paintMarks(); }
+}
+boardEl.addEventListener("pointerup", function (e) { endDrag(e, false); });
+boardEl.addEventListener("pointercancel", function (e) { endDrag(e, true); });
+boardEl.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+// =====================================================================
+// game controller
+// =====================================================================
+var G = null;           // the current game
+var hooks = { move: [], end: [], start: [] };
+function fire(name, ev) { hooks[name].forEach(function (fn) { try { fn(ev); } catch (er) { console.error(er); } }); }
+var gameSeq = 0;
+
+function cur() { return G.positions[G.positions.length - 1]; }
+
+// opts: { white, black: "human" | "engine" | "remote", level, fen, moves, orient, mode, names: { w, b } }
+function startGame(opts) {
+  opts = opts || {};
+  cancelEngine();
+  var start = opts.fen || R.START_FEN;
+  var rp = R.replay(opts.moves || [], start);
+  G = {
+    id: ++gameSeq, mode: opts.mode || "local", startFen: start,
+    players: { w: opts.white || "human", b: opts.black || "human" },
+    level: opts.level || 5, names: opts.names || { w: "white", b: "black" },
+    moves: rp.ucis.slice(), sans: rp.sans.slice(), positions: rp.positions.slice(), keys: rp.keys.slice(),
+    over: false, result: null, reason: null, usedTakeback: false, info: null,
+  };
+  var orient = opts.orient || (G.players.w !== "human" && G.players.b === "human" ? "b" : "w");
+  closeCard();
+  closePromo();
+  if (orient !== V.orient) viewOrient(orient);
+  var lm = G.moves.length ? G.moves[G.moves.length - 1] : null;
+  viewSet(cur(), { instant: true, last: lm ? [sqi(lm.slice(0, 2)), sqi(lm.slice(2, 4))] : null });
+  var st = R.status(cur(), G.keys.slice(0, -1));
+  if (st.over) { finish(st.result, st.reason, true); }
+  refresh();
+  fire("start", stateOf());
+  if (!G.over) { sfx("start"); maybeEngine(); }
+  return G.id;
+}
+
+// source: "local" (this device's board), "engine", "remote" (agent 2's network code)
+function submit(uci, source, viewOpts) {
+  if (!G || G.over) return false;
+  var pos = cur(), who = G.players[pos.turn];
+  source = source || "local";
+  if (source === "local" && who !== "human") return false;
+  if (source === "engine" && who !== "engine") return false;
+  if (source === "remote" && who !== "remote") return false;
+  var norm = R.uci(pos, uci);
+  if (!norm) return false;
+  var san = R.san(pos, norm), np = R.play(pos, norm);
+  if (!np) return false;
+  G.moves.push(norm); G.sans.push(san); G.positions.push(np); G.keys.push(R.key(np));
+  viewOpts = viewOpts || {};
+  viewSet(np, { from: sqi(norm.slice(0, 2)), dropped: viewOpts.dropped, last: [sqi(norm.slice(0, 2)), sqi(norm.slice(2, 4))] });
+  var st = R.status(np, G.keys.slice(0, -1));
+  sfx(np.check ? "tock" : /x/.test(san) ? "pop" : "place");
+  fire("move", { uci: norm, san: san, ply: G.moves.length, by: pos.turn, source: source, fen: R.toFen(np), local: source === "local" });
+  if (st.over) finish(st.result, st.reason);
+  else if (G.mode === "local" && $("autoFlip").checked) setTimeout(function () { if (G && !G.over && G.mode === "local") { viewOrient(np.turn); refresh(); } }, 260);
+  refresh();
+  if (!G.over) maybeEngine();
+  return true;
+}
+
+// take back: in vs computer, back to your last move (two plies if the engine has answered);
+// in pass and play, one ply. Not allowed when a side is remote.
+function takeback() {
+  if (!G || G.players.w === "remote" || G.players.b === "remote" || !G.moves.length) return false;
+  if (G.over && /^(resign|timeout|agreed|abandoned)$/.test(G.reason)) return false;
+  var n = 1;
+  if (G.mode === "cpu") {
+    // back to the last position where it was your move (and at least one ply back)
+    var hs = G.players.w === "human" ? "w" : "b", k = G.positions.length - 2;
+    while (k >= 0 && G.positions[k].turn !== hs) k--;
+    if (k < 0) return false;
+    n = G.positions.length - 1 - k;
+  }
+  cancelEngine();
+  G.moves.length -= n; G.sans.length -= n; G.positions.length -= n; G.keys.length -= n;
+  G.usedTakeback = true;
+  G.over = false; G.result = null; G.reason = null;
+  closeCard();
+  var lm = G.moves.length ? G.moves[G.moves.length - 1] : null;
+  viewSet(cur(), { last: lm ? [sqi(lm.slice(0, 2)), sqi(lm.slice(2, 4))] : null });
+  if (G.mode === "local" && $("autoFlip").checked) viewOrient(cur().turn);
+  sfx("back");
+  refresh();
+  maybeEngine();
+  return true;
+}
+
+// end from outside the rules: reason "resign" | "timeout" | "agreed" | "abandoned"
+function endGame(result, reason, quiet) { if (!G || G.over) return false; finish(result, reason, quiet); refresh(); return true; }
+function resign(colour) {
+  if (!G || G.over) return false;
+  colour = colour || (G.mode === "cpu" ? (G.players.w === "human" ? "w" : "b") : cur().turn);
+  return endGame(colour === "w" ? "0-1" : "1-0", "resign");
+}
+
+function finish(result, reason, quiet) {
+  cancelEngine();
+  G.over = true; G.result = result; G.reason = reason;
+  V.selected = -1; paintMarks();
+  fire("end", stateOf());
+  showResult(quiet);
+}
+
+// ---------- the engine (web worker, main thread fallback) ----------
+var worker = null, workerBroken = false, thinking = null, reqSeq = 0;
+function scriptSrc(part) { var s = document.querySelector('script[src*="' + part + '"]'); return s ? s.getAttribute("src") : part; }
+function getWorker() {
+  if (worker || workerBroken) return worker;
+  try {
+    var es = scriptSrc("chess/engine.js"), q = es.indexOf("?") >= 0 ? es.slice(es.indexOf("?")) : "";
+    worker = new Worker("chess/worker.js" + q);
+    worker.onmessage = function (e) { if (e.data && e.data.init === false) { breakWorker(); return; } if (e.data && e.data.id) onEngineReply(e.data); };
+    worker.onerror = function (e) { console.warn("[chess] worker failed, thinking on the page instead", e && e.message); breakWorker(); };
+    worker.postMessage({ init: [scriptSrc("chess/rules.js"), scriptSrc("chess/engine.js")], base: location.href });
+  } catch (er) { workerBroken = true; worker = null; }
+  return worker;
+}
+function breakWorker() {
+  workerBroken = true;
+  if (worker) { try { worker.terminate(); } catch (er) {} worker = null; }
+  if (thinking) { var t = thinking; thinking = null; runEngine(t.req, t.t0); }
+}
+function maybeEngine() {
+  if (!G || G.over || thinking) return;
+  var pos = cur();
+  if (G.players[pos.turn] !== "engine") return;
+  var req = { id: ++reqSeq, fen: G.startFen, moves: G.moves.slice(), level: G.level, seed: (Math.random() * 2147483647) | 0, game: G.id };
+  runEngine(req, performance.now());
+}
+function runEngine(req, t0) {
+  thinking = { req: req, t0: t0 };
+  refresh();
+  var w = getWorker();
+  if (w) w.postMessage(req);
+  else setTimeout(function () {
+    if (!thinking || thinking.req.id !== req.id) return;
+    var r = E.search(req);
+    onEngineReply({ id: req.id, move: r.move, info: r });
+  }, 40);
+}
+function onEngineReply(d) {
+  if (!thinking || thinking.req.id !== d.id) return;
+  var req = thinking.req, cfg = E.LEVELS[req.level - 1];
+  var wait = Math.max(0, (cfg ? cfg.delay : 400) - (performance.now() - thinking.t0));
+  setTimeout(function () {
+    if (!thinking || thinking.req.id !== d.id || !G || G.id !== req.game) return;
+    thinking = null;
+    G.info = d.info || null;
+    if (!d.move || !submit(d.move, "engine")) { console.warn("[chess] engine gave no usable move", d); setStatus("the computer got confused. try a takeback or a new game"); refresh(); }
+  }, wait);
+}
+function cancelEngine() {
+  if (!thinking) return;
+  thinking = null;
+  if (worker) { try { worker.terminate(); } catch (er) {} worker = null; }  // a running search can't be interrupted
+}
+
+function stateOf() {
+  if (!G) return null;
+  var pos = cur();
+  return {
+    id: G.id, mode: G.mode, fen: R.toFen(pos), startFen: G.startFen, moves: G.moves.slice(), sans: G.sans.slice(),
+    turn: pos.turn, check: pos.check, players: { w: G.players.w, b: G.players.b }, level: G.level,
+    over: G.over, result: G.result, reason: G.reason, usedTakeback: G.usedTakeback, thinking: !!thinking,
+    orient: V.orient, names: { w: G.names.w, b: G.names.b }, info: G.info,
+  };
+}
+
+// =====================================================================
+// the page
+// =====================================================================
+var mode = "cpu";
+var REASON = {
+  checkmate: "by checkmate", resign: "by resignation", timeout: "on time", stalemate: "stalemate",
+  threefold: "threefold repetition", fifty: "fifty moves without a capture or pawn move", material: "not enough material to mate",
+  agreed: "draw agreed", abandoned: "the other player left", illegal: "forfeit, an illegal move came in",
+};
+// play a friend: chess/net.js fills these in (enter, status, canResign, resign, cardButtons, cardWire, cardTitle)
+var FH = {};
+var VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+
+function setStatus(t) { $("status").textContent = t; }
+
+function material(pos) {
+  var c = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
+  pos.board.forEach(function (x) { if (x && x[1] !== "K") c[x[0]][x[1].toLowerCase()]++; });
+  return c;
+}
+
+function fillBar(el, colour) {
+  var pos = cur(), mat = material(pos), base = material(G.positions[0]), other = colour === "w" ? "b" : "w";
+  el.dataset.c = colour;   // net.js finds each colour's clock by this
+  el.querySelector(".dotc").className = "dotc " + colour;
+  el.querySelector(".who").textContent = G.names[colour];
+  el.classList.toggle("turn", !G.over && pos.turn === colour);
+  var html = "", first = true;
+  ["q", "r", "b", "n", "p"].forEach(function (t) {
+    var missing = Math.max(0, base[other][t] - mat[other][t]);   // taken since the game's start position
+    for (var k = 0; k < missing; k++) { html += '<span class="' + (k === 0 && !first ? "gap" : "") + '">' + PC[other + t.toUpperCase()] + "</span>"; }
+    if (missing) first = false;
+  });
+  var score = 0;
+  ["p", "n", "b", "r", "q"].forEach(function (t) { score += VALUE[t] * (mat[colour][t] - mat[other][t]); });
+  if (score > 0) html += '<span class="diff">+' + score + "</span>";
+  el.querySelector(".caps").innerHTML = html;
+  el.querySelector(".think").hidden = !(thinking && pos.turn === colour);
+}
+
+function renderMoves() {
+  var ol = $("moves"), sans = G.sans, html = "";
+  var startBlack = G.positions[0].turn === "b", n0 = G.positions[0].fullmove;
+  var list = startBlack ? [null].concat(sans) : sans.slice();
+  for (var i = 0; i < list.length; i += 2) {
+    var a = list[i], b = list[i + 1], ia = i - (startBlack ? 1 : 0), ib = ia + 1;
+    html += '<li><span class="n">' + (n0 + i / 2) + ".</span><span>" + (a == null ? "..." : '<span class="' + (ia === sans.length - 1 ? "cur" : "") + '">' + a + "</span>") +
+      "</span><span>" + (b == null ? "" : '<span class="' + (ib === sans.length - 1 ? "cur" : "") + '">' + b + "</span>") + "</span></li>";
+  }
+  ol.innerHTML = html || '<li class="none">no moves yet</li>';
+  ol.scrollTop = ol.scrollHeight;
+}
+
+function refresh() {
+  if (!G) return;
+  var pos = cur();
+  V.canMove = function (c) { return !!G && !G.over && G.players[c] === "human" && !thinking; };
+  var top = V.orient === "w" ? "b" : "w";
+  fillBar($("barTop"), top);
+  fillBar($("barBot"), top === "w" ? "b" : "w");
+  renderMoves();
+  paintMarks();
+  // status
+  if (G.over) setStatus(resultLine());
+  else if (thinking) setStatus("the computer is thinking...");
+  else if (G.mode === "cpu") setStatus(pos.check ? "check! your move" : "your move");
+  else if (G.mode === "local") setStatus((pos.turn === "w" ? "white" : "black") + " to move" + (pos.check ? ", check!" : ""));
+  else if (G.mode === "friend" && FH.status && FH.status() != null) setStatus(FH.status());
+  else setStatus(G.players[pos.turn] === "human" ? (pos.check ? "check! your move" : "your move") : "waiting for " + G.names[pos.turn]);
+  // buttons
+  var remote = G.players.w === "remote" || G.players.b === "remote";
+  var canTake = !remote && G.moves.length > 0 && !(G.over && (G.reason === "resign" || G.reason === "timeout" || G.reason === "agreed" || G.reason === "abandoned"));
+  if (G.mode === "cpu") {
+    var hs = G.players.w === "human" ? "w" : "b";
+    canTake = canTake && G.positions.some(function (p, k) { return k < G.positions.length - 1 && p.turn === hs; });
+  }
+  $("takeback").disabled = !canTake;
+  if (G.mode === "friend") $("resign").disabled = !(FH.canResign && FH.canResign());
+  else $("resign").disabled = G.over || G.moves.length === 0 || (G.players.w === "remote" && G.players.b === "remote");
+  if (resignArmed && $("resign").disabled) disarmResign();
+}
+
+function resultLine() {
+  if (!G.over) return "";
+  var r = G.result, why = REASON[G.reason] || G.reason;
+  if (r === "1/2-1/2") return "draw: " + why;
+  var winner = r === "1-0" ? "w" : "b";
+  if (G.mode === "cpu") return (G.players[winner] === "human" ? "you won " : "the computer won ") + why;
+  return G.names[winner] + " won " + why;
+}
+
+function closeCard() { $("over").hidden = true; }
+function showResult(quiet) {
+  var r = G.result, card = $("card"), html = "", winner = r === "1-0" ? "w" : r === "0-1" ? "b" : null;
+  var why = REASON[G.reason] || G.reason || "";
+  var lbEl = $("lb");
+  if (G.mode === "cpu") {
+    var human = G.players.w === "human" ? "w" : "b";
+    if (winner === human) {
+      html += "<h2>you won!</h2><p>you beat " + levelLabel(G.level) + ", " + why + ".</p>";
+      if (G.usedTakeback) {
+        html += '<p class="small">you used a takeback this game, so it doesn\'t count for the leaderboard. win one clean to get on it.</p>';
+      } else {
+        var best = +lsGet("sortafun-chess-best", 0) || 0;
+        if (G.level > best) { lsSet("sortafun-chess-best", G.level); html += "<p><b>new best!</b> your highest level beaten is now " + G.level + ".</p>"; }
+        updateLevelNote();
+        if (!quiet) {
+          if (window.SortafunLB && SortafunLB.GAMES && SortafunLB.GAMES.chess) {
+            lbEl.innerHTML = "";
+            SortafunLB.mountPanel(lbEl, "chess", { score: G.level });
+            html += '<p class="small">put your name on the board below.</p>';
+          } else html += '<p class="small">the chess leaderboard isn\'t switched on yet.</p>';
+        }
+      }
+      if (!quiet) { if (window.SortafunSFX) SortafunSFX.result("win"); }
+    } else if (winner) {
+      html += "<h2>the computer won</h2><p>" + levelLabel(G.level) + " got you, " + why + ".</p>";
+      if (!quiet && window.SortafunSFX) SortafunSFX.result("lose");
+    } else {
+      html += "<h2>draw</h2><p>" + why + ".</p>";
+      if (!quiet) sfx("done");
+    }
+  } else {
+    var mine = G.players.w === "human" && G.players.b !== "human" ? "w" : G.players.b === "human" && G.players.w !== "human" ? "b" : null;
+    var title = G.mode === "friend" && FH.cardTitle ? FH.cardTitle(winner) : null;
+    if (title) html += "<h2>" + title + "</h2><p>" + why + ".</p>";
+    else if (winner) html += "<h2>" + G.names[winner] + " won</h2><p>" + why + ".</p>";
+    else html += "<h2>draw</h2><p>" + why + ".</p>";
+    if (!quiet) { if (window.SortafunSFX) SortafunSFX.result(winner ? (mine && winner !== mine ? "lose" : "win") : "done"); }
+  }
+  var friendCard = G.mode === "friend" && FH.cardButtons;
+  html += friendCard ? FH.cardButtons() : '<div class="btns"><button class="big-go" id="again" style="width:auto">new game</button><button id="seeBoard">look at the board</button></div>';
+  card.innerHTML = html;
+  $("over").hidden = false;
+  if (friendCard) { if (FH.cardWire) FH.cardWire(card); }
+  else $("again").onclick = function () { newGame(); };
+  if ($("seeBoard")) $("seeBoard").onclick = function () { closeCard(); };
+}
+
+// ---------- side panel ----------
+var level = Math.max(1, Math.min(50, parseInt(lsGet("sortafun-chess-level", "5"), 10) || 5));
+var colourPick = lsGet("sortafun-chess-colour", "w");
+if (["w", "b", "r"].indexOf(colourPick) < 0) colourPick = "w";
+$("level").value = level;
+$("colour").querySelector('[data-c="w"]').innerHTML = PC.wK + "white";
+$("colour").querySelector('[data-c="b"]').innerHTML = PC.bK + "black";
+
+function updateLevelNote() {
+  var best = +lsGet("sortafun-chess-best", 0) || 0;
+  var pending = G && G.mode === "cpu" && !G.over && G.moves.length > 1 && level !== G.level;
+  $("lvlTxt").textContent = levelLabel(level);
+  $("lvlNote").textContent = (pending ? "starts with your next game. " : "ratings are approx, a rough guess. ") + "your best win: " + (best ? "level " + best : "none yet");
+}
+function paintColour() { [].forEach.call($("colour").children, function (b) { b.classList.toggle("on", b.dataset.c === colourPick); }); }
+$("level").addEventListener("input", function () {
+  level = +this.value;
+  lsSet("sortafun-chess-level", level);
+  // a game that hasn't really started picks the new level up straight away
+  if (G && G.mode === "cpu" && !G.over && G.moves.length <= 1 && !thinking) {
+    G.level = level;
+    G.names[G.players.w === "engine" ? "w" : "b"] = "computer, " + levelLabel(level);
+    refresh();
+  }
+  updateLevelNote();
+});
+$("colour").addEventListener("click", function (e) {
+  var b = e.target.closest("button");
+  if (!b) return;
+  colourPick = b.dataset.c; lsSet("sortafun-chess-colour", colourPick); paintColour();
+  if (G && G.mode === "cpu" && G.moves.length === 0 && !G.over) newGame();
+});
+
+function newGame() {
+  if (mode === "cpu") {
+    var you = colourPick === "r" ? (Math.random() < 0.5 ? "w" : "b") : colourPick;
+    var names = { w: "", b: "" };
+    names[you] = "you";
+    names[you === "w" ? "b" : "w"] = "computer, " + levelLabel(level);
+    startGame({ mode: "cpu", white: you === "w" ? "human" : "engine", black: you === "b" ? "human" : "engine", level: level, orient: you, names: names });
+  } else if (mode === "local") {
+    startGame({ mode: "local", white: "human", black: "human", orient: "w", names: { w: "white", b: "black" } });
+  } else if (FH.enter) {
+    FH.enter();   // play a friend: chess/net.js puts up the lobby or the room's game
+  } else {
+    startGame({ mode: "friend", white: "remote", black: "remote", orient: "w", names: { w: "white", b: "black" } });
+  }
+  $("lb").innerHTML = "";
+  updateLevelNote();
+}
+
+function setMode(m) {
+  mode = m;
+  [].forEach.call($("tabs").children, function (b) { b.classList.toggle("on", b.dataset.mode === m); });
+  $("pan-cpu").hidden = m !== "cpu"; $("pan-friend").hidden = m !== "friend"; $("pan-local").hidden = m !== "local";
+  $("newGame").hidden = m === "friend";
+  $("takeback").hidden = m === "friend";
+  newGame();
+}
+$("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && b.dataset.mode !== mode) setMode(b.dataset.mode); });
+$("newGame").addEventListener("click", function () { newGame(); });
+$("takeback").addEventListener("click", function () { takeback(); });
+$("flip").addEventListener("click", function () { viewOrient(V.orient === "w" ? "b" : "w"); refresh(); sfx("flip"); });
+var resignArmed = null;
+function disarmResign() { clearTimeout(resignArmed); resignArmed = null; $("resign").textContent = "resign"; $("resign").classList.remove("warn"); }
+$("resign").addEventListener("click", function () {
+  if (!G || G.over) return;
+  if (!resignArmed) { $("resign").textContent = "sure?"; $("resign").classList.add("warn"); resignArmed = setTimeout(disarmResign, 3000); return; }
+  disarmResign();
+  if (mode === "friend" && FH.resign) FH.resign(); else resign();
+});
+
+V.onMove = function (uci, o) { submit(uci, "local", { dropped: o && o.dropped >= 0 ? o.dropped : undefined }); };
+V.canMove = function () { return false; };
+layoutSquares();
+paintColour();
+
+// ---------- public controller (agent 2 plugs the online opponent in here) ----------
+window.SortafunChess = {
+  start: startGame,                 // ({ white, black, level, fen, moves, orient, mode, names }) -> game id
+  submit: submit,                   // (uci, "local" | "engine" | "remote", viewOpts?) -> bool
+  applyRemote: function (uci) { return submit(uci, "remote"); },
+  takeback: takeback,
+  resign: resign,                   // (colour?) -> bool
+  end: endGame,                     // (result, reason) for resign / timeout / agreed / abandoned
+  state: stateOf,
+  on: function (name, fn) { hooks[name].push(fn); return function () { var a = hooks[name], k = a.indexOf(fn); if (k >= 0) a.splice(k, 1); }; },
+  setOrientation: function (c) { viewOrient(c); refresh(); },
+  flip: function () { viewOrient(V.orient === "w" ? "b" : "w"); refresh(); },
+  setNames: function (names) { if (G) { if (names.w != null) G.names.w = names.w; if (names.b != null) G.names.b = names.b; refresh(); } },
+  setStatus: setStatus,
+  setMode: setMode,
+  mode: function () { return mode; },
+  refresh: refresh,
+  closeResult: closeCard,
+  resultOpen: function () { return !$("over").hidden; },
+  friend: FH,                       // hooks for play a friend (chess/net.js)
+};
+
+// ---------- test hook ----------
+window.__chess = {
+  state: stateOf,
+  move: function (uci) { return submit(uci, "local"); },
+  auto: function (lvl) { var s = stateOf(); return E.search({ fen: s.startFen, moves: s.moves, level: lvl || 50, timeCap: 3000 }).move; },
+  newGame: newGame, setMode: setMode, takeback: takeback, resign: resign,
+  setLevel: function (n) { $("level").value = n; $("level").dispatchEvent(new Event("input")); },
+  setColour: function (c) { colourPick = c; paintColour(); },
+  view: V, ctl: window.SortafunChess,
+};
+
+setMode("cpu");
+})();
+</script>
+<script src="chess/net.js?v=eb38e794"></script>
+<script>/* the leaderboard sits under the game from the start (leaderboard.js keepBoard) */
+if (window.SortafunLB) SortafunLB.keepBoard(document.getElementById("lb"), "chess");</script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

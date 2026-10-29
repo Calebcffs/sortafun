@@ -39,6 +39,14 @@
   ul.todos li.done span.t { text-decoration: line-through; color: #999; }
   ul.todos li span.t { flex: 1; word-break: break-word; }
   [hidden] { display: none !important; }
+  .cdoc h3 { font-size: 14px; margin: 16px 0 6px; }
+  .cdoc p, .cdoc ol { margin: 4px 0 8px; max-width: 900px; }
+  .cdoc table { width: auto; }
+  .cdoc td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .cdoc .psts { display: flex; flex-wrap: wrap; gap: 14px; }
+  .cdoc .pst { font-size: 11px; }
+  .cdoc .pst table td { width: 26px; height: 20px; padding: 0; text-align: center; font-size: 9px; border: 1px solid #fff; }
+  .cdoc .lvls { max-height: 420px; overflow: auto; display: inline-block; }
 </style>
 </head>
 <body>
@@ -70,6 +78,11 @@
   <details id="rlevels"><summary>show every level (delete takes a level and its board down for good)</summary>
     <div class="row"><button id="rl-reload">reload</button> <span class="muted" id="rl-count"></span></div>
     <table id="rltable"><thead><tr><th>when (SGT)</th><th>level</th><th>song</th><th>by</th><th>notes</th><th>plays</th><th></th></tr></thead><tbody></tbody></table>
+  </details>
+
+  <h2>chess: how the engine works</h2>
+  <details id="chessdoc"><summary>open the engine notes (algorithm, weights, the 50 levels). Built from the numbers in chess/engine.js, so it can't go stale</summary>
+    <div id="chessdoc-in" class="cdoc" style="margin-top:10px"></div>
   </details>
 
   <h2>overview</h2>
@@ -104,6 +117,80 @@
 
 <script src="piano-charts.js?v=226043f6"></script>
 <script src="piano-studio.js?v=d7833f9b"></script>
+<script src="chess/rules.js?v=8f649586"></script>
+<script src="chess/engine.js?v=db0e241b"></script>
+<script>
+// chess engine notes: rendered from ChessEngine's exported constants, so a retune shows up here by itself
+(function () {
+  var E = window.ChessEngine, el = document.getElementById("chessdoc-in");
+  if (!E || !el) return;
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function table(head, rows) {
+    return "<table><thead><tr>" + head.map(function (h) { return "<th>" + h + "</th>"; }).join("") + "</tr></thead><tbody>" +
+      rows.map(function (r) { return "<tr>" + r.map(function (c) { return typeof c === "number" ? '<td class="n">' + c + "</td>" : "<td>" + c + "</td>"; }).join("") + "</tr>"; }).join("") +
+      "</tbody></table>";
+  }
+  var PV = E.PIECE_VALUES, T = E.EVAL_TERMS, L = E.LEVELS, h = "";
+
+  h += "<h3>how it picks a move</h3><ol>" +
+    "<li><b>opening book.</b> " + E.BOOK_LINES.length + " short main lines (our own data). If the position is in the book, it plays a book move, picked at random weighted by how many lines use it. Higher levels may follow the book for more plies (the <i>book</i> column below).</li>" +
+    "<li><b>only one legal move:</b> play it straight away.</li>" +
+    "<li><b>search.</b> Iterative deepening: depth 1, 2, 3 and so on, each time with alpha-beta (principal variation search) over every legal move, the best move from the last depth tried first. It stops when the level's <b>node budget</b> runs out, the level's <b>depth cap</b> is reached, a forced mate is found, or the 6 second safety cap hits. Strength comes from nodes, not time, so a level plays the same on a phone and a desktop (just slower on the phone). If time runs out halfway through a depth, it keeps the move from the last finished depth unless a new move already beat it.</li>" +
+    "<li><b>human-ish mistakes (low levels only).</b> With chance <i>blunder</i> it ignores the search and plays the <i>natural</i> move: the one with the best static score right after it is played (plus 0-39 cp of noise), without looking at the reply. So it grabs material that is defended and walks into forks, like a beginner. Otherwise, if <i>temp</i> &gt; 0, it picks among the root moves with softmax weights e^((score - best) / temp): a move 1 temp worse is played e times less often than the best. To score the other moves fairly, root moves are searched with a window of temp x 4 + 1 cp below the best.</li>" +
+    "<li><b>reply delay.</b> The page waits at least <i>delay</i> ms before showing the move, so level 1 doesn't answer instantly.</li></ol>";
+
+  h += "<h3>search features</h3>" + table(["feature", "what it does"], E.FEATURES.map(function (f) { return ["<b>" + esc(f.name) + "</b>", esc(f.desc)]; }));
+
+  h += "<h3>evaluation (the weights)</h3><p>Everything is in centipawns (100 = a pawn), scored for white and black, then flipped to the side to move, +" + T.tempo + " for having the move. " +
+    "Each term has a middlegame (mg) and an endgame (eg) value; the two totals are blended by <b>phase</b> = knights + bishops x1, rooks x2, queens x4 (24 = all pieces on the board): score = (mg x phase + eg x (24 - phase)) / 24.</p>";
+  h += table(["piece", "mg", "eg"], ["P", "N", "B", "R", "Q"].map(function (p) { return [p, PV.mg[p], PV.eg[p]]; }));
+  h += "<p></p>" + table(["term", "mg", "eg", "notes"], [
+    ["mobility per square (N, B, R, Q)", T.mobility.mg.join(", "), T.mobility.eg.join(", "), "counted from a base of " + T.mobility.base.join(", ") + " squares, so a piece with fewer squares scores below zero"],
+    ["passed pawn by rank (1st to 8th)", T.passed.mg.join(", "), T.passed.eg.join(", "), "rank counted from the pawn's own side"],
+    ["doubled pawn", T.doubled[0], T.doubled[1], "per extra pawn on a file"],
+    ["isolated pawn", T.isolated[0], T.isolated[1], "no friendly pawn on either side file"],
+    ["bishop pair", T.bishopPair[0], T.bishopPair[1], ""],
+    ["rook on open file", T.rookOpen[0], T.rookOpen[1], "half-open file: " + T.rookSemiOpen + " mg"],
+    ["king pawn shield", T.shield[0] + " / " + T.shield[1] + " / " + T.shield[2], "-", "while the king is on its first two ranks, for its file and the two beside it: pawn one step ahead / two steps ahead / neither"],
+    ["king attack", "up to -500", "-", "attack units on the 9 squares round the king (N 2, B 2, R 3, Q 5), penalty min(500, 1.6 x units^2), only with 2+ attackers and a queen"],
+    ["mop-up", "-", "yes", "the other side has no pawns and is 400+ cp down in pieces: their king is pushed to the edge and ours walks closer"],
+    ["drawish material", "-", "yes", "side ahead has no pawns and not enough to mate: score shrinks toward 0"],
+  ]);
+  h += "<p>Material and piece-square tables are the PeSTO values by Ronald Friederich (Chess Programming Wiki, \"PeSTO's Evaluation Function\"). Everything else above is our own and hand set.</p>";
+
+  h += "<h3>piece-square tables</h3><p class='muted'>Bonus (green) or penalty (red) in cp for a white piece on each square, rank 8 at the top. Black uses the mirror. " + esc(E.PST.layout) + ".</p><div class='psts'>";
+  ["mg", "eg"].forEach(function (ph) {
+    ["P", "N", "B", "R", "Q", "K"].forEach(function (p) {
+      var a = E.PST[ph][p], max = 1, i;
+      for (i = 0; i < 64; i++) max = Math.max(max, Math.abs(a[i]));
+      var g = "<div class='pst'><b>" + p + " " + ph + "</b><table>";
+      for (var r = 0; r < 8; r++) {
+        g += "<tr>";
+        for (var f = 0; f < 8; f++) {
+          var v = a[r * 8 + f], k = Math.abs(v) / max;
+          var bg = v >= 0 ? "rgba(30,160,70," + (k * 0.85).toFixed(2) + ")" : "rgba(210,40,40," + (k * 0.85).toFixed(2) + ")";
+          g += "<td style='background:" + bg + "' title='" + "abcdefgh"[f] + (8 - r) + ": " + v + "'>" + v + "</td>";
+        }
+        g += "</tr>";
+      }
+      h += g + "</table></div>";
+    });
+  });
+  h += "</div>";
+
+  h += "<h3>the 50 levels</h3><p>Rating label = 600 + (level - 1) x 1400 / 49, so level 1 = 600 and level 50 = 2000, about 28.6 a level. <b>These are estimates, not measurements</b>: nobody has played the levels against rated players. " +
+    "nodes = positions searched per move (grows evenly on a log scale from 300 to " + L[49].nodes.toLocaleString() + "), depth = max search depth (64 = no cap), temp = softmax noise in cp, blunder = chance of a natural-move blunder, qs = capture search at the horizon, book = max book plies, delay = minimum reply time.</p>";
+  h += "<div class='lvls'>" + table(["level", "~elo", "nodes", "depth", "temp", "blunder", "qs", "book", "delay ms"], L.map(function (c) {
+    return [c.level, c.elo, c.nodes.toLocaleString(), c.depth === 64 ? "-" : c.depth, c.temp, Math.round(c.blunder * 100) + "%", c.qs ? "yes" : "no", c.book, c.delay];
+  })) + "</div>";
+
+  h += "<h3>is the ladder in order?</h3><p><code>node tools/chess/selfplay.mjs</code> plays each level against the one 5 below it, 20 games (10 random 4-move openings, both colours; levels over 20k nodes ran at a quarter of their budget to keep it quick). " +
+    "The stronger side won every pairing, 75% to 100%; level 50 beat level 1 20-0. Levels 1 apart are not guaranteed to be in order. " +
+    "Self-play tends to exaggerate gaps (the same engine exploits its own weaknesses), and these scores imply bigger jumps than the 143 points 5 levels are labelled with, so the in-between labels are the roughest part. " +
+    "To pin them down properly the levels would need games against an engine with known ratings.</p>";
+  el.innerHTML = h;
+})();
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";

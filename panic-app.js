@@ -44,6 +44,7 @@
     "city.html": ["City Sandbox", "ppt"],
     "draw.html": ["Draw and Guess", "ppt"],
     "globe.html": ["Globe Guesser", "ppt"],
+    "chess.html": ["Chess", "excel"],
     "casino.html": ["Sorta Casino", "excel"],
     "noclip.html": ["Noclip", "ppt"],
     "deeptime.html": ["Deep Time", "ppt"],

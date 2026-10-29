@@ -714,9 +714,9 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=5233b886"></script>
-<script src="china.js?v=c7758ff9"></script>
-<script src="feedback.js?v=1e93ee6f"></script>
-<script src="panic-app.js?v=56ca46e5"></script>
+<script src="china.js?v=c859d851"></script>
+<script src="feedback.js?v=19f93896"></script>
+<script src="panic-app.js?v=f0e47fde"></script>
 </head>
 <body>
 <div class="site">
@@ -837,6 +837,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-29</span> <b>v0.20</b>: chess! play the computer at 50 levels (beginner up to strong club player, our own engine), play a friend online with a 4-letter code and a clock, or pass and play on one device. beat a level to get on the board.</li>
         <li><span class="when">10-26</span> <b>v0.19.2</b>: globe guesser: skipping a place no longer ends the next round early, a skipped game stays off the board, and the host of a room can end a round when someone wanders off.</li>
         <li><span class="when">10-26</span> <b>v0.19.1</b>: globe guesser: the bar along the top of the picture now always hides the address, however long it is.</li>
         <li><span class="when">10-26</span> <b>v0.19</b>: NEW: <b>globe guesser</b>. you get dropped somewhere on earth in street view. look around, walk down the road, read the signs, then pin the map where you think you are. play solo, take the daily challenge (the same 5 places for everyone), or make a room for up to 8 friends: party or duels.</li>
@@ -942,7 +943,7 @@
     <p><b>word games:</b> <a href="grab.html">Word Grab</a> &middot; <a href="typing.html">Typing Test</a> &middot; <a href="crossword.html">Crossword</a></p>
     <p><b>puzzle:</b> <a href="mines.html">Minesweeper</a></p>
     <p><b>skill and action:</b> <a href="maze.html">Cursor Maze</a> &middot; <a href="reaction.html">Reaction Time Test</a> &middot; <a href="aim.html">Aim Trainer</a> &middot; <a href="stopbar.html">Stop the Bar</a> &middot; <a href="piano.html">Piano Rush</a> &middot; <a href="rhythm.html">Rhythm Rush</a> &middot; <a href="driving.html">Circuit Race</a> &middot; <a href="sushi.html">Sushi Goes Round</a> &middot; <a href="deeptime.html">Deep Time</a></p>
-    <p><b>play with friends:</b> <a href="funstrike.html">Fun Strike</a> &middot; <a href="draw.html">Draw and Guess</a> &middot; <a href="globe.html">Globe Guesser</a></p>
+    <p><b>play with friends:</b> <a href="funstrike.html">Fun Strike</a> &middot; <a href="draw.html">Draw and Guess</a> &middot; <a href="chess.html">Chess</a> &middot; <a href="globe.html">Globe Guesser</a></p>
     <p><b>art:</b> <a href="flipbook.html">Animation Studio</a> &middot; <a href="anim-gallery.html">Animation Gallery</a></p>
     <p><b>hang out:</b> <a href="leaderboards.html">Leaderboards</a> &middot; <a href="forum.html">The Forum</a> &middot; <a href="guestbook.html">Guestbook</a> &middot; <a href="passport.html">Passport</a></p>
   </nav>
@@ -962,7 +963,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=a995c8d7"></script>
+<script src="leaderboard.js?v=e978a479"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -984,6 +985,7 @@ var GAMES = [
   { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
   { id: "globe",     name: "Globe Guesser",  url: "globe.html",     cat: "online", key: "globe",    badge: "new",   blurb: "dropped somewhere on earth in street view. look around, then pin the map. solo, a daily challenge, or a room with friends: party or duels." },
+  { id: "chess",     name: "Chess",          url: "chess.html",     cat: "online", key: "chess",    badge: "new",   blurb: "play the computer at 50 levels, from beginner to strong club player, or send a friend a code and play them online." },
   { id: "deeptime",  name: "Deep Time",      url: "deeptime.html",  cat: "skill",  key: "deeptime", badge: "new",   blurb: "a camcorder tape from a forest in 1987. find the 8 parts of the time machine. something came through. headphones on." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },
@@ -1025,7 +1027,7 @@ var SOON = [
 ];
 
 // the Mobile chip: games that play well on a phone (a game keeps its own category too)
-var MOBILE = { rhythm: 1, piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1, globe: 1 };
+var MOBILE = { rhythm: 1, piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1, globe: 1, chess: 1 };
 
 var CAT_LABEL = { app: "app", soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout" };
 var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY", wip: "WIP" };
@@ -1299,6 +1301,23 @@ var THUMB = {
     g += '<circle cx="14" cy="12" r="4" fill="#ff3b30" stroke="' + K + '" stroke-width="1.5"/>' + outlined(38, 16, "REC", 11, "#f2f2e8");
     g += outlined(124, 112, "2/5", 11, "#f2f2e8");
     return g;
+  },
+  chess: function () {
+    // a corner of the board, a king and a knight on it
+    var g = bg("#c9a46b"), x, y;
+    for (y = 0; y < 3; y++) for (x = 0; x < 4; x++)
+      g += '<rect x="' + (x * 40) + '" y="' + (y * 40) + '" width="40" height="40" fill="' + ((x + y) % 2 ? "#b58863" : "#f0d9b5") + '"/>';
+    // white king
+    g += '<g' + S + ' fill="#fff">' +
+      '<path d="M50 34 v-12 M44 27 h12" fill="none" stroke-width="4"/>' +
+      '<path d="M50 40 C32 30 22 50 34 66 L66 66 C78 50 68 30 50 40 Z"/>' +
+      '<path d="M30 92 L34 66 L66 66 L70 92 Z"/><rect x="24" y="92" width="52" height="12" rx="4"/></g>';
+    // black knight
+    g += '<g' + S + ' fill="#2b2a3a">' +
+      '<path d="M96 104 L100 80 C92 74 88 66 92 58 L110 40 L112 30 L120 40 C136 44 142 64 138 104 Z"/>' +
+      '<rect x="90" y="98" width="54" height="10" rx="4"/></g>' +
+      '<circle cx="112" cy="50" r="3" fill="#fff"/>';
+    return g + outlined(124, 26, "LV 50", 16, "#ffd43b");
   },
   globe: function () {
     return bg("#7fd4ff") +

@@ -76,6 +76,8 @@
     // globe guesser: solo world map, 5 rounds (max 25000); today's challenge, the same 5 places for everyone
     globe:     { label: "globe guesser", unit: "pts", better: "high" },
     globeday:  { label: "globe guesser, today's challenge", unit: "pts", better: "high" },
+    // chess: the highest computer level (1-50) beaten, no takebacks
+    chess:     { label: "chess vs computer", unit: "level", better: "high" },
     sushirush: { label: "sushi lunch rush",   unit: "yen", better: "high", format: function (v) { return "\u00A5" + Number(v).toLocaleString("en-US"); } },
     // part 2: samples * 10000 - seconds, the same idea
     // archived 2026-10-06: off the homepage/leaderboards/passport, deeptime2.html still works by URL
