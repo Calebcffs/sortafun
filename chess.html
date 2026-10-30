@@ -169,9 +169,9 @@
     .moves { max-height: 160px; }
   }
 </style>
-<script src="sfx.js?v=5233b886"></script>
+<script src="sfx.js?v=3c3fc236"></script>
 <script src="china.js?v=c859d851"></script>
-<script src="feedback.js?v=19f93896"></script>
+<script src="feedback.js?v=565145a5"></script>
 <script src="panic-app.js?v=f0e47fde"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -308,7 +308,7 @@
 "use strict";
 var R = window.ChessRules, E = window.ChessEngine, PC = window.ChessPieces;
 var $ = function (id) { return document.getElementById(id); };
-function sfx(n) { if (window.SortafunSFX) SortafunSFX.play(n); }
+function sfx(n, delay) { if (window.SortafunSFX) SortafunSFX.play(n, delay); }
 function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function sqi(name) { return (name.charCodeAt(0) - 97) + (name.charCodeAt(1) - 49) * 8; } // "e4" -> 0..63
@@ -515,6 +515,7 @@ function endDrag(e, cancel) {
   var sq = cancel ? -1 : squareAt(e.clientX, e.clientY);
   if (d.moved) {
     if (sq >= 0 && sq !== d.sq && isTarget(d.sq, sq) && tryMove(d.sq, sq, true)) return;
+    if (sq >= 0 && sq !== d.sq) sfx("cnope");
     if (d.p) { d.p.el.classList.remove("drag"); placePiece(d.p, d.sq); }
     paintMarks();
   } else if (d.wasSel) { V.selected = -1; paintMarks(); }
@@ -576,7 +577,11 @@ function submit(uci, source, viewOpts) {
   viewOpts = viewOpts || {};
   viewSet(np, { from: sqi(norm.slice(0, 2)), dropped: viewOpts.dropped, last: [sqi(norm.slice(0, 2)), sqi(norm.slice(2, 4))] });
   var st = R.status(np, G.keys.slice(0, -1));
-  sfx(np.check ? "tock" : /x/.test(san) ? "pop" : "place");
+  // wooden piece sounds; a slid piece (not dropped) lands ~170 ms later, so wait for it.
+  // mate skips the check ping: finish() plays its own jingle
+  var mine = source === "local";
+  sfx(/^O-O/.test(san) ? "ccastle" : /=/.test(san) ? "cpromote" : np.check && !/#/.test(san) ? "ccheck" :
+    /x/.test(san) ? "ccapture" : mine ? "cmove" : "cmove2", viewOpts.dropped >= 0 ? 0 : 0.14);
   fire("move", { uci: norm, san: san, ply: G.moves.length, by: pos.turn, source: source, fen: R.toFen(np), local: source === "local" });
   if (st.over) finish(st.result, st.reason);
   else if (G.mode === "local" && $("autoFlip").checked) setTimeout(function () { if (G && !G.over && G.mode === "local") { viewOrient(np.turn); refresh(); } }, 260);

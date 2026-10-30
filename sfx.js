@@ -12,6 +12,7 @@
 // Games call SortafunSFX.play(name) for their own moments:
 //   tick click back good great bad coin win lose done start beep go pop type
 //   flip place boom whoosh levelup highscore stamp tock door
+//   cmove cmove2 ccapture ccastle ccheck cpromote cnope (chess)
 // and SortafunSFX.result("win" | "lose") at the end of a round, which the
 // leaderboard panel falls back on if a game doesn't.
 //
@@ -131,6 +132,17 @@
     return t;
   }
 
+  // a wooden knock: a narrow band of noise (the wood ringing) over a short
+  // falling thump (the board). p scales the pitch, v the loudness; each one is
+  // a few % off so a run of moves doesn't sound copy-pasted
+  function wood(t, p, v) {
+    v = v || 1;
+    p *= 0.96 + Math.random() * 0.08;
+    noise(sfxBus, t, 0.035, { ft: "bandpass", f: 2000 * p, q: 4, vol: 1.3 * v });
+    noise(sfxBus, t, 0.008, { f: 4000, vol: 0.06 * v });
+    tone(sfxBus, 200 * p, t, 0.06, { wave: "sine", to: 130 * p, vol: 0.36 * v, att: 0.001, decay: true });
+  }
+
   // ---------------------------------------------------------------
   // the sound effects
   // ---------------------------------------------------------------
@@ -171,6 +183,20 @@
       noise(B(), t + 0.6, 0.12, { ft: "lowpass", f: 700, vol: 0.2 });
     },
     tock: function (t) { tone(B(), 1000, t, 0.03, { wave: "sine", vol: 0.15, decay: true }); },
+    // chess pieces on a wooden board (chess.html): cmove for your own move, cmove2
+    // for the other side's, then capture / castle / check / promote, and cnope when
+    // a dragged piece snaps back
+    cmove: function (t) { wood(t, 1); },
+    cmove2: function (t) { wood(t, 0.86); },
+    ccapture: function (t) { wood(t, 1.25, 1.3); wood(t + 0.022, 0.8, 0.8); },
+    ccastle: function (t) { wood(t, 1, 0.75); wood(t + 0.085, 0.9, 0.6); },
+    ccheck: function (t) { wood(t, 1.05); tone(B(), 960, t + 0.01, 0.16, { wave: "sine", vol: 0.1, decay: true }); },
+    cpromote: function (t) {
+      wood(t, 1);
+      tone(B(), "E6", t + 0.05, 0.08, { wave: "sine", vol: 0.07, decay: true });
+      tone(B(), "B6", t + 0.11, 0.2, { wave: "sine", vol: 0.07, decay: true });
+    },
+    cnope: function (t) { tone(B(), 150, t, 0.1, { wave: "sine", to: 110, vol: 0.18, decay: true }); noise(B(), t, 0.05, { ft: "lowpass", f: 500, vol: 0.12 }); },
     // the Chinese-mode switch (china.js): a gong, then a little rising pentatonic run
     gong: function (t) {
       tone(B(), "D3", t, 1.6, { wave: "sine", vol: 0.28, decay: true });
@@ -252,7 +278,8 @@
     else if (wantsMusic && musicOn && soundOn && unlocked && !document.hidden) musicStart();
   }
 
-  function play(name) {
+  // delay (seconds) waits on the audio clock, e.g. for a piece to finish sliding
+  function play(name, delay) {
     if (!soundOn || !unlocked || hushed) return;
     var fn = SOUNDS[name];
     if (!fn || !ac()) return;
@@ -261,7 +288,7 @@
     var now = ctx.currentTime;
     if (MINGAP[name] && lastAt[name] && now - lastAt[name] < MINGAP[name]) return;
     lastAt[name] = now;
-    try { fn(now + 0.005); } catch (e) {}
+    try { fn(now + 0.005 + (delay || 0)); } catch (e) {}
   }
 
   // end of a round: "win" / "lose" (or any sound name)
