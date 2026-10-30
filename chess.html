@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
 <title>Chess: Play the Computer at 50 Levels or a Friend Online | Sortafun</title>
-<meta name="description" content="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.">
+<meta name="description" content="Free online chess. Play the computer at 50 levels, from a 600-rated beginner up to Stockfish at about 3000, get a review of every move after the game, or send a friend a 4-letter code and play them online with a clock. No sign-up.">
 <meta name="sortafun:name" content="chess">
 <link rel="canonical" href="https://sortafun.org/chess.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sortafun">
 <meta property="og:title" content="Chess: Play the Computer at 50 Levels or a Friend Online | Sortafun">
-<meta property="og:description" content="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.">
+<meta property="og:description" content="Free online chess. Play the computer at 50 levels, from a 600-rated beginner up to Stockfish at about 3000, get a review of every move after the game, or send a friend a 4-letter code and play them online with a clock. No sign-up.">
 <meta property="og:url" content="https://sortafun.org/chess.html">
 <meta property="og:image" content="https://sortafun.org/assets/og/chess.png">
 <meta property="og:image:width" content="1200">
@@ -19,10 +19,10 @@
 <meta property="og:image:alt" content="Chess on Sortafun">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Chess: Play the Computer at 50 Levels or a Friend Online | Sortafun">
-<meta name="twitter:description" content="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.">
+<meta name="twitter:description" content="Free online chess. Play the computer at 50 levels, from a 600-rated beginner up to Stockfish at about 3000, get a review of every move after the game, or send a friend a 4-letter code and play them online with a clock. No sign-up.">
 <meta name="twitter:image" content="https://sortafun.org/assets/og/chess.png">
 <meta name="theme-color" content="#ffd43b">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Chess","url":"https://sortafun.org/chess.html","description":"Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up.","image":"https://sortafun.org/assets/og/chess.png","genre":["Board","Strategy"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Chess","url":"https://sortafun.org/chess.html","description":"Free online chess. Play the computer at 50 levels, from a 600-rated beginner up to Stockfish at about 3000, get a review of every move after the game, or send a friend a 4-letter code and play them online with a clock. No sign-up.","image":"https://sortafun.org/assets/og/chess.png","genre":["Board","Strategy"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Chess","item":"https://sortafun.org/chess.html"}]}</script>
 <!-- /seo -->
 <link rel="icon" href="favicon.ico">
@@ -158,8 +158,51 @@
   #fWatch:empty { display: none; }
   .credit { font-size: 12px; color: var(--muted); margin: 14px 0 0; }
 
+  /* premoves */
+  .sq.pre.l { background-color: #e9a99c; } .sq.pre.d { background-color: #cc7f70; }
+
+  /* game review: eval bar, arrows, move badges, side panel */
+  .brow { display: flex; gap: 6px; align-items: stretch; }
+  .brow .board { flex: 1; min-width: 0; }
+  .evalbar { flex: none; width: 20px; border: 3px solid var(--ink); border-radius: 6px; background: #403d39; position: relative; overflow: hidden; box-sizing: border-box; }
+  .evalbar .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #fff; transition: height .3s ease-out; }
+  .evalbar.top .fill { bottom: auto; top: 0; }
+  .evalbar .num { position: absolute; left: 0; right: 0; font: 700 9px/1 var(--body); text-align: center; letter-spacing: -.5px; }
+  .evalbar .num.bot { bottom: 3px; } .evalbar .num.up { top: 3px; }
+  .arrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; }
+  .bdgs { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+  .bdgs > div { position: absolute; width: 5.6%; height: 5.6%; }
+  .bdgs svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .45)); }
+  .bdg.sm { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+  .side.rv > :not(#pan-review):not(#moves) { display: none !important; }
+  .moves { position: relative; }
+  .side.rv .moves .mv { cursor: pointer; border-radius: 4px; }
+  .side.rv .moves .mv:hover { background: #fff1a8; }
+  #pan-review h2 { margin-bottom: 8px; }
+  .rvprog { font-size: 13px; margin: 0 0 8px; }
+  .rvprog .bar { height: 10px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; overflow: hidden; margin-bottom: 3px; }
+  .rvprog .bar i { display: block; height: 100%; width: 0; background: linear-gradient(#5cf08e, #18a84b); transition: width .2s; }
+  .rvacc { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .rvacc > div { background: #fff; border: 2px solid var(--ink); border-radius: 10px; padding: 4px 8px; display: flex; align-items: baseline; gap: 6px; }
+  .rvacc .dotc { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); flex: none; align-self: center; }
+  .rvacc .dotc.w { background: #fff; } .rvacc .dotc.b { background: #333; }
+  .rvacc b { font-family: var(--chunky); font-weight: 400; font-size: 22px; }
+  .rvacc small { color: var(--muted); font-size: 11px; }
+  #rvGraph { width: 100%; height: 84px; display: block; box-sizing: border-box; border: 2px solid var(--ink); border-radius: 8px; background: #403d39; cursor: pointer; margin: 0 0 8px; padding: 0; }
+  .rvtab { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+  .rvtab td { padding: 1px 4px; }
+  .rvtab td.n { width: 30px; text-align: center; font-weight: 700; }
+  .rvtab tr.z td.n { color: #b9bfd3; font-weight: 400; }
+  .rvnow { font-size: 14px; min-height: 2.6em; margin: 0 0 8px; background: #fff; border: 2px solid #c5cbe0; border-radius: 10px; padding: 6px 8px; }
+  .rvnav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+  .rvnav button { padding: 6px 2px; font-size: 15px; font-weight: 700; }
+  #rvClose { width: 100%; padding: 6px 8px; font-size: 13px; }
+
   @media (max-width: 880px) {
     .chgrid { grid-template-columns: 1fr; }
+    /* the review panel sits under the board: put what this move was and the arrows first */
+    #pan-review:not([hidden]) { display: flex; flex-direction: column; }
+    #pan-review .rvnow { order: -2; } #pan-review .rvnav { order: -1; } #pan-review h2 { order: -3; }
     .boardcol { width: min(100%, 560px); }
   }
   @media (max-width: 680px) {
@@ -171,7 +214,7 @@
 </style>
 <script src="sfx.js?v=3c3fc236"></script>
 <script src="china.js?v=c859d851"></script>
-<script src="feedback.js?v=565145a5"></script>
+<script src="feedback.js?v=02add947"></script>
 <script src="panic-app.js?v=f0e47fde"></script>
 <script src="chat.js?v=49067dc4"></script>
 </head>
@@ -190,11 +233,16 @@
   <div class="chgrid">
     <div class="boardcol">
       <div class="pbar" id="barTop"><span class="dotc"></span><span class="who"></span><span class="caps"></span><span class="think" hidden>thinking</span><span class="clk" hidden></span></div>
+      <div class="brow">
+      <div class="evalbar" id="evalbar" hidden><div class="fill"></div><span class="num"></span></div>
       <div class="board" id="board">
         <div class="sqs" id="sqs"></div>
         <div class="pcs" id="pcs"></div>
+        <svg class="arrows" id="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg>
+        <div class="bdgs" id="badges"></div>
         <div class="promo" id="promo" hidden></div>
         <div class="over" id="over" hidden><div class="card" id="card"></div></div>
+      </div>
       </div>
       <div class="pbar" id="barBot"><span class="dotc"></span><span class="who"></span><span class="caps"></span><span class="think" hidden>thinking</span><span class="clk" hidden></span></div>
     </div>
@@ -258,7 +306,20 @@
         <label class="chk-row"><input type="checkbox" id="autoFlip"> turn the board round after each move</label>
       </div>
 
+      <!-- game review (Stockfish goes over every move after the game) -->
+      <div id="pan-review" hidden>
+        <h2>game review</h2>
+        <div class="rvprog" id="rvProg"><div class="bar"><i id="rvBar"></i></div><span id="rvProgTxt">starting the engine</span></div>
+        <div class="rvacc"><div><span class="dotc w"></span><b id="rvAccW">-</b><small>accuracy</small></div><div><span class="dotc b"></span><b id="rvAccB">-</b><small>accuracy</small></div></div>
+        <canvas id="rvGraph" width="560" height="168" aria-label="how the game went, click to jump to a move"></canvas>
+        <table class="rvtab" id="rvTab"></table>
+        <p class="rvnow" id="rvNow" aria-live="polite"></p>
+        <div class="rvnav"><button id="rvFirst" title="start (home)">|&lt;</button><button id="rvPrev" title="back (left arrow)">&lt;</button><button id="rvNext" title="forward (right arrow)">&gt;</button><button id="rvLast" title="end (end)">&gt;|</button></div>
+        <button id="rvClose">back to the game</button>
+      </div>
+
       <button class="big-go" id="newGame">new game &#9654;</button>
+      <button class="big-go" id="reviewBtn" hidden>game review &#9654;</button>
       <p id="status" aria-live="polite"></p>
       <div class="acts">
         <button id="takeback" title="take your last move back">takeback</button>
@@ -270,16 +331,17 @@
   </div>
 
   <div class="lbwrap"><div id="lb"></div></div>
-  <p class="credit">pieces by Colin M.L. Burnett, CC BY-SA 3.0. the computer is our own engine, levels and ratings are approx.</p>
+  <p class="credit">pieces by Colin M.L. Burnett, CC BY-SA 3.0. levels 1 to 25 are our own engine; levels 26 to 50 and the game review are <a href="chess/sf/README.md">Stockfish 19</a> (stockfish.js lite, GPL-3.0, <a href="https://github.com/nmrugg/stockfish.js/tree/v19.0.1">source</a>, <a href="chess/sf/COPYING.txt">licence</a>). levels and ratings are approx.</p>
   <!-- seo:about -->
   <section class="seo-x about-game">
     <h2>how to play chess</h2>
     <p>pick a mode: play the computer, play a friend online, or pass and play on one device. click or drag a piece and the dots show where it can go. all the normal rules are in: castling, en passant, promotion, draws by stalemate, repetition, the 50 move rule and not enough pieces.</p>
-    <p>against the computer, slide the level from 1 to 50. level 1 plays like a beginner of about 600 rating and makes the mistakes a beginner makes; level 50 plays like a strong club player of about 2000. the ratings in between go up evenly, about 29 a level. they are estimates, not measured ratings.</p>
+    <p>against the computer, slide the level from 1 to 50. level 1 plays like a beginner of about 600 rating and makes the mistakes a beginner makes. levels 26 to 50 are Stockfish held to a rating, from about 1320 up to about 3000. the ratings are estimates, not measured ratings. while the computer thinks you can queue up your next moves (premoves); right click or tap an empty square to cancel them.</p>
+    <p>after any game, press game review. Stockfish goes over every position and labels each move, from brilliant and best down to inaccuracy, mistake and blunder, with an accuracy score for each player, a graph of the game and an eval bar. step through with the arrows and it shows the best move wherever you missed it.</p>
     <p>beat a level and your best goes on the leaderboard. a game where you took a move back doesn't count.</p>
     <h3>questions</h3><dl>
     <dt>how do i play a friend?</dt><dd>open play a friend, pick your colour and a clock (or no clock) and make a room. you get a 4-letter code and a link: send either to your friend. once they join, white moves first. you can offer a draw, resign, and ask for a rematch with the colours swapped.</dd>
-    <dt>what engine is it?</dt><dd>our own, written for this site in plain javascript. it searches ahead with alpha-beta and judges positions on material, where each piece stands, pawn structure, mobility and king safety. on the low levels it is held back on purpose: it looks less far ahead and sometimes picks a worse move.</dd>
+    <dt>what engine is it?</dt><dd>levels 1 to 25 are our own engine, written for this site in plain javascript, held back on purpose so it plays like a real beginner. levels 26 to 50 and the game review are Stockfish 19, the free open source engine (GPL-3.0), running in your browser.</dd>
     </dl>
   </section>
   <!-- /seo:about -->
@@ -294,6 +356,7 @@
 <script src="chess/rules.js?v=8f649586"></script>
 <script src="chess/engine.js?v=db0e241b"></script>
 <script src="chess/pieces.js?v=8070f923"></script>
+<script src="chess/sf.js?v=77de12ae"></script>
 <script>
 /* chess.html: board view + game controller + vs computer / pass and play.
  *
@@ -313,7 +376,11 @@ function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ?
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function sqi(name) { return (name.charCodeAt(0) - 97) + (name.charCodeAt(1) - 49) * 8; } // "e4" -> 0..63
 function sqn(i) { return "abcdefgh"[i & 7] + ((i >> 3) + 1); }
-function eloOf(L) { return E.LEVELS[L - 1].elo; }
+// levels from SF_FROM up are Stockfish held to a rating (1320 at 26, +70 a level, 3000 at 50); below that,
+// our own engine (600 to ~1290), which can play like a real beginner where Stockfish can't go
+var SF_FROM = 26;
+function useSF(L) { return L >= SF_FROM && !!window.SortafunSF && SortafunSF.ok(); }
+function eloOf(L) { return L >= SF_FROM ? 1320 + (L - SF_FROM) * 70 : E.LEVELS[L - 1].elo; }
 function levelLabel(L) { return "level " + L + " (~" + eloOf(L) + ")"; }
 
 // =====================================================================
@@ -363,7 +430,14 @@ function viewSet(pos, opts) {
   opts = opts || {};
   V.pos = pos;
   V.legal = pos ? R.legalMoves(pos, { san: false }) : [];
-  var want = pos ? pos.board : [];
+  drawPieces(pos ? (PM.length ? pmBoard(pos) : pos.board) : [], opts);
+  V.last = opts.last || null;
+  V.selected = -1;
+  paintMarks();
+}
+// put the piece elements on a board array (the real one, or the one the premoves will make)
+function drawPieces(want, opts) {
+  opts = opts || {};
   var old = V.pieces, used = [], next = [], i, j;
   var keep = new Array(64);
   for (j = 0; j < old.length; j++) if (want[old[j].sq] === old[j].code && !keep[old[j].sq]) { keep[old[j].sq] = old[j]; used[j] = true; }
@@ -400,15 +474,16 @@ function viewSet(pos, opts) {
     (function (el) { el.classList.add("gone"); setTimeout(function () { el.remove(); }, 200); })(old[j].el);
   }
   V.pieces = next;
-  V.last = opts.last || null;
-  V.selected = -1;
-  paintMarks();
 }
 function pieceOn(sq) { for (var i = 0; i < V.pieces.length; i++) if (V.pieces[i].sq === sq) return V.pieces[i]; return null; }
 
 function paintMarks() {
-  var targets = {};
-  if (V.selected >= 0) V.legal.forEach(function (m) { if (sqi(m.from) === V.selected) targets[sqi(m.to)] = m.captured ? "cap" : "dot"; });
+  var targets = {}, pre = {}, pm = pmActive();
+  if (V.selected >= 0 && pm) {
+    var vb = pmBoard(V.pos);
+    pmTargets(V.selected, vb).forEach(function (s) { targets[s] = vb[s] ? "cap" : "dot"; });
+  } else if (V.selected >= 0) V.legal.forEach(function (m) { if (sqi(m.from) === V.selected) targets[sqi(m.to)] = m.captured ? "cap" : "dot"; });
+  PM.forEach(function (m) { pre[m.from] = pre[m.to] = true; });
   var chk = -1;
   if (V.pos && V.pos.check) for (var k = 0; k < 64; k++) if (V.pos.board[k] === V.pos.turn + "K") chk = k;
   for (var d = 0; d < 64; d++) {
@@ -418,21 +493,109 @@ function paintMarks() {
     c.toggle("dot", targets[sq] === "dot");
     c.toggle("cap", targets[sq] === "cap");
     c.toggle("chk", sq === chk);
+    c.toggle("pre", !!pre[sq]);
     c.remove("hov");
   }
-  boardEl.classList.toggle("can", !!(V.pos && V.canMove(V.pos.turn)));
+  boardEl.classList.toggle("can", !!(V.pos && (V.canMove(V.pos.turn) || pm)));
 }
 
 function viewOrient(c) { V.orient = c; layoutSquares(); V.pieces.forEach(function (p) { p.el.style.transition = "none"; placePiece(p, p.sq); void p.el.offsetWidth; p.el.style.transition = ""; }); paintMarks(); closePromo(); }
 
 function movable(sq) {
-  var code = V.pos && V.pos.board[sq];
-  return !!code && code[0] === V.pos.turn && V.canMove(V.pos.turn) && !V.promoting;
+  if (!V.pos || V.promoting) return false;
+  if (pmActive()) { var vb = pmBoard(V.pos); return !!vb[sq] && vb[sq][0] === pmColour(); }
+  var code = V.pos.board[sq];
+  return !!code && code[0] === V.pos.turn && V.canMove(V.pos.turn);
 }
-function isTarget(from, to) { return V.legal.some(function (m) { return sqi(m.from) === from && sqi(m.to) === to; }); }
+function isTarget(from, to) {
+  if (pmActive()) return pmTargets(from, pmBoard(V.pos)).indexOf(to) >= 0;
+  return V.legal.some(function (m) { return sqi(m.from) === from && sqi(m.to) === to; });
+}
 function select(sq) { V.selected = sq; paintMarks(); }
 
+// ---------- premoves: moves queued while the other side thinks, played the moment it's your turn ----------
+var PM = [];   // [{ from, to, uci }] (square indexes), oldest first
+function pmColour() {   // the colour this board can premove for: one human against the computer or a friend
+  if (!G || G.over || reviewing) return null;
+  var w = G.players.w, b = G.players.b;
+  if (w === "human" && (b === "engine" || b === "remote")) return "w";
+  if (b === "human" && (w === "engine" || w === "remote")) return "b";
+  return null;
+}
+function pmActive() { var c = pmColour(); return !!c && !!V.pos && V.pos === cur() && cur().turn !== c; }
+// the board once the queued premoves are played (pieces just move: legality is checked when each one is played)
+function pmBoard(pos) {
+  var b = pos.board.slice();
+  PM.forEach(function (m) {
+    var p = b[m.from];
+    if (!p) return;
+    b[m.from] = null;
+    if (p[1] === "K" && Math.abs((m.to & 7) - (m.from & 7)) === 2) {   // castling brings the rook
+      var rank = m.from - (m.from & 7), kside = (m.to & 7) === 6, rf = rank + (kside ? 7 : 0), rt = rank + (kside ? 5 : 3);
+      if (b[rf] && b[rf][1] === "R") { b[rt] = b[rf]; b[rf] = null; }
+    }
+    if (p[1] === "P" && (m.to >> 3 === 7 || m.to >> 3 === 0)) p = p[0] + "Q";
+    b[m.to] = p;
+  });
+  return b;
+}
+// where a piece might go after the other side moves: its moves on an open board (blockers may move away),
+// pawn captures either side, castling while the rights last; never onto your own piece
+function pmTargets(sq, b) {
+  var p = b[sq], out = [];
+  if (!p) return out;
+  var c = p[0], t = p[1], f = sq & 7, r = sq >> 3, dir = c === "w" ? 1 : -1;
+  function add(df, dr) {
+    var ff = f + df, rr = r + dr;
+    if (ff < 0 || ff > 7 || rr < 0 || rr > 7) return;
+    var s = rr * 8 + ff;
+    if (!b[s] || b[s][0] !== c) out.push(s);
+  }
+  var ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]], DIAG = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+  if (t === "P") {
+    add(0, dir);
+    if (r === (c === "w" ? 1 : 6)) add(0, 2 * dir);
+    add(-1, dir); add(1, dir);
+  } else if (t === "N") {
+    [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]].forEach(function (d) { add(d[0], d[1]); });
+  } else if (t === "K") {
+    ORTHO.concat(DIAG).forEach(function (d) { add(d[0], d[1]); });
+    var cr = cur().castling || "", home = c === "w" ? 4 : 60;
+    if (sq === home && cr.indexOf(c === "w" ? "K" : "k") >= 0) add(2, 0);
+    if (sq === home && cr.indexOf(c === "w" ? "Q" : "q") >= 0) add(-2, 0);
+  } else {
+    var dirs = t === "R" ? ORTHO : t === "B" ? DIAG : ORTHO.concat(DIAG);
+    dirs.forEach(function (d) { for (var k = 1; k < 8; k++) add(d[0] * k, d[1] * k); });
+  }
+  return out;
+}
+function pmPush(from, to, dropped) {
+  var p = pmBoard(V.pos)[from];
+  var promo = p && p[1] === "P" && (to >> 3 === 7 || to >> 3 === 0) ? "q" : "";   // premoved promotions are queens
+  PM.push({ from: from, to: to, uci: sqn(from) + sqn(to) + promo });
+  V.selected = -1;
+  drawPieces(pmBoard(V.pos), { dropped: dropped ? to : -1 });
+  paintMarks();
+  sfx("tick");
+}
+function pmClear() {
+  if (!PM.length) return;
+  PM = [];
+  if (V.pos) drawPieces(V.pos.board, { instant: true });
+  paintMarks();
+}
+// it's your turn: play the first premove if it's legal now, else drop them all
+function pmRun() {
+  if (!PM.length || !G || G.over) return;
+  var c = pmColour();
+  if (!c || cur().turn !== c || thinking) return;
+  var m = PM.shift(), norm = R.uci(cur(), m.uci);
+  if (!norm) { PM = []; viewSet(cur(), { last: V.last }); sfx("cnope"); return; }
+  submit(norm, "local", { premove: true });
+}
+
 function tryMove(from, to, dropped) {
+  if (pmActive()) { pmPush(from, to, dropped); return true; }
   var ms = V.legal.filter(function (m) { return sqi(m.from) === from && sqi(m.to) === to; });
   if (!ms.length) return false;
   if (ms.length > 1 || ms[0].promo) { openPromo(from, to, dropped); return true; }
@@ -494,7 +657,9 @@ boardEl.addEventListener("pointerdown", function (e) {
     V.drag = { sq: sq, x: e.clientX, y: e.clientY, moved: false, wasSel: wasSel, p: p, id: e.pointerId };
     try { boardEl.setPointerCapture(e.pointerId); } catch (er) {}
   } else if (V.selected >= 0) { V.selected = -1; paintMarks(); }
+  else if (PM.length) pmClear();   // a click on nothing cancels the premoves
 });
+boardEl.addEventListener("pointerdown", function (e) { if (e.button === 2 && PM.length) { V.selected = -1; pmClear(); } });   // so does a right click
 boardEl.addEventListener("pointermove", function (e) {
   var d = V.drag;
   if (!d || e.pointerId !== d.id) return;
@@ -538,6 +703,8 @@ function cur() { return G.positions[G.positions.length - 1]; }
 function startGame(opts) {
   opts = opts || {};
   cancelEngine();
+  cancelReview();
+  PM = [];
   var start = opts.fen || R.START_FEN;
   var rp = R.replay(opts.moves || [], start);
   G = {
@@ -577,17 +744,22 @@ function submit(uci, source, viewOpts) {
   viewOpts = viewOpts || {};
   viewSet(np, { from: sqi(norm.slice(0, 2)), dropped: viewOpts.dropped, last: [sqi(norm.slice(0, 2)), sqi(norm.slice(2, 4))] });
   var st = R.status(np, G.keys.slice(0, -1));
-  // wooden piece sounds; a slid piece (not dropped) lands ~170 ms later, so wait for it.
-  // mate skips the check ping: finish() plays its own jingle
-  var mine = source === "local";
-  sfx(/^O-O/.test(san) ? "ccastle" : /=/.test(san) ? "cpromote" : np.check && !/#/.test(san) ? "ccheck" :
-    /x/.test(san) ? "ccapture" : mine ? "cmove" : "cmove2", viewOpts.dropped >= 0 ? 0 : 0.14);
+  // a slid piece (not dropped) lands ~170 ms later, so the sound waits for it; a premove waits a bit
+  // longer so it doesn't land on top of the move it answers
+  sfx(moveSound(san, np.check, source === "local"), viewOpts.dropped >= 0 ? 0 : viewOpts.premove ? 0.3 : 0.14);
   fire("move", { uci: norm, san: san, ply: G.moves.length, by: pos.turn, source: source, fen: R.toFen(np), local: source === "local" });
   if (st.over) finish(st.result, st.reason);
   else if (G.mode === "local" && $("autoFlip").checked) setTimeout(function () { if (G && !G.over && G.mode === "local") { viewOrient(np.turn); refresh(); } }, 260);
   refresh();
   if (!G.over) maybeEngine();
+  if (!G.over && source !== "local" && PM.length) setTimeout(pmRun, 0);
   return true;
+}
+
+// wooden piece sounds (sfx.js). Mate skips the check ping: finish() plays its own jingle
+function moveSound(san, check, mine) {
+  return /^O-O/.test(san) ? "ccastle" : /=/.test(san) ? "cpromote" : check && !/#/.test(san) ? "ccheck" :
+    /x/.test(san) ? "ccapture" : mine ? "cmove" : "cmove2";
 }
 
 // take back: in vs computer, back to your last move (two plies if the engine has answered);
@@ -604,6 +776,8 @@ function takeback() {
     n = G.positions.length - 1 - k;
   }
   cancelEngine();
+  cancelReview();
+  PM = [];
   G.moves.length -= n; G.sans.length -= n; G.positions.length -= n; G.keys.length -= n;
   G.usedTakeback = true;
   G.over = false; G.result = null; G.reason = null;
@@ -628,7 +802,7 @@ function resign(colour) {
 function finish(result, reason, quiet) {
   cancelEngine();
   G.over = true; G.result = result; G.reason = reason;
-  V.selected = -1; paintMarks();
+  V.selected = -1; pmClear(); paintMarks();
   fire("end", stateOf());
   showResult(quiet);
 }
@@ -657,7 +831,17 @@ function maybeEngine() {
   var pos = cur();
   if (G.players[pos.turn] !== "engine") return;
   var req = { id: ++reqSeq, fen: G.startFen, moves: G.moves.slice(), level: G.level, seed: (Math.random() * 2147483647) | 0, game: G.id };
-  runEngine(req, performance.now());
+  if (useSF(req.level)) runSF(req, performance.now());
+  else runEngine(req, performance.now());
+}
+function runSF(req, t0) {
+  thinking = { req: req, t0: t0, sf: true };
+  refresh();
+  SortafunSF.play({ fen: req.fen === R.START_FEN ? null : req.fen, moves: req.moves, elo: eloOf(req.level), ms: 700 }).then(function (r) {
+    if (!thinking || thinking.req.id !== req.id) return;
+    if (!r || !r.move) { thinking = null; runEngine(req, t0); return; }   // stockfish failed: our engine takes the move
+    onEngineReply({ id: req.id, move: r.move, info: { engine: "stockfish", elo: eloOf(req.level) } });
+  });
 }
 function runEngine(req, t0) {
   thinking = { req: req, t0: t0 };
@@ -683,8 +867,10 @@ function onEngineReply(d) {
 }
 function cancelEngine() {
   if (!thinking) return;
+  var sf = thinking.sf;
   thinking = null;
-  if (worker) { try { worker.terminate(); } catch (er) {} worker = null; }  // a running search can't be interrupted
+  if (sf) SortafunSF.stop();
+  else if (worker) { try { worker.terminate(); } catch (er) {} worker = null; }  // a running search can't be interrupted
 }
 
 function stateOf() {
@@ -719,8 +905,9 @@ function material(pos) {
   return c;
 }
 
+function shownPos() { return reviewing && RV ? RV.g.positions[RV.idx] : cur(); }
 function fillBar(el, colour) {
-  var pos = cur(), mat = material(pos), base = material(G.positions[0]), other = colour === "w" ? "b" : "w";
+  var pos = shownPos(), mat = material(pos), base = material(G.positions[0]), other = colour === "w" ? "b" : "w";
   el.dataset.c = colour;   // net.js finds each colour's clock by this
   el.querySelector(".dotc").className = "dotc " + colour;
   el.querySelector(".who").textContent = G.names[colour];
@@ -740,21 +927,30 @@ function fillBar(el, colour) {
 
 function renderMoves() {
   var ol = $("moves"), sans = G.sans, html = "";
+  var rv = reviewing && RV && RV.game === G.id ? RV : null, curIx = rv ? rv.idx - 1 : sans.length - 1;
   var startBlack = G.positions[0].turn === "b", n0 = G.positions[0].fullmove;
   var list = startBlack ? [null].concat(sans) : sans.slice();
+  function cell(ix, t) {
+    if (t == null) return "";
+    return '<span data-ply="' + ix + '" class="mv' + (ix === curIx ? " cur" : "") + '">' + (rv && rv.cls[ix] ? badgeHtml(rv.cls[ix], true) : "") + t + "</span>";
+  }
   for (var i = 0; i < list.length; i += 2) {
-    var a = list[i], b = list[i + 1], ia = i - (startBlack ? 1 : 0), ib = ia + 1;
-    html += '<li><span class="n">' + (n0 + i / 2) + ".</span><span>" + (a == null ? "..." : '<span class="' + (ia === sans.length - 1 ? "cur" : "") + '">' + a + "</span>") +
-      "</span><span>" + (b == null ? "" : '<span class="' + (ib === sans.length - 1 ? "cur" : "") + '">' + b + "</span>") + "</span></li>";
+    var ia = i - (startBlack ? 1 : 0);
+    html += '<li><span class="n">' + (n0 + i / 2) + ".</span><span>" + (list[i] == null ? "..." : cell(ia, list[i])) + "</span><span>" + cell(ia + 1, list[i + 1]) + "</span></li>";
   }
   ol.innerHTML = html || '<li class="none">no moves yet</li>';
-  ol.scrollTop = ol.scrollHeight;
+  var at = rv && ol.querySelector(".cur");
+  if (!rv) ol.scrollTop = ol.scrollHeight;
+  else if (at) {
+    var top = at.parentNode.parentNode.offsetTop;
+    if (top < ol.scrollTop || top > ol.scrollTop + ol.clientHeight - 24) ol.scrollTop = top - ol.clientHeight / 2;
+  } else ol.scrollTop = 0;
 }
 
 function refresh() {
   if (!G) return;
   var pos = cur();
-  V.canMove = function (c) { return !!G && !G.over && G.players[c] === "human" && !thinking; };
+  V.canMove = function (c) { return !!G && !G.over && G.players[c] === "human" && !thinking && !reviewing; };
   var top = V.orient === "w" ? "b" : "w";
   fillBar($("barTop"), top);
   fillBar($("barBot"), top === "w" ? "b" : "w");
@@ -778,6 +974,7 @@ function refresh() {
   if (G.mode === "friend") $("resign").disabled = !(FH.canResign && FH.canResign());
   else $("resign").disabled = G.over || G.moves.length === 0 || (G.players.w === "remote" && G.players.b === "remote");
   if (resignArmed && $("resign").disabled) disarmResign();
+  $("reviewBtn").hidden = !G.over || !G.moves.length;
 }
 
 function resultLine() {
@@ -829,16 +1026,309 @@ function showResult(quiet) {
     if (!quiet) { if (window.SortafunSFX) SortafunSFX.result(winner ? (mine && winner !== mine ? "lose" : "win") : "done"); }
   }
   var friendCard = G.mode === "friend" && FH.cardButtons;
-  html += friendCard ? FH.cardButtons() : '<div class="btns"><button class="big-go" id="again" style="width:auto">new game</button><button id="seeBoard">look at the board</button></div>';
+  var rvb = G.moves.length ? '<button id="cardReview">game review</button>' : "";
+  html += friendCard ? FH.cardButtons() + (rvb ? '<div class="btns">' + rvb + "</div>" : "") :
+    '<div class="btns"><button class="big-go" id="again" style="width:auto">new game</button>' + rvb + '<button id="seeBoard">look at the board</button></div>';
   card.innerHTML = html;
   $("over").hidden = false;
   if (friendCard) { if (FH.cardWire) FH.cardWire(card); }
   else $("again").onclick = function () { newGame(); };
   if ($("seeBoard")) $("seeBoard").onclick = function () { closeCard(); };
+  if ($("cardReview")) $("cardReview").onclick = function () { startReview(); };
 }
 
+// =====================================================================
+// game review: Stockfish looks at every position after the game, then each move gets a label
+// =====================================================================
+// Labels go by how much of your winning chance a move threw away (expected points, 0-100, from the eval):
+// best = Stockfish's own pick, excellent < 2, good < 5, inaccuracy < 10, mistake < 20, blunder 20+.
+// book = still in our opening book. great = the best move when the next best was 20+ worse (and not just a
+// recapture, a mate in one or the only move). brilliant = a good move that gives up 2+ points of material. miss = a mistake
+// or blunder straight after the other side's, so the chance they gave you went begging.
+// Accuracy per player is the lichess formula on the same numbers (mean and harmonic mean averaged).
+var REVIEW_DEPTH = 14, REVIEW_MS = 1500;
+var reviewing = false, RV = null;
+var CL = {   // label, colour, icon
+  brilliant: ["brilliant", "#26c2a3", "!!"], great: ["great", "#749bbf", "!"], best: ["best", "#81b64c", "star"],
+  excellent: ["excellent", "#81b64c", "check"], good: ["good", "#95b776", "check"], book: ["book", "#a88865", "book"],
+  inaccuracy: ["inaccuracy", "#f7c631", "?!"], mistake: ["mistake", "#ffa459", "?"], miss: ["miss", "#ff7769", "x"], blunder: ["blunder", "#fa412d", "??"],
+};
+var CL_ORDER = ["brilliant", "great", "best", "excellent", "good", "book", "inaccuracy", "mistake", "miss", "blunder"];
+var CL_SAY = {
+  brilliant: "is brilliant!", great: "is a great move", best: "is the best move", excellent: "is excellent", good: "is good",
+  book: "is a book move", inaccuracy: "is an inaccuracy", mistake: "is a mistake", miss: "is a miss", blunder: "is a blunder",
+};
+var ICON = {
+  star: '<path d="M10 2.6l2.3 5 5.4.6-4 3.7 1.1 5.4L10 14.6l-4.8 2.7 1.1-5.4-4-3.7 5.4-.6z" fill="#fff"/>',
+  check: '<path d="M5 10.4l3.4 3.4 6.8-7.6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+  book: '<path d="M3.2 5.6c2.6-1 4.9-.9 6.8.8 1.9-1.7 4.2-1.8 6.8-.8v8.9c-2.6-1-4.9-.9-6.8.8-1.9-1.7-4.2-1.8-6.8-.8z" fill="#fff"/>',
+  x: '<path d="M6.2 6.2l7.6 7.6M13.8 6.2l-7.6 7.6" stroke="#fff" stroke-width="3" stroke-linecap="round"/>',
+};
+function badgeHtml(c, small) {
+  var d = CL[c], g = d[2];
+  var inner = ICON[g] || '<text x="10" y="14.4" text-anchor="middle" font-family="Verdana, sans-serif" font-weight="700" font-size="' + (g.length > 1 ? 10 : 12.5) + '" fill="#fff">' + g + "</text>";
+  return '<svg class="bdg' + (small ? " sm" : "") + '" viewBox="0 0 20 20" role="img" aria-label="' + d[0] + '"><circle cx="10" cy="10" r="9.6" fill="' + d[1] + '"/>' + inner + "</svg>";
+}
+
+// chance of winning (0-100) for the side to move, from a Stockfish score (lichess's curve)
+function winPct(e) {
+  if (!e) return 50;
+  if (e.mate != null) return e.mate > 0 ? 100 : 0;   // mate 0 = already mated
+  return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * e.cp)) - 1);
+}
+function whiteWin(rv, i) { var e = rv.ev[i]; return e ? (rv.g.positions[i].turn === "w" ? e.w : 100 - e.w) : null; }
+function evText(e, turn) {   // "+1.2", "-0.4", "M3", "-M2", "1-0"
+  if (!e) return "";
+  var s = turn === "w" ? 1 : -1;
+  if (e.mate != null) {
+    if (e.mate === 0) return turn === "w" ? "0-1" : "1-0";
+    var m = e.mate * s;
+    return (m > 0 ? "M" : "-M") + Math.abs(m);
+  }
+  var v = e.cp * s / 100;
+  return (v > 0 ? "+" : "") + v.toFixed(1);
+}
+
+var BOOK = null;
+function inBook(g, k) {
+  if (g.startFen !== R.START_FEN) return false;
+  if (!BOOK) BOOK = (E.BOOK_LINES || []).map(function (l) { return R.replay(l.split(" ")).ucis; });
+  return BOOK.some(function (line) {
+    if (line.length <= k) return false;
+    for (var j = 0; j <= k; j++) if (line[j] !== g.moves[j]) return false;
+    return true;
+  });
+}
+// the move leaves a piece where taking it wins the other side 2+ points, even after you take back
+function sacrifice(g, k) {
+  var uci = g.moves[k];
+  if (uci.length > 4) return false;
+  var pos = g.positions[k], np = g.positions[k + 1], to = uci.slice(2, 4), ti = sqi(to), me = np.board[ti];
+  if (!me) return false;
+  var val = VALUE[me[1].toLowerCase()] || 0, took = pos.board[ti], gain = took ? VALUE[took[1].toLowerCase()] || 0 : 0;
+  if (val < 3 || gain >= val) return false;
+  return R.legalMoves(np, { san: false }).some(function (m) {
+    if (m.to !== to) return false;
+    var after = R.play(np, m.uci);
+    var back = !!after && R.legalMoves(after, { san: false }).some(function (x) { return x.to === to; });
+    return val - (back ? VALUE[m.piece] || 0 : 0) - gain >= 2;
+  });
+}
+function classify(rv, k) {
+  var g = rv.g, a = rv.ev[k], b = rv.ev[k + 1];
+  if (!a || !b) return null;
+  var best = a.lines[0], uci = g.moves[k], isBest = !!best && best.move === uci;
+  var before = a.w, after = 100 - b.w, loss = isBest ? 0 : Math.max(0, before - after);
+  var c = isBest ? "best" : loss < 2 ? "excellent" : loss < 5 ? "good" : loss < 10 ? "inaccuracy" : loss < 20 ? "mistake" : "blunder";
+  if (loss < 5 && inBook(g, k)) return "book";
+  if (loss < 2 && after >= 45 && before < 97 && sacrifice(g, k)) return "brilliant";
+  if (isBest && a.lines[1] && before - winPct(a.lines[1]) >= 20 && !/#/.test(g.sans[k]) && R.legalMoves(g.positions[k], { san: false }).length > 1 &&
+      !(k > 0 && /x/.test(g.sans[k - 1]) && g.moves[k - 1].slice(2, 4) === uci.slice(2, 4))) return "great";
+  if ((c === "mistake" || c === "blunder") && k > 0 && /^(mistake|blunder|miss)$/.test(rv.cls[k - 1] || "")) return "miss";
+  return c;
+}
+function accuracy(rv, colour) {
+  var a = [];
+  for (var k = 0; k < rv.g.moves.length; k++) {
+    if (rv.g.positions[k].turn !== colour || !rv.cls[k]) continue;
+    var diff = rv.cls[k] === "best" ? 0 : Math.max(0, rv.ev[k].w - (100 - rv.ev[k + 1].w));
+    a.push(Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * diff) - 3.1669)));
+  }
+  if (!a.length) return null;
+  var sum = 0, inv = 0;
+  a.forEach(function (x) { sum += x; inv += 1 / Math.max(x, 1); });
+  return (sum / a.length + a.length / inv) / 2;
+}
+
+function startReview(at) {
+  if (!G || !G.over || !G.moves.length) return;
+  if (!RV || RV.game !== G.id) {
+    if (RV) { RV.cancelled = true; if (RV.running) SortafunSF.stop(); }
+    RV = { game: G.id, idx: G.moves.length, ev: [], cls: [], names: { w: G.names.w, b: G.names.b },
+      g: { startFen: G.startFen, moves: G.moves.slice(), sans: G.sans.slice(), positions: G.positions.slice(), keys: G.keys.slice() } };
+  }
+  reviewing = true;
+  PM = [];
+  closeCard(); closePromo();
+  $("side").classList.add("rv"); $("evalbar").hidden = false; $("pan-review").hidden = false;
+  showPly(at == null ? RV.idx : at, true);
+  if (!RV.done && !RV.running) runReview(RV);
+}
+function endReview() {
+  if (!reviewing) return;
+  reviewing = false;
+  $("side").classList.remove("rv"); $("evalbar").hidden = true; $("pan-review").hidden = true;
+  $("arrows").innerHTML = ""; $("badges").innerHTML = "";
+  if (G) {
+    var lm = G.moves.length ? G.moves[G.moves.length - 1] : null;
+    viewSet(cur(), { instant: true, last: lm ? [sqi(lm.slice(0, 2)), sqi(lm.slice(2, 4))] : null });
+    refresh();
+  }
+}
+function cancelReview() {
+  if (RV) { RV.cancelled = true; if (RV.running && window.SortafunSF) SortafunSF.stop(); }
+  RV = null;
+  endReview();
+}
+
+function runReview(rv) {
+  rv.running = true;
+  var g = rv.g, N = g.positions.length - 1;
+  function fail(msg) { rv.running = false; rv.failed = msg; if (RV === rv) paintReview(); }
+  if (!window.SortafunSF || !SortafunSF.ok()) { fail("the review engine didn't load on this device."); return; }
+  (function step(i) {
+    if (rv.cancelled) return;
+    if (i > N) { rv.running = false; rv.done = true; if (RV === rv) paintReview(); return; }
+    function got(e) {
+      rv.ev[i] = e;
+      if (i > 0) rv.cls[i - 1] = classify(rv, i - 1);
+      if (RV === rv && reviewing) { paintReview(); renderMoves(); }
+      step(i + 1);
+    }
+    if (i === N) {   // the final position may be over by the rules: no need to ask
+      var st = R.status(g.positions[N], g.keys.slice(0, N));
+      if (st.over) { got(st.reason === "checkmate" ? { lines: [{ move: null, mate: 0, cp: null }], w: 0 } : { lines: [{ move: null, cp: 0, mate: null }], w: 50 }); return; }
+    }
+    SortafunSF.analyse({ fen: g.startFen === R.START_FEN ? null : g.startFen, moves: g.moves.slice(0, i), depth: REVIEW_DEPTH, multipv: 2, ms: REVIEW_MS }).then(function (r) {
+      if (rv.cancelled) return;
+      if (!r) { fail("the review engine stopped. try again."); return; }
+      var lines = r.lines.length ? r.lines : [{ move: null, cp: 0, mate: null }];
+      got({ lines: lines, w: winPct(lines[0]) });
+    });
+  })(rv.ev.length);
+}
+
+function showPly(i, jump) {
+  if (!RV) return;
+  var g = RV.g, N = g.positions.length - 1;
+  i = Math.max(0, Math.min(N, i));
+  var step = i - RV.idx;
+  RV.idx = i;
+  var lm = i > 0 ? g.moves[i - 1] : null;
+  viewSet(g.positions[i], { last: lm ? [sqi(lm.slice(0, 2)), sqi(lm.slice(2, 4))] : null, instant: jump || Math.abs(step) !== 1 });
+  if (!jump && step === 1) sfx(moveSound(g.sans[i - 1], g.positions[i].check, true));
+  else if (!jump && step === -1) sfx("cmove2");
+  refresh();
+  paintReview();
+}
+
+function drawArrow(uci, colour) {
+  function f(v) { return Math.round(v * 1000) / 1000; }
+  var a = xyOf(sqi(uci.slice(0, 2))), b = xyOf(sqi(uci.slice(2, 4)));
+  var x1 = a[0] + 0.5, y1 = a[1] + 0.5, x2 = b[0] + 0.5, y2 = b[1] + 0.5, dx = x2 - x1, dy = y2 - y1, L = Math.sqrt(dx * dx + dy * dy) || 1;
+  var ux = dx / L, uy = dy / L, hx = x2 - ux * 0.42, hy = y2 - uy * 0.42, px = -uy * 0.27, py = ux * 0.27;
+  return '<g opacity=".82"><line x1="' + f(x1 + ux * 0.18) + '" y1="' + f(y1 + uy * 0.18) + '" x2="' + f(hx) + '" y2="' + f(hy) + '" stroke="' + colour +
+    '" stroke-width=".18" stroke-linecap="round"/><polygon points="' + f(x2) + "," + f(y2) + " " + f(hx + px) + "," + f(hy + py) + " " + f(hx - px) + "," + f(hy - py) +
+    '" fill="' + colour + '"/></g>';
+}
+
+function paintReview() {
+  if (!reviewing || !RV) return;
+  var rv = RV, g = rv.g, i = rv.idx, N = g.positions.length - 1, e = rv.ev[i];
+  // eval bar
+  var ww = whiteWin(rv, i), bar = $("evalbar"), wb = V.orient === "w";
+  if (ww == null) ww = 50;
+  bar.classList.toggle("top", !wb);
+  bar.querySelector(".fill").style.height = ww + "%";
+  var num = bar.querySelector(".num"), ahead = ww >= 50;
+  num.textContent = e ? evText(e.lines[0], g.positions[i].turn).replace(/^\+/, "") : "";
+  num.className = "num " + (ahead === wb ? "bot" : "up");
+  num.style.color = ahead ? "#1d1b2e" : "#fff";
+  // this move's badge, and the best move as an arrow when you didn't play it
+  var c = i > 0 ? rv.cls[i - 1] : null, before = i > 0 ? rv.ev[i - 1] : null, arrows = "", badges = "";
+  if (c) {
+    var xy = xyOf(sqi(g.moves[i - 1].slice(2, 4)));
+    badges = '<div style="left:' + Math.min(94.4, xy[0] * 12.5 + 8.6) + "%;top:" + Math.max(0.2, xy[1] * 12.5 - 1.6) + '%">' + badgeHtml(c) + "</div>";
+    if (!/^(best|book|great|brilliant)$/.test(c) && before && before.lines[0].move) arrows = drawArrow(before.lines[0].move, "#3d9e3d");
+  }
+  $("badges").innerHTML = badges;
+  $("arrows").innerHTML = arrows;
+  // what happened on this move
+  var now;
+  if (i === 0) now = "the start." + (e ? " eval " + evText(e.lines[0], g.positions[0].turn) + "." : "") + " step through with the arrows.";
+  else {
+    var p = g.positions[i - 1], label = p.fullmove + (p.turn === "w" ? ". " : "... ") + g.sans[i - 1];
+    if (!c) now = label + ": not looked at yet.";
+    else {
+      now = "<b>" + label + "</b> " + CL_SAY[c] + ".";
+      if (!/^(best|book|great|brilliant)$/.test(c) && before && before.lines[0].move) {
+        now += " best was <b>" + (R.san(p, before.lines[0].move) || before.lines[0].move) + "</b> (" + evText(before.lines[0], p.turn) + ").";
+      }
+      if (e && i < N) now += " eval now " + evText(e.lines[0], g.positions[i].turn) + ".";
+    }
+  }
+  $("rvNow").innerHTML = now;
+  // progress, accuracy, the table
+  var have = rv.ev.length;
+  $("rvProg").hidden = !!rv.done;
+  $("rvBar").style.width = Math.round(have / (N + 1) * 100) + "%";
+  $("rvProgTxt").textContent = rv.failed || (have ? "analysing position " + Math.min(have + 1, N + 1) + " of " + (N + 1) : "starting the engine");
+  var aw = accuracy(rv, "w"), ab = accuracy(rv, "b");
+  $("rvAccW").textContent = aw == null ? "-" : aw.toFixed(1);
+  $("rvAccB").textContent = ab == null ? "-" : ab.toFixed(1);
+  var count = { w: {}, b: {} };
+  rv.cls.forEach(function (x, k) { if (x) { var side = g.positions[k].turn; count[side][x] = (count[side][x] || 0) + 1; } });
+  var t = "";
+  CL_ORDER.forEach(function (x) {
+    var a = count.w[x] || 0, b = count.b[x] || 0;
+    t += '<tr class="' + (a + b ? "" : "z") + '"><td class="n">' + a + "</td><td>" + badgeHtml(x, true) + CL[x][0] + '</td><td class="n">' + b + "</td></tr>";
+  });
+  $("rvTab").innerHTML = t;
+  drawGraph(rv);
+}
+function drawGraph(rv) {
+  var cv = $("rvGraph"), cx = cv.getContext("2d"), W = cv.width, H = cv.height, N = rv.g.positions.length - 1;
+  function X(k) { return N ? k / N * W : W / 2; }
+  function Y(k) { return H - whiteWin(rv, k) / 100 * H; }
+  cx.clearRect(0, 0, W, H);
+  cx.fillStyle = "#403d39"; cx.fillRect(0, 0, W, H);
+  var n = rv.ev.length;
+  if (n) {
+    cx.beginPath(); cx.moveTo(0, H);
+    for (var k = 0; k < n; k++) cx.lineTo(X(k), Y(k));
+    cx.lineTo(X(n - 1), H); cx.closePath();
+    cx.fillStyle = "#f4f4f4"; cx.fill();
+  }
+  cx.strokeStyle = "rgba(150,150,150,.6)"; cx.lineWidth = 2;
+  cx.beginPath(); cx.moveTo(0, H / 2); cx.lineTo(W, H / 2); cx.stroke();
+  cx.strokeStyle = "#ffc21a"; cx.lineWidth = 3;
+  cx.beginPath(); cx.moveTo(X(rv.idx), 0); cx.lineTo(X(rv.idx), H); cx.stroke();
+  rv.cls.forEach(function (c, k) {
+    if (!c || !/^(brilliant|great|mistake|miss|blunder)$/.test(c)) return;
+    cx.beginPath(); cx.arc(X(k + 1), Y(k + 1), 6, 0, Math.PI * 2);
+    cx.fillStyle = CL[c][1]; cx.fill(); cx.strokeStyle = "#1d1b2e"; cx.lineWidth = 2; cx.stroke();
+  });
+}
+
+$("reviewBtn").addEventListener("click", function () { startReview(); });
+$("rvClose").addEventListener("click", function () { endReview(); });
+$("rvFirst").addEventListener("click", function () { showPly(0, true); });
+$("rvPrev").addEventListener("click", function () { if (RV) showPly(RV.idx - 1); });
+$("rvNext").addEventListener("click", function () { if (RV) showPly(RV.idx + 1); });
+$("rvLast").addEventListener("click", function () { if (RV) showPly(RV.g.positions.length - 1, true); });
+$("rvGraph").addEventListener("click", function (e) {
+  if (!RV) return;
+  var r = this.getBoundingClientRect(), N = RV.g.positions.length - 1;
+  showPly(Math.round((e.clientX - r.left) / r.width * N), true);
+});
+$("moves").addEventListener("click", function (e) {
+  var m = e.target.closest("[data-ply]");
+  if (!m || !G || !G.over) return;
+  if (reviewing) showPly(+m.dataset.ply + 1, true); else startReview(+m.dataset.ply + 1);
+});
+document.addEventListener("keydown", function (e) {
+  if (!reviewing || !RV || e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "")) return;
+  var k = e.key, N = RV.g.positions.length - 1;
+  if (k === "ArrowLeft") showPly(RV.idx - 1);
+  else if (k === "ArrowRight") showPly(RV.idx + 1);
+  else if (k === "Home") showPly(0, true);
+  else if (k === "End") showPly(N, true);
+  else return;
+  e.preventDefault();
+});
+
 // ---------- side panel ----------
-var level = Math.max(1, Math.min(50, parseInt(lsGet("sortafun-chess-level", "5"), 10) || 5));
+var level =Math.max(1, Math.min(50, parseInt(lsGet("sortafun-chess-level", "5"), 10) || 5));
 var colourPick = lsGet("sortafun-chess-colour", "w");
 if (["w", "b", "r"].indexOf(colourPick) < 0) colourPick = "w";
 $("level").value = level;
@@ -849,7 +1339,9 @@ function updateLevelNote() {
   var best = +lsGet("sortafun-chess-best", 0) || 0;
   var pending = G && G.mode === "cpu" && !G.over && G.moves.length > 1 && level !== G.level;
   $("lvlTxt").textContent = levelLabel(level);
-  $("lvlNote").textContent = (pending ? "starts with your next game. " : "ratings are approx, a rough guess. ") + "your best win: " + (best ? "level " + best : "none yet");
+  $("lvlNote").textContent = (pending ? "starts with your next game. " : "ratings are approx, a rough guess. ") +
+    (level >= SF_FROM ? "this level is stockfish. " : "") + "your best win: " + (best ? "level " + best : "none yet");
+  if (level >= SF_FROM && window.SortafunSF) SortafunSF.boot();   // start loading it before the first move
 }
 function paintColour() { [].forEach.call($("colour").children, function (b) { b.classList.toggle("on", b.dataset.c === colourPick); }); }
 $("level").addEventListener("input", function () {
@@ -899,7 +1391,7 @@ function setMode(m) {
 $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && b.dataset.mode !== mode) setMode(b.dataset.mode); });
 $("newGame").addEventListener("click", function () { newGame(); });
 $("takeback").addEventListener("click", function () { takeback(); });
-$("flip").addEventListener("click", function () { viewOrient(V.orient === "w" ? "b" : "w"); refresh(); sfx("flip"); });
+$("flip").addEventListener("click", function () { viewOrient(V.orient === "w" ? "b" : "w"); refresh(); if (reviewing) paintReview(); sfx("flip"); });
 var resignArmed = null;
 function disarmResign() { clearTimeout(resignArmed); resignArmed = null; $("resign").textContent = "resign"; $("resign").classList.remove("warn"); }
 $("resign").addEventListener("click", function () {
@@ -945,6 +1437,9 @@ window.__chess = {
   setLevel: function (n) { $("level").value = n; $("level").dispatchEvent(new Event("input")); },
   setColour: function (c) { colourPick = c; paintColour(); },
   view: V, ctl: window.SortafunChess,
+  review: { start: startReview, end: endReview, show: showPly, state: function () { return RV; }, on: function () { return reviewing; } },
+  premoves: function () { return PM.map(function (m) { return m.uci; }); }, pmClear: pmClear,
+  thinking: function () { return thinking; },
 };
 
 setMode("cpu");

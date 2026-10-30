@@ -178,6 +178,7 @@
   });
   h += "</div>";
 
+  h += "<p><b>Since v0.21 only levels 1-25 of this table are played</b>: levels 26-50 are Stockfish 19 lite with UCI_Elo = 1320 + (level - 26) x 70 (3000 at 50), 700 ms a move (chess.html <code>SF_FROM</code>, chess/sf.js). This engine is the fallback when Stockfish can't load.</p>";
   h += "<h3>the 50 levels</h3><p>Rating label = 600 + (level - 1) x 1400 / 49, so level 1 = 600 and level 50 = 2000, about 28.6 a level. <b>These are estimates, not measurements</b>: nobody has played the levels against rated players. " +
     "nodes = positions searched per move (grows evenly on a log scale from 300 to " + L[49].nodes.toLocaleString() + "), depth = max search depth (64 = no cap), temp = softmax noise in cp, blunder = chance of a natural-move blunder, qs = capture search at the horizon, book = max book plies, delay = minimum reply time.</p>";
   h += "<div class='lvls'>" + table(["level", "~elo", "nodes", "depth", "temp", "blunder", "qs", "book", "delay ms"], L.map(function (c) {

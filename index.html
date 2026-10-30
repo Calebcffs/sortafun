@@ -715,7 +715,7 @@
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=3c3fc236"></script>
 <script src="china.js?v=c859d851"></script>
-<script src="feedback.js?v=565145a5"></script>
+<script src="feedback.js?v=02add947"></script>
 <script src="panic-app.js?v=f0e47fde"></script>
 </head>
 <body>
@@ -837,6 +837,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">10-30</span> <b>v0.21</b>: chess got stockfish, the free open source engine: levels 26 to 50 now go up to about 3000. after a game press game review: every move gets a label (brilliant, best, mistake, blunder and the rest), accuracy for both players, a graph of the game and an eval bar, and you can step back through it. you can also premove now: queue your next moves while the other side thinks.</li>
         <li><span class="when">10-30</span> <b>v0.20.1</b>: chess pieces now make wooden clacks when they land: a knock for a move, a sharper crack for a capture, a double knock for castling, a ping for check and a little chime when a pawn promotes.</li>
         <li><span class="when">10-29</span> <b>v0.20</b>: chess! play the computer at 50 levels (beginner up to strong club player, our own engine), play a friend online with a 4-letter code and a clock, or pass and play on one device. beat a level to get on the board.</li>
         <li><span class="when">10-26</span> <b>v0.19.2</b>: globe guesser: skipping a place no longer ends the next round early, a skipped game stays off the board, and the host of a room can end a round when someone wanders off.</li>
@@ -986,7 +987,7 @@ var GAMES = [
   { id: "sushi",     name: "Sushi Goes Round", url: "sushi.html",   cat: "skill",  key: "sushi",    badge: "new",   blurb: "run a conveyor belt sushi bar. roll what the customers ask for, send it round the belt, phone for more salmon. career, endless and a daily lunch rush." },
   { id: "draw",      name: "Draw and Guess", url: "draw.html",      cat: "online", badge: "new",   blurb: "one of you draws, the rest guess in the chat. make a room, send your friends the link. 2 to 8 players." },
   { id: "globe",     name: "Globe Guesser",  url: "globe.html",     cat: "online", key: "globe",    badge: "new",   blurb: "dropped somewhere on earth in street view. look around, then pin the map. solo, a daily challenge, or a room with friends: party or duels." },
-  { id: "chess",     name: "Chess",          url: "chess.html",     cat: "online", key: "chess",    badge: "new",   blurb: "play the computer at 50 levels, from beginner to strong club player, or send a friend a code and play them online." },
+  { id: "chess",     name: "Chess",          url: "chess.html",     cat: "online", key: "chess",    badge: "new",   blurb: "play the computer at 50 levels, from beginner up to stockfish, review every move after, or send a friend a code and play them online." },
   { id: "deeptime",  name: "Deep Time",      url: "deeptime.html",  cat: "skill",  key: "deeptime", badge: "new",   blurb: "a camcorder tape from a forest in 1987. find the 8 parts of the time machine. something came through. headphones on." },
   { id: "crossword", name: "Crossword",      url: "crossword.html", cat: "word",   blurb: "a 15x15 themeless grid by Caleb. snacky, quick, and some clues bite back." },
   { id: "five",      name: "Five Letters",   url: "five.html",      cat: "word",   key: "five",     badge: "new",   blurb: "guess today's secret five letter word in six tries. colours tell you how close you are." },

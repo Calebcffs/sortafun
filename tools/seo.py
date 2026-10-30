@@ -133,7 +133,7 @@ PAGES = {
         desc="One of you draws, the rest guess in the chat. Make a private room and send your friends the link. 2 to 8 players, free, no sign-up."),
     "chess.html": dict(name="chess", kind="game", og="chess", list="online", genre=["Board", "Strategy"],
         title="Chess: Play the Computer at 50 Levels or a Friend Online",
-        desc="Free online chess. Play our own chess engine at 50 levels, from about 600 to about 2000 rating, or send a friend a 4-letter code and play them online with a clock. Pass and play too. No sign-up."),
+        desc="Free online chess. Play the computer at 50 levels, from a 600-rated beginner up to Stockfish at about 3000, get a review of every move after the game, or send a friend a 4-letter code and play them online with a clock. No sign-up."),
     "globe.html": dict(name="globe guesser", kind="game", og="globe", list="online", daily=True, genre=["Geography", "Party"],
         title="Globe Guesser: Free Street View Geography Game",
         desc="You get dropped somewhere on earth in street view. Look around, then pin the map where you think you are. Solo, a daily challenge, or a room with friends: party or duels. Free, no sign-up."),
@@ -196,10 +196,11 @@ GROUPS = [("daily", "daily puzzles"), ("word", "word games"), ("puzzle", "puzzle
 ABOUT = {
     "chess.html": dict(h="how to play chess", p=[
         "pick a mode: play the computer, play a friend online, or pass and play on one device. click or drag a piece and the dots show where it can go. all the normal rules are in: castling, en passant, promotion, draws by stalemate, repetition, the 50 move rule and not enough pieces.",
-        "against the computer, slide the level from 1 to 50. level 1 plays like a beginner of about 600 rating and makes the mistakes a beginner makes; level 50 plays like a strong club player of about 2000. the ratings in between go up evenly, about 29 a level. they are estimates, not measured ratings.",
+        "against the computer, slide the level from 1 to 50. level 1 plays like a beginner of about 600 rating and makes the mistakes a beginner makes. levels 26 to 50 are Stockfish held to a rating, from about 1320 up to about 3000. the ratings are estimates, not measured ratings. while the computer thinks you can queue up your next moves (premoves); right click or tap an empty square to cancel them.",
+        "after any game, press game review. Stockfish goes over every position and labels each move, from brilliant and best down to inaccuracy, mistake and blunder, with an accuracy score for each player, a graph of the game and an eval bar. step through with the arrows and it shows the best move wherever you missed it.",
         "beat a level and your best goes on the leaderboard. a game where you took a move back doesn't count."],
         faq=[("how do i play a friend?", "open play a friend, pick your colour and a clock (or no clock) and make a room. you get a 4-letter code and a link: send either to your friend. once they join, white moves first. you can offer a draw, resign, and ask for a rematch with the colours swapped."),
-             ("what engine is it?", "our own, written for this site in plain javascript. it searches ahead with alpha-beta and judges positions on material, where each piece stands, pawn structure, mobility and king safety. on the low levels it is held back on purpose: it looks less far ahead and sometimes picks a worse move.")]),
+             ("what engine is it?", "levels 1 to 25 are our own engine, written for this site in plain javascript, held back on purpose so it plays like a real beginner. levels 26 to 50 and the game review are Stockfish 19, the free open source engine (GPL-3.0), running in your browser.")]),
     "globe.html": dict(h="how to play globe guesser", p=[
         "you start somewhere on earth, standing in a street view picture. drag to look around and click the arrows on the road to walk. look for clues: which side people drive on, the language on the signs, the plants, the road lines, the number plates.",
         "when you think you know, open the map in the corner, click where you think you are and press guess (or space). the closer your pin, the more points: up to 5000 a round, falling off fast the further away you are.",

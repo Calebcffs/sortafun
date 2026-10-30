@@ -1777,6 +1777,19 @@ the page never reimplement them). Board key `chess` = highest level beaten with 
 caps it). Online games never post scores. Admin page renders the engine notes from `chess/engine.js`'s constants.
 Tests: `node tools/chess/perft.mjs` (147, CPW perft numbers), `node tools/chess/selfplay.mjs` (level ladder);
 the room tests (`nettest.mjs` 3 browsers, `rulestest.mjs` emulator, `phone.mjs`) were scratch scripts, see SPEC.md.
+**v0.21 (2026-10-30, Caleb's ask): Stockfish, game review, premoves.** `chess/sf/` holds Stockfish.js 19.0.1
+"lite, single-threaded" (1.8 MB wasm, GPL-3.0: keep `COPYING.txt` + `README.md` with the source links, and the
+credit line on the page). `chess/sf.js` (`SortafunSF`) runs it in a worker over UCI, one job at a time
+(`play`, `analyse`, `stop`). Levels 26-50 are Stockfish with `UCI_Elo` 1320 + 70 a level (3000 at 50), 700 ms
+a move (`SF_FROM` in chess.html); 1-25 stay our engine (Stockfish can't play below ~1320), which is also the
+fallback if the wasm fails. Same board key `chess` (it had no scores yet). **Game review** (after any game, any
+mode, button on the result card / side panel, or click a move): depth 14, MultiPV 2, 1.5 s cap per position,
+classifications by expected-points loss (rules in the comment above `REVIEW_DEPTH`), lichess accuracy formula,
+eval bar, graph, best-move arrow, badges; `.side.rv` hides everything but the review panel and move list.
+Book = our `BOOK_LINES` only. **Premoves** (`PM` in chess.html): any number, vs computer and online, targets
+are geometric (blockers ignored), auto-queen, played via `setTimeout(pmRun)` after the other side's move,
+the first illegal one drops the rest; right click or a click on nothing cancels. Test hooks:
+`__chess.review.{start,end,show,state,on}`, `__chess.premoves()`, `__chess.thinking()`.
 Known: `leaderboard.js` / `chat.js` use `getApps().length ? getApp() : initializeApp`, which throws when a named
 app was made first; chess/net.js works around it by creating the default app first (globe/draw have the same
 latent problem).

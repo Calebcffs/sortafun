@@ -236,6 +236,7 @@ the board and the name bars. Desktop 1400 wide: board 656 px; 390 px phone (ifra
 - Engine: no SEE (quiescence skips "bigger piece takes a defended smaller one" instead), no aspiration windows, no
   pawn hash, king safety is simple. ~2000 is a guess, untested against humans or other engines.
 - Threefold and fifty-move draws are automatic (no claim button); fivefold / 75-move not separate.
+- (v0.21: premoves, move-list browsing and arrows now exist, see the chess section of the repo CLAUDE.md.)
 - No premoves, no move-list browsing (click a past move to view it), no arrows. Sounds are the site's sfx names
   (place / pop / tock / start / back), unheard by me.
 - On a slow phone L45-50 can hit the 6 s cap and play a little weaker than on a desktop.
