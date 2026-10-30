@@ -1784,7 +1784,7 @@ credit line on the page). `chess/sf.js` (`SortafunSF`) runs it in a worker over 
 a move (`SF_FROM` in chess.html); 1-25 stay our engine (Stockfish can't play below ~1320), which is also the
 fallback if the wasm fails. Same board key `chess` (it had no scores yet). **Game review** (after any game, any
 mode, button on the result card / side panel, or click a move): depth 14, MultiPV 2, 1.5 s cap per position,
-classifications by expected-points loss (rules in the comment above `REVIEW_DEPTH`), lichess accuracy formula,
+classifications by expected-points loss (rules in the comment above `REVIEW_DEPTH`; an 80-ply game takes 30-45 s on a desktop), lichess accuracy formula,
 eval bar, graph, best-move arrow, badges; `.side.rv` hides everything but the review panel and move list.
 Book = our `BOOK_LINES` only. **Premoves** (`PM` in chess.html): any number, vs computer and online, targets
 are geometric (blockers ignored), auto-queen, played via `setTimeout(pmRun)` after the other side's move,

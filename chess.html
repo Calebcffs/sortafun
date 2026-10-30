@@ -1044,7 +1044,7 @@ function showResult(quiet) {
 // best = Stockfish's own pick, excellent < 2, good < 5, inaccuracy < 10, mistake < 20, blunder 20+.
 // book = still in our opening book. great = the best move when the next best was 20+ worse (and not just a
 // recapture, a mate in one or the only move). brilliant = a good move that gives up 2+ points of material. miss = a mistake
-// or blunder straight after the other side's, so the chance they gave you went begging.
+// or blunder straight after the other side's mistake or blunder left you ahead (60+), so the chance went begging.
 // Accuracy per player is the lichess formula on the same numbers (mean and harmonic mean averaged).
 var REVIEW_DEPTH = 14, REVIEW_MS = 1500;
 var reviewing = false, RV = null;
@@ -1124,7 +1124,7 @@ function classify(rv, k) {
   if (loss < 2 && after >= 45 && before < 97 && sacrifice(g, k)) return "brilliant";
   if (isBest && a.lines[1] && before - winPct(a.lines[1]) >= 20 && !/#/.test(g.sans[k]) && R.legalMoves(g.positions[k], { san: false }).length > 1 &&
       !(k > 0 && /x/.test(g.sans[k - 1]) && g.moves[k - 1].slice(2, 4) === uci.slice(2, 4))) return "great";
-  if ((c === "mistake" || c === "blunder") && k > 0 && /^(mistake|blunder|miss)$/.test(rv.cls[k - 1] || "")) return "miss";
+  if ((c === "mistake" || c === "blunder") && k > 0 && /^(mistake|blunder)$/.test(rv.cls[k - 1] || "") && before >= 60) return "miss";
   return c;
 }
 function accuracy(rv, colour) {
