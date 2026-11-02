@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en" data-nomusic>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- seo (written by tools/seo.py: edit PAGES there, not here) -->
+<title>Beat Maker: Free Online Drum Machine and Music Studio | Sortafun</title>
+<meta name="description" content="Make beats in your browser. Tap drum loops into a step grid, play bass and melodies on a piano keyboard, chain patterns into a song, save it as a wav and publish it to the beat library. Free, no sign-up.">
+<meta name="sortafun:name" content="beat maker">
+<link rel="canonical" href="https://sortafun.org/beats.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sortafun">
+<meta property="og:title" content="Beat Maker: Free Online Drum Machine and Music Studio | Sortafun">
+<meta property="og:description" content="Make beats in your browser. Tap drum loops into a step grid, play bass and melodies on a piano keyboard, chain patterns into a song, save it as a wav and publish it to the beat library. Free, no sign-up.">
+<meta property="og:url" content="https://sortafun.org/beats.html">
+<meta property="og:image" content="https://sortafun.org/assets/og/beats.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Beat Maker on Sortafun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Beat Maker: Free Online Drum Machine and Music Studio | Sortafun">
+<meta name="twitter:description" content="Make beats in your browser. Tap drum loops into a step grid, play bass and melodies on a piano keyboard, chain patterns into a song, save it as a wav and publish it to the beat library. Free, no sign-up.">
+<meta name="twitter:image" content="https://sortafun.org/assets/og/beats.png">
+<meta name="theme-color" content="#ffd43b">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Beat Maker","url":"https://sortafun.org/beats.html","description":"Make beats in your browser. Tap drum loops into a step grid, play bass and melodies on a piano keyboard, chain patterns into a song, save it as a wav and publish it to the beat library. Free, no sign-up.","image":"https://sortafun.org/assets/og/beats.png","genre":["Music"],"gamePlatform":"Web browser","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Sortafun","url":"https://sortafun.org/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sortafun","item":"https://sortafun.org/"},{"@type":"ListItem","position":2,"name":"Beat Maker","item":"https://sortafun.org/beats.html"}]}</script>
+<!-- /seo -->
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="game.css?v=2cfb0408">
+<link rel="stylesheet" href="beats/beats.css?v=8d5a995b">
+<script src="sfx.js?v=3c3fc236"></script>
+<script src="china.js?v=14e875f3"></script>
+<script src="feedback.js?v=5eabf52b"></script>
+<script src="panic-app.js?v=6027d837"></script>
+<script src="chat.js?v=49067dc4"></script>
+</head>
+<body class="k-art">
+<header class="homebar"><a class="hb-logo" href="index.html">Sortafun<small>(Alpha)</small></a><nav class="hb-nav"><a class="n-games" href="index.html#games">Games</a><a class="n-art" href="index.html#art">Art</a><a class="n-hang" href="index.html#hangout">Hangout</a></nav></header>
+<div class="wrap bm">
+  <h1>beat maker</h1>
+  <p class="sub">tap a beat into the grid (or finger drum the pads and hit rec), play bass, chords and melodies on the keys, then stack your patterns into a song and publish it to the beat library. <b>space</b> plays, <b>1-8</b> hit the drums, <b>A to '</b> play notes (W E T Y U O P are the black keys), <b>Z / X</b> change octave, <b>R</b> records.</p>
+
+  <div class="bmtabs" role="tablist">
+    <button data-tab="studio" class="on">studio</button>
+    <button data-tab="lib">beat library</button>
+  </div>
+
+  <section id="studio" data-nosfx>
+    <div class="rig">
+      <div class="tbar">
+        <button id="play" class="tp play" title="play / stop (space)"><svg viewBox="0 0 20 20"><path class="i-play" d="M5 3l12 7-12 7z"/><rect class="i-stop" x="4" y="4" width="12" height="12" rx="1"/></svg></button>
+        <button id="rec" class="tp rec" title="record what you play on the pads and keys (R)"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6"/></svg></button>
+        <div class="seg" id="mode"><button data-m="pat">loop pattern</button><button data-m="song">play song</button></div>
+        <label class="fld">bpm <input id="bpm" type="number" min="50" max="200" step="1"></label>
+        <button id="tap" title="tap this in time to set the bpm">tap</button>
+        <label class="fld">swing <input id="swing" type="range" min="0" max="75" step="1"></label>
+        <button id="metro" title="metronome click">click</button>
+        <label class="fld">key <select id="key"></select> <select id="scale"></select></label>
+        <canvas id="viz" width="140" height="36"></canvas>
+      </div>
+      <div class="tbar t2">
+        <input id="title" maxlength="40" placeholder="name your beat" autocomplete="off">
+        <button id="undo" title="undo (ctrl+z)">undo</button>
+        <button id="redo" title="redo (ctrl+shift+z)">redo</button>
+        <button id="new">new beat</button>
+        <button id="wav" title="download your song as a .wav file">save .wav</button>
+        <button id="midi" title="use a real MIDI keyboard or pad controller">MIDI</button>
+        <button id="pub" class="hot">publish</button>
+        <span id="saved" class="dim"></span>
+      </div>
+
+      <div class="sect">
+        <span class="lab">patterns</span>
+        <div id="pats" class="chips"></div>
+        <button id="padd" title="a new empty pattern">+ new</button>
+        <button id="pdup" title="copy this pattern into a new one, then change it up">copy</button>
+        <button id="pclr">clear</button>
+        <button id="pdel">delete</button>
+        <span class="lab">bars</span>
+        <div class="seg" id="plen"><button data-l="16">1</button><button data-l="32">2</button><button data-l="64">4</button></div>
+        <button id="px2" title="double the length and repeat what's there">x2</button>
+        <input id="pname" maxlength="10" title="rename this pattern" autocomplete="off">
+      </div>
+      <div class="sect">
+        <span class="lab">song</span>
+        <div id="arr" class="chips arr"></div>
+        <button id="aadd" title="add the pattern you're editing to the end of the song">+ add</button>
+        <button id="aleft" title="move the selected block left">&lt;</button>
+        <button id="aright" title="move the selected block right">&gt;</button>
+        <button id="adel" title="remove the selected block">remove</button>
+        <span id="alen" class="dim"></span>
+      </div>
+      <div class="sect">
+        <span class="lab">brush</span>
+        <div class="seg brush" id="brush">
+          <button data-b="1">hit</button><button data-b="2">accent</button><button data-b="3">ghost</button><button data-b="4">roll 2</button><button data-b="5">roll 3</button><button data-b="6">roll 4</button>
+        </div>
+        <span class="lab pgl">bar</span>
+        <div class="seg" id="page"></div>
+        <button id="follow" title="jump to whatever is playing">follow</button>
+      </div>
+
+      <div id="grid" class="grid"></div>
+      <div id="tpanel" class="tpanel"></div>
+
+      <div class="editor">
+        <div class="ehead">
+          <div class="seg" id="etrack"></div>
+          <button id="odown" title="octave down (Z)">oct -</button><span id="olab" class="dim"></span><button id="oup" title="octave up (X)">oct +</button>
+          <span class="lab">new note</span>
+          <div class="seg" id="nlen"><button data-n="1">1/16</button><button data-n="2">1/8</button><button data-n="4">1/4</button><button data-n="8">1/2</button><button data-n="16">bar</button></div>
+          <button id="nclr" title="clear this track's notes in this pattern">clear notes</button>
+        </div>
+        <div class="rollwrap"><canvas id="roll"></canvas></div>
+        <div class="rollhint dim">click to add a note, drag to move it, drag its right end to stretch it, click it again (or right click) to delete.</div>
+        <div class="perf">
+          <div class="pads" id="pads"></div>
+          <div class="kbwrap">
+            <div class="kbhead"><button id="chord" title="each key plays a chord from the key and scale you picked">chords</button><span id="khint" class="dim"></span></div>
+            <div id="kb" class="kb"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="lib" hidden>
+    <div class="libbar">
+      <div class="seg" id="lsort"><button data-s="new">newest</button><button data-s="likes">most liked</button><button data-s="plays">most played</button></div>
+      <input id="lq" placeholder="search beats or names" autocomplete="off">
+      <button id="lref">refresh</button>
+    </div>
+    <div id="lnote" class="dim"></div>
+    <div id="llist" class="llist"></div>
+  </section>
+
+  <!-- seo:about -->
+  <section class="seo-x about-game">
+    <h2>how to make a beat</h2>
+    <p>the grid is one bar of 16 steps for 8 drums: kick, snare, clap, hi-hat, open hat, tom, perc and fx. pick a brush (hit, accent, ghost, or a roll of 2, 3 or 4 quick hits) and tap or drag across the grid. click a drum's name to swap its sound (each drum has four to six) and set its volume, tuning, pan and reverb.</p>
+    <p>the bass, keys and lead tracks each have their own instrument (808, reese, acid, e-piano, organ, pads, strings, bells, chiptune, supersaw and more). draw notes in the piano roll, or play them on the on-screen keyboard, your computer keys (A to ' with the row above for the black keys) or a MIDI keyboard. press rec and whatever you play on the pads and keys lands in the loop. the chords button turns each key into a chord in the key you picked.</p>
+    <p>patterns can be 1, 2 or 4 bars. copy one to make a variation, then add patterns to the song row in any order to build an intro, verse and drop. play song plays the whole thing. save .wav downloads it, and publish puts it in the beat library, where anyone can play it, like it or open it in the studio to remix it.</p>
+  </section>
+  <!-- /seo:about -->
+  <!-- seo:more -->
+  <nav class="seo-x more-games" aria-label="more games"><h2>more free games</h2><ul><li><a href="flipbook.html">Animation Studio</a></li><li><a href="sudoku.html">Daily Sudoku</a></li><li><a href="anagram.html">Word Hive</a></li><li><a href="five.html">Five Letters</a></li><li><a href="ladder.html">Word Ladder</a></li><li><a href="sides.html">Four Sides</a></li><li><a href="puzzle.html">Tile Slider</a></li><li><a href="grab.html">Word Grab</a></li></ul><p><a href="index.html">all games &raquo;</a></p></nav>
+  <!-- /seo:more -->
+  <a class="back" href="index.html">back to all games</a>
+</div>
+
+<div id="modal" class="bmmodal" hidden><div class="box" role="dialog" aria-modal="true"></div></div>
+
+<script src="firebase-config.js?v=4115083e"></script>
+<script src="leaderboard.js?v=92e6e9a1"></script>
+<script src="beats/engine.js?v=8f8aeda5"></script>
+<script src="beats/song.js?v=a5b6f546"></script>
+<script src="beats/app.js?v=8506d3dd"></script>
+<footer class="sitefoot">&copy; 2026 <a href="index.html">sortafun.org</a> &middot; all games free forever &middot; no downloads, no sign-up</footer>
+</body>
+</html>

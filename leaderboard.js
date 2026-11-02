@@ -834,6 +834,57 @@
     });
   }
 
+  /* ------------------------------------------------------------------ *
+   * Beat Maker (beats.html): the beat library. collection "beats":
+   *   { title, author, bpm, bars, data: the song as a JSON string (beats/song.js
+   *     clean() checks it on the way in), plays, likes, parent? (remixed from),
+   *     day, ts }
+   * The list leaves `data` out (field mask); a beat's data is fetched when
+   * someone plays or remixes it. plays / likes only ever go up by one.
+   * ------------------------------------------------------------------ */
+  function beatsList() {
+    if (!configLooksReal(window.SORTAFUN_FIREBASE)) return Promise.reject(new Error("firebase not configured"));
+    var r = FS_REST();
+    var q = {
+      from: [{ collectionId: "beats" }],
+      select: { fields: ["title", "author", "bpm", "bars", "plays", "likes", "parent", "ts"].map(function (f) { return { fieldPath: f }; }) },
+      orderBy: [{ field: { fieldPath: "ts" }, direction: "DESCENDING" }], limit: 300
+    };
+    return fetch(r.base + ":runQuery?key=" + r.key, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ structuredQuery: q })
+    }).then(function (res) {
+      if (!res.ok) throw new Error("list failed " + res.status);
+      return res.json();
+    }).then(function (rows) {
+      return rows.filter(function (x) { return x.document; }).map(function (x) { return restDoc(x.document); });
+    });
+  }
+  function beatsGet(id) {
+    var r = FS_REST();
+    return fetch(r.base + "/beats/" + encodeURIComponent(id) + "?key=" + r.key).then(function (res) {
+      if (!res.ok) throw new Error("beat not found " + res.status);
+      return res.json();
+    }).then(restDoc);
+  }
+  // b: { title, author, bpm, bars, data (string), parent? }. Resolves the new id
+  function beatsCreate(b) {
+    return init().then(function () {
+      var fs = state.fs, doc = {
+        title: String(b.title).trim().slice(0, 40), author: String(b.author).trim().slice(0, 20),
+        bpm: Math.round(b.bpm), bars: Math.round(b.bars), data: String(b.data),
+        plays: 0, likes: 0, day: dayStr(), ts: fs.serverTimestamp()
+      };
+      if (b.parent && /^[A-Za-z0-9]{20}$/.test(b.parent)) doc.parent = b.parent;
+      return fs.addDoc(fs.collection(state.db, "beats"), doc).then(function (ref) { return ref.id; });
+    });
+  }
+  function beatsBump(id, field) {
+    return init().then(function () {
+      var o = {}; o[field] = state.fs.increment(1);
+      return state.fs.updateDoc(state.fs.doc(state.db, "beats", id), o);
+    });
+  }
+
   // opts: { score?: number, onSubmitted?: fn }  — pass score to show the submit row
   function sfx(name) { if (window.SortafunSFX) window.SortafunSFX.play(name); }
 
@@ -1139,5 +1190,6 @@
     fmtScore: function (key, v) { return GAMES[key] ? fmtScore(GAMES[key], v) : String(v); },
     keepBoard: keepBoard,
     rhythm: { list: rhythmList, get: rhythmGet, create: rhythmCreate, played: rhythmPlayed, top: rhythmTop, score: rhythmScore },
+    beats: { list: beatsList, get: beatsGet, create: beatsCreate, played: function (id) { return beatsBump(id, "plays"); }, liked: function (id) { return beatsBump(id, "likes"); } },
   };
 })();

@@ -58,6 +58,7 @@
     "stopbar.html": ["Stop the Bar", "ppt"],
     "piano.html": ["Piano Rush", "ppt"],
     "flipbook.html": ["Animation Studio", "ppt"],
+    "beats.html": ["Beat Maker", "ppt"],
     "anim-gallery.html": ["Animation Gallery", "ppt"],
   };
 

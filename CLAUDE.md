@@ -1794,6 +1794,49 @@ Known: `leaderboard.js` / `chat.js` use `getApps().length ? getApp() : initializ
 app was made first; chess/net.js works around it by creating the default app first (globe/draw have the same
 latent problem).
 
+### Beat Maker (`beats.html` + `beats/`, 2026-11-02, v0.22)
+
+Caleb: "a beatmaker game where you tap out looping beats and drum components and variations of each, and
+instruments on a midi type keyboard that you can loop/duplicate for sections, then publish your beats in a beat
+library", creative freedom. Homepage tile `beats` in the ART row (and the Mobile chip). No leaderboard key.
+All sound is synthesised (no samples), `<html data-nomusic>`.
+
+- `beats/engine.js` (`BeatEngine`): `DRUMS` = 8 rows (kick, snare, clap, hat, open hat, tom, perc, fx), each with
+  4-6 variants (`vars[].fn(ctx, out, t, vel, pitchMul)`); `SYNTHS` = 17 presets for the 3 synth tracks (one generic
+  `voice()`: oscillators + filter env + FM + vibrato + drive + breath noise). Mixer: 11 channels (vol^2, pan,
+  reverb send) -> master -> compressor -> limiter. Scheduler is the usual 25ms timer / 120ms lookahead; `queue`
+  holds scheduled steps for the playhead (`poll()` from the page's rAF). `posAt(t)` = nearest step for live
+  recording; a recorded hit that lands on a step not yet scheduled sets `skip["d<row>:<step>"]` /
+  `skip["n<track>:<step>:<midi>"]` so it doesn't play twice (consumed when that step is scheduled).
+  `render(song, mode, pat, loops)` = OfflineAudioContext -> 16-bit wav Blob (`.peak`). Template peaks 0.80-0.92.
+- `beats/song.js` (`BeatSong`): the song shape (top comment), `TEMPLATES` (trap, boombap, house, lofi, empty;
+  first visit loads trap), `clean()` (validates everything from localStorage / the library, clamps, drops junk),
+  `pack()`, `stats()`. Limits: 8 patterns, 64 song slots, 512 notes per track per pattern, 16/32/64 steps.
+  Step codes 0 off, 1 hit, 2 accent, 3 ghost, 4-6 roll x2-x4.
+- `beats/app.js`: the page. Studio: step grid (brush + drag paint, 16 steps a page, bar pages for 2/4-bar
+  patterns), synth rows (mini view, click = edit that track), track panel (variants / presets, vol, tune, pan,
+  reverb, mute, solo), piano roll canvas (25 rows = 2 octaves from `ui.oct[track]*12`, add / drag / stretch /
+  click-to-delete), pads, on-screen keyboard, computer keys (A-' notes, W E T Y U O P black keys, 1-8 drums,
+  Z/X octave, R rec, space, ctrl+Z), Web MIDI (button; channel 10 = drums via `GM` map), chord mode (diatonic
+  triads from key + scale), rec (forces pattern mode, overdubs while looping), patterns (new / copy / clear /
+  delete / length / x2 repeat / rename; picking one while looping cues it for the end of the loop), song row
+  (add / move / remove, dblclick plays from there), undo/redo (JSON snapshots), autosave to localStorage
+  `sortafun-beats-draft`, .wav export. Other keys: `sortafun-beats-mine` (published ids), `-liked`, `-last`
+  (publish cooldown 60s), sessionStorage `sortafun-beats-played-<id>`. Test hook `window.__beats`.
+- **Library**: Firestore `beats/<auto id>` = `{title, author, bpm, bars, data (pack() JSON, <= 200k), plays,
+  likes, parent?, day, ts}` via `SortafunLB.beats.{list, get, create, played, liked}` (list = REST runQuery,
+  newest 300, field mask without `data`). Rules: create with plays = likes = 0, the only public edits are
+  plays +1 / likes +1, admin deletes (admin.html "beat maker: the beat library"). Likes are one per browser
+  (localStorage), so not forge-proof, same trade as the rhythm levels. `beats.html?b=<id>` opens the library
+  on that beat (fetched by id if it's older than the newest 300). "remix in studio" loads it and publishes
+  with `parent`.
+- Tested: headless Chrome (play, song mode, grid paint, roll add/stretch/move/delete/undo, chord keys,
+  recording pads + keys into the loop, wav render of every template, publish -> library -> play -> like ->
+  remix with an in-page mock of `SortafunLB.beats`, 390px phone layout) and the rules on the Firestore
+  emulator (`emulators:exec --only firestore`, REST commits with a REQUEST_TIME transform). Untested by ear.
+- `tools/og-images.mjs` needs `CHROME=/usr/bin/google-chrome` and a `python` on PATH on Linux; `seo.py`
+  refuses to run while the git-ignored `_birdtest.html` / `_citytest*.html` are in the folder (move them out).
+
 ### Search engines + link previews (`tools/seo.py`, v0.11, 2026-10-06)
 
 Caleb's ask: as many visits as possible. **`python tools/seo.py`, then `tools/stamp.py`.** One table

@@ -32,7 +32,7 @@
 
   // the site version. every update that ships bumps it: +0.0.1 for fixes and
   // small things, +0.1 for a big one (a new game, a new system)
-  var VERSION = "0.21";
+  var VERSION = "0.22";
   window.SORTAFUN_VERSION = VERSION;
 
   // every page, keyed by id. game: true = a thing you play (gets the star strip
@@ -68,6 +68,7 @@
     { id: "stopbar",   name: "Stop the Bar",         file: "stopbar.html",      game: true },
     { id: "piano",     name: "Piano Rush",           file: "piano.html",        game: true },
     { id: "studio",    name: "Animation Studio",     file: "flipbook.html",     game: true },
+    { id: "beats",     name: "Beat Maker",           file: "beats.html",        game: true },
     { id: "gallery",   name: "Animation Gallery",    file: "anim-gallery.html" },
     { id: "forum",     name: "The Forum",            file: "forum.html" },
     { id: "boards",    name: "Leaderboards",         file: "leaderboards.html" },

@@ -192,6 +192,38 @@ service cloud.firestore {
         && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
         && d.ts == request.time;
     }
+    // --- beat maker (beats.html): the beat library ---
+    // beats/<auto id> = { title, author, bpm, bars, data: the song as a JSON string,
+    // plays, likes, parent? (the beat it was remixed from), day, ts }. Anyone reads,
+    // anyone publishes (plays + likes start at 0), the only public edits are
+    // plays +1 and likes +1, only the admin deletes (moderation, admin.html).
+    // The page checks the song inside `data` when it loads it (beats/song.js clean()).
+    match /beats/{id} {
+      allow read: if true;
+      allow create: if id.matches('[A-Za-z0-9]{20}') && isValidBeat(request.resource.data)
+        && request.resource.data.plays == 0 && request.resource.data.likes == 0;
+      allow update: if isBeatPlay(resource.data, request.resource.data) || isBeatLike(resource.data, request.resource.data);
+      allow delete: if isAdmin();
+    }
+    function isValidBeat(d) {
+      return d.keys().hasOnly(['title', 'author', 'bpm', 'bars', 'data', 'plays', 'likes', 'parent', 'day', 'ts'])
+        && d.keys().hasAll(['title', 'author', 'bpm', 'bars', 'data', 'plays', 'likes', 'day', 'ts'])
+        && d.title is string && d.title.size() >= 1 && d.title.size() <= 40
+        && d.author is string && d.author.size() >= 1 && d.author.size() <= 20
+        && d.bpm is int && d.bpm >= 50 && d.bpm <= 200
+        && d.bars is int && d.bars >= 1 && d.bars <= 256
+        && d.data is string && d.data.size() >= 20 && d.data.size() <= 200000
+        && d.plays is int && d.likes is int
+        && (!('parent' in d) || (d.parent is string && d.parent.matches('[A-Za-z0-9]{20}')))
+        && d.day is string && d.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.ts == request.time;
+    }
+    function isBeatPlay(o, n) {
+      return n.diff(o).affectedKeys().hasOnly(['plays']) && n.plays is int && n.plays == o.plays + 1;
+    }
+    function isBeatLike(o, n) {
+      return n.diff(o).affectedKeys().hasOnly(['likes']) && n.likes is int && n.likes == o.likes + 1;
+    }
     // the admin studio's drafts: piano_drafts/<video id> = { draft: JSON string, ts }
     match /piano_drafts/{vid} { allow read, write: if isAdmin(); }
     function isValidFeedback(d) {

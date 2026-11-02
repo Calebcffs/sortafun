@@ -96,6 +96,8 @@
     "mobile": "手机",
     // rhythm rush (rhythm.html)
     "rhythm rush": "节奏快手",
+    "beat maker": "节拍工坊", "studio": "工作室", "beat library": "节拍库", "publish": "发布", "new beat": "新节拍",
+    "loop pattern": "循环段落", "play song": "播放整首", "patterns": "段落", "song": "歌曲", "brush": "画笔",
     "notes fall to the line in time with the song. tap each one right on the beat: dead on scores the most, a bit off scores less, and a note you let past is a miss. every level is made by a player, and you can make one too.": "音符跟着歌落到线上。每个都要正好踩在拍子上点：正中得分最高，偏一点分少一点，漏掉就是失误。每一关都是玩家做的，你也可以做一关。",
     "real ncs songs. tap each note right on the beat for the most points, then make a level of your own and share it.": "真正的 NCS 歌曲。每个音符正好踩在拍子上点，分数最高，然后自己做一关分享出去。",
     "play a level": "玩关卡",

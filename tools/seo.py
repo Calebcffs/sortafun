@@ -142,6 +142,9 @@ PAGES = {
     "flipbook.html": dict(name="animation studio", kind="game", og="studio", list="art", genre=["Art"],
         title="Animation Studio: Free Online Flipbook Maker",
         desc="Draw a flipbook frame by frame with onion skin, play it back at 8, 12 or 16 fps, then post it to the gallery. Free, in your browser."),
+    "beats.html": dict(name="beat maker", kind="game", og="beats", list="art", genre=["Music"],
+        title="Beat Maker: Free Online Drum Machine and Music Studio",
+        desc="Make beats in your browser. Tap drum loops into a step grid, play bass and melodies on a piano keyboard, chain patterns into a song, save it as a wav and publish it to the beat library. Free, no sign-up."),
     "anim-gallery.html": dict(name="animation gallery", kind="page", og="gallery", list="art",
         title="Animation Gallery: Flipbooks Made by Players",
         desc="Looping flipbook animations made by players in the Sortafun animation studio. Vote for your favourite, leave a comment, or make your own."),
@@ -182,7 +185,7 @@ LABEL = {
     "sides.html": "Four Sides", "puzzle.html": "Tile Slider", "grab.html": "Word Grab", "typing.html": "Typing Test",
     "crossword.html": "Crossword", "mines.html": "Minesweeper", "maze.html": "Cursor Maze", "reaction.html": "Reaction Time Test",
     "aim.html": "Aim Trainer", "stopbar.html": "Stop the Bar", "piano.html": "Piano Rush", "rhythm.html": "Rhythm Rush", "driving.html": "Circuit Race", "sushi.html": "Sushi Goes Round",
-    "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "globe.html": "Globe Guesser", "chess.html": "Chess", "flipbook.html": "Animation Studio",
+    "deeptime.html": "Deep Time", "funstrike.html": "Fun Strike", "draw.html": "Draw and Guess", "globe.html": "Globe Guesser", "chess.html": "Chess", "flipbook.html": "Animation Studio", "beats.html": "Beat Maker",
     "anim-gallery.html": "Animation Gallery", "leaderboards.html": "Leaderboards", "forum.html": "The Forum",
     "guestbook.html": "Guestbook", "passport.html": "Passport",
 }
@@ -194,6 +197,11 @@ GROUPS = [("daily", "daily puzzles"), ("word", "word games"), ("puzzle", "puzzle
 # game code, keep them true when a game changes.
 # ---------------------------------------------------------------------------
 ABOUT = {
+    "beats.html": dict(h="how to make a beat", p=[
+        "the grid is one bar of 16 steps for 8 drums: kick, snare, clap, hi-hat, open hat, tom, perc and fx. pick a brush (hit, accent, ghost, or a roll of 2, 3 or 4 quick hits) and tap or drag across the grid. click a drum's name to swap its sound (each drum has four to six) and set its volume, tuning, pan and reverb.",
+        "the bass, keys and lead tracks each have their own instrument (808, reese, acid, e-piano, organ, pads, strings, bells, chiptune, supersaw and more). draw notes in the piano roll, or play them on the on-screen keyboard, your computer keys (A to ' with the row above for the black keys) or a MIDI keyboard. press rec and whatever you play on the pads and keys lands in the loop. the chords button turns each key into a chord in the key you picked.",
+        "patterns can be 1, 2 or 4 bars. copy one to make a variation, then add patterns to the song row in any order to build an intro, verse and drop. play song plays the whole thing. save .wav downloads it, and publish puts it in the beat library, where anyone can play it, like it or open it in the studio to remix it.",
+    ]),
     "chess.html": dict(h="how to play chess", p=[
         "pick a mode: play the computer, play a friend online, or pass and play on one device. click or drag a piece and the dots show where it can go. all the normal rules are in: castling, en passant, promotion, draws by stalemate, repetition, the 50 move rule and not enough pieces.",
         "against the computer, slide the level from 1 to 50. level 1 plays like a beginner of about 600 rating and makes the mistakes a beginner makes. levels 26 to 50 are Stockfish held to a rating, from about 1320 up to about 3000. the ratings are estimates, not measured ratings. while the computer thinks you can queue up your next moves (premoves); right click or tap an empty square to cancel them.",

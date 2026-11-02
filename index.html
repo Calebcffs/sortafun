@@ -714,9 +714,9 @@
 </script>
 <style>html.panic .site { display: none; } html.panic, html.panic body { background: #f5f5f5; }</style>
 <script src="sfx.js?v=3c3fc236"></script>
-<script src="china.js?v=c859d851"></script>
-<script src="feedback.js?v=02add947"></script>
-<script src="panic-app.js?v=f0e47fde"></script>
+<script src="china.js?v=14e875f3"></script>
+<script src="feedback.js?v=5eabf52b"></script>
+<script src="panic-app.js?v=6027d837"></script>
 </head>
 <body>
 <div class="site">
@@ -837,6 +837,7 @@
     <section class="panel news">
       <div class="panel-head h-news"><h2>What's New</h2></div>
       <ul class="news-list" tabindex="0" aria-label="what's new, newest first">
+        <li><span class="when">11-02</span> <b>v0.22</b>: beat maker! tap drum loops into a grid (8 drums, a few sounds each, accents, ghost notes and trap rolls), play bass, keys and leads on a piano keyboard or your computer keys, record live while it loops, copy patterns to make a verse and a drop, line them up into a song, save it as a .wav, and publish it to the beat library where people can play, like and remix it. it's in the art section.</li>
         <li><span class="when">10-30</span> <b>v0.21</b>: chess got stockfish, the free open source engine: levels 26 to 50 now go up to about 3000. after a game press game review: every move gets a label (brilliant, best, mistake, blunder and the rest), accuracy for both players, a graph of the game and an eval bar, and you can step back through it. you can also premove now: queue your next moves while the other side thinks.</li>
         <li><span class="when">10-30</span> <b>v0.20.1</b>: chess pieces now make wooden clacks when they land: a knock for a move, a sharper crack for a capture, a double knock for castling, a ping for check and a little chime when a pawn promotes.</li>
         <li><span class="when">10-29</span> <b>v0.20</b>: chess! play the computer at 50 levels (beginner up to strong club player, our own engine), play a friend online with a 4-letter code and a clock, or pass and play on one device. beat a level to get on the board.</li>
@@ -946,7 +947,7 @@
     <p><b>puzzle:</b> <a href="mines.html">Minesweeper</a></p>
     <p><b>skill and action:</b> <a href="maze.html">Cursor Maze</a> &middot; <a href="reaction.html">Reaction Time Test</a> &middot; <a href="aim.html">Aim Trainer</a> &middot; <a href="stopbar.html">Stop the Bar</a> &middot; <a href="piano.html">Piano Rush</a> &middot; <a href="rhythm.html">Rhythm Rush</a> &middot; <a href="driving.html">Circuit Race</a> &middot; <a href="sushi.html">Sushi Goes Round</a> &middot; <a href="deeptime.html">Deep Time</a></p>
     <p><b>play with friends:</b> <a href="funstrike.html">Fun Strike</a> &middot; <a href="draw.html">Draw and Guess</a> &middot; <a href="chess.html">Chess</a> &middot; <a href="globe.html">Globe Guesser</a></p>
-    <p><b>art:</b> <a href="flipbook.html">Animation Studio</a> &middot; <a href="anim-gallery.html">Animation Gallery</a></p>
+    <p><b>art:</b> <a href="flipbook.html">Animation Studio</a> &middot; <a href="beats.html">Beat Maker</a> &middot; <a href="anim-gallery.html">Animation Gallery</a></p>
     <p><b>hang out:</b> <a href="leaderboards.html">Leaderboards</a> &middot; <a href="forum.html">The Forum</a> &middot; <a href="guestbook.html">Guestbook</a> &middot; <a href="passport.html">Passport</a></p>
   </nav>
   <!-- /seo:links -->
@@ -965,7 +966,7 @@
 </div>
 
 <script src="firebase-config.js?v=4115083e"></script>
-<script src="leaderboard.js?v=e978a479"></script>
+<script src="leaderboard.js?v=92e6e9a1"></script>
 <script src="chat.js?v=49067dc4"></script>
 <script>
 "use strict";
@@ -1007,7 +1008,8 @@ var GAMES = [
 
 var ART = [
   { id: "studio",  name: "Animation Studio",  url: "flipbook.html",     cat: "art", blurb: "draw a flipbook frame by frame with onion skin, then post it to the gallery once it moves." },
-  { id: "gallery", name: "Animation Gallery", url: "anim-gallery.html", cat: "art", blurb: "everyone else's flipbooks. vote for your favourite and leave a comment." }
+  { id: "gallery", name: "Animation Gallery", url: "anim-gallery.html", cat: "art", blurb: "everyone else's flipbooks. vote for your favourite and leave a comment." },
+  { id: "beats",   name: "Beat Maker",        url: "beats.html",        cat: "art", badge: "new", blurb: "tap out drum loops, play bass and melodies on the keys, chain patterns into a song, then publish it to the beat library." }
 ];
 
 var HANGOUT = [
@@ -1029,7 +1031,7 @@ var SOON = [
 ];
 
 // the Mobile chip: games that play well on a phone (a game keeps its own category too)
-var MOBILE = { rhythm: 1, piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1, globe: 1, chess: 1 };
+var MOBILE = { beats: 1, rhythm: 1, piano: 1, sudoku: 1, five: 1, sides: 1, grab: 1, hive: 1, ladder: 1, slider: 1, mines: 1, reaction: 1, aim: 1, stopbar: 1, draw: 1, globe: 1, chess: 1 };
 
 var CAT_LABEL = { app: "app", soon: "soon", online: "online", word: "words", puzzle: "puzzle", skill: "skill", art: "art", hang: "hangout" };
 var BADGE_LABEL = { new: "NEW!", daily: "DAILY", hot: "HOT!", pick: "TODAY", wip: "WIP" };
@@ -1623,6 +1625,20 @@ var THUMB = {
       '<g transform="translate(132 30) rotate(30)"><rect x="0" y="0" width="12" height="54" fill="#4dabf7"' + S + '/>' +
       '<polygon points="0,54 12,54 6,68" fill="#ffe8cc"' + S + '/><rect x="0" y="-10" width="12" height="10" fill="#ff8fc1"' + S + '/></g>' +
       outlined(136, 112, "1 2 3", 14, "#fff");
+  },
+  beats: function () {
+    var cols = ["#ff4d6d", "#ffb703", "#8ecae6", "#06d6a0"], g = "";
+    var on = ["1000100010001000", "0000100000001000", "1111111111111111", "0010000000100100"];
+    for (var r = 0; r < 4; r++) for (var c = 0; c < 8; c++) {
+      var lit = on[r].charAt(c * 2) === "1";
+      g += '<rect x="' + (14 + c * 17) + '" y="' + (14 + r * 15) + '" width="14" height="12" rx="2" fill="' + (lit ? cols[r] : "#3d3961") + '" stroke="' + K + '" stroke-width="1.5"/>';
+    }
+    var keys = "";
+    for (var k = 0; k < 9; k++) keys += '<rect x="' + (14 + k * 15) + '" y="80" width="15" height="30" fill="' + (k === 4 ? "#ff8fc1" : "#fff") + '" stroke="' + K + '" stroke-width="2"/>';
+    [0, 1, 3, 4, 5, 7].forEach(function (k) { keys += '<rect x="' + (24 + k * 15) + '" y="80" width="9" height="18" fill="' + K + '"/>'; });
+    return bg("#2b2350") + g + keys +
+      '<g transform="translate(138 74)"><path d="M0 0v-30l14 -5v30" stroke="#ffd43b" stroke-width="3" fill="none"/>' +
+      '<ellipse cx="-4" cy="1" rx="5" ry="4" fill="#ffd43b"' + S + '/><ellipse cx="10" cy="-4" rx="5" ry="4" fill="#ffd43b"' + S + '/></g>';
   },
   gallery: function () {
     function fr(x, y, w, h, fill, inner) {

@@ -80,6 +80,12 @@
     <table id="rltable"><thead><tr><th>when (SGT)</th><th>level</th><th>song</th><th>by</th><th>notes</th><th>plays</th><th></th></tr></thead><tbody></tbody></table>
   </details>
 
+  <h2>beat maker: the beat library</h2>
+  <details id="beatlib"><summary>show every published beat (delete takes it down for good)</summary>
+    <div class="row"><button id="bl-reload">reload</button> <span class="muted" id="bl-count"></span></div>
+    <table id="bltable"><thead><tr><th>when (SGT)</th><th>beat</th><th>by</th><th>bpm</th><th>bars</th><th>plays</th><th>likes</th><th></th></tr></thead><tbody></tbody></table>
+  </details>
+
   <h2>chess: how the engine works</h2>
   <details id="chessdoc"><summary>open the engine notes (algorithm, weights, the 50 levels). Built from the numbers in chess/engine.js, so it can't go stale</summary>
     <div id="chessdoc-in" class="cdoc" style="margin-top:10px"></div>
@@ -246,6 +252,24 @@ document.getElementById("rltable").addEventListener("click", async (e) => {
   if (!confirm("delete this level and its leaderboard for good?")) return;
   b.disabled = true;
   try { await dropLevel(b.dataset.drop); b.closest("tr").remove(); } catch (err) { b.disabled = false; alert("didn't delete: " + (err.code || err.message)); }
+});
+// ---------------- beat maker library (beats/<id>), moderation ----------------
+async function loadBeats() {
+  $("bl-count").textContent = "loading...";
+  const snap = await getDocs(query(collection(db, "beats"), orderBy("ts", "desc"), limit(500)));
+  $("bltable").tBodies[0].innerHTML = snap.docs.map((x) => { const v = x.data();
+    return `<tr><td>${esc(when(v.ts))}</td><td><a href="beats.html?b=${encodeURIComponent(x.id)}" target="_blank">${esc(v.title)}</a></td>` +
+      `<td>${esc(v.author)}</td><td>${esc(v.bpm)}</td><td>${esc(v.bars)}</td><td>${esc(v.plays || 0)}</td><td>${esc(v.likes || 0)}</td><td><button data-dropbeat="${esc(x.id)}">delete</button></td></tr>`; }).join("") ||
+    '<tr><td colspan="8" class="muted">no beats yet</td></tr>';
+  $("bl-count").textContent = snap.size + " beat" + (snap.size === 1 ? "" : "s");
+}
+document.getElementById("beatlib").addEventListener("toggle", (e) => { if (e.target.open && auth.currentUser) loadBeats().catch((err) => { $("bl-count").textContent = "error: " + (err.code || err.message); }); });
+document.getElementById("bl-reload").addEventListener("click", () => loadBeats());
+document.getElementById("bltable").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-dropbeat]"); if (!b) return;
+  if (!confirm("delete this beat from the library for good?")) return;
+  b.disabled = true;
+  try { await deleteDoc(doc(db, "beats", b.dataset.dropbeat)); b.closest("tr").remove(); } catch (err) { b.disabled = false; alert("didn't delete: " + (err.code || err.message)); }
 });
 let studioUp = false;
 document.getElementById("studio").addEventListener("toggle", (e) => {
